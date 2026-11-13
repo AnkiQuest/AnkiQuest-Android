@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -394,6 +395,7 @@ internal object AnkiquestMomentCard {
         val open: MaterialButton = view.findViewById(R.id.aq_moment_open)
         val tell: MaterialButton = view.findViewById(R.id.aq_moment_tell)
         val share: MaterialButton = view.findViewById(R.id.aq_moment_share)
+        val deck: MaterialButton = view.findViewById(R.id.aq_moment_deck)
     }
 
     /** What the server knows about a moment beyond the inbox row: whether friends heard it, and its picture. */
@@ -417,6 +419,20 @@ internal object AnkiquestMomentCard {
         private val pictures = mutableMapOf<String, Bitmap>()
         private val told = mutableSetOf<String>()
         private var generation = 0
+        private val deckNames = mutableMapOf<String, DeckName>()
+
+        /** A lookup owns one state; returning from editing or saving replaces it. */
+        private sealed interface DeckName {
+            val name: String?
+
+            data class Loading(
+                override val name: String?,
+            ) : DeckName
+
+            data class Ready(
+                override val name: String?,
+            ) : DeckName
+        }
 
         /** Conquered cards whose telling friends can still be taken back. */
         private val undoable = mutableSetOf<String>()
@@ -432,7 +448,9 @@ internal object AnkiquestMomentCard {
             holder: Holder,
             position: Int,
         ) {
-            val moment = moments[position]
+            val original = moments[position]
+            val deck = deckNames[original.key]
+            val moment = if (deck != null) original.copy(deck = deck.name) else original
             val size = (ART_DP * host.resources.displayMetrics.density).toInt()
             val picture = pictures[moment.key]
             if (picture != null) {
@@ -456,6 +474,21 @@ internal object AnkiquestMomentCard {
             holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
             holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
             holder.share.setOnClickListener { share(moment) }
+            holder.deck.isVisible = moment.conquest != null
+            holder.deck.text = moment.deck?.let { host.getString(R.string.aq_share_deck_edit, it) }
+                ?: host.getString(R.string.aq_share_deck_title)
+            holder.deck.setOnClickListener {
+                val activity = host as? FragmentActivity ?: return@setOnClickListener
+                moment.conquest?.let { at ->
+                    AnkiquestDeckNameDialog.show(activity, account, at) { name ->
+                        deckNames[moment.key] = DeckName.Ready(name)
+                        changed(position)
+                    }
+                }
+            }
+            if (!deckNames.containsKey(moment.key)) {
+                loadDeck(moment, position)
+            }
             if (known == null) load(moment, position)
         }
 
@@ -465,7 +498,39 @@ internal object AnkiquestMomentCard {
             extras.clear()
             pictures.clear()
             undoable.clear()
+            deckNames.clear()
             moments.indices.forEach(::changed)
+        }
+
+        private fun loadDeck(
+            moment: Moment,
+            position: Int,
+        ) {
+            val at = moment.conquest ?: return
+            val scope = scope ?: return
+            if (deckNames.containsKey(moment.key)) {
+                return
+            }
+            val loading = DeckName.Loading(moment.deck?.let(AnkiquestDeckNames::clean)?.ifEmpty { null })
+            deckNames[moment.key] = loading
+            scope.launch {
+                var name = loading.name
+                try {
+                    val deck = AnkiquestDeckNames.find(at)
+                    if (deck != null) {
+                        name = deck.name.ifEmpty { null }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.w(error, "AnkiQuest moment deck choice unavailable")
+                }
+                if (current() == null || deckNames[moment.key] !== loading) {
+                    return@launch
+                }
+                deckNames[moment.key] = DeckName.Ready(name)
+                changed(position)
+            }
         }
 
         /** Asks the server whether friends heard [moment] and for its picture, once per visit. */

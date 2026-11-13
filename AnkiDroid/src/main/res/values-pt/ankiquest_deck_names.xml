@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_share_deck_title">Nome do baralho</string>
+    <string name="aq_share_deck_edit">Baralho: %1$s</string>
+    <string name="aq_share_deck_help">Escolha um nome ou escreva o seu. Ele fica neste dispositivo até você compartilhar.</string>
+    <string name="aq_share_deck_omit">Sem nome do baralho</string>
+    <string name="aq_share_deck_failed">Não foi possível salvar o nome do baralho.</string>
+</resources>

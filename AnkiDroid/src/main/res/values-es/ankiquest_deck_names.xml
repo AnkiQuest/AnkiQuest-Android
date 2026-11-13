@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_share_deck_title">Nombre del mazo</string>
+    <string name="aq_share_deck_edit">Mazo: %1$s</string>
+    <string name="aq_share_deck_help">Elige un nombre o escribe uno propio. Se queda en este dispositivo hasta que lo compartas.</string>
+    <string name="aq_share_deck_omit">Sin nombre del mazo</string>
+    <string name="aq_share_deck_failed">No se pudo guardar el nombre del mazo.</string>
+</resources>

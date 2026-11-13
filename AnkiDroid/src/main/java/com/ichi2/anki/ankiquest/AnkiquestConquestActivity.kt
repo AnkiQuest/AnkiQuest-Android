@@ -259,6 +259,20 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         status?.let { line ->
             views.text(content, line, small = true).accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
+        if (owns(current, card)) {
+            val title = deck?.let { getString(R.string.aq_share_deck_edit, it) } ?: getString(R.string.aq_share_deck_title)
+            views
+                .button(content, title) {
+                    AnkiquestDeckNameDialog.show(this, current, at) { name ->
+                        deck = name
+                        render()
+                    }
+                }.apply {
+                    isEnabled = !busy
+                    setIconResource(R.drawable.ic_mode_edit_white)
+                    iconTint = textColors
+                }
+        }
         views.button(content, getString(R.string.ankiquest_share), primary = true) { share(current, card) }
         if (card.mine) owner(card)
         views.text(

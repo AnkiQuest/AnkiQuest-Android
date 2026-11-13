@@ -129,6 +129,87 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
+    fun `a queued conquest uses the saved deck choice instead of its old path`() {
+        mockkObject(AnkiquestDeckNames, AnkiquestCommunity)
+        var name = "My Mandarin"
+        coEvery { AnkiquestDeckNames.find(100) } coAnswers { AnkiquestDeckNames.Deck(name, listOf(name)) {} }
+        coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
+        try {
+            val controller = host()
+            val host = controller.get()
+            val moment =
+                AnkiquestMoments.Moment(
+                    "conquered:100",
+                    AnkiquestMoments.Kind.CONQUERED,
+                    "Card conquered",
+                    "",
+                    clock.intTimeMS(),
+                    conquest = 100,
+                    deck = "5 Archive::Mandarin::Old path",
+                )
+            AnkiquestMomentCard.show(host, AnkiquestHomeData.account(), listOf(moment), prefs)
+            val card = card()
+            advanceRobolectricLooper()
+            assertEquals(
+                host.getString(R.string.aq_share_deck_edit, "My Mandarin"),
+                card.findViewById<TextView>(R.id.aq_moment_deck)?.text.toString(),
+            )
+            controller.pause().stop()
+            name = "Renamed on the conquest screen"
+            controller.start().resume()
+            advanceRobolectricLooper()
+            assertEquals(
+                host.getString(R.string.aq_share_deck_edit, name),
+                card.findViewById<TextView>(R.id.aq_moment_deck)?.text.toString(),
+            )
+        } finally {
+            ShadowDialog.getLatestDialog()?.dismiss()
+            unmockkObject(AnkiquestDeckNames, AnkiquestCommunity)
+        }
+    }
+
+    @Test
+    fun `returning from an edit replaces a pending deck lookup and ignores its late result`() {
+        mockkObject(AnkiquestDeckNames, AnkiquestCommunity)
+        val old = CompletableDeferred<AnkiquestDeckNames.Deck?>()
+        var lookups = 0
+        coEvery { AnkiquestDeckNames.find(100) } coAnswers {
+            lookups++
+            if (lookups == 1) old.await() else AnkiquestDeckNames.Deck("Edited deck", emptyList()) {}
+        }
+        coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
+        try {
+            val controller = host()
+            val host = controller.get()
+            val moment =
+                AnkiquestMoments.Moment(
+                    "conquered:100",
+                    AnkiquestMoments.Kind.CONQUERED,
+                    "Card conquered",
+                    "",
+                    clock.intTimeMS(),
+                    conquest = 100,
+                    deck = "Old deck",
+                )
+            AnkiquestMomentCard.show(host, AnkiquestHomeData.account(), listOf(moment), prefs)
+            val card = card()
+            advanceRobolectricLooperUntil { lookups == 1 }
+            controller.pause().stop()
+            controller.start().resume()
+            advanceRobolectricLooper()
+            val title = host.getString(R.string.aq_share_deck_edit, "Edited deck")
+            assertEquals(title, card.findViewById<TextView>(R.id.aq_moment_deck)?.text.toString())
+            old.complete(AnkiquestDeckNames.Deck("Stale deck", emptyList()) {})
+            advanceRobolectricLooper()
+            assertEquals(title, card.findViewById<TextView>(R.id.aq_moment_deck)?.text.toString())
+        } finally {
+            old.complete(null)
+            ShadowDialog.getLatestDialog()?.dismiss()
+            unmockkObject(AnkiquestDeckNames, AnkiquestCommunity)
+        }
+    }
+
+    @Test
     fun `a recap joins a moment that appeared before the summary finished`() {
         val host = host().get()
         queue()
