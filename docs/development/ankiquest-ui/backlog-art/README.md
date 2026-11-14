@@ -2,7 +2,7 @@
 
 Aki and Ankilope calmly sort a stack of blank flashcards. The transparent
 336 × 336 WebPs are exported from the 1254 × 1254 PNG masters in the companion
-server change for AnkiQuest/ankiquest#88. `AnkiquestCompanion` maps the pair while
+server change for AnkiQuest/AnkiQuest-Desktop#88. `AnkiquestCompanion` maps the pair while
 preserving the account's mascot choice, including None.
 
 ![Android exports at 128 and 64 pixels, on light and dark](review.png)

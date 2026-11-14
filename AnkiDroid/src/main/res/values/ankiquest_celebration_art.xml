@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
-<!-- Placeholder artwork for images that AnkiQuest/ankiquest#126 did not deliver yet.
+<!-- Placeholder artwork for images that AnkiQuest/AnkiQuest-Desktop#126 did not deliver yet.
      To use a new image, delete its line and add a WebP with the same name to drawable-nodpi. -->
 <resources>
     <!-- Medals for the top three leaderboard rows -->

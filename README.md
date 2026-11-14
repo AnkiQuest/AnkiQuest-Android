@@ -9,7 +9,7 @@
 <a href="https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/COPYING"><img src="https://img.shields.io/github/license/AnkiQuest/AnkiQuest-Android" alt="license"/></a>
 
 # AnkiQuest for Android
-A fork of [AnkiDroid](https://github.com/ankidroid/Anki-Android), the semi-official Android port of the open source [Anki](https://apps.ankiweb.net/index.html) spaced repetition flashcard system, with [AnkiQuest](https://github.com/AnkiQuest/ankiquest) built in: XP, levels, streaks, daily quests and a leaderboard with your friends. Memorize anything, and make a game of it.
+A fork of [AnkiDroid](https://github.com/ankidroid/Anki-Android), the semi-official Android port of the open source [Anki](https://apps.ankiweb.net/index.html) spaced repetition flashcard system, with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop) built in: XP, levels, streaks, daily quests and a leaderboard with your friends. Memorize anything, and make a game of it.
 
 <img src="docs/graphics/logos/ankidroid_logo.png" align="right" width="40%" height="100%"></img>
 
@@ -47,7 +47,7 @@ Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/
 
 Help
 ----
-For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/) and [wiki](https://github.com/ankidroid/Anki-Android/wiki) apply here too. For AnkiQuest, see [the server's README](https://github.com/AnkiQuest/ankiquest).
+For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/) and [wiki](https://github.com/ankidroid/Anki-Android/wiki) apply here too. For AnkiQuest, see [the server's README](https://github.com/AnkiQuest/AnkiQuest-Desktop).
 
 Report bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 

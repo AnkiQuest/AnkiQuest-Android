@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: AnkiQuest/ankiquest
+          repository: AnkiQuest/AnkiQuest-Desktop
           ref: ${{ steps.server-ref.outputs.ref }}
           path: server
           persist-credentials: false

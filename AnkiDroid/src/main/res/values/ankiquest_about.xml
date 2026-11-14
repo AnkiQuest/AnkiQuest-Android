@@ -4,7 +4,7 @@
     tools:keep="@string/about_contributors_description,@string/about_contributors_description_no_donate,@string/license_description,@string/link_source">
     <!-- Preserve upstream About resources for future upstream merges. -->
     <string name="ankiquest_link_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Android</string>
-    <string name="ankiquest_link_server_source" translatable="false">https://github.com/AnkiQuest/ankiquest</string>
+    <string name="ankiquest_link_server_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Desktop</string>
     <string name="ankiquest_about_name" translatable="false">AnkiQuest</string>
     <string name="ankiquest_debug_info_key" translatable="false">ankiquestCopyDebugInfo</string>
     <string name="ankiquest_about_channel">Update channel: %1$s</string>

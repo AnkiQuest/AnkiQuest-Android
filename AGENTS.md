@@ -1,6 +1,6 @@
 # Agent instructions
 
-AnkiQuest-Android is AnkiDroid with AnkiQuest added: streaks, friends, leaderboards and moments, talking to the server in [AnkiQuest/ankiquest](https://github.com/AnkiQuest/ankiquest). These rules apply to every agent (Claude, Codex, others) and to people too.
+AnkiQuest-Android is AnkiDroid with AnkiQuest added: streaks, friends, leaderboards and moments, talking to the server in [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop). These rules apply to every agent (Claude, Codex, others) and to people too.
 
 ## Ownership
 
@@ -46,10 +46,10 @@ Write new code in Rust, or TypeScript for the web, when the platform allows it. 
 
 ## Desktop and Android parity
 
-AnkiQuest has two clients: the Android app ([AnkiQuest/AnkiQuest-Android](https://github.com/AnkiQuest/AnkiQuest-Android)) and the Anki desktop add-on (`addon/` in [AnkiQuest/ankiquest](https://github.com/AnkiQuest/ankiquest)). A player should get the same AnkiQuest on both.
+AnkiQuest has two clients: the Android app ([AnkiQuest/AnkiQuest-Android](https://github.com/AnkiQuest/AnkiQuest-Android)) and the Anki desktop add-on (`addon/` in [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop)). A player should get the same AnkiQuest on both.
 
 - A user-facing feature or behaviour change lands on both clients, unless the platform can't do it (home-screen widgets, for example). Do both in one go when you can. Otherwise open an issue in the other repository, labelled `parity`, and link it from the PR.
-- Rules both clients compute (streak verdicts, heatmap, card labels, deck names) are defined once, as cases in `tests/fixtures/*.json` in AnkiQuest/ankiquest. Both clients test against the same cases. Change the fixture first, then both implementations.
+- Rules both clients compute (streak verdicts, heatmap, card labels, deck names) are defined once, as cases in `tests/fixtures/*.json` in AnkiQuest/AnkiQuest-Desktop. Both clients test against the same cases. Change the fixture first, then both implementations.
 - Use the same names, wording and order for the same thing on both clients.
 - When you find a gap between the clients, open a `parity` issue for it.
 
