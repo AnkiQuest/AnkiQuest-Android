@@ -6,4 +6,5 @@
     <string name="aq_share_deck_help">Choose a name or type your own. It stays on this device until you share it.</string>
     <string name="aq_share_deck_omit">No deck name</string>
     <string name="aq_share_deck_failed">Could not save the deck name.</string>
+    <string name="aq_share_deck_unavailable">The deck name is unavailable on this device.</string>
 </resources>

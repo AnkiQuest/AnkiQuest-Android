@@ -6,4 +6,5 @@
     <string name="aq_share_deck_help">Elige un nombre o escribe uno propio. Se queda en este dispositivo hasta que lo compartas.</string>
     <string name="aq_share_deck_omit">Sin nombre del mazo</string>
     <string name="aq_share_deck_failed">No se pudo guardar el nombre del mazo.</string>
+    <string name="aq_share_deck_unavailable">El nombre del mazo no está disponible en este dispositivo.</string>
 </resources>

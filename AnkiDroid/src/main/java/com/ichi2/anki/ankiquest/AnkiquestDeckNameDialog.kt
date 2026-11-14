@@ -30,7 +30,16 @@ internal object AnkiquestDeckNameDialog {
         host.lifecycleScope.launch {
             try {
                 val deck = AnkiquestDeckNames.find(at)
-                if (deck == null || !owner.isCurrent()) {
+                if (!owner.isCurrent()) {
+                    owner.close()
+                    return@launch
+                }
+                if (deck == null) {
+                    showThemedToast(
+                        host,
+                        AnkiquestLanguage.context(host).getString(R.string.aq_share_deck_unavailable),
+                        shortLength = false,
+                    )
                     owner.close()
                     return@launch
                 }

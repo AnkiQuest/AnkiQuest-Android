@@ -97,12 +97,6 @@ class AnkiquestDeckNameScreenshotTest : ScreenshotTest() {
             }
         }
         captureScreen("${screenshot}_top")
-        val deck =
-            host.findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<TextView>().single {
-                it.text.toString() == host.getString(R.string.aq_share_deck_edit, name)
-            }
-        reveal(deck)
-        captureScreen("${screenshot}_control")
     }
 
     private fun moment(screenshot: String) {

@@ -17,7 +17,6 @@ import java.text.Normalizer
 /** Collection and account -> first noticed home deck -> local sharing choice. No names are uploaded. */
 internal object AnkiquestDeckNames {
     private const val KEY = "ankiquestConquestDecks:"
-    private const val LIMIT = 120
     private const val SHORT_NAME = 3
     private val PREFIX = Regex("""(?U)^(?:#?\d+[\s.)_-]+|\[[A-Za-z0-9]+\]\s*)""")
     private val SPACE = Regex("""(?U)\s+""")
@@ -127,7 +126,10 @@ internal object AnkiquestDeckNames {
     private fun line(value: String): String = value.trim().replace(SPACE, " ")
 
     // Match Python's character limit without splitting a supplementary character.
-    private fun limit(value: String): String = value.take(value.offsetByCodePoints(0, minOf(LIMIT, value.codePointCount(0, value.length))))
+    private fun limit(value: String): String {
+        val count = minOf(AnkiquestShare.MAX_LABEL, value.codePointCount(0, value.length))
+        return value.take(value.offsetByCodePoints(0, count))
+    }
 
     private fun parts(path: String): List<String> =
         buildList {

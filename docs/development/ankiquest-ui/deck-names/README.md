@@ -35,9 +35,8 @@ Run ordinary regression tests separately without `-Pscreenshot`; screenshot mode
 selects screenshot tests only. Native rendering does not replace physical-device
 keyboard, TalkBack or Accessibility Scanner checks.
 
-14 native cases passed; all 22 captures were reviewed, including the scrolled
-actions at 200% font size. The four conquest control captures match their top
-captures byte for byte.
+14 native cases passed; all 18 distinct captures were reviewed, including the scrolled
+actions at 200% font size. Four duplicate conquest captures were removed during review.
 
 | Capture | Light | Dark |
 |---|---|---|
@@ -53,6 +52,10 @@ captures byte for byte.
 
 After integration with the current share sheet and picture download actions, all
 140 affected ordinary/API tests and ktlint pass. The 14 native cases pass again;
-all 22 captures were refreshed and reviewed.
+the captures were refreshed and reviewed (18 distinct images after review).
 A regression also verifies that a pending lookup cannot replace a deck edited
 during another foreground visit.
+
+When a conquest has no local deck record, both entry points explain that the
+deck name is unavailable on this device. Late replies still respect the account
+and foreground owner. The cleaner and editor share one character limit.

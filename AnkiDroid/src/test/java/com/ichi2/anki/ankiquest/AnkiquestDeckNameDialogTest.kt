@@ -22,6 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowToast
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -71,6 +72,33 @@ class AnkiquestDeckNameDialogTest : RobolectricTest() {
             .decorView.allViews
             .filterIsInstance<MaterialAutoCompleteTextView>()
             .single()
+
+    @Test
+    fun `a missing deck explains why the name cannot be edited`() {
+        coEvery { AnkiquestDeckNames.find(100) } returns null
+        AnkiquestDeckNameDialog.show(host().get(), identity, 100) { callbacks.add(it) }
+        advanceRobolectricLooper()
+        assertEquals("The deck name is unavailable on this device.", ShadowToast.getTextOfLatestToast())
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        assertEquals(0, saves)
+    }
+
+    @Test
+    fun `a missing deck lookup cannot notify a replacement account`() {
+        val answer = CompletableDeferred<AnkiquestDeckNames.Deck?>()
+        var operation: Job? = null
+        coEvery { AnkiquestDeckNames.find(100) } coAnswers {
+            operation = currentCoroutineContext()[Job]
+            answer.await()
+        }
+        AnkiquestDeckNameDialog.show(host().get(), identity, 100) { callbacks.add(it) }
+        advanceRobolectricLooperUntil { operation != null }
+        account = identity.copy(user = "other")
+        answer.complete(null)
+        advanceRobolectricLooperUntil { assertNotNull(operation).isCompleted }
+        assertEquals(null, ShadowToast.getTextOfLatestToast())
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+    }
 
     @Test
     fun `the picker offers meaningful parts and saves an edited name once`() {

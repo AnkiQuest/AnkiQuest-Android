@@ -6,4 +6,5 @@
     <string name="aq_share_deck_help">Choisissez un nom ou saisissez le vôtre. Il reste sur cet appareil tant que vous ne le partagez pas.</string>
     <string name="aq_share_deck_omit">Sans nom de paquet</string>
     <string name="aq_share_deck_failed">Impossible de sauvegarder le nom du paquet.</string>
+    <string name="aq_share_deck_unavailable">Le nom du paquet est indisponible sur cet appareil.</string>
 </resources>

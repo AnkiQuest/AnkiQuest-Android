@@ -6,4 +6,5 @@
     <string name="aq_share_deck_help">Wähle einen Namen oder gib einen eigenen ein. Er bleibt bis zum Teilen auf diesem Gerät.</string>
     <string name="aq_share_deck_omit">Kein Stapelname</string>
     <string name="aq_share_deck_failed">Der Stapelname konnte nicht gespeichert werden.</string>
+    <string name="aq_share_deck_unavailable">Der Stapelname ist auf diesem Gerät nicht verfügbar.</string>
 </resources>
