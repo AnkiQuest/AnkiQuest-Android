@@ -86,7 +86,7 @@ class AnkiquestGreetingTest : RobolectricTest() {
         val dialog = awaitGreeting(host)
 
         val signIn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-        assertEquals(targetContext.getString(R.string.ankiquest_greeting_sign_in), signIn.text.toString())
+        assertEquals(targetContext.getString(R.string.ankiquest_sign_in_submit), signIn.text.toString())
         val later = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
         assertEquals(targetContext.getString(R.string.ankiquest_greeting_later), later.text.toString())
 

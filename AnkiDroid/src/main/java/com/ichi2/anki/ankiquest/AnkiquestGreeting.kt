@@ -5,7 +5,6 @@ package com.ichi2.anki.ankiquest
 import android.app.Dialog
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AlertDialog
@@ -76,7 +75,7 @@ internal class AnkiquestGreetingDialog : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val context = requireContext()
-        val view = LayoutInflater.from(context).inflate(R.layout.dialog_ankiquest_greeting, null)
+        val view = requireActivity().layoutInflater.inflate(R.layout.dialog_ankiquest_greeting, null)
         val image = view.findViewById<ImageView>(R.id.ankiquest_greeting_image)
         showArt(image, R.drawable.aki_welcome)
 
@@ -85,7 +84,7 @@ internal class AnkiquestGreetingDialog : DialogFragment() {
         when (account()) {
             Account.SIGNED_OUT ->
                 builder
-                    .setPositiveButton(R.string.ankiquest_greeting_sign_in) { _, _ ->
+                    .setPositiveButton(R.string.ankiquest_sign_in_submit) { _, _ ->
                         startActivity(AnkiquestSettingsFragment.signInIntent(context))
                     }.setNegativeButton(R.string.ankiquest_greeting_later, null)
             Account.SIGNED_IN -> builder.setPositiveButton(R.string.ankiquest_greeting_study, null)
