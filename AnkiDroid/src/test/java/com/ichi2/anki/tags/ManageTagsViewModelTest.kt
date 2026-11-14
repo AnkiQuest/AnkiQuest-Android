@@ -49,6 +49,53 @@ class ManageTagsViewModelTest : JvmTest() {
     val caseFolding = IcuCaseFoldingRule()
 
     @Test
+    fun `rename availability includes used descendants and does not change the collection`() =
+        runTest {
+            addTags("parent::used", "abc", "a1", "a.b")
+            addUnusedTags("parent::unused", "empty::child", "none", "a*", "a?", "a[b]")
+            val before = col.undoStatus()
+            withViewModel {
+                for (name in listOf("parent", "parent::used", "a.b")) {
+                    assertEquals(true, canRenameTag(TagName.asValid(name)), name)
+                }
+                for (name in listOf("parent::unused", "empty", "empty::child", "none", "a*", "a?", "a[b]", "missing")) {
+                    assertEquals(false, canRenameTag(TagName.asValid(name)), name)
+                }
+                assertEquals(before, col.undoStatus())
+                assertTrue(pendingMessages.value.isEmpty())
+            }
+        }
+
+    @Test
+    fun `rename availability failure reports an error instead of claiming the tag is unused`() =
+        runTest {
+            addTags("used")
+            withViewModel {
+                withLockedCollection { assertNull(canRenameTag(TagName.asValid("used"))) }
+                assertIs<CollectionLockedException>(loadedState.error)
+                refreshTags().join()
+                assertEquals(true, canRenameTag(TagName.asValid("used")))
+                assertNull(loadedState.error)
+            }
+        }
+
+    @Test
+    fun `successful rename availability check clears an earlier check failure`() =
+        runTest {
+            addTags("used")
+            addUnusedTags("unused")
+            withViewModel {
+                for ((name, expected) in listOf("used" to true, "unused" to false)) {
+                    val tag = TagName.asValid(name)
+                    withLockedCollection { assertNull(canRenameTag(tag)) }
+                    assertIs<CollectionLockedException>(loadedState.error)
+                    assertEquals(expected, canRenameTag(tag), name)
+                    assertNull(loadedState.error, name)
+                }
+            }
+        }
+
+    @Test
     fun `row equality preserves parent spelling while tag identity ignores case`() {
         val original = tagListItem("parent::child", "child", 1, hasChildren = false, collapsed = false)
         val renamed = original.copy(fullTagName = "PARENT::child")
@@ -611,6 +658,36 @@ class ManageTagsViewModelTest : JvmTest() {
                 }
                 assertEquals(listOf("history", "history::ancient", "science"), loadedState.visibleTagNames)
                 assertFalse(loadedState.isWorking)
+            }
+        }
+
+    @Test
+    fun `closing the screen keeps queued expansion saves ahead of a reopened screen`() =
+        runTest {
+            addTags("science::biology", "history::ancient")
+            val closing = ManageTagsViewModel()
+            withQueuedCollectionAccess {
+                withViewModel(closing) {
+                    toggleCollapsed("science")
+                    toggleCollapsed("history")
+                    toggleCollapsed("history")
+                    assertEquals(listOf("history", "science", "science::biology"), loadedState.visibleTagNames)
+                }
+                withViewModel {
+                    refreshTags().join()
+                    assertEquals(listOf("history", "science", "science::biology"), loadedState.visibleTagNames)
+                }
+            }
+        }
+
+    @Test
+    fun `completed expansion saves survive closing and reopening the screen`() =
+        runTest {
+            addTags("science::biology")
+            withViewModel { toggleCollapsed("science").join() }
+            withViewModel {
+                assertEquals(listOf("science", "science::biology"), loadedState.visibleTagNames)
+                assertFalse(loadedState.visibleNodes.first().collapsed)
             }
         }
 

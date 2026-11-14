@@ -13,6 +13,7 @@ import com.ichi2.anki.browser.SearchHistory.SearchHistoryEntry
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.libanki.DeckNameId
 import com.ichi2.anki.libanki.NoteTypeNameID
+import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.utils.ViewModelSavedStateHandle
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +50,9 @@ class CardBrowserSearchViewModel(
     private val searchHistoryManager = SearchHistory()
 
     val advancedSearchFlow =
-        savedStateHandle.getMutableStateFlow(STATE_ADVANCED_SEARCH_ENABLED, false)
+        savedStateHandle.getMutableStateFlow(STATE_ADVANCED_SEARCH_ENABLED, false).apply {
+            if (!Prefs.devUsingCardBrowserSearchTools) value = false
+        }
 
     val searchTextFlow: StateFlow<String>
         field = savedStateHandle.getMutableStateFlow(STATE_SEARCH_TEXT, "")
@@ -76,7 +79,7 @@ class CardBrowserSearchViewModel(
             it.entryToSearchString.size > MAX_SEARCH_HISTORY_ENTRIES
         }
 
-    val closeSearchViewFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1, replay = 1)
+    val closeSearchViewFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     val submittedSearchFlow = MutableSharedFlow<SearchRequest?>(extraBufferCapacity = 1, replay = 1)
 
@@ -182,6 +185,8 @@ class CardBrowserSearchViewModel(
      * Toggles between Basic and Advanced search mode
      */
     fun toggleAdvancedSearch() {
+        if (!Prefs.devUsingCardBrowserSearchTools) return
+
         Timber.i("Toggling advanced search to %s", !advancedSearchFlow.value)
         advancedSearchFlow.value = !advancedSearchFlow.value
     }
@@ -301,9 +306,6 @@ class CardBrowserSearchViewModel(
             filterStateUpdateFlow.value = FilterUpdate.System(submittedSearch.filters)
 
             isScreenOpenFlow.value = false
-
-            savedStateHandle.remove<Any>(STATE_ADVANCED_SEARCH_ENABLED)
-            savedStateHandle.remove<Any>(STATE_SEARCH_TEXT)
         }
 
     fun syncState(search: SearchRequest) =
