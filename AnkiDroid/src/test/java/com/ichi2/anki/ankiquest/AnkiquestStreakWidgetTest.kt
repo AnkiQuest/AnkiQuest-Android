@@ -17,10 +17,17 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertContains
@@ -242,6 +249,93 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap)
         val frozen = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_freeze, minOf(shown.width, shown.height)))
         assertTrue(shown.sameAs(frozen))
+    }
+
+    /** The companion [widget] shows is [pose]. */
+    private fun assertPose(
+        widget: View,
+        pose: Int,
+        message: String,
+    ) {
+        val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+        val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap, message)
+        val expected = assertNotNull(AnkiquestArt.bitmap(targetContext, pose, minOf(shown.width, shown.height)))
+        val name = targetContext.resources.getResourceEntryName(pose)
+        assertTrue(shown.sameAs(expected), "$message: not $name")
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a studied streak is sad once its day ends`() {
+        // Yesterday counted and its goal was reached; nothing newer arrived before the day ended.
+        val now = TimeManager.time.intTimeMS()
+        val ended = now - 3_600_000
+        val row = me(12, "studied", 30, 20, 10).put("day_ends_at", ended)
+        val profile =
+            JSONObject()
+                .put("streak", 12)
+                .put("streak_state", "studied")
+                .put("day_ends_at", ended)
+                .put(
+                    "goal",
+                    JSONObject()
+                        .put("mode", "cards")
+                        .put("value", 20)
+                        .put("progress", 30)
+                        .put("reached", true),
+                )
+        AnkiquestIcon.update(targetContext, profile, now, targetContext.sharedPrefs())
+
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, JSONArray().put(row), "hill", size, now)
+                    .apply(targetContext, FrameLayout(targetContext))
+            assertPose(widget, AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 12), size.name)
+            assertEquals("12", widget.text(R.id.ankiquest_streak_number), size.name)
+            // The status waits for the server to judge the new day.
+            assertEquals(targetContext.getString(R.string.ankiquest_streak_unknown), widget.text(R.id.ankiquest_streak_status), size.name)
+        }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a goal reached on an ended day does not set today on fire`() {
+        val now = TimeManager.time.intTimeMS()
+        val ended = now - 3_600_000
+        val row = me(12, "pending", 0, 0, 10).put("day_ends_at", ended)
+        val profile =
+            JSONObject()
+                .put("streak", 12)
+                .put("streak_state", "pending")
+                .put("day_ends_at", ended)
+                .put("goal", JSONObject().put("reached", true))
+        AnkiquestIcon.update(targetContext, profile, now, targetContext.sharedPrefs())
+
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, JSONArray().put(row), "hill", AnkiquestStreakWidget.Size.HUGE, now)
+                .apply(targetContext, FrameLayout(targetContext))
+        assertPose(widget, AnkiquestMood.pose(AnkiquestMood.Mood.UNKNOWN, 12), "an unknown day")
+    }
+
+    @Test
+    fun `placed streak widgets are drawn again when the day ends`() {
+        targetContext.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://study.example.test")
+            putString(Ankiquest.PREF_USER, "hill")
+        }
+        mockkObject(AnkiquestPoll)
+        every { AnkiquestPoll.refreshNow(any()) } just Runs
+        try {
+            val manager = AppWidgetManager.getInstance(targetContext)
+            shadowOf(manager).createWidget(AnkiquestStreakWidget::class.java, R.layout.widget_ankiquest_streak)
+            val row = me(12, "studied", 30, 20, 10)
+            AnkiquestStreakWidget.render(targetContext, JSONArray().put(row))
+            verify { AnkiquestPoll.atDayEnd(targetContext, row.getLong("day_ends_at")) }
+        } finally {
+            unmockkObject(AnkiquestPoll)
+        }
     }
 
     /** Edge of the companion bitmap each big layout shows at its largest, from its ImageView maxHeight. */
