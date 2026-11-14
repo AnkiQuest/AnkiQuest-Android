@@ -46,7 +46,11 @@
         "study",
         "upload"
     ],
-    "unused": [],
+    "unused": [
+        "settings",
+        "settings_save",
+        "share_undo_send"
+    ],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",
