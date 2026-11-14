@@ -162,6 +162,7 @@ internal object AnkiquestDay {
      * [server] carried into the next day, for the hours after a counted day ends and before the
      * server answers for the new one: the streak still runs and nothing counts yet. Any other day
      * is returned as it is, so an ended day that did not count still says nothing about today.
+     * Only the companion's mood uses this; streak verdicts and their words wait for the server.
      */
     fun carried(
         server: Server?,
@@ -291,7 +292,10 @@ internal object AnkiquestDay {
         return Evidence(saved.optInt("count"), saved.optLong("time"), saved.optBoolean("earlier"))
     }
 
-    internal fun own(now: Long): Verdict? = judgeOwn(carried(last(), now), now)
+    internal fun own(now: Long): Verdict? = judgeOwn(last(), now)
+
+    /** Like [own], with a counted day that has just ended [carried] into today: for the companion's mood, not for verdicts. */
+    internal fun ownCarried(now: Long): Verdict? = judgeOwn(carried(last(), now), now)
 
     internal fun words(
         context: Context,

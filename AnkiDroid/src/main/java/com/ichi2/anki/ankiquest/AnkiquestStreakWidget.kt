@@ -247,8 +247,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, style.layout(size))
             val me = board?.let { mine(it, player) }
             // The collection can secure today before the board reflects it.
-            val ownDay = if (player != null && player == Ankiquest.player()) AnkiquestDay.own(now) else null
-            val row = AnkiquestDay.carried(me?.let(AnkiquestDay.Server::ownRow), now)
+            val own = player != null && player == Ankiquest.player()
+            val ownDay = if (own) AnkiquestDay.own(now) else null
+            val row = me?.let(AnkiquestDay.Server::ownRow)
             val day = ownDay ?: AnkiquestDay.judge(row, emptyList(), now)
             val streak = if (ownDay == null) me?.optInt("streak") else ownDay.streak
             val state = day?.label ?: AnkiquestDay.State.UNKNOWN
@@ -262,12 +263,15 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 val profile = sameDay(me, now)
                 val goal = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
                 val frozen = profile?.optInt("frozen_days") ?: 0
-                val mood = AnkiquestMood.of(day, frozen, goal)
+                // Until the server answers for a new day, a counted day carries into it: the streak waits.
+                val today = day ?: carriedDay(own, row, now)
+                val mood = AnkiquestMood.of(today, frozen, goal)
+                val days = (if (day != null) streak else today?.streak) ?: 0
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
-                        AnkiquestMood.bigPose(mood, streak ?: 0, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now)
+                        AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now)
                     } else {
-                        AnkiquestMood.pose(mood, streak ?: 0)
+                        AnkiquestMood.pose(mood, days)
                     }
                 setCompanion(views, context, AnkiquestCompanion.resource(aki), companionPx(context, size, options))
             }
@@ -325,6 +329,16 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 )
             }
             return views
+        }
+
+        /** The day after the last counted one for the companion's mood, from your own last day or else from [row]. */
+        private fun carriedDay(
+            own: Boolean,
+            row: AnkiquestDay.Server?,
+            now: Long,
+        ): AnkiquestDay.Verdict? {
+            val mine = if (own) AnkiquestDay.ownCarried(now) else null
+            return mine ?: AnkiquestDay.judge(AnkiquestDay.carried(row, now), emptyList(), now)
         }
 
         /** A bitmap decoded for [pixels] keeps the launcher from upscaling the drawable; null [pixels] keeps the drawable. */

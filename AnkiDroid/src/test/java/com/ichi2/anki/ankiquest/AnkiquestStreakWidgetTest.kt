@@ -276,7 +276,14 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                 .put("streak", 12)
                 .put("streak_state", "studied")
                 .put("day_ends_at", ended)
-                .put("goal", JSONObject().put("mode", "cards").put("value", 20).put("progress", 30).put("reached", true))
+                .put(
+                    "goal",
+                    JSONObject()
+                        .put("mode", "cards")
+                        .put("value", 20)
+                        .put("progress", 30)
+                        .put("reached", true),
+                )
         AnkiquestIcon.update(targetContext, profile, now, targetContext.sharedPrefs())
 
         for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
@@ -286,7 +293,8 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                     .apply(targetContext, FrameLayout(targetContext))
             assertPose(widget, AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 12), size.name)
             assertEquals("12", widget.text(R.id.ankiquest_streak_number), size.name)
-            assertEquals(targetContext.getString(R.string.ankiquest_streak_pending), widget.text(R.id.ankiquest_streak_status), size.name)
+            // The status waits for the server to judge the new day.
+            assertEquals(targetContext.getString(R.string.ankiquest_streak_unknown), widget.text(R.id.ankiquest_streak_status), size.name)
         }
     }
 

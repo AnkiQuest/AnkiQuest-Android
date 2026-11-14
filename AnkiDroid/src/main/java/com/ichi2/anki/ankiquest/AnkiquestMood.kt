@@ -126,7 +126,7 @@ internal object AnkiquestMood {
      */
     @DrawableRes
     fun ownPose(now: Long): Int {
-        val day = AnkiquestDay.own(now)
+        val day = AnkiquestDay.ownCarried(now)
         // The last profile's goal and frozen days only count while its day is the one judged.
         val endsAt = AnkiquestDay.last()?.dayEndsAt?.takeIf { it > now }
         val last = AnkiquestIcon.lastKnown()?.takeIf { endsAt != null && it.optLong("day_ends_at") == endsAt }

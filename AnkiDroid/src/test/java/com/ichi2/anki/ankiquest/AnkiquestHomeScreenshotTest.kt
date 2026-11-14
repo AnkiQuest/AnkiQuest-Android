@@ -80,7 +80,11 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestHomeData.profile(any()) } coAnswers {
             withContext(Dispatchers.IO) {
                 delay(1_000)
-                JSONObject().put("level", 4).put("streak", 3).put("streak_state", "pending").put("day_ends_at", DAY_ENDS_AT)
+                JSONObject()
+                    .put("level", 4)
+                    .put("streak", 3)
+                    .put("streak_state", "pending")
+                    .put("day_ends_at", DAY_ENDS_AT)
             }
         }
         captureToday(prefix = "today_delayed")

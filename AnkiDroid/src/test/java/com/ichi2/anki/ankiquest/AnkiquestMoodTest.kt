@@ -219,7 +219,11 @@ class AnkiquestMoodTest : RobolectricTest() {
         }
         val today = JSONObject().put("starts_at", now - HOUR).put("reviews", 0).put("streak_minutes", 10)
         AnkiquestDay.remember(
-            JSONObject().put("streak", 12).put("streak_state", "pending").put("day_ends_at", now + HOUR).put("today", today),
+            JSONObject()
+                .put("streak", 12)
+                .put("streak_state", "pending")
+                .put("day_ends_at", now + HOUR)
+                .put("today", today),
         )
 
         val view = ReviewHeatmapView(ContextThemeWrapper(targetContext, CommonR.style.Theme_Light))
