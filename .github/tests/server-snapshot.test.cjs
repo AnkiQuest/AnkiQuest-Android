@@ -110,12 +110,16 @@ test("the server baseline is an immutable commit, with explicit example ownershi
     ]);
 });
 
-test("normal contract and fixture runs never substitute server master", () => {
-    for (const name of ["ankiquest_api_contract.yml", "ankiquest_fixtures.yml"]) {
+test("normal contract, fixture and art runs never substitute server master", () => {
+    for (const name of [
+        "ankiquest_api_contract.yml",
+        "ankiquest_art_check.yml",
+        "ankiquest_fixtures.yml",
+    ]) {
         const workflow = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
         assert.doesNotMatch(
             workflow,
-            /inputs\.server_ref\s*\|\|\s*'master'|raw\.githubusercontent\.com\/float3\/ankiquest\/master/,
+            /inputs\.server_ref\s*\|\|\s*'master'|\bref: master\b|raw\.githubusercontent\.com\/float3\/ankiquest\/master/,
         );
         assert.match(workflow, /server_ref:/);
         assert.match(workflow, /ankiquest_server_snapshot\.cjs/);

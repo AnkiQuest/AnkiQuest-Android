@@ -8,6 +8,12 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      server_ref:
+        description: "Optional server branch, tag or commit for an ad-hoc check; blank uses the committed pin"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -26,10 +32,18 @@ jobs:
         with:
           persist-credentials: false
 
+      # Check against the pinned server commit (#203), so a server merge cannot turn main red;
+      # the bump PR brings exporter changes in.
+      - name: Read the immutable server pin or manual override
+        id: server-ref
+        env:
+          SERVER_REF: ${{ inputs.server_ref }}
+        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: float3/ankiquest
-          ref: master
+          ref: ${{ steps.server-ref.outputs.ref }}
           path: server
           persist-credentials: false
 
