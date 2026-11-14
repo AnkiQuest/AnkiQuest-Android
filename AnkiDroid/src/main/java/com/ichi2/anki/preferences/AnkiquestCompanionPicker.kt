@@ -154,7 +154,9 @@ internal class AnkiquestCompanionPicker(
                     super.onInitializeAccessibilityNodeInfo(host, info)
                     info.className = RadioButton::class.java.name
                     info.isCheckable = true
-                    info.isChecked = selected
+                    info.setChecked(
+                        if (selected) AccessibilityNodeInfoCompat.CHECKED_STATE_TRUE else AccessibilityNodeInfoCompat.CHECKED_STATE_FALSE,
+                    )
                 }
             },
         )

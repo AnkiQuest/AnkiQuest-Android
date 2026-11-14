@@ -6,6 +6,8 @@ import android.os.Looper
 import android.view.View
 import android.widget.LinearLayout
 import androidx.core.content.edit
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CHECKED_STATE_TRUE
 import androidx.core.view.children
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
@@ -122,7 +124,7 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     /** The card drawn with the thick outline, read through its accessibility state. */
     private fun AnkiquestCompanionFragment.chosen(): CharSequence? =
         cards()
-            .first { it.createAccessibilityNodeInfo().isChecked }
+            .first { AccessibilityNodeInfoCompat.wrap(it.createAccessibilityNodeInfo()).checked == CHECKED_STATE_TRUE }
             .contentDescription
 
     private companion object {
