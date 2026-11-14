@@ -10,22 +10,35 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
 
 /** Aki encourages real progress without changing study, scoring or notification rules. */
 internal object AnkiquestAki {
-    enum class Mood(
-        @DrawableRes val image: Int,
-        @StringRes val message: Int,
+    /** What the Home card says, chosen to fit Aki's mood. */
+    enum class Message { WELCOME, REVIEW, COMPLETE, STREAK, PROTECTED, WAITING }
+
+    /** The Home card: Aki's [mood] for a [streak] of that many days, and a [message] that fits it. */
+    data class Card(
+        val mood: AnkiquestMood.Mood,
+        val streak: Int,
+        val message: Message,
     ) {
-        WELCOME(R.drawable.aki_welcome, R.string.aki_welcome),
-        REVIEW(R.drawable.aki_review, R.string.aki_review),
-        CELEBRATE(R.drawable.aki_celebrate, R.string.aki_complete),
-        STREAK(R.drawable.aki_streak, R.string.aki_streak),
-        FREEZE(R.drawable.aki_freeze_used, R.string.aki_protected),
+        /** The pose [AnkiquestMood] gives the mood, as on the streak widget. */
+        @get:DrawableRes
+        val image: Int get() = AnkiquestMood.pose(mood, streak)
+
+        fun text(context: Context): String =
+            when (message) {
+                Message.WELCOME -> context.getString(R.string.aki_welcome)
+                Message.REVIEW -> context.getString(R.string.aki_review)
+                Message.COMPLETE -> context.getString(R.string.aki_complete)
+                Message.STREAK -> context.getString(R.string.aki_streak)
+                Message.PROTECTED -> context.getString(R.string.aki_protected)
+                Message.WAITING -> context.resources.getQuantityString(R.plurals.aki_streak_waiting, streak, streak)
+            }
     }
 
     /** Aki's mood for today; the collection, not the server, says whether cards are still due. */
@@ -33,7 +46,7 @@ internal object AnkiquestAki {
         local: HomeLocal?,
         profile: JSONObject?,
         now: Long = TimeManager.time.intTimeMS(),
-    ): Mood {
+    ): Card {
         val goal = local?.goal
         val day =
             if (goal == null) {
@@ -41,20 +54,42 @@ internal object AnkiquestAki {
             } else {
                 goal.withServerDay(profile, now).streakDay
             }
-        if (day?.label == AnkiquestDay.State.PROTECTED && day.reviews == 0) {
-            return Mood.FREEZE
-        }
-        if (local?.decks?.isNotEmpty() == true && local.decks.all { it.due == 0 } &&
-            (day?.reviews ?: 0) > 0
-        ) {
-            return Mood.CELEBRATE
-        }
-        if ((local?.focus?.due ?: 0) > 0) return Mood.REVIEW
-        if (day?.met == true && day.reviews > 0) {
-            return Mood.STREAK
-        }
-        return Mood.WELCOME
+
+        // The pose follows the one mood rule; the profile's goal and frozen days count only while its day is today.
+        val current = profile?.takeIf { day != null }
+        val reached = if (current?.optJSONObject("goal")?.optBoolean("reached") == true) Goal.REACHED else Goal.OPEN
+        val mood = AnkiquestMood.of(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
+        return Card(mood, day?.streak ?: 0, message(mood, local, day))
     }
+
+    private fun message(
+        mood: AnkiquestMood.Mood,
+        local: HomeLocal?,
+        day: AnkiquestDay.Verdict?,
+    ): Message {
+        // A streak waiting for today, or kept by a freeze, comes before anything about the decks.
+        if (mood == AnkiquestMood.Mood.SAD) {
+            return Message.WAITING
+        }
+        if (mood in frozen) {
+            return Message.PROTECTED
+        }
+
+        // Otherwise the decks decide: all done after real study, or cards still due.
+        val reviewed = (day?.reviews ?: 0) > 0
+        if (reviewed && local?.decks?.isNotEmpty() == true && local.decks.all { it.due == 0 }) {
+            return Message.COMPLETE
+        }
+        if ((local?.focus?.due ?: 0) > 0) {
+            return Message.REVIEW
+        }
+        if (mood == AnkiquestMood.Mood.FIRE) {
+            return Message.STREAK
+        }
+        return Message.WELCOME
+    }
+
+    private val frozen = setOf(AnkiquestMood.Mood.FROZEN_1, AnkiquestMood.Mood.FROZEN_2, AnkiquestMood.Mood.FROZEN_3)
 
     fun image(
         context: Context,
@@ -70,17 +105,17 @@ internal object AnkiquestAki {
 
     fun encouragement(
         context: Context,
-        mood: Mood,
+        card: Card,
     ): LinearLayout =
         LinearLayout(context).apply {
             visibility = if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(context, 8), 0, dp(context, 8))
-            addView(image(context, mood.image))
+            addView(image(context, card.image))
             addView(
                 TextView(context).apply {
-                    text = context.getString(mood.message)
+                    text = card.text(context)
                     textSize = 16f
                     setTextColor(context.getColor(R.color.aq_home_text))
                     setPadding(dp(context, 12), 0, 0, 0)

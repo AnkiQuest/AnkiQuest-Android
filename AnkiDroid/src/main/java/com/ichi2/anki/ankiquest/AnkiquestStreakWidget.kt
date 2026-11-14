@@ -170,8 +170,12 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
          * The last own profile when it is for the study day of [entry], for what the leaderboard row
          * does not say: the goal and the frozen days before today.
          */
-        private fun sameDay(entry: JSONObject?): JSONObject? {
-            val dayEndsAt = entry?.optLong("day_ends_at")?.takeIf { it > 0 } ?: return null
+        private fun sameDay(
+            entry: JSONObject?,
+            now: Long,
+        ): JSONObject? {
+            // An ended day's goal and frozen days say nothing about today.
+            val dayEndsAt = entry?.optLong("day_ends_at")?.takeIf { it > now } ?: return null
             val last = runCatching { AnkiquestIcon.lastKnown() }.getOrNull() ?: return null
             return last.takeIf { it.optLong("day_ends_at") == dayEndsAt }
         }
@@ -184,6 +188,13 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val manager = getAppWidgetManager(context) ?: return
             for (style in Style.entries) {
                 renderStyle(context, board, manager, style)
+            }
+
+            // A drawn day is wrong once it ends: draw the next one then, not at the next periodic poll.
+            val placed = Style.entries.any { manager.getAppWidgetIds(ComponentName(context, it.provider))?.isNotEmpty() == true }
+            val endsAt = board?.let { mine(it, Ankiquest.player()) }?.optLong("day_ends_at") ?: 0
+            if (placed && endsAt > 0) {
+                AnkiquestPoll.atDayEnd(context, endsAt)
             }
         }
 
@@ -237,7 +248,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val me = board?.let { mine(it, player) }
             // The collection can secure today before the board reflects it.
             val ownDay = if (player != null && player == Ankiquest.player()) AnkiquestDay.own(now) else null
-            val day = ownDay ?: AnkiquestDay.judge(me?.let(AnkiquestDay.Server::ownRow), emptyList(), now)
+            val row = AnkiquestDay.carried(me?.let(AnkiquestDay.Server::ownRow), now)
+            val day = ownDay ?: AnkiquestDay.judge(row, emptyList(), now)
             val streak = if (ownDay == null) me?.optInt("streak") else ownDay.streak
             val state = day?.label ?: AnkiquestDay.State.UNKNOWN
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
@@ -247,10 +259,10 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val companionVisible = AnkiquestCompanion.visible()
             views.setViewVisibility(R.id.ankiquest_streak_companion, if (companionVisible) View.VISIBLE else View.GONE)
             if (companionVisible) {
-                val profile = sameDay(me)
+                val profile = sameDay(me, now)
                 val goal = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
                 val frozen = profile?.optInt("frozen_days") ?: 0
-                val mood = AnkiquestMood.of(state, day?.reviews ?: 0, streak ?: 0, frozen, goal)
+                val mood = AnkiquestMood.of(day, frozen, goal)
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
                         AnkiquestMood.bigPose(mood, streak ?: 0, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now)

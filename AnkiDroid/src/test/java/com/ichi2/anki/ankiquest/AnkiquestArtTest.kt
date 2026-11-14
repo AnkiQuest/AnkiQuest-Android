@@ -37,6 +37,14 @@ class AnkiquestArtTest {
     }
 
     @Test
+    fun `streak reminders show today's mood`() {
+        val sad = AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 1)
+        assertEquals(sad, AnkiquestArt.forNotice("reminder_urgent", null), "a streak with no study today")
+        assertEquals(sad, AnkiquestArt.forNotice("reminder_milestone", null), "a streak one study day from a milestone")
+        assertEquals(AnkiquestMood.pose(AnkiquestMood.Mood.FROZEN_1, 1), AnkiquestArt.forNotice("reminder_freeze_used", null))
+    }
+
+    @Test
     fun `only the top three get a medal`() {
         assertEquals(R.drawable.icon_place_1, AnkiquestArt.medal(1))
         assertEquals(R.drawable.icon_place_3, AnkiquestArt.medal(3))

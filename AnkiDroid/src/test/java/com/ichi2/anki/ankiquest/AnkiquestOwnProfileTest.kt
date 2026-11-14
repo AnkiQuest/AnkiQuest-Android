@@ -126,7 +126,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             registerAliases()
             answer = profile("pending", 12, 2)
             Ankiquest.uploadPending()
-            assertEquals(listOf(Mood.WORRIED), enabled(), "the last hours of an open day worry Aki")
+            assertEquals(listOf(Mood.WORRIED), enabled(), "a streak not studied today worries Aki")
 
             answer = profile("studied", 13, 2)
             Ankiquest.uploadPending()

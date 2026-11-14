@@ -10,9 +10,10 @@ import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import org.json.JSONArray
 
 /**
- * How Aki feels about today's streak: the one rule for the streak widget, the streak moments and
- * their pictures. Sad before any study, hopeful after some, on fire once today counts, and frozen
- * after days a freeze kept. New poses for sad, hopeful and the frozen levels are requested in
+ * How Aki feels about today's streak: the one rule for every place the companion shows today, from
+ * the streak widget and the Home card to the launcher icon, the heatmap and streak reminders. Sad
+ * before any study, hopeful after some, on fire once today counts, and frozen after days a freeze
+ * kept. New poses for sad, hopeful and the frozen levels are requested in
  * float3/ankiquest#88; until then the closest existing poses stand in.
  */
 internal object AnkiquestMood {
@@ -102,6 +103,35 @@ internal object AnkiquestMood {
             streak == 0 -> Mood.ASLEEP
             else -> Mood.SAD
         }
+    }
+
+    /**
+     * The mood for today's [day] verdict; [Mood.UNKNOWN] without one. [frozenDays] and [goal] must
+     * be for the same day.
+     */
+    fun of(
+        day: AnkiquestDay.Verdict?,
+        frozenDays: Int,
+        goal: Goal,
+    ): Mood {
+        if (day == null) {
+            return Mood.UNKNOWN
+        }
+        return of(day.label, day.reviews, day.streak ?: 0, frozenDays, goal)
+    }
+
+    /**
+     * Aki's pose today for the signed-in player, from what the server and the collection last said:
+     * the same mood the streak widget shows.
+     */
+    @DrawableRes
+    fun ownPose(now: Long): Int {
+        val day = AnkiquestDay.own(now)
+        // The last profile's goal and frozen days only count while its day is the one judged.
+        val endsAt = AnkiquestDay.last()?.dayEndsAt?.takeIf { it > now }
+        val last = AnkiquestIcon.lastKnown()?.takeIf { endsAt != null && it.optLong("day_ends_at") == endsAt }
+        val goal = if (last?.optBoolean("goal_reached") == true) Goal.REACHED else Goal.OPEN
+        return pose(of(day, last?.optInt("frozen_days") ?: 0, goal), day?.streak ?: 0)
     }
 
     /** Aki's pose for [mood] with a [streak] of that many days. */
