@@ -46,6 +46,8 @@
         "social_change",
         "streak_freezes",
         "study",
+        "unlocks",
+        "unlocks_save",
         "upload"
     ],
     "unused": [

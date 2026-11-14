@@ -100,53 +100,29 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             AnkiquestCapabilities.refresh(account)
         }
 
-    /** One case of the shared fixture: taps as (choice, milliseconds), and whether the last one unlocks. */
-    private data class TapCase(
-        val name: String,
-        val sequence: List<Pair<String, Long>>,
-        val unlocks: Boolean,
-    )
-
-    /**
-     * The cases of `tests/fixtures/companion_unlock.json` in float3/ankiquest, copied until the pinned
-     * server commit (`ankiquest-server.sha`) includes the fixture; then this reads it.
-     */
-    private val tapCases =
-        listOf(
-            TapCase("nine quick taps unlock", ankilope(0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400), unlocks = true),
-            TapCase("eight taps are not enough", ankilope(0, 300, 600, 900, 1200, 1500, 1800, 2100), unlocks = false),
-            TapCase(
-                "a gap of exactly max_gap_ms still counts",
-                ankilope(0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000),
-                unlocks = true,
-            ),
-            TapCase("a longer gap starts again", ankilope(0, 300, 600, 900, 3000, 3300, 3600, 3900, 4200), unlocks = false),
-            TapCase(
-                "the late tap is the first of the new run",
-                ankilope(0, 5000, 5100, 5200, 5300, 5400, 5500, 5600, 5700, 5800),
-                unlocks = true,
-            ),
-            TapCase(
-                "a tap on another choice starts again",
-                ankilope(0, 100, 200, 300) + ("aki" to 400L) + ankilope(500, 600, 700, 800),
-                unlocks = false,
-            ),
-            TapCase(
-                "taps on other choices never unlock",
-                listOf<Long>(0, 100, 200, 300, 400).map { "aki" to it } + listOf<Long>(500, 600, 700, 800).map { "none" to it },
-                unlocks = false,
-            ),
+    /** The shared fixture `tests/fixtures/companion_unlock.json` from the pinned server commit. */
+    private val fixture =
+        JSONObject(
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_unlock.json")) { "missing companion unlock" }.readText(),
         )
-
-    private fun ankilope(vararg times: Long) = times.map { "ankilope" to it }
 
     @Test
     fun `the tap rule matches the shared fixture`() {
-        assertEquals(UnlockTapRule(taps = 9, maxGapMs = 2000), UnlockTapRule.COW)
-        for (case in tapCases) {
+        assertEquals(UnlockTapRule(taps = fixture.getInt("taps"), maxGapMs = fixture.getLong("max_gap_ms")), UnlockTapRule.COW)
+
+        // Each case taps through a fresh counter; only the last tap's progress is checked.
+        val cases = fixture.getJSONArray("cases")
+        assertTrue(cases.length() > 0)
+        for (i in 0 until cases.length()) {
+            val case = cases.getJSONObject(i)
+            val sequence = case.getJSONArray("sequence")
             val taps = UnlockTaps(UnlockTapRule.COW)
-            val last = case.sequence.map { (choice, at) -> taps.tap(Choice.of(choice), at) }.last()
-            assertEquals(case.unlocks, last == UnlockTaps.Progress.UNLOCKED, case.name)
+            val last =
+                (0 until sequence.length())
+                    .map { sequence.getJSONArray(it) }
+                    .map { taps.tap(Choice.of(it.getString(0)), it.getLong(1)) }
+                    .last()
+            assertEquals(case.getBoolean("unlocks"), last == UnlockTaps.Progress.UNLOCKED, case.getString("name"))
         }
     }
 

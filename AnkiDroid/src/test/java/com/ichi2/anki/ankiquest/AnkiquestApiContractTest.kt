@@ -394,6 +394,19 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `an unlock made on this phone is saved and the server's list is kept`() =
+        runBlocking {
+            AnkiquestCapabilities.refresh(account)
+            AnkiquestUnlocks.unlock(account, AnkiquestUnlocks.Unlock.COW)
+
+            AnkiquestUnlocks.sync(account)
+
+            assertEquals(AnkiquestUnlocks.State.SYNCED, AnkiquestUnlocks.state(account, AnkiquestUnlocks.Unlock.COW))
+            assertTrue("POST /api/unlocks/hill" in requests, "$requests")
+            assertTrue("GET /api/unlocks/hill" in requests, "$requests")
+        }
+
+    @Test
     fun `a moment sent to chosen friends or a group answers its win and can be taken back`() =
         runBlocking {
             val conquest = AnkiquestSharing.MomentRef.Conquest(1_793_097_000_000L)
@@ -697,6 +710,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/accounts/hill" && method == "GET" -> "account"
             path == "/api/records" -> "records"
             path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
+            path == "/api/unlocks/hill" -> if (method == "POST") "unlocks_save" else "unlocks"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"
