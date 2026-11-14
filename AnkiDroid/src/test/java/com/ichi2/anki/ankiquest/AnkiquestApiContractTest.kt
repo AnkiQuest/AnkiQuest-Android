@@ -52,6 +52,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private lateinit var server: HttpServer
     private lateinit var url: String
     private val requests = CopyOnWriteArrayList<String>()
+    private val shareRetractions = CopyOnWriteArrayList<String>()
     private val manager get() = targetContext.getSystemService<NotificationManager>()!!
 
     @Before
@@ -65,6 +66,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
         server.createContext("/") { exchange ->
             val path = exchange.requestURI.path
             requests += "${exchange.requestMethod} $path"
+            if (exchange.requestMethod == "DELETE" && path.startsWith("/api/share/")) {
+                shareRetractions += exchange.requestURI.toString()
+            }
             val sent = exchange.requestBody.bufferedReader().use { it.readText() }
             val body = route(exchange.requestMethod, path, sent, exchange.requestURI.query)?.let(::example)?.toByteArray(Charsets.UTF_8)
             exchange.responseHeaders.set("Content-Type", "application/json")
@@ -408,7 +412,14 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(3L, shared.win)
             assertNotNull(shared.undoUntil)
 
-            assertEquals(1, AnkiquestSharing.retract(account, told.win))
+            mockkObject(AnkiquestCapabilities)
+            every { AnkiquestCapabilities.has(account, any()) } returns false
+            try {
+                assertEquals(1, AnkiquestSharing.retract(account, told))
+            } finally {
+                unmockkObject(AnkiquestCapabilities)
+            }
+            assertEquals(listOf("/api/share/hill/6"), shareRetractions.toList(), "older servers keep the original endpoint")
             assertEquals(
                 listOf("POST /api/share/hill", "POST /api/share/hill", "DELETE /api/share/hill/6"),
                 requests.filter {
@@ -416,6 +427,33 @@ class AnkiquestApiContractTest : RobolectricTest() {
                         it
                 },
             )
+        }
+
+    @Test
+    fun `send-specific Undo uses the receipt selector from the server`() =
+        runBlocking {
+            val features = AnkiquestCapabilities.parse(example("capabilities"))
+            assertTrue("share_undo_send" in features)
+            mockkObject(AnkiquestCapabilities)
+            every { AnkiquestCapabilities.has(account, any()) } answers { secondArg<String>() in features }
+            try {
+                val told =
+                    AnkiquestSharing.send(
+                        account,
+                        AnkiquestSharing.MomentRef.Conquest(1_793_097_000_000L),
+                        AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList()),
+                        null,
+                    )
+                assertEquals(1_793_269_800_000L, told.undoUntil)
+                assertEquals(1, AnkiquestSharing.retract(account, told))
+                assertEquals(listOf("/api/share/hill/6?until=${told.undoUntil}"), shareRetractions.toList())
+
+                // A missing receipt cannot accidentally retract every send of this win.
+                assertFailsWith<IllegalArgumentException> { AnkiquestSharing.retract(account, told.copy(undoUntil = null)) }
+                assertEquals(1, shareRetractions.size)
+            } finally {
+                unmockkObject(AnkiquestCapabilities)
+            }
         }
 
     @Test
@@ -667,7 +705,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/week" -> "week"
             path == "/api/profile/cerro" -> "player_profile"
             parts.size == 2 && parts[0] == "wins" -> "wins"
-            parts.size == 3 && parts[0] == "share" && method == "DELETE" -> "share_undo"
+            parts.size == 3 && parts[0] == "share" && method == "DELETE" ->
+                if (params.any { it.startsWith("until=") }) "share_undo_send" else "share_undo"
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).has("moment") -> shareMoment(sent)
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).optString("to") == "link" -> "share_to_link"
             path == "/api/accounts" && method == "POST" -> "sign_up"
