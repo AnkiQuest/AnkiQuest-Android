@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.graphics.Color
 import androidx.core.content.edit
+import androidx.core.graphics.get
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
@@ -91,10 +92,10 @@ class AnkiquestCompanionTest : RobolectricTest() {
         val opaque =
             (0 until art.width)
                 .flatMap { x -> (0 until art.height).map { y -> x to y } }
-                .filter { (x, y) -> Color.alpha(art.getPixel(x, y)) == OPAQUE }
+                .filter { (x, y) -> Color.alpha(art[x, y]) == OPAQUE }
         assertTrue(opaque.isNotEmpty())
         for ((x, y) in opaque) {
-            val pixel = shadow.getPixel(x, y)
+            val pixel = shadow[x, y]
             for (channel in listOf(Color.red(pixel), Color.green(pixel), Color.blue(pixel))) {
                 assertTrue(channel in SILHOUETTE_GREY - ROUNDING..SILHOUETTE_GREY + ROUNDING, "grey at $x,$y: $channel")
             }
