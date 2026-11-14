@@ -140,6 +140,19 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         show(context, mood, prefs)
     }
 
+    /** Shows the mood, or the plain icon when off, after the setting changed outside the settings screen. */
+    fun refresh(
+        context: Context,
+        now: Long,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) {
+        if (enabled(prefs)) {
+            showLastKnown(context, now, prefs)
+        } else {
+            show(context, Mood.DEFAULT, prefs)
+        }
+    }
+
     /**
      * Requests the mood for the last profile without waiting for the next poll, as when the setting
      * is turned on. Until a profile has been seen that is the plain icon.
