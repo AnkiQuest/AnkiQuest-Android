@@ -5,7 +5,8 @@ commit used by Android's committed API examples and shared fixtures.
 Normal PR and main builds test those committed files. A cheap isolated job
 checks them against that SHA; it never substitutes server master or runs
 server code. The art check runs the exporter from that pinned
-server commit, not from master. The Gradle contract job receives no server checkout or new data
+server commit, not from master, and takes no manual `server_ref`: it runs
+server code with a Rust cache shared with main. The Gradle contract job receives no server checkout or new data
 unless a manual `server_ref` is explicitly supplied.
 
 `ankiquest-api/names.json` assigns every example to exactly one group:
