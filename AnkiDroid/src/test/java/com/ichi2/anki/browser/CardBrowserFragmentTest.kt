@@ -5,6 +5,7 @@ package com.ichi2.anki.browser
 import android.content.Intent
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -14,23 +15,42 @@ import com.ichi2.anki.CardBrowser
 import com.ichi2.anki.Flag
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.SingleFragmentActivity
 import com.ichi2.anki.browser.search.AdvancedSearchFragment
 import com.ichi2.anki.browser.search.SavedSearch
 import com.ichi2.anki.browser.search.SearchFilters
 import com.ichi2.anki.browser.search.StandardSearchFragment
 import com.ichi2.anki.browser.search.requireChildFragment
+import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.crashreporting.CrashReporter
+import com.ichi2.anki.filtered.FilteredDeckOptionsFragment
 import com.ichi2.anki.getVisibleRows
+import com.ichi2.anki.libanki.DeckNameId
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.model.SortType
 import com.ichi2.anki.settings.Prefs
+import com.ichi2.anki.throwOnShowError
+import com.ichi2.testutils.withPref
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.sameInstance
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.empty
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowDialog
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** Test of [CardBrowserFragment] */
 @RunWith(AndroidJUnit4::class)
@@ -111,13 +131,26 @@ class CardBrowserFragmentTest : RobolectricTest() {
         }
 
     @Test
-    fun `switching search modes preserves draft text and selection`() =
+    fun `new search view leaves Search tools disabled by default`() =
         withCardBrowserFragment(useSearchView = true) {
+            searchView!!.show()
+            advanceRobolectricLooper()
+
+            val basic = requireChildFragment<StandardSearchFragment>(StandardSearchFragment.TAG)
+            assertThat("Basic search remains available", basic.isVisible, equalTo(true))
+            assertFalse(basic.binding.toggleAdvancedSearch.isVisible)
+            assertNull(childFragmentManager.findFragmentByTag(AdvancedSearchFragment.TAG))
+        }
+
+    @Test
+    fun `switching search modes preserves draft text and selection`() =
+        withCardBrowserFragment(useSearchView = true, useSearchTools = true) {
             val search = searchView!!
             search.show()
             advanceRobolectricLooper()
             assertSearchMode(advancedSearch = false)
             val basicSearch = requireChildFragment<StandardSearchFragment>(StandardSearchFragment.TAG)
+            assertTrue(basicSearch.binding.toggleAdvancedSearch.isVisible)
 
             val queries = listOf("  basic draft  ", "tag:example draft", "")
             for (query in queries) {
@@ -148,7 +181,7 @@ class CardBrowserFragmentTest : RobolectricTest() {
 
     @Test
     fun `edits in Search tools replace the Basic draft`() =
-        withCardBrowserFragment(useSearchView = true) {
+        withCardBrowserFragment(useSearchView = true, useSearchTools = true) {
             val search = searchView!!
             search.show()
             advanceRobolectricLooper()
@@ -172,6 +205,87 @@ class CardBrowserFragmentTest : RobolectricTest() {
                 assertThat(search.editText.text.toString(), equalTo(query))
                 assertThat(search.editText.selectionStart, equalTo(query.length))
                 assertThat(search.editText.selectionEnd, equalTo(query.length))
+            }
+        }
+
+    @Test
+    fun `filtered deck search is the browser search`() =
+        withCardBrowserFragment {
+            // 'OR' binds looser than the selected deck, and '_' is a wildcard which also matches 'Chapter11'
+            val first = addBasicNote("first").apply { moveToDeck("Chapter_1") }
+            val second = addBasicNote("second").apply { moveToDeck("Chapter_1") }
+            addBasicNote("second").apply { moveToDeck("Chapter11") }
+            addBasicNote("first").apply { moveToDeck("Other") }
+            val deckId = requireNotNull(col.decks.idForName("Chapter_1"))
+            activityViewModel.searchRequestFlow.update { request ->
+                request.copy(query = "first OR second").copyFilters { it.copy(decks = listOf(DeckNameId("Chapter_1", deckId))) }
+            }
+
+            val search = filteredDeckSearch()
+
+            assertThat(col.findCards(search), containsInAnyOrder(first.firstCard().id, second.firstCard().id))
+        }
+
+    @Test
+    fun `invalid browser query is not reported as a crash when creating a filtered deck`() {
+        val originalReporter = CrashReportService.getReporter()
+        val originalThrowOnShowError = throwOnShowError
+        val reporter = mock<CrashReporter>()
+        CrashReportService.setReporter(reporter)
+        try {
+            withCardBrowserFragment {
+                throwOnShowError = false
+                activityViewModel.setQuery("and").join()
+                advanceRobolectricLooper()
+
+                showFilteredDeckScreen()
+                advanceRobolectricLooper()
+                // The error handler sends its crash report when the dialog is dismissed.
+                requireNotNull(ShadowDialog.getLatestDialog()) { "the error is shown" }.dismiss()
+                advanceRobolectricLooper()
+
+                verify(reporter, never()).sendExceptionReport(any<Throwable>(), anyOrNull(), anyOrNull(), any())
+            }
+        } finally {
+            CrashReportService.setReporter(originalReporter)
+            throwOnShowError = originalThrowOnShowError
+        }
+    }
+
+    @Test
+    fun `search view stays open after leaving and returning once a search was submitted`() =
+        withPref(Prefs::devUsingCardBrowserSearchView, true) {
+            withPref(Prefs::devUsingCardBrowserSearchTools, true) {
+                runTest {
+                    withStartedBrowser { browser ->
+                        val fragment = browser.cardBrowserFragment
+                        val search = assertNotNull(fragment.searchView)
+                        search.show()
+                        advanceRobolectricLooper()
+                        fragment.searchViewModel.onSearchTextChanged("a")
+                        fragment.searchViewModel.submitCurrentSearch()
+                        browser.viewModel.searchJob?.join()
+                        advanceRobolectricLooper()
+                        assertThat("submitting closes the search view", search.isShowing, equalTo(false))
+
+                        search.show()
+                        advanceRobolectricLooper()
+                        fragment
+                            .requireChildFragment<StandardSearchFragment>(StandardSearchFragment.TAG)
+                            .binding.toggleAdvancedSearch
+                            .performClick()
+                        advanceRobolectricLooper()
+                        fragment.assertSearchMode(advancedSearch = true)
+                        assertThat("search view open before leaving", search.isShowing, equalTo(true))
+
+                        stopBrowser()
+                        resumeBrowser { }
+                        advanceRobolectricLooper()
+
+                        assertThat("search view is still open", search.isShowing, equalTo(true))
+                        assertThat("Search tools still enabled", fragment.searchViewModel.advancedSearchFlow.value, equalTo(true))
+                    }
+                }
             }
         }
 
@@ -208,9 +322,24 @@ class CardBrowserFragmentTest : RobolectricTest() {
     private fun CardBrowserFragment.assertSearchMode(advancedSearch: Boolean) {
         assertThat("active search mode", searchViewModel.advancedSearchFlow.value, equalTo(advancedSearch))
         val basic = requireChildFragment<StandardSearchFragment>(StandardSearchFragment.TAG)
-        val tools = requireChildFragment<AdvancedSearchFragment>(AdvancedSearchFragment.TAG)
+        val tools = childFragmentManager.findFragmentByTag(AdvancedSearchFragment.TAG)
         assertThat("Basic search visibility", basic.isVisible, equalTo(!advancedSearch))
-        assertThat("Search tools visibility", tools.isVisible, equalTo(advancedSearch))
+        assertThat("Search tools visibility", tools?.isVisible == true, equalTo(advancedSearch))
+    }
+
+    /** Opens the filtered deck screen, returning the search it was opened with */
+    private fun CardBrowserFragment.filteredDeckSearch(): String {
+        showFilteredDeckScreen()
+
+        val activity = shadowOf(requireActivity())
+        advanceRobolectricLooperUntil { activity.peekNextStartedActivity() != null }
+        val intent = requireNotNull(activity.nextStartedActivity)
+        assertThat(
+            intent.getStringExtra(SingleFragmentActivity.EXTRA_FRAGMENT_NAME),
+            equalTo(FilteredDeckOptionsFragment::class.java.name),
+        )
+        val arguments = requireNotNull(intent.getBundleExtra(SingleFragmentActivity.EXTRA_FRAGMENT_ARGS))
+        return requireNotNull(arguments.getString(FilteredDeckOptionsFragment.ARG_SEARCH))
     }
 
     private suspend fun withStartedBrowser(block: suspend ActivityScenario<CardBrowser>.(CardBrowser) -> Unit) {
@@ -255,10 +384,12 @@ private val String.isSentenceCase: Boolean
 context(test: RobolectricTest)
 fun withCardBrowserFragment(
     useSearchView: Boolean = false,
+    useSearchTools: Boolean = false,
     block: suspend CardBrowserFragment.() -> Unit,
 ) = test.runTest {
     try {
         Prefs.devUsingCardBrowserSearchView = useSearchView
+        Prefs.devUsingCardBrowserSearchTools = useSearchTools
 
         val cardBrowserIntent = Intent(test.targetContext, CardBrowser::class.java)
 
@@ -274,5 +405,6 @@ fun withCardBrowserFragment(
         }
     } finally {
         Prefs.devUsingCardBrowserSearchView = false
+        Prefs.devUsingCardBrowserSearchTools = false
     }
 }

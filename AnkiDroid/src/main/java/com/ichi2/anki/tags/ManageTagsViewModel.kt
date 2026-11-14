@@ -2,10 +2,12 @@
 
 package com.ichi2.anki.tags
 
+import android.icu.lang.UCharacter
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ichi2.anki.CollectionManager.withCol
+import com.ichi2.anki.common.utils.ext.isAscii
 import com.ichi2.anki.libanki.Tags
 import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.tags.ManageTagsState.Error
@@ -18,11 +20,14 @@ import com.ichi2.anki.utils.MessageQueue.MessageId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.text.Normalizer
 import anki.tags.TagTreeNode as BackendTagTreeNode
 
 /**
@@ -92,6 +97,20 @@ class ManageTagsViewModel : ViewModel() {
     /** Checks the complete tag tree, including tags hidden by search or collapsed ancestors. */
     fun tagExists(tag: TagName): Boolean = tagList.any { it.fullTag == tag }
 
+    /** Checks only the selected subtree, rather than searching notes for every row in the tree. */
+    suspend fun canRenameTag(tag: TagName): Boolean? =
+        try {
+            withCol { canRenameTagTree(tag) }.also {
+                updateState { it.copy(error = null) }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "Checking whether a tag can be renamed failed")
+            updateState { it.copy(error = e) }
+            null
+        }
+
     /** Finds a tag using its displayed expansion state when visible. */
     private fun findTagNode(tag: TagName): TagListItemState? {
         val loaded = state.value as? ManageTagsState.Content
@@ -117,7 +136,6 @@ class ManageTagsViewModel : ViewModel() {
      */
     fun toggleCollapsed(tag: TagName): Job {
         tagOperation?.takeUnless { it.isCompleted }?.let { return it }
-        val previousSave = expansionSave
         val operation =
             viewModelScope.launch(start = CoroutineStart.LAZY) {
                 val node =
@@ -134,9 +152,12 @@ class ManageTagsViewModel : ViewModel() {
                         if (it.fullTag == tag) it.copy(collapsed = newCollapsed) else it
                     }
                 updateState { it.copy(visibleNodes = computeVisibleNodes(searchQuery.value), error = null) }
-                previousSave?.join()
                 try {
-                    withCol { tags.setCollapsed(node.fullTag, newCollapsed) }
+                    // Queue every tap before a reopened screen can load the tree. These small
+                    // preference writes must finish even when closing clears this ViewModel.
+                    withContext(NonCancellable) {
+                        withCol { tags.setCollapsed(node.fullTag, newCollapsed) }
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -358,13 +379,13 @@ class ManageTagsViewModel : ViewModel() {
             searchQuery: String,
             manuallyCollapsedTags: Set<TagName> = emptySet(),
         ): List<TagListItemState> {
-            val queryLowercase = searchQuery.lowercase()
+            val queryFolded = searchQuery.foldForTagSearch()
             val visibleTags = mutableSetOf<String>()
             val ancestorsToExpand = mutableSetOf<String>()
             for (item in allNodes) {
-                if (item.containsLowercase(queryLowercase)) {
+                if (item.containsFolded(queryFolded)) {
                     visibleTags.add(item.fullTag.value)
-                    val expandAncestors = item.matchesOwnComponent(queryLowercase)
+                    val expandAncestors = item.matchesOwnComponent(queryFolded)
                     for (ancestor in item.fullTag.ancestors) {
                         visibleTags.add(ancestor)
                         if (expandAncestors) ancestorsToExpand.add(ancestor)
@@ -402,18 +423,24 @@ data class TagListItemState(
 ) {
     val fullTag: TagName = requireNotNull(TagName.build(fullTagName))
 
-    // cache the tag name to support fast case-insensitive searches
-    private val fullTagLower: String = fullTagName.lowercase()
+    // Cache the same normalization and case folding used for the query.
+    private val fullTagFolded: String = fullTagName.foldForTagSearch()
 
-    /** Case-insensitive check against the full tag path. [query] must be pre-lowercased. */
-    fun containsLowercase(query: String): Boolean = fullTagLower.contains(query)
+    /** Check against the full tag path. [query] must use [foldForTagSearch]. */
+    fun containsFolded(query: String): Boolean = fullTagFolded.contains(query)
 
-    /** Whether pre-lowercased [query] reaches this tag's own name or its preceding separator. */
+    /** Whether folded [query] reaches this tag's own name or its preceding separator. */
     fun matchesOwnComponent(query: String): Boolean {
-        val matchStart = fullTagLower.lastIndexOf(query)
+        val matchStart = fullTagFolded.lastIndexOf(query)
         // Include the separator so a query such as "parent::" reveals its immediate children.
-        return matchStart >= 0 && matchStart + query.length > fullTagLower.lastIndexOf("::")
+        return matchStart >= 0 && matchStart + query.length > fullTagFolded.lastIndexOf("::")
     }
+}
+
+/** Normalize partial search text without filling empty hierarchy components with "blank". */
+private fun String.foldForTagSearch(): String {
+    val normalized = Normalizer.normalize(this, Normalizer.Form.NFC)
+    return if (normalized.isAscii()) normalized.lowercase() else UCharacter.foldCase(normalized, true)
 }
 
 sealed class ManageTagsState {
