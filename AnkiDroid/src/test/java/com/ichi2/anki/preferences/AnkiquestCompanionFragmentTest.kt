@@ -14,6 +14,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
@@ -24,6 +25,7 @@ import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockkObject
@@ -39,6 +41,9 @@ import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestCompanionFragmentTest : RobolectricTest() {
+    /** The unlocks the server holds. */
+    private var serverUnlocks = setOf<String>()
+
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit {
@@ -47,15 +52,21 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
             putString(Ankiquest.PREF_TOKEN, "test-token")
         }
         TimeManager.resetWith(MockTime(START_MS))
-        mockkObject(AnkiquestHomeData, AnkiquestWidget)
+        mockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
         every { AnkiquestWidget.requestUpdate(any()) } just runs
+        every { AnkiquestCapabilities.has(any(), AnkiquestUnlocks.FEATURE) } returns true
+        coEvery { AnkiquestHomeData.unlocks(any()) } answers { serverUnlocks }
+        coEvery { AnkiquestHomeData.saveUnlock(any(), any()) } answers {
+            serverUnlocks = serverUnlocks + secondArg<String>()
+            serverUnlocks
+        }
         coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
         coEvery { AnkiquestHomeData.saveCompanion(any(), any()) } answers { secondArg() }
     }
 
     @After
     fun clearMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestWidget)
+        unmockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
     }
 
     @Test
@@ -94,10 +105,27 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         assertEquals("Bluma", fragment.chosen())
         assertEquals(Choice.COW, AnkiquestCompanion.choice())
 
-        // The server here has no unlocks, so the cow stays on this phone.
+        // The unlock reaches the server before the choice that needs it.
         val account = requireNotNull(AnkiquestHomeData.account())
-        assertEquals(AnkiquestUnlocks.State.LOCAL, AnkiquestUnlocks.state(account, AnkiquestUnlocks.Unlock.COW))
-        coVerify(exactly = 0) { AnkiquestHomeData.saveCompanion(any(), "cow") }
+        assertEquals(AnkiquestUnlocks.State.SYNCED, AnkiquestUnlocks.state(account, AnkiquestUnlocks.Unlock.COW))
+        coVerifyOrder {
+            AnkiquestHomeData.saveUnlock(any(), "cow")
+            AnkiquestHomeData.saveCompanion(any(), "cow")
+        }
+    }
+
+    @Test
+    fun `a server without unlocks makes the taps do nothing`() {
+        every { AnkiquestCapabilities.has(any(), AnkiquestUnlocks.FEATURE) } returns false
+        val fragment = open()
+        repeat(UnlockTapRule.COW.taps) {
+            fragment.card("Ankilope").performClick()
+            idle()
+        }
+
+        assertEquals(listOf("Aki", "Ankilope", "No companion"), fragment.cards().map { it.contentDescription })
+        assertEquals(Choice.ANKILOPE, AnkiquestCompanion.choice())
+        coVerify(exactly = 0) { AnkiquestHomeData.saveUnlock(any(), any()) }
     }
 
     private fun open(): AnkiquestCompanionFragment {

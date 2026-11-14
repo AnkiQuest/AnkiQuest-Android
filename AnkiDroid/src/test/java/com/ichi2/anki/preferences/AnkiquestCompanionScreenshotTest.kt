@@ -42,7 +42,7 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
 
     @Test
     fun bluma() {
-        // An old server: the cow is unlocked and chosen on this phone only, which the server's answer does not undo.
+        // Unlocked and chosen while offline: the server's older answer does not undo the cow it does not know yet.
         val account = assertNotNull(AnkiquestHomeData.account())
         AnkiquestUnlocks.unlock(account, AnkiquestUnlocks.Unlock.COW)
         AnkiquestCompanion.remember(account, AnkiquestCompanion.Choice.COW.id)

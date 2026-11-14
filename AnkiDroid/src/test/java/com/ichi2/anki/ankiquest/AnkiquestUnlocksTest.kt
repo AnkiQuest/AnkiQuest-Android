@@ -37,6 +37,9 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     @Volatile private var companion = "aki"
 
+    /** The unlocks cannot be reached, as when the phone went offline after the capabilities check. */
+    @Volatile private var offline = false
+
     @Before
     fun serve() {
         AnkiquestCapabilities.forgetMemory()
@@ -48,7 +51,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             val answer =
                 when {
                     path == "/api/capabilities" -> JSONObject().put("version", 1).put("features", JSONArray(features))
-                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features -> {
+                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features && !offline -> {
                         if (sent.isNotEmpty()) {
                             unlocks = unlocks + JSONObject(sent).getString("unlock")
                         }
@@ -97,36 +100,53 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             AnkiquestCapabilities.refresh(account)
         }
 
-    @Test
-    fun `nine quick taps on Ankilope unlock`() {
-        val taps = UnlockTaps(UnlockTapRule.COW)
-        val progress = (0 until UnlockTapRule.COW.taps).map { taps.tap(Choice.ANKILOPE, it * UnlockTapRule.COW.maxGapMs) }
-        assertEquals(List(UnlockTapRule.COW.taps - 1) { UnlockTaps.Progress.COUNTING } + UnlockTaps.Progress.UNLOCKED, progress)
-    }
+    /** One case of the shared fixture: taps as (choice, milliseconds), and whether the last one unlocks. */
+    private data class TapCase(
+        val name: String,
+        val sequence: List<Pair<String, Long>>,
+        val unlocks: Boolean,
+    )
+
+    /**
+     * The cases of `tests/fixtures/companion_unlock.json` in float3/ankiquest, copied until the pinned
+     * server commit (`ankiquest-server.sha`) includes the fixture; then this reads it.
+     */
+    private val tapCases =
+        listOf(
+            TapCase("nine quick taps unlock", ankilope(0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400), unlocks = true),
+            TapCase("eight taps are not enough", ankilope(0, 300, 600, 900, 1200, 1500, 1800, 2100), unlocks = false),
+            TapCase(
+                "a gap of exactly max_gap_ms still counts",
+                ankilope(0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000),
+                unlocks = true,
+            ),
+            TapCase("a longer gap starts again", ankilope(0, 300, 600, 900, 3000, 3300, 3600, 3900, 4200), unlocks = false),
+            TapCase(
+                "the late tap is the first of the new run",
+                ankilope(0, 5000, 5100, 5200, 5300, 5400, 5500, 5600, 5700, 5800),
+                unlocks = true,
+            ),
+            TapCase(
+                "a tap on another choice starts again",
+                ankilope(0, 100, 200, 300) + ("aki" to 400L) + ankilope(500, 600, 700, 800),
+                unlocks = false,
+            ),
+            TapCase(
+                "taps on other choices never unlock",
+                listOf<Long>(0, 100, 200, 300, 400).map { "aki" to it } + listOf<Long>(500, 600, 700, 800).map { "none" to it },
+                unlocks = false,
+            ),
+        )
+
+    private fun ankilope(vararg times: Long) = times.map { "ankilope" to it }
 
     @Test
-    fun `a pause longer than the gap starts over`() {
-        val taps = UnlockTaps(UnlockTapRule.COW)
-        var now = 0L
-        repeat(UnlockTapRule.COW.taps - 1) {
-            taps.tap(Choice.ANKILOPE, now)
-            now += UnlockTapRule.COW.maxGapMs
-        }
-        now += 1
-        repeat(UnlockTapRule.COW.taps - 1) {
-            assertEquals(UnlockTaps.Progress.COUNTING, taps.tap(Choice.ANKILOPE, now))
-            now += UnlockTapRule.COW.maxGapMs
-        }
-        assertEquals(UnlockTaps.Progress.UNLOCKED, taps.tap(Choice.ANKILOPE, now))
-    }
-
-    @Test
-    fun `a tap on another companion starts over`() {
-        for (other in listOf(Choice.AKI, Choice.NONE)) {
+    fun `the tap rule matches the shared fixture`() {
+        assertEquals(UnlockTapRule(taps = 9, maxGapMs = 2000), UnlockTapRule.COW)
+        for (case in tapCases) {
             val taps = UnlockTaps(UnlockTapRule.COW)
-            repeat(UnlockTapRule.COW.taps - 1) { taps.tap(Choice.ANKILOPE, it.toLong()) }
-            assertEquals(UnlockTaps.Progress.COUNTING, taps.tap(other, UnlockTapRule.COW.taps.toLong()))
-            assertEquals(UnlockTaps.Progress.COUNTING, taps.tap(Choice.ANKILOPE, UnlockTapRule.COW.taps + 1L), "$other")
+            val last = case.sequence.map { (choice, at) -> taps.tap(Choice.of(choice), at) }.last()
+            assertEquals(case.unlocks, last == UnlockTaps.Progress.UNLOCKED, case.name)
         }
     }
 
@@ -149,29 +169,30 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     }
 
     @Test
-    fun `an old server keeps the cow on this phone only`() =
+    fun `an old server offers no unlock`() =
         runBlocking {
             AnkiquestCapabilities.refresh(account)
+            assertFalse(AnkiquestUnlocks.available(account))
+
+            serverGains(AnkiquestUnlocks.FEATURE)
+            assertTrue(AnkiquestUnlocks.available(account))
+        }
+
+    @Test
+    fun `an unlock made offline stays on this phone and is sent with the choice later`() =
+        runBlocking {
+            serverGains(AnkiquestUnlocks.FEATURE)
+            offline = true
             AnkiquestUnlocks.unlock(account, Unlock.COW)
 
             assertEquals(Choice.COW, AnkiquestCompanion.choose(account, Choice.COW))
             assertEquals(Choice.COW, AnkiquestCompanion.choice())
+            assertEquals(State.LOCAL, AnkiquestUnlocks.state(account, Unlock.COW))
+            assertEquals("aki", companion)
 
-            // The server's answer does not replace a cow it cannot hold.
-            assertFalse(AnkiquestCompanion.refresh(account))
-            assertEquals(Choice.COW, AnkiquestCompanion.choice())
-            assertTrue(requests.none { it.contains("cow") }, "$requests")
-            assertTrue(requests.none { it.contains("/api/unlocks/") }, "$requests")
-        }
-
-    @Test
-    fun `a server that gains unlocks receives the cow and then the choice`() =
-        runBlocking {
-            AnkiquestUnlocks.unlock(account, Unlock.COW)
-            AnkiquestCompanion.choose(account, Choice.COW)
-            serverGains(AnkiquestUnlocks.FEATURE)
+            // Back online: the unlock goes first, since the server refuses a cow it does not know.
+            offline = false
             requests.clear()
-
             AnkiquestUnlocks.sync(account)
 
             assertEquals(State.SYNCED, AnkiquestUnlocks.state(account, Unlock.COW))
@@ -180,6 +201,19 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             val unlock = requests.indexOfFirst { it.startsWith("POST /api/unlocks/cerro") }
             val choice = requests.indexOfFirst { it.startsWith("POST /api/companion/cerro") }
             assertTrue(unlock in 0 until choice, "$requests")
+            assertEquals(Choice.COW, AnkiquestCompanion.choice())
+        }
+
+    @Test
+    fun `the server's answer does not undo a cow it does not know yet`() =
+        runBlocking {
+            serverGains(AnkiquestUnlocks.FEATURE)
+            offline = true
+            AnkiquestUnlocks.unlock(account, Unlock.COW)
+            AnkiquestCompanion.choose(account, Choice.COW)
+
+            // Only the unlocks are out of reach; the server still answers its old choice.
+            assertFalse(AnkiquestCompanion.refresh(account))
             assertEquals(Choice.COW, AnkiquestCompanion.choice())
         }
 

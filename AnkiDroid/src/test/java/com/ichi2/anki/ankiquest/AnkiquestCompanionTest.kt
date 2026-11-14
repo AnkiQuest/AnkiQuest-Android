@@ -66,7 +66,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertTrue(AnkiquestCompanion.remember(alice, "cow"))
         assertEquals(Choice.COW, AnkiquestCompanion.choice())
         assertTrue(AnkiquestCompanion.visible())
-        for (pose in AnkiquestCompanion.previewPoses + R.drawable.aki_challenge + R.drawable.aki_place_1) {
+        for (pose in AnkiquestCompanion.preview(Choice.AKI) + R.drawable.aki_challenge + R.drawable.aki_place_1) {
             assertEquals(AnkiquestCompanion.resource(pose, Choice.ANKILOPE), AnkiquestCompanion.resource(pose))
         }
 
@@ -77,6 +77,15 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(ankilope.width to ankilope.height, cow.width to cow.height)
         assertFalse(ankilope.sameAs(cow))
         assertEquals(cow, AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size), "the recoloured bitmap is cached")
+    }
+
+    @Test
+    fun `previews show face, fire and sad without repeating a picture`() {
+        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk), AnkiquestCompanion.preview(Choice.AKI))
+        for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
+            val pictures = AnkiquestCompanion.preview(choice).map { AnkiquestCompanion.resource(it, choice) }
+            assertEquals(listOf(R.drawable.ankilope_face, R.drawable.ankilope_study), pictures)
+        }
     }
 
     @Test

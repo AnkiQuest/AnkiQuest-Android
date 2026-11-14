@@ -11,8 +11,9 @@ import org.json.JSONObject
 /**
  * Companions a player unlocks with an easter egg. A server with [FEATURE] keeps them per account
  * (`/api/unlocks/{user}`), so every device shows them. They are not settings: the settings-sync
- * switch does not apply. A server without the feature keeps nothing, so the unlock stays on this
- * phone and is sent once the server reports the feature.
+ * switch does not apply. With a server without the feature nothing can be unlocked, as on the
+ * desktop. An unlock made while the server cannot be reached stays on this phone until [sync]
+ * sends it.
  */
 internal object AnkiquestUnlocks {
     const val FEATURE = "companion_unlocks"
@@ -51,6 +52,9 @@ internal object AnkiquestUnlocks {
         unlock: Unlock,
     ) = state(account, unlock) != State.LOCKED
 
+    /** Whether [account]'s server last reported [FEATURE], so something can be unlocked. */
+    fun available(account: HomeAccount) = AnkiquestCapabilities.has(account, FEATURE)
+
     /** Unlocks [unlock] on this phone; [sync] takes it to the server. */
     fun unlock(
         account: HomeAccount,
@@ -67,7 +71,7 @@ internal object AnkiquestUnlocks {
      * last reported [FEATURE]. A cow chosen while only this phone knew it is then saved there too.
      */
     suspend fun sync(account: HomeAccount) {
-        if (account.token.isEmpty() || !AnkiquestCapabilities.has(account, FEATURE)) {
+        if (account.token.isEmpty() || !available(account)) {
             return
         }
 
@@ -112,19 +116,22 @@ internal object AnkiquestUnlocks {
 }
 
 /**
- * How many quick taps on Ankilope unlock the cow. The same values are the shared fixture
- * `tests/fixtures/companion_unlock.json` in float3/ankiquest, which the desktop add-on reads.
+ * How many quick taps on Ankilope unlock the cow. The same values, with the cases both clients test,
+ * are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
  */
 internal data class UnlockTapRule(
     val taps: Int,
     val maxGapMs: Long,
 ) {
     companion object {
-        val COW = UnlockTapRule(taps = 9, maxGapMs = 1_000)
+        val COW = UnlockTapRule(taps = 9, maxGapMs = 2_000)
     }
 }
 
-/** Counts a run of taps on Ankilope's card; any other card, or a pause longer than the rule allows, starts over. */
+/**
+ * Counts a run of taps on Ankilope's card. A tap on another card starts over; a tap after a longer
+ * pause than the rule allows is the first of a new run.
+ */
 internal class UnlockTaps(
     private val rule: UnlockTapRule = UnlockTapRule.COW,
 ) {

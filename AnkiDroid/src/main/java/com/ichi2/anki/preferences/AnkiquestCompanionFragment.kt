@@ -92,8 +92,9 @@ class AnkiquestCompanionFragment : SettingsFragment() {
     private fun tap(choice: Choice) {
         val account = signedIn() ?: return
 
-        // The cow stays hidden, with no hint, until Ankilope is tapped enough times in a row.
-        val locked = !AnkiquestUnlocks.has(account, Unlock.COW)
+        // The cow stays hidden, with no hint, until Ankilope is tapped enough times in a row. A server
+        // that cannot keep unlocks offers none, as on the desktop.
+        val locked = !AnkiquestUnlocks.has(account, Unlock.COW) && AnkiquestUnlocks.available(account)
         if (locked && taps.tap(choice, TimeManager.time.intTimeMS()) == UnlockTaps.Progress.UNLOCKED) {
             AnkiquestUnlocks.unlock(account, Unlock.COW)
             showSnackbar(getString(R.string.ankiquest_companion_joined, getString(Choice.COW.title)))

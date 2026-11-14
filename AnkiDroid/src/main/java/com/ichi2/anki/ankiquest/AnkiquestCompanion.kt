@@ -42,8 +42,11 @@ internal object AnkiquestCompanion {
         }
     }
 
-    /** The poses a companion's preview card shows, as Aki's; [resource] maps them to the companion's. */
-    val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_sleeping)
+    /** The poses a preview card shows, as Aki's: face, fire and sad. */
+    private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk)
+
+    /** [choice]'s preview poses as Aki's, without two that look the same (Ankilope studies for fire and sad). */
+    fun preview(choice: Choice): List<Int> = previewPoses.distinctBy { resource(it, choice) }
 
     /** Degrees that turn Ankilope's tan fur purple for the interim cow. */
     private const val COW_HUE_DEGREES = 250.0
@@ -53,15 +56,18 @@ internal object AnkiquestCompanion {
     private const val MATRIX_SIZE = 4 * MATRIX_COLUMNS
     private const val ALPHA_INDEX = 3 * MATRIX_COLUMNS + 3
 
-    // The standard luminance-preserving hue rotation: per output channel, weights for red, green
-    // and blue, plus cosine and sine terms of the angle.
+    // The CSS hue-rotate() matrix: per output channel, weights for red, green and blue, plus cosine
+    // and sine terms of the angle.
     private val hueLuminance = floatArrayOf(0.213f, 0.715f, 0.072f)
     private val hueCos =
         listOf(floatArrayOf(0.787f, -0.715f, -0.072f), floatArrayOf(-0.213f, 0.285f, -0.072f), floatArrayOf(-0.213f, -0.715f, 0.928f))
     private val hueSin =
         listOf(floatArrayOf(-0.213f, -0.715f, 0.928f), floatArrayOf(0.143f, 0.140f, -0.283f), floatArrayOf(-0.787f, 0.715f, 0.072f))
 
-    /** The cow is drawn as Ankilope with its hues rotated until it has art of its own (float3/ankiquest#88). */
+    /**
+     * The cow is drawn as Ankilope with its hues rotated until it has art of its own (float3/ankiquest#88),
+     * with the matrix of CSS `hue-rotate(250deg)` so every client draws the same purple.
+     */
     private val cowFilter: ColorFilter by lazy {
         val radians = Math.toRadians(COW_HUE_DEGREES)
         val cos = cos(radians).toFloat()

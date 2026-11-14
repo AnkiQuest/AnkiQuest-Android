@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
@@ -24,7 +25,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 
 /**
- * One card per companion: its preview poses ([AnkiquestCompanion.previewPoses]) with its name
+ * One card per companion: its preview poses ([AnkiquestCompanion.preview]) with its name
  * under them, the chosen one outlined. Tapping a card reports it; the screen decides what follows.
  */
 internal class AnkiquestCompanionPicker(
@@ -108,7 +109,7 @@ internal class AnkiquestCompanionPicker(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             val edge = dp(POSE_DP)
-            for (pose in AnkiquestCompanion.previewPoses) {
+            for (pose in AnkiquestCompanion.preview(choice)) {
                 val bitmap = AnkiquestCompanion.bitmap(context, pose, edge, choice) ?: continue
                 addView(
                     ImageView(context).apply {
@@ -135,7 +136,7 @@ internal class AnkiquestCompanionPicker(
     private fun ripple() =
         TypedValue().let { value ->
             context.theme.resolveAttribute(android.R.attr.selectableItemBackground, value, true)
-            context.getDrawable(value.resourceId)
+            AppCompatResources.getDrawable(context, value.resourceId)
         }
 
     /** TalkBack reads the cards as a group of radio buttons. */
