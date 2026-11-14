@@ -99,8 +99,7 @@ internal class AnkiquestGreetingDialog : DialogFragment() {
         AnkiquestPostStudyPrompts.track(requireDialog())
     }
 
-    private fun account(): Account =
-        if (AnkiquestHomeData.account()?.token?.isNotEmpty() == true) Account.SIGNED_IN else Account.SIGNED_OUT
+    private fun account(): Account = if (AnkiquestHomeData.account()?.token?.isNotEmpty() == true) Account.SIGNED_IN else Account.SIGNED_OUT
 
     private fun showArt(
         image: ImageView,
