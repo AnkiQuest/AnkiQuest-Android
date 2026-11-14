@@ -205,7 +205,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
             Timber.w(e, "AnkiQuest friend goals unreachable")
             R.string.aq_challenges_offline
         } catch (e: JSONException) {
-            Timber.w(e, "AnkiQuest friend goals unreadable")
+            Timber.w(AnkiquestApi.redacted(e), "AnkiQuest friend goals unreadable")
             R.string.aq_challenges_server_error
         }
 
