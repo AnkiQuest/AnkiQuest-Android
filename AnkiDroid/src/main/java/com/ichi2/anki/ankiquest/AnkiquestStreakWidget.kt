@@ -284,11 +284,11 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
             // Today's mood, from the same day the status describes: it sets the companion and the flame.
             val profile = sameDay(me, now)
-            val goal = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
+            val goalState = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
             val frozen = profile?.optInt("frozen_days") ?: 0
             // Until the server answers for a new day, a counted day carries into it: the streak waits.
             val today = day ?: carriedDay(own, row, now)
-            val mood = AnkiquestMood.of(today, frozen, goal)
+            val mood = AnkiquestMood.of(today, frozen, goalState)
 
             // Aki shows the mood when chosen; otherwise only the flame does.
             val companionVisible = AnkiquestCompanion.visible()
