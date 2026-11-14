@@ -25,7 +25,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Uploads pending reviews and fetches the leaderboard and profile in the background, redraws the
- * widget and raises rank and streak notifications, and keeps the server's capabilities current.
+ * widget and raises rank and streak notifications, keeps the server's capabilities current and syncs
+ * settings ([AnkiquestSettingsSync]).
  * Runs every 15 minutes and on demand.
  */
 object AnkiquestPoll {
@@ -178,6 +179,9 @@ object AnkiquestPoll {
             }
         }
         AnkiquestHomeData.account(prefs)?.let { AnkiquestCapabilities.current(it) }
+
+        // After the features are current, so a server that just gained settings sync is used.
+        AnkiquestSettingsSync.sync(context, AnkiquestSettingsSync.Trigger.POLL)
         return result
     }
 }

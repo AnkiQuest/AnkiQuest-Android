@@ -640,6 +640,22 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertTrue("GET /api/study/hill" in requests)
         }
 
+    @Test
+    fun `settings sync applies the server's settings and saves a newer one from here`() =
+        runBlocking {
+            val prefs = AnkiDroidApp.sharedPrefs()
+            prefs.edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+            AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPEN_TODAY)
+            assertTrue("settings_sync" in AnkiquestCapabilities.refresh(account))
+
+            AnkiquestSettingsSync.sync(targetContext, AnkiquestSettingsSync.Trigger.CHANGE)
+
+            assertFalse(prefs.getBoolean(AnkiquestNotifier.PREF_RANK, true))
+            assertEquals("4", prefs.getString(AnkiquestNotifier.PREF_STREAK_HOURS, null))
+            assertTrue(prefs.getBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, false))
+            assertTrue(requests.containsAll(listOf("GET /api/settings/hill", "PUT /api/settings/hill")))
+        }
+
     private fun Notification.title() = extras.getCharSequence(Notification.EXTRA_TITLE).toString()
 
     private fun Notification.text() = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -680,6 +696,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
             path == "/api/accounts/hill" && method == "GET" -> "account"
             path == "/api/records" -> "records"
+            path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"
