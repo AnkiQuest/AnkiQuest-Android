@@ -3,16 +3,20 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.FileProvider
 import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
@@ -22,6 +26,7 @@ import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.setIntroductionSlidesShown
 import com.ichi2.testutils.BackupManagerTestUtilities
+import com.ichi2.testutils.ShadowFileProviderPathStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -30,6 +35,7 @@ import io.mockk.unmockkObject
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import okhttp3.Request
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -37,12 +43,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.util.ReflectionHelpers
 import java.io.IOException
+import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -154,6 +166,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 host.getString(R.string.aq_share_deck_edit, "My Mandarin"),
                 card.findViewById<TextView>(R.id.aq_moment_deck)?.text.toString(),
             )
+            assertNotNull(card.findViewById<View>(R.id.aq_moment_open)).performClick()
             controller.pause().stop()
             name = "Renamed on the conquest screen"
             controller.start().resume()
@@ -194,6 +207,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             AnkiquestMomentCard.show(host, AnkiquestHomeData.account(), listOf(moment), prefs)
             val card = card()
             advanceRobolectricLooperUntil { lookups == 1 }
+            assertNotNull(card.findViewById<View>(R.id.aq_moment_open)).performClick()
             controller.pause().stop()
             controller.start().resume()
             advanceRobolectricLooper()
@@ -300,7 +314,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         val prepared = AtomicBoolean(false)
         var operation: Job? = null
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
-        coEvery { Ankiquest.shareWinLink(17, any(), AnkiquestApi.Timeout.PICTURE) } coAnswers {
+        coEvery { Ankiquest.shareWinLink(17, any()) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }
@@ -333,6 +347,49 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
+    fun `with share_moments a moment's Share opens AnkiQuest's share sheet and Undo shows on the card`() {
+        mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        coEvery { AnkiquestSharing.win(any(), 17) } returns null
+        every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(17), AnkiquestSharing.Audience.Circle, null) } returns
+            AnkiquestSharing.Sent(1, 17, clock.intTimeMS() + 60_000)
+        val controller = host()
+        try {
+            val host = controller.get()
+            queue(win = 17)
+            finish(host)
+            val card = card()
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooper()
+            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+            assertNull(shadowOf(host).nextStartedActivity, "nothing leaves the app before a choice")
+
+            val everyone = host.getString(R.string.ankiquest_share_all_friends)
+            advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
+            views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
+            sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+
+            coVerify(
+                exactly = 1,
+            ) { AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(17), AnkiquestSharing.Audience.Circle, null) }
+            assertFalse(sheet.isShowing)
+            assertTrue(card.isShowing, "sending keeps the moment open")
+            assertNotNull(
+                card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action),
+                "Undo shows on the card",
+            )
+        } finally {
+            controller.close()
+            unmockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        }
+    }
+
+    @Test
     fun `an offline conquest picture leaves unsaved card text private`() {
         val picture = conquestPicture(null)
         assertFalse((picture.body + picture.details.joinToString()).contains("PRIVATE UNSHARED FIELD"))
@@ -347,9 +404,118 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
-    fun `returning to a moment forgets a label the player has removed`() {
+    fun `returning from the conquest forgets a label the player has removed there`() {
         val picture = conquestPicture("Previously shared label", LabelChange.REMOVE_ON_RESUME)
         assertFalse((picture.body + picture.details.joinToString()).contains("Previously shared label"))
+    }
+
+    @Test
+    fun `returning from the share sheet keeps what the moment already loaded`() {
+        mockkObject(AnkiquestSharing)
+        val fetched = AtomicInteger()
+        coEvery { AnkiquestSharing.win(any(), 17) } coAnswers {
+            fetched.incrementAndGet()
+            null
+        }
+        val controller = host()
+        try {
+            val host = controller.get()
+            queue(win = 17)
+            finish(host)
+            val card = card()
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooperUntil { fetched.get() == 1 }
+
+            // The chooser, a permission dialog and an app switch all pause and resume the host.
+            controller.pause().stop()
+            controller.start().resume()
+            advanceRobolectricLooper()
+            assertEquals(1, fetched.get(), "resuming must not refetch, clear pictures or forget Undo")
+        } finally {
+            controller.close()
+            unmockkObject(AnkiquestSharing)
+        }
+    }
+
+    @Test
+    fun `a moment's picture says what its caption says`() {
+        mockkObject(AnkiquestApi, AnkiquestShare, AnkiquestSharing)
+        val prepared = AtomicReference<AnkiquestShare.Card?>()
+        coEvery { AnkiquestSharing.win(any(), 17) } returns null
+        every { AnkiquestApi.json(any(), any(), any()) } returns
+            JSONObject()
+                .put("url", "https://anki.example.test/w/card")
+                .put("image", "https://anki.example.test/w/card.png")
+                .put("text", "I reached level 4! https://anki.example.test/w/card")
+        every { AnkiquestShare.linkChooser(any(), any(), any(), any()) } answers {
+            prepared.set(arg(3))
+            Intent(Intent.ACTION_CHOOSER)
+        }
+        val controller = host()
+        try {
+            val host = controller.get()
+            val moment =
+                AnkiquestMoments.Moment(
+                    "level:4",
+                    AnkiquestMoments.Kind.LEVEL,
+                    "Level 4",
+                    "You reached level 4.",
+                    clock.intTimeMS(),
+                    win = 17,
+                    shareTitle = "Level 4!",
+                    shareBody = "I reached level 4.",
+                )
+            AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
+            finish(host)
+            val card = card()
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooper()
+            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            advanceRobolectricLooperUntil { prepared.get() != null }
+            val picture = assertNotNull(prepared.get())
+            assertEquals("Level 4!", picture.title)
+            assertEquals("I reached level 4.", picture.body)
+        } finally {
+            controller.close()
+            unmockkObject(AnkiquestApi, AnkiquestShare, AnkiquestSharing)
+        }
+    }
+
+    @Test
+    @Config(shadows = [ShadowFileProviderPathStrategy::class])
+    fun `downloading a moment's picture publishes nothing`() {
+        ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
+        mockkObject(AnkiquestApi, AnkiquestSharing)
+        val requests = CopyOnWriteArrayList<String>()
+        coEvery { AnkiquestSharing.win(any(), 17) } returns null
+        every { AnkiquestApi.json(any(), any(), any()) } answers {
+            requests.add(arg<Request>(1).url.encodedPath)
+            throw IOException("offline")
+        }
+        val controller = host()
+        try {
+            val host = controller.get()
+            queue(win = 17)
+            finish(host)
+            val card = card()
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooper()
+            val download = host.getString(R.string.ankiquest_download_picture)
+            val button =
+                assertNotNull(
+                    views(card.window!!.decorView).firstOrNull { it.isShown && it.contentDescription == download },
+                    "the moment offers Download picture outside the share sheet",
+                )
+            button.performClick()
+            advanceRobolectricLooperUntil { shadowOf(host).peekNextStartedActivity() != null }
+            val saving = assertNotNull(shadowOf(host).nextStartedActivity)
+            assertEquals(AnkiquestGalleryActivity::class.java.name, saving.component?.className)
+            assertNotNull(saving.data, "the locally drawn picture")
+            assertEquals(emptyList<String>(), requests.filter { it.startsWith("/api/share/") }, "saving must not make a public link")
+        } finally {
+            controller.close()
+            unmockkObject(AnkiquestApi, AnkiquestSharing)
+        }
     }
 
     private enum class LabelChange { KEEP, REMOVE_ON_RESUME }
@@ -371,7 +537,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             }
             recorded.copy(label = sharedLabel, win = null)
         }
-        coEvery { Ankiquest.shareWinLink(any(), any(), any()) } throws IOException("offline")
+        coEvery { Ankiquest.shareWinLink(any(), any()) } throws IOException("offline")
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
             prepared.set(arg(4))
             Intent(Intent.ACTION_CHOOSER)
@@ -396,6 +562,8 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
             if (change == LabelChange.REMOVE_ON_RESUME) {
+                assertNotNull(card.findViewById<View>(R.id.aq_moment_open)).performClick()
+                assertEquals(AnkiquestConquestActivity::class.java.name, shadowOf(host).nextStartedActivity?.component?.className)
                 controller.pause().stop()
                 sharedLabel = null
                 controller.start().resume()

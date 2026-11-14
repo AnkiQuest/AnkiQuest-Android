@@ -15,7 +15,8 @@ import com.ichi2.anki.R
  * several megabytes each time.
  */
 internal object AnkiquestArt {
-    private const val CACHE_BYTES = 4 * 1024 * 1024
+    /** Room for one 1024 px streak widget pose (4 MiB) next to the smaller art. */
+    private const val CACHE_BYTES = 8 * 1024 * 1024
 
     private val cache =
         object : LruCache<String, Bitmap>(CACHE_BYTES) {
@@ -35,8 +36,6 @@ internal object AnkiquestArt {
         size: Int,
     ): Bitmap? {
         if (size <= 0) return null
-        val key = "$resource:$size"
-        cache.get(key)?.let { return it }
         val bounds =
             BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
@@ -44,9 +43,14 @@ internal object AnkiquestArt {
             }
         BitmapFactory.decodeResource(context.resources, resource, bounds)
         val edge = minOf(bounds.outWidth, bounds.outHeight)
+        val sample = if (edge > 0) sampleSize(edge, size) else 1
+
+        // Keyed by sample, so sizes that decode alike share one bitmap, also within one RemoteViews.
+        val key = "$resource:$sample"
+        cache.get(key)?.let { return it }
         val options =
             BitmapFactory.Options().apply {
-                inSampleSize = if (edge > 0) sampleSize(edge, size) else 1
+                inSampleSize = sample
                 inScaled = false
             }
         val decoded = BitmapFactory.decodeResource(context.resources, resource, options) ?: return null
@@ -69,6 +73,9 @@ internal object AnkiquestArt {
             "nudge" -> R.drawable.aki_nudge
             "challenge_invite", "challenge_accepted" -> R.drawable.aki_challenge
             "challenge_complete" -> R.drawable.aki_challenge_won
+            // The server sends these only to a streak not studied today; the streak's length is not in the notice.
+            "reminder_urgent", "reminder_milestone" -> AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 1)
+            "reminder_freeze_used" -> AnkiquestMood.pose(AnkiquestMood.Mood.FROZEN_1, 1)
             "reminder_weekly_recap" -> place(topic?.removePrefix("place:")?.toIntOrNull()) ?: R.drawable.aki_face
             else -> R.drawable.aki_face
         }
@@ -77,7 +84,8 @@ internal object AnkiquestArt {
     private fun forTopic(topic: String?): Int =
         when {
             topic == "streak" -> R.drawable.aki_streak_milestone
-            topic == "secured" -> R.drawable.aki_minimum
+            // A notification does not say how long the streak is: the first fire pose.
+            topic == "secured" -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 1)
             topic == "goal" -> R.drawable.aki_goal
             topic == "conquered" -> R.drawable.aki_deck_conquered
             topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: R.drawable.aki_achievement

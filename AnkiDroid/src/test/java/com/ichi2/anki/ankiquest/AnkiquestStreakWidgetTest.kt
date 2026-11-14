@@ -2,8 +2,13 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.appwidget.AppWidgetManager
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
@@ -12,15 +17,24 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -194,75 +208,220 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     }
 
     @Test
-    fun `the companion's pose follows the streak`() {
-        assertEquals(R.drawable.aki_comeback, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 1))
-        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 3))
-        assertEquals(R.drawable.aki_streak_hot, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 10))
-        assertEquals(R.drawable.aki_streak_blazing, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 45))
-        assertEquals(R.drawable.aki_streak_legend, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 365))
-        assertEquals(R.drawable.aki_freeze_used, AnkiquestStreakWidget.pose(AnkiquestDay.State.PROTECTED, 10))
-        assertEquals(R.drawable.aki_at_risk, AnkiquestStreakWidget.pose(AnkiquestDay.State.SHORT, 10))
-        assertEquals(R.drawable.aki_sleeping, AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 0))
-        assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose(AnkiquestDay.State.UNKNOWN, 10))
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a 64-day streak whose day counts shows the blazing pose`() {
+        // The minimum was reached a minute ago: the big layouts showed the calm minimum pose.
+        val board = JSONArray().put(me(64, "studied", 20, 11, 10))
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, board, "hill", size)
+                    .apply(targetContext, FrameLayout(targetContext))
+            val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+            val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap, size.name)
+            val blazing = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_streak_blazing, minOf(shown.width, shown.height)))
+            assertTrue(shown.sameAs(blazing), "$size shows the blazing pose")
+        }
     }
 
     @Test
-    fun `the big companion fits today's state and streak`() {
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `two frozen days before today show the second frozen pose`() {
         val now = TimeManager.time.intTimeMS()
-        val poses = { state: AnkiquestDay.State, streak: Int, entry: JSONObject?, goal: Boolean ->
-            AnkiquestStreakWidget.poses(state, streak, entry, goal, now)
+        val row = me(10, "protected", 0)
+        val heatmap = JSONArray()
+        for (frozen in listOf(false, true, true, false)) {
+            heatmap.put(JSONObject().put("frozen", frozen))
         }
-        val day = { minutes: Int, needed: Int, hoursLeft: Long ->
+        val profile =
             JSONObject()
-                .put("today_minutes", minutes)
-                .put("streak_minutes", needed)
-                .put("day_ends_at", now + hoursLeft * 3_600_000)
-        }
-        assertEquals(listOf(R.drawable.aki_celebrate, R.drawable.aki_streak), poses(AnkiquestDay.State.STUDIED, 3, day(20, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_goal, R.drawable.aki_celebrate), poses(AnkiquestDay.State.STUDIED, 3, day(20, 0, 10), true))
-        assertEquals(
-            listOf(R.drawable.aki_minimum),
-            poses(AnkiquestDay.State.STUDIED, 40, day(11, 10, 10), false),
-            "the minimum was just reached",
-        )
-        assertEquals(
-            listOf(R.drawable.aki_streak_hot, R.drawable.aki_celebrate),
-            poses(AnkiquestDay.State.STUDIED, 10, day(30, 10, 10), false),
-        )
-        assertEquals(
-            listOf(R.drawable.aki_streak_blazing, R.drawable.aki_celebrate),
-            poses(AnkiquestDay.State.STUDIED, 45, day(30, 0, 10), false),
-        )
-        assertEquals(
-            listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone),
-            poses(AnkiquestDay.State.STUDIED, 365, day(30, 0, 10), false),
-        )
-        assertEquals(listOf(R.drawable.aki_comeback), poses(AnkiquestDay.State.STUDIED, 1, day(30, 0, 10), false))
-        assertEquals(
-            listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze),
-            poses(AnkiquestDay.State.PROTECTED, 10, day(0, 0, 10), false),
-        )
-        assertEquals(
-            listOf(R.drawable.aki_at_risk),
-            poses(AnkiquestDay.State.PENDING, 10, day(0, 0, 3), false),
-            "the last hours of the day",
-        )
-        assertEquals(listOf(R.drawable.aki_review, R.drawable.aki_welcome), poses(AnkiquestDay.State.SHORT, 10, day(4, 10, 10), false))
-        assertEquals(listOf(R.drawable.aki_sleeping, R.drawable.aki_comeback), poses(AnkiquestDay.State.PENDING, 0, day(0, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_welcome), poses(AnkiquestDay.State.UNKNOWN, 10, null, false))
+                .put("streak", 10)
+                .put("streak_state", "protected")
+                .put("day_ends_at", row.getLong("day_ends_at"))
+                .put("heatmap", heatmap)
+        AnkiquestIcon.update(targetContext, profile, now, targetContext.sharedPrefs())
+
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, JSONArray().put(row), "hill", AnkiquestStreakWidget.Size.HUGE)
+                .apply(targetContext, FrameLayout(targetContext))
+        val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+        val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap)
+        val frozen = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_freeze, minOf(shown.width, shown.height)))
+        assertTrue(shown.sameAs(frozen))
+    }
+
+    /** The companion [widget] shows is [pose]. */
+    private fun assertPose(
+        widget: View,
+        pose: Int,
+        message: String,
+    ) {
+        val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+        val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap, message)
+        val expected = assertNotNull(AnkiquestArt.bitmap(targetContext, pose, minOf(shown.width, shown.height)))
+        val name = targetContext.resources.getResourceEntryName(pose)
+        assertTrue(shown.sameAs(expected), "$message: not $name")
     }
 
     @Test
-    fun `the big companion keeps its pose all day and changes between days`() {
-        val day = 86_400_000L
-        val entry = { endsAt: Long -> JSONObject().put("day_ends_at", endsAt) }
-        val pose = { endsAt: Long -> AnkiquestStreakWidget.bigPose(AnkiquestDay.State.STUDIED, 3, entry(endsAt), false, endsAt - 1) }
-        val today = 20_000 * day + 5 * 3_600_000
-        assertEquals(pose(today), AnkiquestStreakWidget.bigPose(AnkiquestDay.State.STUDIED, 3, entry(today), false, today - 10 * 3_600_000))
-        assertEquals(
-            setOf(R.drawable.aki_celebrate, R.drawable.aki_streak),
-            setOf(pose(today), pose(today + day)),
-            "two days in a row show both poses",
-        )
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a studied streak is sad once its day ends`() {
+        // Yesterday counted and its goal was reached; nothing newer arrived before the day ended.
+        val now = TimeManager.time.intTimeMS()
+        val ended = now - 3_600_000
+        val row = me(12, "studied", 30, 20, 10).put("day_ends_at", ended)
+        val profile =
+            JSONObject()
+                .put("streak", 12)
+                .put("streak_state", "studied")
+                .put("day_ends_at", ended)
+                .put(
+                    "goal",
+                    JSONObject()
+                        .put("mode", "cards")
+                        .put("value", 20)
+                        .put("progress", 30)
+                        .put("reached", true),
+                )
+        AnkiquestIcon.update(targetContext, profile, now, targetContext.sharedPrefs())
+
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, JSONArray().put(row), "hill", size, now)
+                    .apply(targetContext, FrameLayout(targetContext))
+            assertPose(widget, AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 12), size.name)
+            assertEquals("12", widget.text(R.id.ankiquest_streak_number), size.name)
+            // The status waits for the server to judge the new day.
+            assertEquals(targetContext.getString(R.string.ankiquest_streak_unknown), widget.text(R.id.ankiquest_streak_status), size.name)
+        }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a goal reached on an ended day does not set today on fire`() {
+        val now = TimeManager.time.intTimeMS()
+        val ended = now - 3_600_000
+        val row = me(12, "pending", 0, 0, 10).put("day_ends_at", ended)
+        val profile =
+            JSONObject()
+                .put("streak", 12)
+                .put("streak_state", "pending")
+                .put("day_ends_at", ended)
+                .put("goal", JSONObject().put("reached", true))
+        AnkiquestIcon.update(targetContext, profile, now, targetContext.sharedPrefs())
+
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, JSONArray().put(row), "hill", AnkiquestStreakWidget.Size.HUGE, now)
+                .apply(targetContext, FrameLayout(targetContext))
+        assertPose(widget, AnkiquestMood.pose(AnkiquestMood.Mood.UNKNOWN, 12), "an unknown day")
+    }
+
+    @Test
+    fun `placed streak widgets are drawn again when the day ends`() {
+        targetContext.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://study.example.test")
+            putString(Ankiquest.PREF_USER, "hill")
+        }
+        mockkObject(AnkiquestPoll)
+        every { AnkiquestPoll.refreshNow(any()) } just Runs
+        try {
+            val manager = AppWidgetManager.getInstance(targetContext)
+            shadowOf(manager).createWidget(AnkiquestStreakWidget::class.java, R.layout.widget_ankiquest_streak)
+            val row = me(12, "studied", 30, 20, 10)
+            AnkiquestStreakWidget.render(targetContext, JSONArray().put(row))
+            verify { AnkiquestPoll.atDayEnd(targetContext, row.getLong("day_ends_at")) }
+        } finally {
+            unmockkObject(AnkiquestPoll)
+        }
+    }
+
+    /** Edge of the companion bitmap each big layout shows at its largest, from its ImageView maxHeight. */
+    private fun shownPx(size: AnkiquestStreakWidget.Size): Int {
+        val dp = if (size == AnkiquestStreakWidget.Size.LARGE) LARGE_COMPANION_DP else HUGE_COMPANION_DP
+        return minOf((dp * targetContext.resources.displayMetrics.density).toInt(), COMPANION_MAX_PX)
+    }
+
+    /** The companion's bitmap edge in [size], for a first streak day (one pose in every layout). */
+    private fun companionPx(
+        size: AnkiquestStreakWidget.Size,
+        options: Bundle? = null,
+    ): Int {
+        val board = JSONArray().put(me(1, "studied", 20, 30, 10))
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, board, "hill", size, options = options)
+                .apply(targetContext, FrameLayout(targetContext))
+        val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+        val bitmap = assertNotNull((drawable as? BitmapDrawable)?.bitmap, size.name)
+        return minOf(bitmap.width, bitmap.height)
+    }
+
+    @Test
+    @Config(qualifiers = "560dpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `the big companion is never upscaled on a dense screen`() {
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val shown = shownPx(size)
+            val actual = companionPx(size)
+            assertTrue(actual >= shown, "$size shows $shown px from $actual px")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "xhdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `the big companion is decoded for its shown size`() {
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val shown = shownPx(size)
+            val actual = companionPx(size)
+            // Power-of-two sampling covers the shown size with less than twice its edge.
+            assertTrue(actual in shown until 2 * shown, "$size shows $shown px from $actual px")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "xhdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a narrow widget decodes a smaller companion`() {
+        val options =
+            Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 150)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 400)
+            }
+        val shown = (150 * targetContext.resources.displayMetrics.density).toInt()
+        val actual = companionPx(AnkiquestStreakWidget.Size.HUGE, options)
+        assertTrue(actual in shown until 2 * shown, "150 dp shows $shown px from $actual px")
+    }
+
+    @Test
+    @Config(qualifiers = "560dpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `every streak pose covers the huge layout on a dense screen`() {
+        val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
+        // Every pose the big layouts rotate through, and Ankilope's stand-ins for them.
+        val aki =
+            AnkiquestMood.Mood.entries
+                .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
+                .toSet()
+        assertEquals(11, aki.size)
+        val poses = aki + setOf(R.drawable.ankilope_face, R.drawable.ankilope_welcome, R.drawable.ankilope_study)
+        for (pose in poses) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeResource(targetContext.resources, pose, bounds)
+            val name = targetContext.resources.getResourceEntryName(pose)
+            assertTrue(minOf(bounds.outWidth, bounds.outHeight) >= shown, "$name is ${bounds.outWidth} px for $shown px")
+        }
+    }
+
+    private companion object {
+        /** The ImageView maxHeight of the large and huge layouts. */
+        const val LARGE_COMPANION_DP = 220
+        const val HUGE_COMPANION_DP = 520
+
+        /** The streak widget poses are exported at this size (float3/ankiquest#253). */
+        const val COMPANION_MAX_PX = 1024
     }
 }

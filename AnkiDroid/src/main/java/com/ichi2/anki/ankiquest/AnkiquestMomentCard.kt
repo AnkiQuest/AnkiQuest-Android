@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
+import android.graphics.drawable.GradientDrawable
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -44,6 +45,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.text.NumberFormat
 
 /**
  * The one card every moment gets: Aki in a pose for the moment (or the server's picture of it, once
@@ -53,6 +55,9 @@ import timber.log.Timber
  */
 internal object AnkiquestMomentCard {
     private const val ART_DP = 128
+    private const val HERO_ART_DP = 168
+    private const val HERO_PAD_DP = 16
+    private const val HERO_CORNER_DP = 24
     private const val RECAP_ART_DP = 112
     private const val MAX_PAGE_HEIGHT_DP = 400
 
@@ -117,7 +122,7 @@ internal object AnkiquestMomentCard {
 
     /** One owner and lifetime for the recap and any moments that arrive while it is open. */
     class Card(
-        private val host: Activity,
+        private val host: FragmentActivity,
         private val account: HomeAccount?,
         initial: List<Moment>,
         private val prefs: SharedPreferences,
@@ -125,8 +130,8 @@ internal object AnkiquestMomentCard {
         private enum class Exit { DONE, CONTINUE, PROGRESS, REPLACED, CLOSED }
 
         private val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
-        private val lifecycle = (host as LifecycleOwner).lifecycle
-        private val parentScope = (host as LifecycleOwner).lifecycleScope
+        private val lifecycle = host.lifecycle
+        private val parentScope = host.lifecycleScope
         private val jobs = SupervisorJob(parentScope.coroutineContext[Job])
         private val scope = CoroutineScope(parentScope.coroutineContext + jobs)
         private val content = Content(host)
@@ -134,7 +139,7 @@ internal object AnkiquestMomentCard {
         private val more = content.findViewById<TextView>(R.id.aq_moment_more)
         private val recap = RecapPage(host)
         private val moments = initial.toMutableList()
-        private val pages = account?.let { Pages(host, it, moments, scope) }
+        private val pages = account?.let { Pages(host, it, moments, scope) { content } }
         private val adapter = ConcatAdapter(recap).apply { pages?.let(::addAdapter) }
         private var session: Session? = null
         private var exit = Exit.DONE
@@ -164,7 +169,7 @@ internal object AnkiquestMomentCard {
                     if (!ownsAccount()) {
                         abandon()
                     } else {
-                        pages?.refresh()
+                        pages?.resumed()
                     }
                 }
             }
@@ -345,7 +350,7 @@ internal object AnkiquestMomentCard {
 
     /** Shows a session, moments, or both in one scrollable, swipeable card. */
     fun show(
-        host: Activity,
+        host: FragmentActivity,
         account: HomeAccount?,
         moments: List<Moment>,
         prefs: SharedPreferences,
@@ -369,6 +374,7 @@ internal object AnkiquestMomentCard {
     @DrawableRes
     fun art(moment: Moment): Int =
         when (moment.kind) {
+            // A milestone has its own pose; a counted day burns as hot as its streak.
             Kind.STREAK -> R.drawable.aki_streak_milestone
             Kind.LEVEL -> R.drawable.aki_level_up
             Kind.RANK -> AnkiquestArt.place(moment.place) ?: R.drawable.aki_winner
@@ -378,7 +384,7 @@ internal object AnkiquestMomentCard {
             Kind.CONQUERED -> R.drawable.aki_deck_conquered
             Kind.GOAL -> R.drawable.aki_goal
             Kind.UNLOCKS -> R.drawable.aki_celebrate
-            Kind.SECURED -> R.drawable.aki_minimum
+            Kind.SECURED -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, moment.streak ?: 1)
         }
 
     /** Whether friends can be told about [moment] at all: it needs something the server can pass on. */
@@ -388,15 +394,22 @@ internal object AnkiquestMomentCard {
     private class Holder(
         view: View,
     ) : RecyclerView.ViewHolder(view) {
+        val hero: LinearLayout = view.findViewById(R.id.aq_moment_hero)
         val art: ImageView = view.findViewById(R.id.aq_moment_art)
+        val streak: TextView = view.findViewById(R.id.aq_moment_streak)
+        val next: TextView = view.findViewById(R.id.aq_moment_next)
         val title: TextView = view.findViewById(R.id.aq_moment_title)
         val detail: TextView = view.findViewById(R.id.aq_moment_detail)
         val date: TextView = view.findViewById(R.id.aq_moment_date)
         val open: MaterialButton = view.findViewById(R.id.aq_moment_open)
         val tell: MaterialButton = view.findViewById(R.id.aq_moment_tell)
         val share: MaterialButton = view.findViewById(R.id.aq_moment_share)
+        val download: MaterialButton = view.findViewById(R.id.aq_moment_download)
         val deck: MaterialButton = view.findViewById(R.id.aq_moment_deck)
     }
+
+    /** Where the player went from the card; only a conquest screen changes what a moment shows. */
+    private enum class Away { NONE, CONQUEST }
 
     /** What the server knows about a moment beyond the inbox row: whether friends heard it, and its picture. */
     private data class Extras(
@@ -410,15 +423,18 @@ internal object AnkiquestMomentCard {
     )
 
     private class Pages(
-        private val host: Activity,
+        private val host: FragmentActivity,
         private val account: HomeAccount,
         private val moments: List<Moment>,
         private val scope: CoroutineScope?,
+        /** A view in the card's dialog, where Undo shows after sending from the share sheet. */
+        private val root: () -> View,
     ) : RecyclerView.Adapter<Holder>() {
         private val extras = mutableMapOf<String, Extras>()
         private val pictures = mutableMapOf<String, Bitmap>()
         private val told = mutableSetOf<String>()
         private var generation = 0
+        private var away = Away.NONE
         private val deckNames = mutableMapOf<String, DeckName>()
 
         /** A lookup owns one state; returning from editing or saving replaces it. */
@@ -451,8 +467,17 @@ internal object AnkiquestMomentCard {
             val original = moments[position]
             val deck = deckNames[original.key]
             val moment = if (deck != null) original.copy(deck = deck.name) else original
-            val size = (ART_DP * host.resources.displayMetrics.density).toInt()
             val picture = pictures[moment.key]
+
+            // The server's picture has its own design; otherwise a streak moment gets the hero.
+            val streak = moment.streak?.takeIf { picture == null }
+            showHero(holder, streak)
+            val size = ((if (streak == null) ART_DP else HERO_ART_DP) * host.resources.displayMetrics.density).toInt()
+            holder.art.layoutParams =
+                holder.art.layoutParams.apply {
+                    width = size
+                    height = size
+                }
             if (picture != null) {
                 holder.art.isVisible = true
                 holder.art.setImageBitmap(picture)
@@ -466,21 +491,24 @@ internal object AnkiquestMomentCard {
             holder.date.isVisible = moment.at > 0
             holder.open.isVisible = moment.conquest != null
             holder.open.setOnClickListener {
-                moment.conquest?.let { host.startActivity(AnkiquestConquestActivity.intent(host, account.user, it)) }
+                moment.conquest?.let {
+                    away = Away.CONQUEST
+                    host.startActivity(AnkiquestConquestActivity.intent(host, account.user, it))
+                }
             }
             val known = extras[moment.key]
             val undo = moment.key in undoable
             holder.tell.isVisible = tellable(moment) && (undo || (moment.key !in told && known?.told != true))
             holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
             holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
-            holder.share.setOnClickListener { share(moment) }
+            holder.share.setOnClickListener { share(moment, position) }
+            holder.download.setOnClickListener { download(moment) }
             holder.deck.isVisible = moment.conquest != null
             holder.deck.text = moment.deck?.let { host.getString(R.string.aq_share_deck_edit, it) }
                 ?: host.getString(R.string.aq_share_deck_title)
             holder.deck.setOnClickListener {
-                val activity = host as? FragmentActivity ?: return@setOnClickListener
                 moment.conquest?.let { at ->
-                    AnkiquestDeckNameDialog.show(activity, account, at) { name ->
+                    AnkiquestDeckNameDialog.show(host, account, at) { name ->
                         deckNames[moment.key] = DeckName.Ready(name)
                         changed(position)
                     }
@@ -492,8 +520,19 @@ internal object AnkiquestMomentCard {
             if (known == null) load(moment, position)
         }
 
-        /** Returning from a conquest must forget a label or picture the player removed there. */
-        fun refresh() {
+        /**
+         * Returning from a conquest must forget a label or picture the player removed there. Any
+         * other return, such as from the share sheet or a permission dialog, keeps what was loaded.
+         */
+        fun resumed() {
+            if (away != Away.CONQUEST) {
+                return
+            }
+            away = Away.NONE
+            refresh()
+        }
+
+        private fun refresh() {
             generation++
             extras.clear()
             pictures.clear()
@@ -665,10 +704,44 @@ internal object AnkiquestMomentCard {
         }
 
         /**
-         * The share sheet: the server's picture and first-person invitation with its link for a win,
+         * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
+         * chosen friends; Android's share sheet otherwise.
+         */
+        private fun share(
+            moment: Moment,
+            position: Int,
+        ) {
+            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            val win = moment.win ?: extras[moment.key]?.win
+            val ref =
+                when {
+                    moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
+                    win != null -> AnkiquestSharing.MomentRef.Win(win)
+                    else -> null
+                }
+            if (ref == null || !AnkiquestMomentShare.available(signedIn)) {
+                elsewhere(moment)
+                return
+            }
+            AnkiquestShareSheet(
+                host,
+                signedIn,
+                ref,
+                publicPicture(moment),
+                elsewhere = { elsewhere(moment) },
+                sent = {
+                    told += moment.key
+                    changed(position)
+                },
+                root = root,
+            ).show()
+        }
+
+        /**
+         * Android's share sheet: the server's picture and first-person invitation with its link for a win,
          * the card's own words and page for a conquered card, or one line of text otherwise.
          */
-        private fun share(moment: Moment) {
+        private fun elsewhere(moment: Moment) {
             val scope = scope ?: return
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             scope.launch {
@@ -677,7 +750,7 @@ internal object AnkiquestMomentCard {
                     val card = publicPicture(moment)
                     val link =
                         try {
-                            win?.let { Ankiquest.shareWinLink(it, signedIn.scope, AnkiquestApi.Timeout.PICTURE) }
+                            win?.let { Ankiquest.shareWinLink(it, signedIn.scope) }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: HomeAccountChanged) {
@@ -708,11 +781,12 @@ internal object AnkiquestMomentCard {
                                         moment.shareTitle ?: moment.title,
                                         moment.shareBody ?: moment.detail,
                                         art = art(moment),
+                                        streak = moment.streak,
                                     )
                                 }
                             }
                         }
-                    (host as LifecycleOwner).lifecycle.withResumed {
+                    host.lifecycle.withResumed {
                         if (current()?.scope == signedIn.scope && !host.isFinishing && !host.isDestroyed) {
                             host.startActivity(chooser)
                         }
@@ -730,13 +804,44 @@ internal object AnkiquestMomentCard {
             }
         }
 
-        /** The on-screen conquest suggestion is private until its label has been saved. */
+        /** The streak number on its heat's colours with the next milestone, or nothing without a [streak]. */
+        private fun showHero(
+            holder: Holder,
+            streak: Int?,
+        ) {
+            holder.streak.isVisible = streak != null
+            if (streak == null) {
+                holder.hero.background = null
+                holder.hero.setPadding(0, 0, 0, 0)
+                holder.next.isVisible = false
+                return
+            }
+
+            // The colours deepen with the streak, as on the share picture.
+            val density = host.resources.displayMetrics.density
+            val heat = AnkiquestMood.Heat.of(streak)
+            holder.hero.background =
+                GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(host.getColor(heat.top), host.getColor(heat.bottom)))
+                    .apply { cornerRadius = HERO_CORNER_DP * density }
+            val pad = (HERO_PAD_DP * density).toInt()
+            holder.hero.setPadding(pad, pad, pad, pad)
+            holder.streak.text = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale()).format(streak)
+            val next = AnkiquestMood.nextLine(host, streak)
+            holder.next.text = next.orEmpty()
+            holder.next.isVisible = next != null
+        }
+
+        /**
+         * The picture says what the caption says: the server's share words, else the moment's own.
+         * The on-screen conquest suggestion is private until its label has been saved.
+         */
         private fun publicPicture(moment: Moment): AnkiquestShare.Card {
+            val title = moment.shareTitle ?: moment.title
             if (moment.conquest == null) {
-                return AnkiquestShare.Card(moment.title, moment.detail, art(moment))
+                return AnkiquestShare.Card(title, moment.shareBody ?: moment.detail, art(moment), streak = moment.streak)
             }
             return AnkiquestShare.Card(
-                moment.title,
+                title,
                 host.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses),
                 art(moment),
                 listOfNotNull(
@@ -744,6 +849,25 @@ internal object AnkiquestMomentCard {
                     moment.deck?.let { host.getString(R.string.aq_conquest_share_deck, it) },
                 ),
             )
+        }
+
+        /** Saves [moment]'s picture drawn on the phone; unlike Share it never asks the server for a link. */
+        private fun download(moment: Moment) {
+            val scope = scope ?: return
+            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            val card = publicPicture(moment)
+            scope.launch {
+                val saving = withContext(Dispatchers.IO) { AnkiquestShare.download(host.applicationContext, card) }
+                if (saving == null) {
+                    toast(R.string.ankiquest_picture_failed)
+                    return@launch
+                }
+                host.lifecycle.withResumed {
+                    if (current()?.scope == signedIn.scope && !host.isFinishing && !host.isDestroyed) {
+                        host.startActivity(saving)
+                    }
+                }
+            }
         }
 
         private fun toast(message: Int) = showThemedToast(host, host.getString(message), shortLength = false)

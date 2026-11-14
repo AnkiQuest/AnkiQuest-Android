@@ -1,6 +1,6 @@
 # Conquest deck names
 
-Part of [#247](https://github.com/float3/AnkiQuest-Android/issues/247).
+Part of [#247](https://github.com/AnkiQuest/AnkiQuest-Android/issues/247).
 
 The conquest screen and session card offer the same editable deck name. Players
 can use a meaningful path component, type their own name or omit the deck. Choices
@@ -14,7 +14,7 @@ home deck when no snapshot exists.
 
 The cleaner follows `ankiquest/deck_names.json`, copied with the complete fixture
 and API snapshot from server commit
-`ad458b3e450d25ce6c144596c8916e4e262e1cfe` (merged server PRs #247/#248).
+`5714b76375d5b9c54095cd72380466ca3495b884` (merged server PRs #247/#248).
 Its 20 cases include supplementary characters at the 120-character limit and
 short leaves that need their parent. The editor uses the same character count.
 
@@ -51,7 +51,8 @@ captures byte for byte.
 | moment_deck_200percent | [View](moment_deck_200percent.png) | [View](dark_moment_deck_200percent.png) |
 | moment_deck_200percent_actions | [View](moment_deck_200percent_actions.png) | [View](dark_moment_deck_200percent_actions.png) |
 
-After integration with local picture sharing, all 128 affected ordinary/API tests
-and ktlint pass. The 14 native cases pass again, with all 22 captures unchanged.
+After integration with the current share sheet and picture download actions, all
+140 affected ordinary/API tests and ktlint pass. The 14 native cases pass again;
+all 22 captures were refreshed and reviewed.
 A regression also verifies that a pending lookup cannot replace a deck edited
 during another foreground visit.

@@ -42,6 +42,9 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
             JSONObject()
                 .put("level", 4)
                 .put("streak", 3)
+                // A running streak not studied yet today: the card shows Aki's sad pose.
+                .put("streak_state", "pending")
+                .put("day_ends_at", DAY_ENDS_AT)
                 .put("xp_into_level", 120)
                 .put("xp_for_next", 250)
                 .put(
@@ -77,7 +80,11 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestHomeData.profile(any()) } coAnswers {
             withContext(Dispatchers.IO) {
                 delay(1_000)
-                JSONObject().put("level", 4).put("streak", 3)
+                JSONObject()
+                    .put("level", 4)
+                    .put("streak", 3)
+                    .put("streak_state", "pending")
+                    .put("day_ends_at", DAY_ENDS_AT)
             }
         }
         captureToday(prefix = "today_delayed")
@@ -150,5 +157,10 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
         )
         val size = if (device == DeviceConfig.PHONE) "320dp" else "default"
         captureScreen("${prefix}_${size}${if (largeText) "_200percent" else ""}")
+    }
+
+    private companion object {
+        /** A day that never ends while the screenshots run. */
+        const val DAY_ENDS_AT = 4_102_444_800_000L
     }
 }

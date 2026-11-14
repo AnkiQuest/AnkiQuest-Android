@@ -1,6 +1,7 @@
-// Keep the existing AGP variant/task APIs until the separate AGP DSL migration.
+// Keep the existing AGP DSL/task APIs until the separate AGP DSL migration.
 @file:Suppress("DEPRECATION")
 
+import com.android.build.api.variant.FilterConfiguration.FilterType
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.isCoverageEnabled
@@ -41,7 +42,7 @@ keeper {
 baselineProfile {
     // Write generated profiles to `src/main/baselineProfiles/` instead of the
     // default per-variant `src/playRelease/generated/baselineProfiles/`. This
-    // ensures the profile is consumed by ALL variants (play, amazon, full) and
+    // ensures the profile is consumed by ALL variants (play, full) and
     // ALL buildTypes (release, benchmark), not just `playRelease`.
     mergeIntoMain = true
 }
@@ -143,9 +144,9 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode = 22600113
+        versionCode = 22600114
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName = "2.26.0alpha13"
+        versionName = "2.26.0alpha14"
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "com.ichi2.testutils.NewCollectionPathTestRunner"
@@ -273,9 +274,7 @@ android {
     }
 
     /*
-     * Product Flavors are used for Amazon App Store and Google Play Store.
-     * This is because we cannot use Camera Permissions in Amazon App Store (for FireTv etc...)
-     * Therefore, different AndroidManifest for Camera Permissions is used in Amazon flavor.
+     * Product Flavors are used for Google Play Store restrictions.
      */
     flavorDimensions += "appStore"
     productFlavors {
@@ -285,9 +284,6 @@ android {
             // Google Play no longer considers Open Collective to be acceptable for
             // a 'tax-exempt' link. Temporarily remove our links
             buildConfigField("Boolean", "SHOW_DONATE_LINKS", "false")
-        }
-        create("amazon") {
-            dimension = "appStore"
         }
         // A 'full' build has no restrictions on storage/camera. Distributed on GitHub/F-Droid
         create("full") {
@@ -328,35 +324,6 @@ android {
             }
         }
     }
-    // applicationVariants are e.g. debug, release
-    applicationVariants.configureEach {
-        val variant = this
-        // We want the same version stream for all ABIs in debug but for release we can split them
-        if (variant.buildType.name == "release") {
-            variant.outputs.configureEach {
-                val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-
-                // For each separate APK per architecture, set a unique version code as described here:
-                // https://developer.android.com/studio/build/configure-apk-splits.html
-                val versionCodes = mapOf("armeabi-v7a" to 1, "x86" to 2, "arm64-v8a" to 3, "x86_64" to 4)
-                val outputFile = output.outputFile
-                if (outputFile != null && outputFile.name.endsWith(".apk")) {
-                    val abi = output.getFilter("ABI")
-                    if (abi != null) { // null for the universal-debug, universal-release variants
-                        //  From: https://developer.android.com/studio/publish/versioning#appversioning
-                        //  "Warning: The greatest value Google Play allows for versionCode is 2100000000"
-                        //  AnkiDroid versionCodes have a budget 8 digits (through AnkiDroid 9)
-                        //  This style does ABI version code ranges with the 9th digit as 0-4.
-                        //  This consumes ~20% of the version range space, w/50 years of versioning at our major-version pace
-                        output.versionCodeOverride =
-                            // ex:  321200106 = 3 * 100000000 + 21200106
-                            versionCodes.getValue(abi) * 100000000 + defaultConfig.versionCode!!
-                    }
-                }
-            }
-        }
-    }
-
     testOptions {
         animationsDisabled = true
         unitTests {
@@ -389,7 +356,7 @@ android {
                         test.systemProperty("screenshot.theme", theme)
                         test.systemProperty("screenshot.device", device)
                         test.systemProperty("screenshot.accessibilityScan", project.hasProperty("accessibilityScan"))
-                        // Screens for the README banner: see tools/ankiquest_banner.py
+                        // Screens for the README banner: see tools/ankiquest-banner
                         test.systemProperty("screenshot.banner", project.hasProperty("readmeBanner"))
                     }
                     // Ensures that no EmptyApplication test relies on AnkiDroidApp
@@ -428,6 +395,27 @@ if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "q
     androidComponents.onVariants { variant ->
         variant.sources.res?.addStaticSourceDirectory("src/quest/res")
         variant.sources.manifests.addStaticManifestFile("src/quest/AndroidManifest.xml")
+    }
+}
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
+    // We want the same version stream for all ABIs in debug but for release we can split them
+    val versionCodes = mapOf("armeabi-v7a" to 1, "x86" to 2, "arm64-v8a" to 3, "x86_64" to 4)
+    variant.outputs.forEach { output ->
+        // Universal APKs keep their base version code; return early
+        val abi = output.filters.find { it.filterType == FilterType.ABI }?.identifier ?: return@forEach
+
+        // For each separate APK per architecture, set a unique version code as described here:
+        // https://developer.android.com/studio/build/configure-apk-splits.html
+        //  From: https://developer.android.com/studio/publish/versioning#appversioning
+        //  "Warning: The greatest value Google Play allows for versionCode is 2100000000"
+        //  AnkiDroid versionCodes have a budget 8 digits (through AnkiDroid 9)
+        //  This style does ABI version code ranges with the 9th digit as 0-4.
+        //  This consumes ~20% of the version range space, w/50 years of versioning at our major-version pace
+        output.versionCode.set(
+            // ex:  321200106 = 3 * 100000000 + 21200106
+            versionCodes.getValue(abi) * 100000000 + output.versionCode.get(),
+        )
     }
 }
 

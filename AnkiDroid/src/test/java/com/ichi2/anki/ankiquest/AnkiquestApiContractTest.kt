@@ -22,6 +22,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -193,7 +194,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 AnkiquestDailyGoal.ServerGoal(AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, 14), since = 20754),
                 AnkiquestDailyGoal.cached(AnkiDroidApp.sharedPrefs(), account.scope),
             )
-            assertEquals(AnkiquestAki.Mood.STREAK, AnkiquestAki.mood(null, profile))
+            assertEquals(AnkiquestAki.Message.STREAK, AnkiquestAki.mood(null, profile).message)
             assertTrue(assertNotNull(profile.optJSONArray("quests")).objects().all { it.optString("title").isNotEmpty() })
 
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
@@ -283,6 +284,49 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `the Global board reads ranks, the player's listing and strangers' summaries`() =
+        runBlocking {
+            // The player is listed: their full row, then a stranger's summary without today's counts.
+            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY, AnkiquestBoards.Source.Global)
+            assertEquals(listOf("hill", "ana"), day.map { it.user })
+            assertEquals(listOf("Hill", "Ana"), day.map { it.display })
+            assertEquals(listOf(1, 2), day.map { it.rank })
+            assertEquals(listOf(107L, 20L), day.map { it.xp })
+            assertEquals(listOf(true, null), day.map { it.shown })
+            assertEquals(listOf(true, false), day.map { it.hasToday })
+            assertEquals(5L, day.first().todayReviews)
+            assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.UNKNOWN), day.map { it.state })
+
+            // A private profile not yet listed: others' summaries, then the player's own row last with its rank.
+            val hidden = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global)
+            assertEquals(listOf("hill", "cerro", "ana"), hidden.map { it.user })
+            assertEquals(listOf(1, 2, 3), hidden.map { it.rank })
+            assertEquals(listOf(246L, 31L, 20L), hidden.map { it.xp })
+            assertEquals(listOf(null, null, false), hidden.map { it.shown })
+            assertEquals(listOf(false, false, true), hidden.map { it.hasToday })
+            assertEquals(2L, hidden.last().todayReviews)
+            assertEquals(2, requests.count { it == "GET /api/leaderboard" })
+
+            // The widget orders the same rows by rank and takes strangers' XP from `xp`.
+            val widgetDay = AnkiquestWidget.forPeriod(JSONArray(example("leaderboard_global")), "day").objects()
+            assertEquals(listOf(107L, 20L), widgetDay.map { it.getLong("xp") })
+            val widgetWeek = AnkiquestWidget.forPeriod(JSONArray(example("leaderboard_global_hidden")), "week").objects()
+            assertEquals(listOf("hill", "cerro", "ana"), widgetWeek.map { it.getString("user") })
+            assertEquals(listOf(246L, 31L, 20L), widgetWeek.map { it.getLong("xp") })
+        }
+
+    @Test
+    fun `the Global listing switch is offered from the settings and saved with the server's answer`() =
+        runBlocking {
+            val global = AnkiquestWidgetSettings.GLOBAL_SETTING
+            assertTrue(AnkiquestBoards.hasScopes(account))
+            assertTrue(AnkiquestWidgetSettings.hasScopes(account))
+            assertEquals(true, Ankiquest.notificationSwitches().opt(global) as? Boolean)
+            assertTrue(Ankiquest.setNotificationSwitch(global, true).getBoolean(global))
+            assertTrue("POST /api/decks/hill" in requests)
+        }
+
+    @Test
     fun `a rank change is announced`() =
         runBlocking {
             AnkiquestNotifier.onLeaderboard(targetContext)
@@ -347,6 +391,31 @@ class AnkiquestApiContractTest : RobolectricTest() {
             )
             assertEquals("aki", AnkiquestHomeData.companion(account))
             assertFalse(Ankiquest.streakProtectionEnabled())
+        }
+
+    @Test
+    fun `a moment sent to chosen friends or a group answers its win and can be taken back`() =
+        runBlocking {
+            val conquest = AnkiquestSharing.MomentRef.Conquest(1_793_097_000_000L)
+            val friends = AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList())
+            val told = AnkiquestSharing.send(account, conquest, friends, "Took me a month!")
+            assertEquals(1, told.recipients)
+            assertEquals(6L, told.win)
+            assertTrue(told.undoable(EXAMPLE_NOW), "Undo while undo_until is ahead")
+
+            val group = AnkiquestSharing.Audience.Chosen(emptyList(), listOf(3L))
+            val shared = AnkiquestSharing.send(account, AnkiquestSharing.MomentRef.Win(3), group, null)
+            assertEquals(3L, shared.win)
+            assertNotNull(shared.undoUntil)
+
+            assertEquals(1, AnkiquestSharing.retract(account, told.win))
+            assertEquals(
+                listOf("POST /api/share/hill", "POST /api/share/hill", "DELETE /api/share/hill/6"),
+                requests.filter {
+                    "/share/" in
+                        it
+                },
+            )
         }
 
     @Test
@@ -582,19 +651,24 @@ class AnkiquestApiContractTest : RobolectricTest() {
         query: String? = null,
     ): String? {
         val parts = path.removePrefix("/api/").split('/')
+        val params = query.orEmpty().split('&')
         return when {
             path == "/api/capabilities" -> "capabilities"
             path == "/api/leaderboard/hidden/hill" -> "leaderboard_hide"
             path == "/api/activity/hill" && method == "GET" ->
-                when (query.orEmpty().split('&').firstOrNull { it.startsWith("before=") }) {
+                when (params.firstOrNull { it.startsWith("before=") }) {
                     null -> "activity"
                     "before=15" -> "activity_older"
                     else -> null
                 }
-            path == "/api/leaderboard" && query.orEmpty().split('&').contains("period=day") -> "leaderboard_day"
+            path == "/api/leaderboard" && "scope=global" in params ->
+                if ("period=day" in params) "leaderboard_global" else "leaderboard_global_hidden"
+            path == "/api/leaderboard" && "period=day" in params -> "leaderboard_day"
             path == "/api/week" -> "week"
             path == "/api/profile/cerro" -> "player_profile"
             parts.size == 2 && parts[0] == "wins" -> "wins"
+            parts.size == 3 && parts[0] == "share" && method == "DELETE" -> "share_undo"
+            parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).has("moment") -> shareMoment(sent)
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).optString("to") == "link" -> "share_to_link"
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
@@ -602,6 +676,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/sign-in/hill" && method == "GET" -> "sign_in_methods"
             path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "password" -> "password_change"
             path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "browser" -> "sign_in_browser"
+            path == "/api/decks/hill" && method == "POST" && isGlobalSwitch(sent) -> "global_leaderboard_on"
             path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
             path == "/api/accounts/hill" && method == "GET" -> "account"
             path == "/api/records" -> "records"
@@ -625,6 +700,21 @@ class AnkiquestApiContractTest : RobolectricTest() {
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
+    }
+
+    /** Whether [sent] turns the Global listing on and changes no deck, as `global_leaderboard_on` records. */
+    private fun isGlobalSwitch(sent: String): Boolean {
+        if (sent.isBlank()) {
+            return false
+        }
+        val body = JSONObject(sent)
+        return body.optBoolean(AnkiquestWidgetSettings.GLOBAL_SETTING) && body.optJSONArray("decks")?.length() == 0
+    }
+
+    /** The recorded answer for sending a moment: to a group, or to chosen friends. */
+    private fun shareMoment(sent: String): String {
+        val groups = JSONObject(sent).optJSONObject("to")?.optJSONArray("groups")
+        return if (groups != null && groups.length() > 0) "share_moment_group" else "share_moment"
     }
 
     /** The recorded answer for one `POST /api/social` action; every action answers the same overview. */

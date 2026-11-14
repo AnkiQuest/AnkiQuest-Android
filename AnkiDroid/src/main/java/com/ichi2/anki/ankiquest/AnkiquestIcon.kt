@@ -48,9 +48,6 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         val prefs: SharedPreferences,
     )
 
-    /** The last hours of a study day in which a streak not yet secured counts as at risk. */
-    const val WORRY_HOURS = 6
-
     enum class Mood(
         val alias: String,
     ) {
@@ -61,13 +58,13 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         SLEEPY("AnkiquestIconSleepy"),
     }
 
-    /** The mood for your [profile] at [now]: happy once today counts, worried in the last hours of an open day. */
+    /** The mood for your [profile] at [now], as [AnkiquestMood] has it: worried from the start of a day not studied yet. */
     fun mood(
         profile: JSONObject?,
         now: Long,
     ): Mood {
         val server = AnkiquestDay.Server.profile(profile) ?: return Mood.DEFAULT
-        return mood(AnkiquestDay.judge(server, emptyList(), now), server.dayEndsAt - now)
+        return mood(AnkiquestDay.judge(AnkiquestDay.carried(server, now), emptyList(), now))
     }
 
     private fun ownMood(
@@ -76,23 +73,17 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         prefs: SharedPreferences,
     ): Mood {
         if (server == null) return Mood.DEFAULT
-        return mood(AnkiquestDay.judgeOwn(server, now, prefs), server.dayEndsAt - now)
+        return mood(AnkiquestDay.judgeOwn(AnkiquestDay.carried(server, now), now, prefs))
     }
 
-    private fun mood(
-        day: AnkiquestDay.Verdict?,
-        remainingMs: Long,
-    ): Mood =
-        when (day?.label) {
-            AnkiquestDay.State.STUDIED -> Mood.HAPPY
-            AnkiquestDay.State.PROTECTED -> Mood.FROZEN
-            AnkiquestDay.State.PENDING, AnkiquestDay.State.SHORT ->
-                when {
-                    day.streak == 0 -> Mood.SLEEPY
-                    remainingMs <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
-                    else -> Mood.DEFAULT
-                }
-            AnkiquestDay.State.UNKNOWN, null -> Mood.DEFAULT
+    /** The icon for [day]'s mood; the icon has one frozen face and none for hopeful. */
+    private fun mood(day: AnkiquestDay.Verdict?): Mood =
+        when (AnkiquestMood.of(day, 0, AnkiquestMood.Goal.OPEN)) {
+            AnkiquestMood.Mood.FIRE -> Mood.HAPPY
+            AnkiquestMood.Mood.SAD -> Mood.WORRIED
+            AnkiquestMood.Mood.FROZEN_1, AnkiquestMood.Mood.FROZEN_2, AnkiquestMood.Mood.FROZEN_3 -> Mood.FROZEN
+            AnkiquestMood.Mood.ASLEEP -> Mood.SLEEPY
+            AnkiquestMood.Mood.HOPEFUL, AnkiquestMood.Mood.UNKNOWN -> Mood.DEFAULT
         }
 
     fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, true)
@@ -169,6 +160,8 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 .put("streak_state", profile.optString("streak_state"))
                 .put("day_ends_at", profile.optLong("day_ends_at"))
                 .put("goal_reached", profile.optJSONObject("goal")?.optBoolean("reached") == true)
+                // The streak widget's frozen mood needs the run of frozen days before today.
+                .put("frozen_days", AnkiquestMood.frozenRun(profile.optJSONArray("heatmap")))
                 .put(
                     "goal",
                     profile.optJSONObject("goal")?.let { goal ->

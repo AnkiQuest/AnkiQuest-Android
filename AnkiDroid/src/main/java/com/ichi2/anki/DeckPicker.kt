@@ -204,9 +204,9 @@ import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.ui.windows.permissions.PermissionsActivity
 import com.ichi2.anki.utils.Destination
 import com.ichi2.anki.utils.ShortcutUtils
+import com.ichi2.anki.utils.ext.collectInLifecycle
 import com.ichi2.anki.utils.ext.dismissAllDialogFragments
 import com.ichi2.anki.utils.ext.doOnScrolled
-import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
 import com.ichi2.anki.utils.ext.onGlobalLayout
 import com.ichi2.anki.utils.ext.positionIsVisible
 import com.ichi2.anki.utils.ext.setFragmentResultListener
@@ -227,7 +227,6 @@ import com.ichi2.utils.VersionUtils
 import com.ichi2.utils.configureView
 import com.ichi2.utils.customView
 import com.ichi2.utils.isRtl
-import com.ichi2.utils.message
 import com.ichi2.utils.positiveButton
 import com.ichi2.utils.show
 import com.ichi2.utils.showDialogIfWebViewOutdated
@@ -429,6 +428,13 @@ open class DeckPicker :
                     }.invokeOnCompletion {
                         finish()
                     }
+            }
+        }
+
+    internal val bottomNavBackCallback =
+        object : OnBackPressedCallback(enabled = false) {
+            override fun handleOnBackPressed() {
+                binding.bottomNavigation?.selectTab(NavigationItem.HOME)
             }
         }
 
@@ -1007,38 +1013,38 @@ open class DeckPicker :
                 .show()
         }
 
-        viewModel.deckDeletedNotification.launchCollectionInLifecycleScope(::onDeckDeleted)
-        viewModel.flowOfDeleteDeckConfirmation.launchCollectionInLifecycleScope(::showDeleteDeckConfirmationDialog)
-        viewModel.flowOfRenameDeck.launchCollectionInLifecycleScope(::renameDeckDialog)
-        viewModel.flowOfStudyDeck.launchCollectionInLifecycleScope { deckId ->
+        viewModel.deckDeletedNotification.collectInLifecycle(::onDeckDeleted)
+        viewModel.flowOfDeleteDeckConfirmation.collectInLifecycle(::showDeleteDeckConfirmationDialog)
+        viewModel.flowOfRenameDeck.collectInLifecycle(::renameDeckDialog)
+        viewModel.flowOfStudyDeck.collectInLifecycle { deckId ->
             launchCatchingTask {
                 handleDeckSelection(deckId, DeckSelectionType.SKIP_STUDY_OPTIONS)
             }
         }
-        viewModel.emptyCardsNotification.launchCollectionInLifecycleScope(::onCardsEmptied)
-        viewModel.flowOfDeckCountsChanged.launchCollectionInLifecycleScope(::onDeckCountsChanged)
-        viewModel.flowOfDestination.launchCollectionInLifecycleScope(::onDestinationChanged)
-        viewModel.flowOfNavigate.launchCollectionInLifecycleScope { navigate(it) }
-        viewModel.flowOfExportDeck.launchCollectionInLifecycleScope(::onExportDeck)
-        viewModel.flowOfCreateShortcut.launchCollectionInLifecycleScope(::createIcon)
-        viewModel.flowOfDisableShortcuts.launchCollectionInLifecycleScope(::disableDeckAndChildrenShortcuts)
-        viewModel.onError.launchCollectionInLifecycleScope(::onError)
-        viewModel.flowOfPromptUserToUpdateScheduler.launchCollectionInLifecycleScope(::onPromptUserToUpdateScheduler)
-        viewModel.flowOfOptionsMenuState.filterNotNull().launchCollectionInLifecycleScope(::onOptionsMenuUpdated)
-        viewModel.flowOfStudiedTodayStats.launchCollectionInLifecycleScope(::onStudiedTodayChanged)
-        viewModel.flowOfDeckListInInitialState.filterNotNull().launchCollectionInLifecycleScope(::onCollectionStatusChanged)
-        viewModel.flowOfCardsDue.launchCollectionInLifecycleScope(::onCardsDueChanged)
-        viewModel.flowOfCollectionHasNoCards.launchCollectionInLifecycleScope(::onStudyOptionsVisibilityChanged)
-        viewModel.flowOfDeckList.launchCollectionInLifecycleScope(::onDeckListChanged)
-        viewModel.flowOfFocusedDeck.launchCollectionInLifecycleScope(::onFocusedDeckChanged)
-        viewModel.flowOfResizingDividerVisible.launchCollectionInLifecycleScope(::onResizingDividerVisibilityChanged)
-        viewModel.flowOfDecksReloaded.launchCollectionInLifecycleScope(::onDecksReloaded)
-        viewModel.flowOfStartupResponse.filterNotNull().launchCollectionInLifecycleScope(::onStartupResponse)
-        viewModel.flowOfShowContextMenu.launchCollectionInLifecycleScope(::showDeckPickerContextMenu)
-        viewModel.flowOfShowRightClickContextMenu.launchCollectionInLifecycleScope(::showDeckPickerRightClickContextMenu)
+        viewModel.emptyCardsNotification.collectInLifecycle(::onCardsEmptied)
+        viewModel.flowOfDeckCountsChanged.collectInLifecycle(::onDeckCountsChanged)
+        viewModel.flowOfDestination.collectInLifecycle(::onDestinationChanged)
+        viewModel.flowOfNavigate.collectInLifecycle { navigate(it) }
+        viewModel.flowOfExportDeck.collectInLifecycle(::onExportDeck)
+        viewModel.flowOfCreateShortcut.collectInLifecycle(::createIcon)
+        viewModel.flowOfDisableShortcuts.collectInLifecycle(::disableDeckAndChildrenShortcuts)
+        viewModel.onError.collectInLifecycle(::onError)
+        viewModel.flowOfPromptUserToUpdateScheduler.collectInLifecycle(::onPromptUserToUpdateScheduler)
+        viewModel.flowOfOptionsMenuState.filterNotNull().collectInLifecycle(::onOptionsMenuUpdated)
+        viewModel.flowOfStudiedTodayStats.collectInLifecycle(::onStudiedTodayChanged)
+        viewModel.flowOfDeckListInInitialState.filterNotNull().collectInLifecycle(::onCollectionStatusChanged)
+        viewModel.flowOfCardsDue.collectInLifecycle(::onCardsDueChanged)
+        viewModel.flowOfCollectionHasNoCards.collectInLifecycle(::onStudyOptionsVisibilityChanged)
+        viewModel.flowOfDeckList.collectInLifecycle(::onDeckListChanged)
+        viewModel.flowOfFocusedDeck.collectInLifecycle(::onFocusedDeckChanged)
+        viewModel.flowOfResizingDividerVisible.collectInLifecycle(::onResizingDividerVisibilityChanged)
+        viewModel.flowOfDecksReloaded.collectInLifecycle(::onDecksReloaded)
+        viewModel.flowOfStartupResponse.filterNotNull().collectInLifecycle(::onStartupResponse)
+        viewModel.flowOfShowContextMenu.collectInLifecycle(::showDeckPickerContextMenu)
+        viewModel.flowOfShowRightClickContextMenu.collectInLifecycle(::showDeckPickerRightClickContextMenu)
         // navigation should be done on RESUMED
-        importViewModel.importAddFlow.launchCollectionInLifecycleScope(Lifecycle.State.RESUMED, ::importAdd)
-        importViewModel.importReplaceFlow.launchCollectionInLifecycleScope(Lifecycle.State.RESUMED, ::importReplace)
+        importViewModel.importAddFlow.collectInLifecycle(Lifecycle.State.RESUMED, ::importAdd)
+        importViewModel.importReplaceFlow.collectInLifecycle(Lifecycle.State.RESUMED, ::importReplace)
     }
 
     private val onReceiveContentListener =
@@ -1729,7 +1735,7 @@ open class DeckPicker :
                 KeyEvent.KEYCODE_4 -> NavigationItem.MORE
                 else -> return super.dispatchKeyEvent(event)
             }
-        bottomNavigation.selectedItemId = destination.id
+        bottomNavigation.selectTab(destination)
         return true
     }
 
@@ -1737,6 +1743,9 @@ open class DeckPicker :
         keyCode: Int,
         event: KeyEvent,
     ): Boolean {
+        if (selectedBottomNavItem() == NavigationItem.BROWSER && window.currentFocus?.onCheckIsTextEditor() == true) {
+            return super.onKeyUp(keyCode, event)
+        }
         if (toolbarSearchView?.hasFocus() == true) {
             Timber.d("Skipping keypress: search action bar is focused")
             return true
