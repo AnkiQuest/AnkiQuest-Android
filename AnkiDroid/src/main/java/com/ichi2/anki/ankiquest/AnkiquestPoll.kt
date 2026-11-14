@@ -56,6 +56,12 @@ object AnkiquestPoll {
         }
     }
 
+    internal fun atDayEnd(
+        context: Context,
+        dayEndsAt: Long,
+    ) {
+    }
+
     fun refreshNow(context: Context) {
         try {
             WorkManager

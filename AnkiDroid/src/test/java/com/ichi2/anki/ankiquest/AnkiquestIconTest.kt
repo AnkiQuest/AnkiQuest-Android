@@ -62,6 +62,13 @@ class AnkiquestIconTest : RobolectricTest() {
     }
 
     @Test
+    fun `a streak with no study today is worried all day`() {
+        for (hoursLeft in listOf(23L, 10L, 3L)) {
+            assertEquals(Mood.WORRIED, AnkiquestIcon.mood(profile("pending", 12, hoursLeft), now), "$hoursLeft hours left")
+        }
+    }
+
+    @Test
     fun `builds without the quest aliases keep their launcher entry`() {
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }

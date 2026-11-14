@@ -85,6 +85,17 @@ class AnkiquestAkiTest : RobolectricTest() {
     }
 
     @Test
+    fun `a streak with no study today shows the sad pose`() {
+        val waiting = profile("pending", 0).put("streak", 12)
+        val sad = AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 12)
+        val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
+        val done = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1)
+        assertEquals(sad, AnkiquestAki.mood(due, waiting).image, "cards due")
+        assertEquals(sad, AnkiquestAki.mood(done, waiting).image, "no cards due")
+        assertEquals(sad, AnkiquestAki.mood(null, waiting).image, "decks not loaded")
+    }
+
+    @Test
     fun `notification art is downsampled and decorative art is not an extra control`() {
         val bitmap = assertNotNull(AnkiquestAki.notificationIcon(targetContext))
         assertTrue(bitmap.width <= 192 && bitmap.height <= 192)
