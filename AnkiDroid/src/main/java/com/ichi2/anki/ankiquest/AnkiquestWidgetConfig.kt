@@ -103,7 +103,7 @@ class AnkiquestWidgetConfig : AnkiActivity(R.layout.activity_ankiquest_widget_se
         groupsStatus.isVisible = true
         lifecycleScope.launch {
             try {
-                global = AnkiquestWidgetSettings.hasScopes(account)
+                global = AnkiquestBoards.hasScopes(account)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

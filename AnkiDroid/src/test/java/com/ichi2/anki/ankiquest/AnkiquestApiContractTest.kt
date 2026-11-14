@@ -320,7 +320,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
         runBlocking {
             val global = AnkiquestWidgetSettings.GLOBAL_SETTING
             assertTrue(AnkiquestBoards.hasScopes(account))
-            assertTrue(AnkiquestWidgetSettings.hasScopes(account))
             assertEquals(true, Ankiquest.notificationSwitches().opt(global) as? Boolean)
             assertTrue(Ankiquest.setNotificationSwitch(global, true).getBoolean(global))
             assertTrue("POST /api/decks/hill" in requests)
