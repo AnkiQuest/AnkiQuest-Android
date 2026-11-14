@@ -91,6 +91,8 @@ class AnkiquestGreetingTest : RobolectricTest() {
         assertEquals(targetContext.getString(R.string.ankiquest_greeting_later), later.text.toString())
 
         signIn.performClick()
+        // AlertDialog delivers button clicks through the main looper.
+        advanceRobolectricLooper()
         val started = assertNotNull(shadowOf(host).nextStartedActivity)
         assertEquals(PreferencesActivity::class.java.name, started.component?.className)
         assertTrue(started.getBooleanExtra("ankiquest.sign_in", false))
