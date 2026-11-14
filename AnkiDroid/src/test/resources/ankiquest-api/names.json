@@ -23,6 +23,7 @@
         "leaderboard",
         "mute",
         "notifications",
+        "notifications_companion",
         "password_change",
         "profile",
         "rank",
