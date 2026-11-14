@@ -7,8 +7,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks.State
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Unlock
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Found
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Milestone
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Progress
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -20,15 +22,23 @@ import org.junit.runner.RunWith
 import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The hidden companion: unlocking it, keeping it, and syncing it with old and new servers. */
+/**
+ * Companions earned at milestones, against the shared fixture `tests/fixtures/companion_unlock.json`
+ * from the pinned server commit and a fake server that grants and refuses like the real one.
+ */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestUnlocksTest : RobolectricTest() {
     private lateinit var server: HttpServer
     private lateinit var account: HomeAccount
+
+    /** Each request as "METHOD path body", and the companion header of each companion save. */
     private val requests = CopyOnWriteArrayList<String>()
+    private val companionHeaders = CopyOnWriteArrayList<String?>()
 
     // What the fake server holds.
     @Volatile private var features = listOf<String>()
@@ -37,8 +47,8 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     @Volatile private var companion = "aki"
 
-    /** The unlocks cannot be reached, as when the phone went offline after the capabilities check. */
-    @Volatile private var offline = false
+    /** The value each live companion's milestone has reached, for its progress. */
+    @Volatile private var reached = 0
 
     @Before
     fun serve() {
@@ -48,18 +58,21 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             val path = exchange.requestURI.path
             val sent = exchange.requestBody.bufferedReader().use { it.readText() }
             requests += "${exchange.requestMethod} $path $sent".trim()
+            var status = OK
             val answer =
                 when {
                     path == "/api/capabilities" -> JSONObject().put("version", 1).put("features", JSONArray(features))
-                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features && !offline -> {
-                        if (sent.isNotEmpty()) {
-                            unlocks = unlocks + JSONObject(sent).getString("unlock")
-                        }
-                        JSONObject().put("unlocks", JSONArray(unlocks.sorted()))
-                    }
+                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features -> unlocksAnswer()
                     path.startsWith("/api/companion/") -> {
                         if (sent.isNotEmpty()) {
-                            companion = JSONObject(sent).getString("companion")
+                            val header = exchange.requestHeaders.getFirst(COMPANIONS_HEADER)
+                            companionHeaders += header
+                            val chosen = JSONObject(sent).getString("companion")
+                            if (refuses(chosen, header)) {
+                                status = CONFLICT
+                            } else {
+                                companion = chosen
+                            }
                         }
                         JSONObject().put("companion", companion)
                     }
@@ -69,7 +82,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             if (bytes == null) {
                 exchange.sendResponseHeaders(NOT_FOUND, -1)
             } else {
-                exchange.sendResponseHeaders(OK, bytes.size.toLong())
+                exchange.sendResponseHeaders(status, bytes.size.toLong())
                 exchange.responseBody.use { it.write(bytes) }
             }
             exchange.close()
@@ -84,6 +97,58 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         AnkiquestCapabilities.forgetMemory()
     }
 
+    /** The shared fixture `tests/fixtures/companion_unlock.json` from the pinned server commit. */
+    private val fixture =
+        JSONObject(
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_unlock.json")) { "missing companion unlock" }.readText(),
+        )
+
+    /** The fixture's companions that can be earned now; planned ones are ignored, as the server does. */
+    private val live: List<JSONObject> =
+        fixture.getJSONArray("companions").let { all ->
+            (0 until all.length()).map { all.getJSONObject(it) }.filter { it.getString("status") == "live" }
+        }
+
+    /** A live companion's entry in the fixture. */
+    private fun live(choice: Choice): JSONObject = live.first { it.getString("companion") == choice.id }
+
+    /** The progress the server lists for a live companion, at [value]. */
+    private fun progress(
+        choice: Choice,
+        value: Int,
+    ): Progress {
+        val entry = live(choice)
+        return Progress(Milestone.of(entry.getString("kind")), value, entry.getInt("goal"))
+    }
+
+    /**
+     * The fake server's `GET /api/unlocks/{user}` with milestones: the unlocks, and progress toward
+     * each live companion that is neither unlocked nor secret.
+     */
+    private fun unlocksAnswer(): JSONObject {
+        val answer = JSONObject().put("unlocks", JSONArray(unlocks.sorted()))
+        if (MILESTONES !in features) {
+            return answer
+        }
+        val progress = JSONObject()
+        for (entry in live) {
+            val id = entry.getString("companion")
+            if (id !in unlocks && !entry.getBoolean("secret")) {
+                progress.put(id, JSONObject().put("kind", entry.getString("kind")).put("value", reached).put("goal", entry.getInt("goal")))
+            }
+        }
+        return answer.put("progress", progress)
+    }
+
+    /** Whether the server refuses to save [chosen]: a locked companion, for a client that shows locks. */
+    private fun refuses(
+        chosen: String,
+        header: String?,
+    ): Boolean {
+        val earned = live.any { it.getString("companion") == chosen }
+        return earned && chosen !in unlocks && (header == SHOWS_LOCKS || chosen == Choice.COW.id)
+    }
+
     private fun signIn(user: String): HomeAccount {
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
             putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
@@ -93,134 +158,186 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         return requireNotNull(AnkiquestHomeData.account())
     }
 
-    /** The server reports [feature] from now on, as the app learns at its next capabilities check. */
-    private fun serverGains(feature: String) =
+    /** The server reports [added] from now on, as the app learns at its next capabilities check. */
+    private fun serverHas(vararg added: String) =
         runBlocking {
-            features = features + feature
+            features = features + added
             AnkiquestCapabilities.refresh(account)
         }
 
-    /** The shared fixture `tests/fixtures/companion_unlock.json` from the pinned server commit. */
-    private val fixture =
-        JSONObject(
-            checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_unlock.json")) { "missing companion unlock" }.readText(),
-        )
+    @Test
+    fun `the app knows every live companion and milestone of the shared fixture`() {
+        assertTrue(live.isNotEmpty())
+        for (entry in live) {
+            val id = entry.getString("companion")
+            assertNotNull(Choice.entries.firstOrNull { it.id == id }, id)
+            assertNotNull(Milestone.of(entry.getString("kind")), id)
+        }
+
+        // Planned companions have no art yet, so the app has no choice for them.
+        val all = fixture.getJSONArray("companions")
+        val planned = (0 until all.length()).map { all.getJSONObject(it) }.filter { it.getString("status") == "planned" }
+        assertTrue(planned.none { entry -> Choice.entries.any { it.id == entry.getString("companion") } })
+    }
 
     @Test
-    fun `the tap rule matches the shared fixture`() {
-        assertEquals(UnlockTapRule(taps = fixture.getInt("taps"), maxGapMs = fixture.getLong("max_gap_ms")), UnlockTapRule.COW)
-
-        // Each case taps through a fresh counter; only the last tap's progress is checked.
-        val cases = fixture.getJSONArray("cases")
-        assertTrue(cases.length() > 0)
-        for (i in 0 until cases.length()) {
-            val case = cases.getJSONObject(i)
-            val sequence = case.getJSONArray("sequence")
-            val taps = UnlockTaps(UnlockTapRule.COW)
-            val last =
-                (0 until sequence.length())
-                    .map { sequence.getJSONArray(it) }
-                    .map { taps.tap(Choice.of(it.getString(0)), it.getLong(1)) }
-                    .last()
-            assertEquals(case.getBoolean("unlocks"), last == UnlockTaps.Progress.UNLOCKED, case.getString("name"))
+    fun `Aki and no companion are always free`() {
+        for (found in listOf(null, Found.NONE, Found(setOf(Choice.COW), mapOf(Choice.ANKILOPE to progress(Choice.ANKILOPE, 2))))) {
+            assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.AKI, found, Choice.NONE))
+            assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.NONE, found, Choice.AKI))
         }
     }
 
     @Test
-    fun `the cow is hidden until unlocked and the unlock belongs to the account`() {
-        assertEquals(listOf(Choice.AKI, Choice.ANKILOPE, Choice.NONE), AnkiquestCompanion.choices(account))
-        assertEquals(listOf(Choice.AKI, Choice.ANKILOPE, Choice.NONE), AnkiquestCompanion.choices(null))
+    fun `a companion with progress is locked with its condition`() {
+        val level = progress(Choice.ANKILOPE, 2)
+        val hours = progress(Choice.COW, 3)
+        val found = Found(emptySet(), mapOf(Choice.ANKILOPE to level, Choice.COW to hours))
 
-        AnkiquestUnlocks.unlock(account, Unlock.COW)
-        assertEquals(State.LOCAL, AnkiquestUnlocks.state(account, Unlock.COW))
-        assertEquals(listOf(Choice.AKI, Choice.ANKILOPE, Choice.COW, Choice.NONE), AnkiquestCompanion.choices(account))
-
-        val other = signIn("other")
-        assertFalse(AnkiquestUnlocks.has(other, Unlock.COW))
-
-        // Signing in again with a new token keeps the unlock: it belongs to the player, not the token.
-        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_USER, "cerro") }
-        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "renewed") }
-        assertTrue(AnkiquestUnlocks.has(requireNotNull(AnkiquestHomeData.account()), Unlock.COW))
+        assertEquals(Offer.Locked(level), AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.AKI))
+        assertEquals(Offer.Locked(hours), AnkiquestUnlocks.offer(Choice.COW, found, Choice.AKI))
+        assertEquals(Milestone.LEVEL, level.milestone)
+        assertEquals(Milestone.STUDY_HOURS, hours.milestone)
     }
 
     @Test
-    fun `an old server offers no unlock`() =
-        runBlocking {
-            AnkiquestCapabilities.refresh(account)
-            assertFalse(AnkiquestUnlocks.available(account))
-
-            serverGains(AnkiquestUnlocks.FEATURE)
-            assertTrue(AnkiquestUnlocks.available(account))
-        }
+    fun `an unlocked companion can be chosen`() {
+        val found = Found(setOf(Choice.ANKILOPE, Choice.COW), emptyMap())
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.AKI))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, found, Choice.AKI))
+    }
 
     @Test
-    fun `an unlock made offline stays on this phone and is sent with the choice later`() =
+    fun `a companion chosen before milestones stays a choice`() {
+        val found = Found(emptySet(), mapOf(Choice.ANKILOPE to progress(Choice.ANKILOPE, 2)))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.ANKILOPE))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, null, Choice.ANKILOPE))
+    }
+
+    @Test
+    fun `a server without progress keeps Ankilope free and the cow hidden until unlocked`() {
+        assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.ANKILOPE, Found.NONE, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, Found.NONE, Choice.AKI))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, Found(setOf(Choice.COW), emptyMap()), Choice.AKI))
+    }
+
+    @Test
+    fun `earned companions stay hidden until the server answers`() {
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.ANKILOPE, null, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, null, Choice.AKI))
+        assertNull(AnkiquestUnlocks.found(account))
+        assertEquals(listOf(Choice.AKI, Choice.NONE), AnkiquestCompanion.offers(account, Choice.AKI).keys.toList())
+    }
+
+    @Test
+    fun `the picker shows the server's unlocks and progress in order`() =
         runBlocking {
-            serverGains(AnkiquestUnlocks.FEATURE)
-            offline = true
-            AnkiquestUnlocks.unlock(account, Unlock.COW)
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            unlocks = setOf(Choice.COW.id)
+            reached = 2
 
-            assertEquals(Choice.COW, AnkiquestCompanion.choose(account, Choice.COW))
-            assertEquals(Choice.COW, AnkiquestCompanion.choice())
-            assertEquals(State.LOCAL, AnkiquestUnlocks.state(account, Unlock.COW))
-            assertEquals("aki", companion)
-
-            // Back online: the unlock goes first, since the server refuses a cow it does not know.
-            offline = false
-            requests.clear()
             AnkiquestUnlocks.sync(account)
 
-            assertEquals(State.SYNCED, AnkiquestUnlocks.state(account, Unlock.COW))
-            assertEquals(setOf("cow"), unlocks)
-            assertEquals("cow", companion)
-            val unlock = requests.indexOfFirst { it.startsWith("POST /api/unlocks/cerro") }
-            val choice = requests.indexOfFirst { it.startsWith("POST /api/companion/cerro") }
-            assertTrue(unlock in 0 until choice, "$requests")
-            assertEquals(Choice.COW, AnkiquestCompanion.choice())
+            assertEquals(
+                mapOf(
+                    Choice.AKI to Offer.Free,
+                    Choice.ANKILOPE to Offer.Locked(progress(Choice.ANKILOPE, 2)),
+                    Choice.COW to Offer.Unlocked,
+                    Choice.NONE to Offer.Free,
+                ),
+                AnkiquestCompanion.offers(account, Choice.AKI),
+            )
+            assertEquals(
+                listOf(Choice.AKI, Choice.ANKILOPE, Choice.COW, Choice.NONE),
+                AnkiquestCompanion.offers(account, Choice.AKI).keys.toList(),
+            )
+            assertTrue(requests.none { it.startsWith("POST /api/unlocks") }, "$requests")
         }
 
     @Test
-    fun `the server's answer does not undo a cow it does not know yet`() =
+    fun `an old server offers Ankilope and no cow`() =
         runBlocking {
-            serverGains(AnkiquestUnlocks.FEATURE)
-            offline = true
-            AnkiquestUnlocks.unlock(account, Unlock.COW)
-            AnkiquestCompanion.choose(account, Choice.COW)
+            AnkiquestCapabilities.refresh(account)
 
-            // Only the unlocks are out of reach; the server still answers its old choice.
-            assertFalse(AnkiquestCompanion.refresh(account))
-            assertEquals(Choice.COW, AnkiquestCompanion.choice())
+            AnkiquestUnlocks.sync(account)
+
+            assertEquals(Found.NONE, AnkiquestUnlocks.found(account))
+            assertEquals(listOf(Choice.AKI, Choice.ANKILOPE, Choice.NONE), AnkiquestCompanion.offers(account, Choice.AKI).keys.toList())
+            assertTrue(requests.none { it.contains("/api/unlocks/") }, "$requests")
         }
 
     @Test
-    fun `unlocks from another device arrive without settings sync`() =
+    fun `unlocks belong to the account`() =
         runBlocking {
-            serverGains(AnkiquestUnlocks.FEATURE)
-            unlocks = setOf("cow")
-            companion = "cow"
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            unlocks = setOf(Choice.COW.id)
+            AnkiquestUnlocks.sync(account)
+            assertEquals(setOf(Choice.COW), AnkiquestUnlocks.found(account)?.unlocks)
+
+            assertNull(AnkiquestUnlocks.found(signIn("other")))
+
+            // Signing in again with a new token keeps them: they belong to the player, not the token.
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_USER, "cerro") }
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "renewed") }
+            assertEquals(setOf(Choice.COW), AnkiquestUnlocks.found(requireNotNull(AnkiquestHomeData.account()))?.unlocks)
+        }
+
+    @Test
+    fun `every companion save says the app shows locked companions`() =
+        runBlocking {
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+
+            AnkiquestCompanion.choose(account, Choice.NONE)
+            AnkiquestCompanion.choose(account, Choice.AKI)
+
+            assertEquals(listOf<String?>(SHOWS_LOCKS, SHOWS_LOCKS), companionHeaders.toList())
+        }
+
+    @Test
+    fun `the server refuses a locked companion and the saved one stays`() =
+        runBlocking {
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            AnkiquestCompanion.remember(account, Choice.AKI.id)
+
+            val refused = assertFailsWith<AnkiquestHttpException> { AnkiquestCompanion.choose(account, Choice.ANKILOPE) }
+
+            assertEquals(CONFLICT, refused.code)
+            assertEquals(Choice.AKI, AnkiquestCompanion.choice())
+            assertEquals("aki", companion)
+        }
+
+    @Test
+    fun `an unlock and a choice from another device arrive without settings sync`() =
+        runBlocking {
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            unlocks = setOf(Choice.COW.id)
+            companion = Choice.COW.id
 
             assertTrue(AnkiquestCompanion.refresh(account))
 
-            assertEquals(State.SYNCED, AnkiquestUnlocks.state(account, Unlock.COW))
             assertEquals(Choice.COW, AnkiquestCompanion.choice())
+            assertEquals(Offer.Unlocked, AnkiquestCompanion.offers(account, Choice.COW)[Choice.COW])
             assertTrue(requests.none { it.startsWith("POST") }, "$requests")
         }
 
     @Test
-    fun `a synced cow is saved on the server`() =
+    fun `an unlocked cow is saved on the server`() =
         runBlocking {
-            serverGains(AnkiquestUnlocks.FEATURE)
-            AnkiquestUnlocks.unlock(account, Unlock.COW)
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            unlocks = setOf(Choice.COW.id)
 
             assertEquals(Choice.COW, AnkiquestCompanion.choose(account, Choice.COW))
 
-            assertEquals(setOf("cow"), unlocks)
             assertEquals("cow", companion)
+            assertEquals(Choice.COW, AnkiquestCompanion.choice())
         }
 
     private companion object {
         const val OK = 200
         const val NOT_FOUND = 404
+        const val CONFLICT = 409
+        const val MILESTONES = "companion_milestones"
+        const val COMPANIONS_HEADER = "X-AnkiQuest-Companions"
+        const val SHOWS_LOCKS = "milestones"
     }
 }

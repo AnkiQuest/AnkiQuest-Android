@@ -5,6 +5,7 @@ package com.ichi2.anki.preferences
 import android.os.Looper
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CHECKED_STATE_TRUE
@@ -20,17 +21,14 @@ import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
-import com.ichi2.anki.ankiquest.UnlockTapRule
-import com.ichi2.anki.common.time.MockTime
-import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockkObject
 import io.mockk.runs
 import io.mockk.unmockkObject
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,11 +36,37 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
+/** The companion screen with the server's unlocks example: Bluma unlocked, Ankilope locked at a level. */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestCompanionFragmentTest : RobolectricTest() {
-    /** The unlocks the server holds. */
-    private var serverUnlocks = setOf<String>()
+    /** `GET /api/unlocks/{user}` as recorded from the pinned server: `unlocks.json`. */
+    private val unlocksExample =
+        checkNotNull(javaClass.classLoader?.getResource("ankiquest-api/unlocks.json")) { "missing unlocks.json" }.readText()
+
+    /** Ankilope's goal in the shared fixture `tests/fixtures/companion_unlock.json`. */
+    private val ankilopeGoal: Int =
+        JSONObject(checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_unlock.json")).readText())
+            .getJSONArray("companions")
+            .let { all -> (0 until all.length()).map { all.getJSONObject(it) } }
+            .first { it.getString("companion") == Choice.ANKILOPE.id }
+            .getInt("goal")
+
+    /** Ankilope's name and the lines its locked card shows for the example's progress. */
+    private val lockedLines: List<String>
+        get() {
+            val progress = JSONObject(unlocksExample).getJSONObject("progress").getJSONObject(Choice.ANKILOPE.id)
+            assertEquals(ankilopeGoal, progress.getInt("goal"), "the example's goal is the fixture's")
+            return listOf(
+                "Ankilope",
+                targetContext.getString(R.string.ankiquest_companion_level_goal, ankilopeGoal),
+                targetContext.getString(R.string.ankiquest_companion_level_progress, progress.getInt("value"), ankilopeGoal),
+            )
+        }
+
+    /** The locked Ankilope card's description: its name and both lines. */
+    private val lockedAnkilope get() = lockedLines.joinToString(", ")
 
     @Before
     fun prepare() {
@@ -51,15 +75,10 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
             putString(Ankiquest.PREF_USER, "member")
             putString(Ankiquest.PREF_TOKEN, "test-token")
         }
-        TimeManager.resetWith(MockTime(START_MS))
         mockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
         every { AnkiquestWidget.requestUpdate(any()) } just runs
-        every { AnkiquestCapabilities.has(any(), AnkiquestUnlocks.FEATURE) } returns true
-        coEvery { AnkiquestHomeData.unlocks(any()) } answers { serverUnlocks }
-        coEvery { AnkiquestHomeData.saveUnlock(any(), any()) } answers {
-            serverUnlocks = serverUnlocks + secondArg<String>()
-            serverUnlocks
-        }
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")
+        coEvery { AnkiquestHomeData.unlocks(any()) } answers { JSONObject(unlocksExample) }
         coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
         coEvery { AnkiquestHomeData.saveCompanion(any(), any()) } answers { secondArg() }
     }
@@ -72,60 +91,44 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     @Test
     fun `each companion is a card and the chosen one is checked`() {
         val fragment = open()
-        assertEquals(listOf("Aki", "Ankilope", "No companion"), fragment.cards().map { it.contentDescription })
+        assertEquals(listOf("Aki", lockedAnkilope, "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
         assertEquals("Aki", fragment.chosen())
 
-        fragment.card("Ankilope").performClick()
+        fragment.card("Bluma").performClick()
         idle()
 
-        assertEquals(Choice.ANKILOPE, AnkiquestCompanion.choice())
-        assertEquals("Ankilope", fragment.chosen())
-        coVerify { AnkiquestHomeData.saveCompanion(any(), "ankilope") }
-    }
-
-    @Test
-    fun `tapping Ankilope gives no hint until the last tap`() {
-        val fragment = open()
-        repeat(UnlockTapRule.COW.taps - 1) {
-            fragment.card("Ankilope").performClick()
-            idle()
-        }
-        assertEquals(listOf("Aki", "Ankilope", "No companion"), fragment.cards().map { it.contentDescription })
-    }
-
-    @Test
-    fun `nine taps on Ankilope bring Bluma and choose her`() {
-        val fragment = open()
-        repeat(UnlockTapRule.COW.taps) {
-            fragment.card("Ankilope").performClick()
-            idle()
-        }
-
-        assertEquals(listOf("Aki", "Ankilope", "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
-        assertEquals("Bluma", fragment.chosen())
         assertEquals(Choice.COW, AnkiquestCompanion.choice())
-
-        // The unlock reaches the server before the choice that needs it.
-        val account = requireNotNull(AnkiquestHomeData.account())
-        assertEquals(AnkiquestUnlocks.State.SYNCED, AnkiquestUnlocks.state(account, AnkiquestUnlocks.Unlock.COW))
-        coVerifyOrder {
-            AnkiquestHomeData.saveUnlock(any(), "cow")
-            AnkiquestHomeData.saveCompanion(any(), "cow")
-        }
+        assertEquals("Bluma", fragment.chosen())
+        coVerify { AnkiquestHomeData.saveCompanion(any(), "cow") }
     }
 
     @Test
-    fun `a server without unlocks makes the taps do nothing`() {
-        every { AnkiquestCapabilities.has(any(), AnkiquestUnlocks.FEATURE) } returns false
+    fun `a locked companion says how to earn it and cannot be chosen`() {
         val fragment = open()
-        repeat(UnlockTapRule.COW.taps) {
-            fragment.card("Ankilope").performClick()
-            idle()
-        }
+        val locked = fragment.card(lockedAnkilope)
+        assertFalse(locked.isEnabled)
+        assertFalse(locked.isClickable)
+        val lines =
+            (locked as LinearLayout)
+                .children
+                .filterIsInstance<TextView>()
+                .map { it.text.toString() }
+                .toList()
+        assertEquals(lockedLines, lines)
 
-        assertEquals(listOf("Aki", "Ankilope", "No companion"), fragment.cards().map { it.contentDescription })
-        assertEquals(Choice.ANKILOPE, AnkiquestCompanion.choice())
-        coVerify(exactly = 0) { AnkiquestHomeData.saveUnlock(any(), any()) }
+        locked.performClick()
+        idle()
+
+        assertEquals(Choice.AKI, AnkiquestCompanion.choice())
+        coVerify(exactly = 0) { AnkiquestHomeData.saveCompanion(any(), any()) }
+    }
+
+    @Test
+    fun `Ankilope chosen before milestones stays a choice`() {
+        coEvery { AnkiquestHomeData.companion(any()) } returns "ankilope"
+        val fragment = open()
+        assertEquals(listOf("Aki", "Ankilope", "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
+        assertEquals("Ankilope", fragment.chosen())
     }
 
     private fun open(): AnkiquestCompanionFragment {
@@ -156,7 +159,6 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
             .contentDescription
 
     private companion object {
-        const val START_MS = 1_750_000_000_000
         const val PHONE_WIDTH = 1080
     }
 }

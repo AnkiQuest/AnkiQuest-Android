@@ -9,13 +9,8 @@ import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Unlock
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
-import com.ichi2.anki.ankiquest.UnlockTaps
-import com.ichi2.anki.common.time.TimeManager
-import com.ichi2.anki.snackbar.showSnackbar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -24,13 +19,12 @@ import kotlinx.coroutines.sync.withLock
 /**
  * The study companion, chosen from a card per companion that previews its poses. The choice is
  * kept per account on the server and shown here as soon as it is tapped; a failed save puts the
- * saved one back. Tapping Ankilope quickly enough times unlocks a hidden companion.
+ * saved one back. Companions earned at milestones show locked, with their condition and progress,
+ * until the server unlocks them.
  */
 class AnkiquestCompanionFragment : SettingsFragment() {
     override val preferenceResource = R.xml.preferences_ankiquest_companion
     override val analyticsScreenNameConstant = "prefs.ankiquest.companion"
-
-    private val taps = UnlockTaps()
 
     /** Server reads and writes, one at a time, so an older answer never replaces a newer choice. */
     private val writes = Mutex()
@@ -54,7 +48,8 @@ class AnkiquestCompanionFragment : SettingsFragment() {
     private fun render() {
         val account = signedIn()
         picker().isEnabled = account != null
-        picker().show(AnkiquestCompanion.choices(account), pending ?: AnkiquestCompanion.choice())
+        val chosen = pending ?: AnkiquestCompanion.choice()
+        picker().show(AnkiquestCompanion.offers(account, chosen), chosen)
         if (account == null) {
             showStatus(getString(R.string.ankiquest_companion_signed_out))
         }
@@ -89,18 +84,9 @@ class AnkiquestCompanionFragment : SettingsFragment() {
         }
     }
 
+    /** A tap on a card that can be chosen; locked cards report none. */
     private fun tap(choice: Choice) {
         val account = signedIn() ?: return
-
-        // The cow stays hidden, with no hint, until Ankilope is tapped enough times in a row. A server
-        // that cannot keep unlocks offers none, as on the desktop.
-        val locked = !AnkiquestUnlocks.has(account, Unlock.COW) && AnkiquestUnlocks.available(account)
-        if (locked && taps.tap(choice, TimeManager.time.intTimeMS()) == UnlockTaps.Progress.UNLOCKED) {
-            AnkiquestUnlocks.unlock(account, Unlock.COW)
-            showSnackbar(getString(R.string.ankiquest_companion_joined, getString(Choice.COW.title)))
-            choose(account, Choice.COW)
-            return
-        }
         if (choice != (pending ?: AnkiquestCompanion.choice())) {
             choose(account, choice)
         }

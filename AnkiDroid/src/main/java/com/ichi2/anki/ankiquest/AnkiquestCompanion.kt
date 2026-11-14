@@ -14,7 +14,7 @@ import androidx.core.content.edit
 import androidx.core.view.isVisible
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Unlock
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import kotlin.math.cos
@@ -24,6 +24,9 @@ import kotlin.math.sin
 internal object AnkiquestCompanion {
     private const val KEY_PREFIX = "ankiquestCompanion:"
 
+    /** The cache name of silhouettes ([AnkiquestArt.filtered]). */
+    private const val SILHOUETTE = "silhouette"
+
     /** The companions, in the order the picker shows them; [id] is the value the server stores. */
     enum class Choice(
         val id: String,
@@ -32,7 +35,7 @@ internal object AnkiquestCompanion {
         AKI("aki", R.string.ankiquest_companion_aki),
         ANKILOPE("ankilope", R.string.ankiquest_companion_ankilope),
 
-        /** Hidden until unlocked ([AnkiquestUnlocks]). */
+        /** Bluma, earned at a milestone like Ankilope ([AnkiquestUnlocks]). */
         COW("cow", R.string.ankiquest_companion_cow),
         NONE("none", R.string.ankiquest_companion_none),
         ;
@@ -55,6 +58,10 @@ internal object AnkiquestCompanion {
     private const val MATRIX_COLUMNS = 5
     private const val MATRIX_SIZE = 4 * MATRIX_COLUMNS
     private const val ALPHA_INDEX = 3 * MATRIX_COLUMNS + 3
+
+    /** The silhouette's grey (0-255) and its opacity as a share of the art's. */
+    private const val SILHOUETTE_GREY = 128f
+    private const val SILHOUETTE_ALPHA = 110f / 255f
 
     // The CSS hue-rotate() matrix: per output channel, weights for red, green and blue, plus cosine
     // and sine terms of the angle.
@@ -82,6 +89,19 @@ internal object AnkiquestCompanion {
         ColorMatrixColorFilter(ColorMatrix(matrix))
     }
 
+    /**
+     * A locked companion's art as a grey shadow of its shape, as the desktop draws it: grey at
+     * [SILHOUETTE_ALPHA] of the art's own opacity.
+     */
+    private val silhouetteFilter: ColorFilter by lazy {
+        val matrix = FloatArray(MATRIX_SIZE)
+        for (row in 0 until 3) {
+            matrix[row * MATRIX_COLUMNS + MATRIX_COLUMNS - 1] = SILHOUETTE_GREY
+        }
+        matrix[ALPHA_INDEX] = SILHOUETTE_ALPHA
+        ColorMatrixColorFilter(ColorMatrix(matrix))
+    }
+
     fun normalize(value: String?) = Choice.of(value).id
 
     /** The current account's companion, Aki without an account. */
@@ -104,23 +124,26 @@ internal object AnkiquestCompanion {
 
     fun visible() = choice() != Choice.NONE
 
-    /** The companions [account] can choose: the cow only once it is unlocked. */
-    fun choices(account: HomeAccount?): List<Choice> =
-        Choice.entries.filter { it != Choice.COW || (account != null && AnkiquestUnlocks.has(account, Unlock.COW)) }
-
     /**
-     * Saves [choice] for [account] on the server, or only on this phone while the server cannot
-     * hold it (a cow it does not know is unlocked). Answers the saved choice.
+     * The companions the picker shows to [account] whose companion is [current], in order, with how
+     * each is offered; hidden ones are left out.
      */
+    fun offers(
+        account: HomeAccount?,
+        current: Choice,
+    ): Map<Choice, Offer> {
+        val found = account?.let { AnkiquestUnlocks.found(it) }
+        return Choice.entries
+            .associateWith { AnkiquestUnlocks.offer(it, found, current) }
+            .filterValues { it != Offer.Hidden }
+    }
+
+    /** Saves [choice] for [account] on the server; answers the saved choice. */
     suspend fun choose(
         account: HomeAccount,
         choice: Choice,
     ): Choice {
-        // A new unlock reaches the server before the choice that needs it.
-        if (localOnly(account, choice)) {
-            syncUnlocks(account)
-        }
-        val saved = if (localOnly(account, choice)) choice.id else AnkiquestHomeData.saveCompanion(account, choice.id)
+        val saved = AnkiquestHomeData.saveCompanion(account, choice.id)
         remember(account, saved)
         return Choice.of(saved)
     }
@@ -130,38 +153,24 @@ internal object AnkiquestCompanion {
      * companion changed.
      */
     suspend fun refresh(account: HomeAccount): Boolean {
-        // Unlocks first, so a choice the server answers is one this phone can show.
         syncUnlocks(account)
-        return adopt(account, AnkiquestHomeData.companion(account))
+        val answer = AnkiquestHomeData.companion(account)
+        if (choice().id == normalize(answer)) {
+            return false
+        }
+        return remember(account, answer)
     }
 
-    /** [AnkiquestUnlocks.sync], whose failure leaves the unlocks as this phone knows them. */
+    /** [AnkiquestUnlocks.sync], whose failure leaves the unlocks as this phone last read them. */
     private suspend fun syncUnlocks(account: HomeAccount) {
         try {
             AnkiquestUnlocks.sync(account)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.w(e, "AnkiQuest unlocks could not be synced")
+            Timber.w(e, "AnkiQuest unlocks could not be read")
         }
     }
-
-    /** Takes the server's [answer] for [account], unless this phone shows a cow the server cannot hold yet. */
-    private fun adopt(
-        account: HomeAccount,
-        answer: String,
-    ): Boolean {
-        val current = choice()
-        if (localOnly(account, current) || current.id == normalize(answer)) {
-            return false
-        }
-        return remember(account, answer)
-    }
-
-    private fun localOnly(
-        account: HomeAccount,
-        choice: Choice,
-    ) = choice == Choice.COW && AnkiquestUnlocks.state(account, Unlock.COW) != AnkiquestUnlocks.State.SYNCED
 
     @DrawableRes
     fun resource(
@@ -214,15 +223,28 @@ internal object AnkiquestCompanion {
         return AnkiquestArt.filtered(context, art, size, Choice.COW.id, cowFilter)
     }
 
-    /** Shows the chosen companion's version of [aki] in [view], decoded for [size] pixels. */
+    /** [choice]'s version of [aki] as a silhouette, for a locked companion; null when it cannot be decoded. */
+    fun silhouette(
+        context: Context,
+        @DrawableRes aki: Int,
+        size: Int,
+        choice: Choice,
+    ): Bitmap? = AnkiquestArt.filtered(context, resource(aki, choice), size, SILHOUETTE, silhouetteFilter)
+
+    /**
+     * Shows [choice]'s version of [aki] in [view], decoded for [size] pixels. [choice] is the chosen
+     * companion unless a moment is about another one.
+     */
     fun show(
         view: ImageView,
         @DrawableRes aki: Int,
         size: Int,
+        choice: Choice = choice(),
     ) {
-        view.isVisible = visible()
-        if (!view.isVisible) return
-        val choice = choice()
+        view.isVisible = choice != Choice.NONE
+        if (!view.isVisible) {
+            return
+        }
         val bitmap = bitmap(view.context, aki, size, choice)
         if (bitmap != null) {
             view.colorFilter = null

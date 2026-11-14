@@ -7,19 +7,26 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
+import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.testutils.launchForFullHeightScreenshot
 import io.mockk.coEvery
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertNotNull
 
-/** The study companion screen of a signed-in player, before and after unlocking Bluma. */
+/**
+ * The study companion screen of a signed-in player with the server's unlocks example: Bluma
+ * unlocked and Ankilope locked, or chosen before milestones.
+ */
 class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
     @Before
     fun prepare() {
@@ -28,28 +35,38 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
             putString(Ankiquest.PREF_USER, "member")
             putString(Ankiquest.PREF_TOKEN, "screenshot-token")
         }
-        mockkObject(AnkiquestHomeData)
-        coEvery { AnkiquestHomeData.companion(any()) } returns "ankilope"
+        mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")
+        coEvery { AnkiquestHomeData.unlocks(any()) } answers {
+            JSONObject(checkNotNull(javaClass.classLoader?.getResource("ankiquest-api/unlocks.json")).readText())
+        }
     }
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData)
+        unmockkObject(AnkiquestHomeData, AnkiquestCapabilities)
     }
 
+    /** Ankilope chosen before milestones: it stays a choice. */
     @Test
-    fun ankilope() = capture("ankilope")
+    fun ankilope() = capture("ankilope", Choice.ANKILOPE)
 
+    /** Bluma chosen, Ankilope locked with its condition and progress. */
     @Test
-    fun bluma() {
-        // Unlocked and chosen while offline: the server's older answer does not undo the cow it does not know yet.
+    fun bluma() = capture("bluma", Choice.COW)
+
+    private fun capture(
+        name: String,
+        chosen: Choice,
+    ) {
+        coEvery { AnkiquestHomeData.companion(any()) } returns chosen.id
         val account = assertNotNull(AnkiquestHomeData.account())
-        AnkiquestUnlocks.unlock(account, AnkiquestUnlocks.Unlock.COW)
-        AnkiquestCompanion.remember(account, AnkiquestCompanion.Choice.COW.id)
-        capture("bluma")
+        AnkiquestCompanion.remember(account, chosen.id)
+        runBlocking { AnkiquestUnlocks.sync(account) }
+        launch(name)
     }
 
-    private fun capture(name: String) {
+    private fun launch(name: String) {
         val intent = PreferencesActivity.getIntent(targetContext, AnkiquestCompanionFragment::class)
         launchForFullHeightScreenshot<PreferencesActivity>(
             intent,

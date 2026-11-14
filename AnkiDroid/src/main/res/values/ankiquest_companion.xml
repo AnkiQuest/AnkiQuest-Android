@@ -9,10 +9,13 @@
     <string name="ankiquest_companion_summary">Choose Aki, Ankilope, or no companion. Synced across devices.</string>
     <string name="ankiquest_companion_aki" translatable="false">Aki</string>
     <string name="ankiquest_companion_ankilope" translatable="false">Ankilope</string>
-    <!-- The hidden companion, a purple cow; art is still to come (float3/ankiquest#88). -->
+    <!-- A purple cow, earned by studying; art is still to come (float3/ankiquest#88). -->
     <string name="ankiquest_companion_cow" translatable="false">Bluma</string>
     <string name="ankiquest_companion_none">No companion</string>
-    <!-- Shown once, when the hidden companion is unlocked. %1$s: its name -->
-    <string name="ankiquest_companion_joined">%1$s joined you!</string>
     <string name="ankiquest_companion_signed_out">Sign in to choose a companion.</string>
+    <!-- A locked companion: how to earn it and how far the player is. Same wording as the desktop add-on. -->
+    <string name="ankiquest_companion_level_goal">Reach level %1$d</string>
+    <string name="ankiquest_companion_level_progress">Level %1$d of %2$d</string>
+    <string name="ankiquest_companion_hours_goal">Study for %1$d hours in total</string>
+    <string name="ankiquest_companion_hours_progress">%1$d of %2$d hours</string>
 </resources>

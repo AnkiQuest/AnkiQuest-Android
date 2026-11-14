@@ -40,6 +40,9 @@ internal object AnkiquestMoments {
     private const val EXTRA_OWNER = "ankiquest.moment_owner"
     private val milestoneDays = setOf(7, 30, 100, 365)
 
+    /** The start of a companion moment's key, followed by the companion's id. */
+    private const val COMPANION_KEY_PREFIX = "companion:"
+
     /** `streak`, the first day and the length. */
     private const val STREAK_KEY_PARTS = 3
 
@@ -65,6 +68,9 @@ internal object AnkiquestMoments {
         LEECH(55),
         CONQUERED(50),
         GOAL(40),
+
+        /** A companion earned at a milestone, `companion:{companion}`. */
+        COMPANION(30),
         UNLOCKS(30),
     }
 
@@ -371,6 +377,7 @@ internal object AnkiquestMoments {
                 "conquered" -> Kind.CONQUERED
                 "goal" -> Kind.GOAL
                 "secured" -> Kind.SECURED
+                "companion" -> Kind.COMPANION
                 else -> Kind.UNLOCKS
             }
         val key = if (entry.isNull("moment")) "" else entry.optString("moment")
@@ -386,6 +393,15 @@ internal object AnkiquestMoments {
             shareBody = entry.optString("share_body").ifEmpty { null },
             streak = if (kind == Kind.STREAK) keyStreak(key) else null,
         )
+    }
+
+    /** The companion that joined in a [Kind.COMPANION] moment, from its key `companion:{companion}`; null otherwise. */
+    fun joined(moment: Moment): AnkiquestCompanion.Choice? {
+        if (moment.kind != Kind.COMPANION) {
+            return null
+        }
+        val id = moment.key.substringAfter(COMPANION_KEY_PREFIX, missingDelimiterValue = "")
+        return AnkiquestCompanion.Choice.entries.firstOrNull { it.id == id && it != AnkiquestCompanion.Choice.NONE }
     }
 
     /** The streak in a milestone's event key, `streak:{first day}:{days}`. */

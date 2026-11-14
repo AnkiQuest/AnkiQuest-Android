@@ -383,7 +383,7 @@ internal object AnkiquestMomentCard {
             Kind.LEECH -> R.drawable.aki_leech
             Kind.CONQUERED -> R.drawable.aki_deck_conquered
             Kind.GOAL -> R.drawable.aki_goal
-            Kind.UNLOCKS -> R.drawable.aki_celebrate
+            Kind.COMPANION, Kind.UNLOCKS -> R.drawable.aki_celebrate
             Kind.SECURED -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, moment.streak ?: 1)
         }
 
@@ -465,7 +465,8 @@ internal object AnkiquestMomentCard {
                 holder.art.isVisible = true
                 holder.art.setImageBitmap(picture)
             } else {
-                AnkiquestCompanion.show(holder.art, art(moment), size)
+                // A new companion shows itself rather than the chosen one.
+                AnkiquestCompanion.show(holder.art, art(moment), size, AnkiquestMoments.joined(moment) ?: AnkiquestCompanion.choice())
             }
             holder.title.text = moment.title
             holder.detail.text = moment.detail
@@ -719,6 +720,7 @@ internal object AnkiquestMomentCard {
                                         moment.shareBody ?: moment.detail,
                                         art = art(moment),
                                         streak = moment.streak,
+                                        companion = AnkiquestMoments.joined(moment),
                                     )
                                 }
                             }
@@ -775,7 +777,13 @@ internal object AnkiquestMomentCard {
         private fun publicPicture(moment: Moment): AnkiquestShare.Card {
             val title = moment.shareTitle ?: moment.title
             if (moment.conquest == null) {
-                return AnkiquestShare.Card(title, moment.shareBody ?: moment.detail, art(moment), streak = moment.streak)
+                return AnkiquestShare.Card(
+                    title,
+                    moment.shareBody ?: moment.detail,
+                    art(moment),
+                    streak = moment.streak,
+                    companion = AnkiquestMoments.joined(moment),
+                )
             }
             return AnkiquestShare.Card(
                 title,

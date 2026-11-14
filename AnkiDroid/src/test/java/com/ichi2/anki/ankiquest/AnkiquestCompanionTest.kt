@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.graphics.Color
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
@@ -62,7 +63,6 @@ class AnkiquestCompanionTest : RobolectricTest() {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `the cow is Ankilope recoloured on every surface`() {
         val alice = account("alice")
-        AnkiquestUnlocks.unlock(alice, AnkiquestUnlocks.Unlock.COW)
         assertTrue(AnkiquestCompanion.remember(alice, "cow"))
         assertEquals(Choice.COW, AnkiquestCompanion.choice())
         assertTrue(AnkiquestCompanion.visible())
@@ -80,6 +80,29 @@ class AnkiquestCompanionTest : RobolectricTest() {
     }
 
     @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a locked companion is drawn as a grey silhouette of its art`() {
+        val size = 64
+        val art = requireNotNull(AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size, Choice.ANKILOPE))
+        val shadow = requireNotNull(AnkiquestCompanion.silhouette(targetContext, R.drawable.aki_face, size, Choice.ANKILOPE))
+        assertEquals(art.width to art.height, shadow.width to shadow.height)
+
+        // Where the art is opaque, the silhouette is the desktop's grey at its opacity (allowing for rounding).
+        val opaque =
+            (0 until art.width)
+                .flatMap { x -> (0 until art.height).map { y -> x to y } }
+                .filter { (x, y) -> Color.alpha(art.getPixel(x, y)) == OPAQUE }
+        assertTrue(opaque.isNotEmpty())
+        for ((x, y) in opaque) {
+            val pixel = shadow.getPixel(x, y)
+            for (channel in listOf(Color.red(pixel), Color.green(pixel), Color.blue(pixel))) {
+                assertTrue(channel in SILHOUETTE_GREY - ROUNDING..SILHOUETTE_GREY + ROUNDING, "grey at $x,$y: $channel")
+            }
+            assertTrue(Color.alpha(pixel) in SILHOUETTE_ALPHA - ROUNDING..SILHOUETTE_ALPHA + ROUNDING, "opacity at $x,$y")
+        }
+    }
+
+    @Test
     fun `previews show face, fire and sad without repeating a picture`() {
         assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk), AnkiquestCompanion.preview(Choice.AKI))
         for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
@@ -92,5 +115,14 @@ class AnkiquestCompanionTest : RobolectricTest() {
     fun `a server value the app does not know falls back to Aki`() {
         assertEquals("aki", AnkiquestCompanion.normalize("unicorn"))
         assertEquals("cow", AnkiquestCompanion.normalize("cow"))
+    }
+
+    private companion object {
+        const val OPAQUE = 255
+
+        /** The desktop's silhouette: grey 128 at an opacity of 110. */
+        const val SILHOUETTE_GREY = 128
+        const val SILHOUETTE_ALPHA = 110
+        const val ROUNDING = 2
     }
 }

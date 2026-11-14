@@ -112,6 +112,7 @@ internal object AnkiquestArt {
             topic == "secured" -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 1)
             topic == "goal" -> R.drawable.aki_goal
             topic == "conquered" -> R.drawable.aki_deck_conquered
+            topic == "companion" -> R.drawable.aki_celebrate
             topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: R.drawable.aki_achievement
             else -> R.drawable.aki_achievement
         }

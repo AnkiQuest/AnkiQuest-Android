@@ -23,16 +23,20 @@ import com.google.android.material.color.MaterialColors
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Milestone
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Progress
 
 /**
  * One card per companion: its preview poses ([AnkiquestCompanion.preview]) with its name
- * under them, the chosen one outlined. Tapping a card reports it; the screen decides what follows.
+ * under them, the chosen one outlined. A locked companion shows as a silhouette with its condition
+ * and progress and cannot be tapped. Tapping a card reports it; the screen decides what follows.
  */
 internal class AnkiquestCompanionPicker(
     context: Context,
     attrs: AttributeSet?,
 ) : Preference(context, attrs) {
-    private var choices: List<Choice> = emptyList()
+    private var offers: Map<Choice, Offer> = emptyMap()
     private var chosen: Choice? = null
     private var onTap: (Choice) -> Unit = {}
 
@@ -42,15 +46,15 @@ internal class AnkiquestCompanionPicker(
         isPersistent = false
     }
 
-    /** Shows [choices] with [chosen] marked. */
+    /** Shows a card per companion in [offers], in order, with [chosen] marked. */
     fun show(
-        choices: List<Choice>,
+        offers: Map<Choice, Offer>,
         chosen: Choice,
     ) {
-        if (this.choices == choices && this.chosen == chosen) {
+        if (this.offers == offers && this.chosen == chosen) {
             return
         }
-        this.choices = choices
+        this.offers = offers
         this.chosen = chosen
         notifyChanged()
     }
@@ -63,14 +67,19 @@ internal class AnkiquestCompanionPicker(
         super.onBindViewHolder(holder)
         val cards = holder.findViewById(R.id.ankiquest_companion_cards) as LinearLayout
         cards.removeAllViews()
-        for (choice in choices) {
-            cards.addView(card(choice), cardParams())
+        for ((choice, offer) in offers) {
+            cards.addView(card(choice, offer as? Offer.Locked), cardParams())
         }
     }
 
-    private fun card(choice: Choice): View {
+    /** [choice]'s card; a [locked] one is a silhouette with how to earn it, and cannot be tapped. */
+    private fun card(
+        choice: Choice,
+        locked: Offer.Locked?,
+    ): View {
         val selected = choice == chosen
         val name = context.getString(choice.title)
+        val lines = locked?.let { lockedLines(it.progress) }.orEmpty()
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -78,39 +87,73 @@ internal class AnkiquestCompanionPicker(
             minimumHeight = dp(MIN_TOUCH_DP)
             background = outline(choice)
             foreground = ripple()
-            isEnabled = this@AnkiquestCompanionPicker.isEnabled
-            alpha = if (isEnabled) 1f else DISABLED_ALPHA
-            isClickable = true
+            isEnabled = this@AnkiquestCompanionPicker.isEnabled && locked == null
+            alpha = if (this@AnkiquestCompanionPicker.isEnabled) 1f else DISABLED_ALPHA
+            isClickable = locked == null
             isFocusable = true
-            contentDescription = name
-            setOnClickListener { onTap(choice) }
+            contentDescription = (listOf(name) + lines).joinToString(", ")
+            if (locked == null) {
+                setOnClickListener { onTap(choice) }
+            }
             describeAsRadio(this, choice)
 
             // No companion has no poses to show.
             if (choice != Choice.NONE) {
-                addView(poses(choice))
+                addView(poses(choice, locked))
             }
-            addView(
-                TextView(context).apply {
-                    text = name
-                    gravity = Gravity.CENTER
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, NAME_SP)
-                    if (selected) {
-                        setTypeface(typeface, Typeface.BOLD)
-                    }
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                },
-            )
+            addView(label(name, NAME_SP, if (selected) Typeface.BOLD else Typeface.NORMAL))
+
+            // A locked card says how to earn it and how far the player is.
+            for (line in lines) {
+                addView(label(line, LINE_SP, Typeface.NORMAL))
+            }
         }
     }
 
-    private fun poses(choice: Choice): LinearLayout =
+    private fun label(
+        line: String,
+        size: Float,
+        style: Int,
+    ) = TextView(context).apply {
+        text = line
+        gravity = Gravity.CENTER
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
+        setTypeface(typeface, style)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    /** The condition and progress a locked card shows, leaving out a milestone this app cannot word. */
+    private fun lockedLines(progress: Progress): List<String> =
+        when (progress.milestone) {
+            Milestone.LEVEL ->
+                listOf(
+                    context.getString(R.string.ankiquest_companion_level_goal, progress.goal),
+                    context.getString(R.string.ankiquest_companion_level_progress, progress.value, progress.goal),
+                )
+            Milestone.STUDY_HOURS ->
+                listOf(
+                    context.getString(R.string.ankiquest_companion_hours_goal, progress.goal),
+                    context.getString(R.string.ankiquest_companion_hours_progress, progress.value, progress.goal),
+                )
+            null -> emptyList()
+        }
+
+    /** [choice]'s preview poses, as silhouettes when [locked]. */
+    private fun poses(
+        choice: Choice,
+        locked: Offer.Locked?,
+    ): LinearLayout =
         LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             val edge = dp(POSE_DP)
             for (pose in AnkiquestCompanion.preview(choice)) {
-                val bitmap = AnkiquestCompanion.bitmap(context, pose, edge, choice) ?: continue
+                val bitmap =
+                    if (locked == null) {
+                        AnkiquestCompanion.bitmap(context, pose, edge, choice)
+                    } else {
+                        AnkiquestCompanion.silhouette(context, pose, edge, choice)
+                    } ?: continue
                 addView(
                     ImageView(context).apply {
                         setImageBitmap(bitmap)
@@ -179,6 +222,7 @@ internal class AnkiquestCompanionPicker(
         const val SELECTED_STROKE_DP = 3
         const val MIN_TOUCH_DP = 48
         const val NAME_SP = 16f
+        const val LINE_SP = 14f
         const val DISABLED_ALPHA = 0.5f
     }
 }

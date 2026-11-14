@@ -9,152 +9,143 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * Companions a player unlocks with an easter egg. A server with [FEATURE] keeps them per account
- * (`/api/unlocks/{user}`), so every device shows them. They are not settings: the settings-sync
- * switch does not apply. With a server without the feature nothing can be unlocked, as on the
- * desktop. An unlock made while the server cannot be reached stays on this phone until [sync]
- * sends it.
+ * Companions earned at milestones: Ankilope at a level, the cow (Bluma) by hours of study. The
+ * server decides and keeps every unlock per account (`GET /api/unlocks/{user}`); the app shows
+ * what it last answered. They are not settings: the settings-sync switch does not apply. The
+ * conditions are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
  */
 internal object AnkiquestUnlocks {
     const val FEATURE = "companion_unlocks"
     private const val PREF_UNLOCKS = "ankiquestUnlocks"
 
-    /** What can be unlocked; [id] is the server's name for it. */
-    enum class Unlock(
+    /** Companions earned at a milestone. */
+    private val EARNED = setOf(Choice.ANKILOPE, Choice.COW)
+
+    /**
+     * Earned companions every player could choose before milestones. A server from then lists no
+     * progress, so these stay free there; the others stay hidden until unlocked.
+     */
+    private val OFFERED_BEFORE = setOf(Choice.ANKILOPE)
+
+    /** What a milestone counts; [id] is the fixture's and the server's `kind`. */
+    enum class Milestone(
         val id: String,
     ) {
-        COW("cow"),
-    }
+        LEVEL("level"),
+        STUDY_HOURS("study_hours"),
+        ;
 
-    /** Where an unlock is known. */
-    enum class State(
-        val id: String,
-    ) {
-        LOCKED("locked"),
-
-        /** Unlocked on this phone; the server does not know yet. */
-        LOCAL("local"),
-
-        /** Unlocked and kept by the server. */
-        SYNCED("synced"),
-    }
-
-    fun state(
-        account: HomeAccount,
-        unlock: Unlock,
-    ): State {
-        val id = stored(account).optString(unlock.id)
-        return State.entries.firstOrNull { it.id == id } ?: State.LOCKED
-    }
-
-    fun has(
-        account: HomeAccount,
-        unlock: Unlock,
-    ) = state(account, unlock) != State.LOCKED
-
-    /** Whether [account]'s server last reported [FEATURE], so something can be unlocked. */
-    fun available(account: HomeAccount) = AnkiquestCapabilities.has(account, FEATURE)
-
-    /** Unlocks [unlock] on this phone; [sync] takes it to the server. */
-    fun unlock(
-        account: HomeAccount,
-        unlock: Unlock,
-    ) {
-        if (has(account, unlock)) {
-            return
+        companion object {
+            fun of(id: String): Milestone? = entries.firstOrNull { it.id == id }
         }
-        write(account, mapOf(unlock to State.LOCAL))
+    }
+
+    /** How far the player is toward a locked companion; [milestone] is null for a kind this app does not know. */
+    data class Progress(
+        val milestone: Milestone?,
+        val value: Int,
+        val goal: Int,
+    )
+
+    /** The server's answer: the companions the player has unlocked, and progress toward each locked one that shows. */
+    data class Found(
+        val unlocks: Set<Choice>,
+        val progress: Map<Choice, Progress>,
+    ) {
+        companion object {
+            /** A server without [FEATURE]: nothing unlocked, no progress. */
+            val NONE = Found(emptySet(), emptyMap())
+
+            /** A `GET /api/unlocks/{user}` answer, leaving out what this app cannot read or show. */
+            fun parse(answer: JSONObject): Found {
+                val ids = answer.optJSONArray("unlocks")
+                val unlocks = (0 until (ids?.length() ?: 0)).mapNotNull { known(ids?.opt(it) as? String) }.toSet()
+                val listed = answer.optJSONObject("progress") ?: return Found(unlocks, emptyMap())
+                val progress =
+                    listed
+                        .keys()
+                        .asSequence()
+                        .mapNotNull { id -> known(id)?.let { choice -> progress(listed.optJSONObject(id))?.let { choice to it } } }
+                        .toMap()
+                return Found(unlocks, progress)
+            }
+
+            private fun known(id: String?): Choice? = Choice.entries.firstOrNull { it.id == id }
+
+            private fun progress(entry: JSONObject?): Progress? {
+                val kind = entry?.opt("kind") as? String ?: return null
+                val value = entry.opt("value") as? Int ?: return null
+                val goal = entry.opt("goal") as? Int ?: return null
+                return Progress(Milestone.of(kind), value, goal)
+            }
+        }
+    }
+
+    /** How the picker offers a companion. */
+    sealed interface Offer {
+        /** Anyone can choose it. */
+        data object Free : Offer
+
+        /** Earned, or already chosen: it can be chosen. */
+        data object Unlocked : Offer
+
+        /** Shown as a silhouette with its condition and [progress]; it cannot be chosen. */
+        data class Locked(
+            val progress: Progress,
+        ) : Offer
+
+        /** Secret until earned, unknown to an older server, or not known yet. */
+        data object Hidden : Offer
     }
 
     /**
-     * Sends this phone's unlocks to [account]'s server and takes the ones it keeps, when the server
-     * last reported [FEATURE]. A cow chosen while only this phone knew it is then saved there too.
+     * How the picker offers [choice] to a player whose companion is [current], given the server's
+     * [found] answer (null until it first answers). A chosen companion stays a choice, so a player
+     * who chose Ankilope before milestones keeps it.
      */
+    fun offer(
+        choice: Choice,
+        found: Found?,
+        current: Choice,
+    ): Offer {
+        if (choice !in EARNED) {
+            return Offer.Free
+        }
+        if (choice == current || (found != null && choice in found.unlocks)) {
+            return Offer.Unlocked
+        }
+        val progress = found?.progress?.get(choice)
+        if (progress != null) {
+            return Offer.Locked(progress)
+        }
+        return if (found != null && choice in OFFERED_BEFORE) Offer.Free else Offer.Hidden
+    }
+
+    /** The server's last answer for [account], or null when it has not answered yet. */
+    fun found(account: HomeAccount): Found? {
+        val stored = AnkiDroidApp.sharedPrefs().getString(key(account), null) ?: return null
+        return try {
+            Found.parse(JSONObject(stored))
+        } catch (_: JSONException) {
+            null
+        }
+    }
+
+    /** Reads [account]'s unlocks and progress from its server and keeps them for the picker. */
     suspend fun sync(account: HomeAccount) {
-        if (account.token.isEmpty() || !available(account)) {
+        if (account.token.isEmpty()) {
             return
         }
 
-        // Unlocks made while the server could not keep them, or before it could be reached.
-        val pending = Unlock.entries.filter { state(account, it) == State.LOCAL }
-        for (unlock in pending) {
-            AnkiquestHomeData.saveUnlock(account, unlock.id)
-        }
-
-        // The server's list is the whole truth for this account, unlocks from other devices included.
-        val known = AnkiquestHomeData.unlocks(account)
-        write(account, Unlock.entries.filter { it.id in known }.associateWith { State.SYNCED })
-
-        // The server refuses a cow it does not know is unlocked, so the choice follows the unlock.
-        if (Unlock.COW in pending && state(account, Unlock.COW) == State.SYNCED && AnkiquestCompanion.choice() == Choice.COW) {
-            AnkiquestCompanion.choose(account, Choice.COW)
-        }
+        // A server without unlocks has nothing to read; its answer is that nothing is unlocked.
+        val answer =
+            if (FEATURE in AnkiquestCapabilities.current(account)) {
+                AnkiquestHomeData.unlocks(account)
+            } else {
+                JSONObject()
+            }
+        AnkiDroidApp.sharedPrefs().edit { putString(key(account), answer.toString()) }
     }
 
     private fun key(account: HomeAccount) = scopedKey(PREF_UNLOCKS, account.notificationAccount)
-
-    private fun stored(account: HomeAccount): JSONObject =
-        try {
-            JSONObject(AnkiDroidApp.sharedPrefs().getString(key(account), null) ?: return JSONObject())
-        } catch (_: JSONException) {
-            JSONObject()
-        } catch (_: ClassCastException) {
-            JSONObject()
-        }
-
-    private fun write(
-        account: HomeAccount,
-        states: Map<Unlock, State>,
-    ) {
-        if (states.isEmpty()) {
-            return
-        }
-        val value = stored(account)
-        states.forEach { (unlock, state) -> value.put(unlock.id, state.id) }
-        AnkiDroidApp.sharedPrefs().edit { putString(key(account), value.toString()) }
-    }
-}
-
-/**
- * How many quick taps on Ankilope unlock the cow. The same values, with the cases both clients test,
- * are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
- */
-internal data class UnlockTapRule(
-    val taps: Int,
-    val maxGapMs: Long,
-) {
-    companion object {
-        val COW = UnlockTapRule(taps = 9, maxGapMs = 2_000)
-    }
-}
-
-/**
- * Counts a run of taps on Ankilope's card. A tap on another card starts over; a tap after a longer
- * pause than the rule allows is the first of a new run.
- */
-internal class UnlockTaps(
-    private val rule: UnlockTapRule = UnlockTapRule.COW,
-) {
-    enum class Progress { COUNTING, UNLOCKED }
-
-    private var count = 0
-    private var last = 0L
-
-    fun tap(
-        choice: Choice,
-        now: Long,
-    ): Progress {
-        val quick = count > 0 && now - last in 0..rule.maxGapMs
-        last = now
-        if (choice != Choice.ANKILOPE) {
-            count = 0
-            return Progress.COUNTING
-        }
-        count = if (quick) count + 1 else 1
-        if (count < rule.taps) {
-            return Progress.COUNTING
-        }
-        count = 0
-        return Progress.UNLOCKED
-    }
 }

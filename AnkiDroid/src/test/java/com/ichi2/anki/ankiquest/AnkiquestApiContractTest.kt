@@ -394,17 +394,47 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `an unlock made on this phone is saved and the server's list is kept`() =
+    fun `the unlocks and progress are read for the picker`() =
         runBlocking {
             AnkiquestCapabilities.refresh(account)
-            AnkiquestUnlocks.unlock(account, AnkiquestUnlocks.Unlock.COW)
 
             AnkiquestUnlocks.sync(account)
 
-            assertEquals(AnkiquestUnlocks.State.SYNCED, AnkiquestUnlocks.state(account, AnkiquestUnlocks.Unlock.COW))
-            assertTrue("POST /api/unlocks/hill" in requests, "$requests")
+            val found = assertNotNull(AnkiquestUnlocks.found(account))
+            val example = JSONObject(example("unlocks"))
+            val unlocks = example.getJSONArray("unlocks")
+            assertEquals((0 until unlocks.length()).map { unlocks.getString(it) }.toSet(), found.unlocks.map { it.id }.toSet())
+            for (id in example.getJSONObject("progress").keys()) {
+                val progress = example.getJSONObject("progress").getJSONObject(id)
+                val read =
+                    assertNotNull(
+                        found.progress.entries
+                            .firstOrNull { it.key.id == id }
+                            ?.value,
+                        id,
+                    )
+                assertEquals(progress.getString("kind"), read.milestone?.id)
+                assertEquals(progress.getInt("value") to progress.getInt("goal"), read.value to read.goal)
+            }
             assertTrue("GET /api/unlocks/hill" in requests, "$requests")
+            assertFalse("POST /api/unlocks/hill" in requests, "the server grants unlocks; the app reports none")
         }
+
+    @Test
+    fun `a companion that joined is a shareable moment with its own art`() {
+        val entries = JSONArray(example("notifications_companion"))
+        val row = (0 until entries.length()).map { entries.getJSONObject(it) }.first { it.optString("topic") == "companion" }
+
+        val moment = assertNotNull(AnkiquestMoments.fromNotice(row))
+
+        assertEquals(AnkiquestMoments.Kind.COMPANION, moment.kind)
+        assertEquals(row.getString("moment"), moment.key)
+        assertEquals(row.getString("title"), moment.title)
+        assertEquals(row.getString("share_title"), moment.shareTitle)
+        assertEquals(row.getLong("win"), moment.win)
+        assertTrue(AnkiquestMomentCard.tellable(moment))
+        assertEquals(AnkiquestCompanion.Choice.COW, AnkiquestMoments.joined(moment))
+    }
 
     @Test
     fun `a moment sent to chosen friends or a group answers its win and can be taken back`() =
@@ -710,7 +740,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/accounts/hill" && method == "GET" -> "account"
             path == "/api/records" -> "records"
             path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
-            path == "/api/unlocks/hill" -> if (method == "POST") "unlocks_save" else "unlocks"
+            path == "/api/unlocks/hill" && method == "GET" -> "unlocks"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"

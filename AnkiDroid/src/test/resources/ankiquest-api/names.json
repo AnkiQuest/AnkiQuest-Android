@@ -48,11 +48,11 @@
         "streak_freezes",
         "study",
         "unlocks",
-        "unlocks_save",
         "upload"
     ],
     "unused": [
-        "share_undo_send"
+        "share_undo_send",
+        "unlocks_save"
     ],
     "boards": [
         "leaderboard_day",

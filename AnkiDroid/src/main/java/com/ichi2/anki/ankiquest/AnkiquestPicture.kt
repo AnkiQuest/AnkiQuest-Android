@@ -120,16 +120,17 @@ internal object AnkiquestPicture {
         }
     }
 
-    /** The chosen companion's [card] art for a [size] pixel hero, or null when hidden. */
+    /** [card]'s companion art for a [size] pixel hero, or null when no companion is shown. */
     private fun art(
         context: Context,
         card: AnkiquestShare.Card,
         size: Int,
     ): Bitmap? {
-        if (!AnkiquestCompanion.visible()) {
+        val companion = card.companion ?: AnkiquestCompanion.choice()
+        if (companion == AnkiquestCompanion.Choice.NONE) {
             return null
         }
-        return AnkiquestCompanion.bitmap(context, card.art, size)
+        return AnkiquestCompanion.bitmap(context, card.art, size, companion)
     }
 
     /** The largest number size up to [NUMBER_SIZE] that keeps [number] on one line. */
