@@ -71,6 +71,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                     keys(
                         R.string.ankiquest_mood_icon_key,
                         R.string.ankiquest_open_today_key,
+                        R.string.ankiquest_sync_settings_key,
                         R.string.ankiquest_update_channel_key,
                         R.string.ankiquest_check_updates_key,
                         R.string.ankiquest_debug_info_key,

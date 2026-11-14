@@ -50,6 +50,7 @@ import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestSettingsSync
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestUndo
@@ -760,6 +761,11 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         key: String?,
     ) {
         super.onSharedPreferenceChanged(sharedPreferences, key)
+
+        // A settings sync can change a switch shown here while the screen is open.
+        if (key != null && AnkiquestSettingsSync.Setting.entries.any { it.pref == key }) {
+            findPreference<SwitchPreferenceCompat>(key)?.let { it.isChecked = sharedPreferences.getBoolean(key, it.isChecked) }
+        }
         if (key in setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)) {
             pictureAccount = null
             pictureEditor?.dismiss()
