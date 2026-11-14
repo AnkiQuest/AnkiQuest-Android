@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
@@ -68,7 +69,7 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
 
     /** The pixels [drawable] draws at its own size, to tell flames apart by colour. */
     private fun pixels(drawable: Drawable): Bitmap {
-        val bitmap = Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight)
         drawable.setBounds(0, 0, bitmap.width, bitmap.height)
         drawable.draw(Canvas(bitmap))
         return bitmap
@@ -111,13 +112,13 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
     @Test
     fun `a pending day without study shows the unlit flame and a nudge`() {
         noCompanion()
-        assertFlame(row("pending", 0, 0), R.drawable.ankiquest_streak_unlit_30, "Study today to keep your 64-day streak")
+        assertFlame(row("pending", 0, 0), R.drawable.ankiquest_streak_unlit_30, "Study today to keep it")
     }
 
     @Test
     fun `study below the minimum keeps the flame unlit`() {
         noCompanion()
-        assertFlame(row("pending", 5, 3), R.drawable.ankiquest_streak_unlit_30, "Study today to keep your 64-day streak")
+        assertFlame(row("pending", 5, 3), R.drawable.ankiquest_streak_unlit_30, "Study today to keep it")
     }
 
     @Test
@@ -129,7 +130,7 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
     @Test
     fun `a day after a freeze shows the icy flame`() {
         noCompanion()
-        assertFlame(row("protected", 0, 0), R.drawable.ankiquest_streak_icy_30, "Study today to keep your 64-day streak")
+        assertFlame(row("protected", 0, 0), R.drawable.ankiquest_streak_icy_30, "Study today to keep it")
     }
 
     @Test
@@ -137,7 +138,7 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
         // The redraw at the day's end runs before the server answers for the new day.
         noCompanion()
         val now = TimeManager.time.intTimeMS()
-        assertFlame(row("studied", 20, 12, now - hour), R.drawable.ankiquest_streak_unlit_30, "Study today to keep your 64-day streak", now)
+        assertFlame(row("studied", 20, 12, now - hour), R.drawable.ankiquest_streak_unlit_30, "Study today to keep it", now)
     }
 
     @Test

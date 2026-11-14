@@ -5,9 +5,6 @@
         <item quantity="one">%1$d day to %2$d 🔥</item>
         <item quantity="other">%1$d days to %2$d 🔥</item>
     </plurals>
-    <!-- Replaces the milestone line while today does not count yet. -->
-    <plurals name="ankiquest_streak_nudge">
-        <item quantity="one">Study today to keep your %d-day streak</item>
-        <item quantity="other">Study today to keep your %d-day streak</item>
-    </plurals>
+    <!-- Replaces the milestone line while today does not count yet. Short, so it stays on one line beside Aki. -->
+    <string name="ankiquest_streak_nudge">Study today to keep it</string>
 </resources>

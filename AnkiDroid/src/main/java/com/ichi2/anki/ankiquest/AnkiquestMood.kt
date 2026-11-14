@@ -250,7 +250,7 @@ internal object AnkiquestMood {
         return when (flame) {
             Flame.NONE -> null
             Flame.LIT -> nextLine(context, streak)
-            Flame.UNLIT, Flame.ICY -> context.resources.getQuantityString(R.plurals.ankiquest_streak_nudge, streak, streak)
+            Flame.UNLIT, Flame.ICY -> context.getString(R.string.ankiquest_streak_nudge)
         }
     }
 }

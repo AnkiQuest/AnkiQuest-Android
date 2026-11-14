@@ -109,7 +109,7 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
             assertNotNull(number.compoundDrawablesRelative[2], size.name)
             if (size == Size.LARGE || size == Size.HUGE) {
                 val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
-                assertEquals("Study today to keep your 100-day streak", milestone.text.toString(), size.name)
+                assertEquals("Study today to keep it", milestone.text.toString(), size.name)
             }
         }
     }
