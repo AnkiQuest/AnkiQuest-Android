@@ -48,6 +48,7 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_moments_decks_key,
             R.string.ankiquest_deck_share_ask_key,
             R.string.ankiquest_mood_icon_key,
+            R.string.ankiquest_sync_settings_key,
             R.string.ankiquest_update_channel_key,
             R.string.ankiquest_check_updates_key,
             R.string.aq_privacy_key,
