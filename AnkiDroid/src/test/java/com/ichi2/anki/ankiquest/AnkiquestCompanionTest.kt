@@ -7,9 +7,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -54,5 +56,32 @@ class AnkiquestCompanionTest : RobolectricTest() {
 
         account("alice")
         assertEquals("ankilope", AnkiquestCompanion.selected())
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `the cow is Ankilope recoloured on every surface`() {
+        val alice = account("alice")
+        AnkiquestUnlocks.unlock(alice, AnkiquestUnlocks.Unlock.COW)
+        assertTrue(AnkiquestCompanion.remember(alice, "cow"))
+        assertEquals(Choice.COW, AnkiquestCompanion.choice())
+        assertTrue(AnkiquestCompanion.visible())
+        for (pose in AnkiquestCompanion.previewPoses + R.drawable.aki_challenge + R.drawable.aki_place_1) {
+            assertEquals(AnkiquestCompanion.resource(pose, Choice.ANKILOPE), AnkiquestCompanion.resource(pose))
+        }
+
+        // The cow's bitmap has the Ankilope pose's shape in other colours.
+        val size = 64
+        val ankilope = requireNotNull(AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size, Choice.ANKILOPE))
+        val cow = requireNotNull(AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size))
+        assertEquals(ankilope.width to ankilope.height, cow.width to cow.height)
+        assertFalse(ankilope.sameAs(cow))
+        assertEquals(cow, AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size), "the recoloured bitmap is cached")
+    }
+
+    @Test
+    fun `a server value the app does not know falls back to Aki`() {
+        assertEquals("aki", AnkiquestCompanion.normalize("unicorn"))
+        assertEquals("cow", AnkiquestCompanion.normalize("cow"))
     }
 }

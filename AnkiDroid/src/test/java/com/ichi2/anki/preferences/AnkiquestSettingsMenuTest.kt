@@ -82,12 +82,13 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
     }
 
     @Test
-    fun `only manage account leads to another screen`() {
+    fun `only the companion and manage account lead to other screens`() {
         assertEquals(
-            listOf(AnkiquestSignInFragment::class.java.name),
+            listOf(AnkiquestCompanionFragment::class.java.name, AnkiquestSignInFragment::class.java.name),
             PreferenceTestUtils.getAttrFromXml(targetContext, R.xml.preferences_ankiquest, "fragment"),
         )
         assertEquals(AnkiquestSignInFragment::class, getFragmentFromXmlRes(R.xml.preferences_ankiquest_sign_in)!!::class)
+        assertEquals(AnkiquestCompanionFragment::class, getFragmentFromXmlRes(R.xml.preferences_ankiquest_companion)!!::class)
     }
 
     @Test

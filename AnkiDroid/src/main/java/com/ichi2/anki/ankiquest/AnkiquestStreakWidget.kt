@@ -116,6 +116,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
          */
         private const val COMPANION_MAX_PX = 1024
 
+        /** The small layouts' companion edge (`widget_ankiquest_streak_small.xml`). */
+        private const val SMALL_COMPANION_DP = 20
+
         /** The flame beside the number grows and deepens in colour with the streak. */
         private enum class StreakTier(
             val days: Int,
@@ -273,7 +276,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     } else {
                         AnkiquestMood.pose(mood, days)
                     }
-                setCompanion(views, context, AnkiquestCompanion.resource(aki), companionPx(context, size, options))
+                setCompanion(views, context, aki, companionPx(context, size, options))
             }
             views.setTextViewText(R.id.ankiquest_streak_number, number)
             views.setTextViewText(
@@ -341,16 +344,22 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             return mine ?: AnkiquestDay.judge(AnkiquestDay.carried(row, now), emptyList(), now)
         }
 
-        /** A bitmap decoded for [pixels] keeps the launcher from upscaling the drawable; null [pixels] keeps the drawable. */
+        /**
+         * The companion's version of [aki]. A bitmap decoded for [pixels] keeps the launcher from upscaling
+         * the drawable; null [pixels] keeps the drawable.
+         */
         private fun setCompanion(
             views: RemoteViews,
             context: Context,
-            @DrawableRes art: Int,
+            @DrawableRes aki: Int,
             pixels: Int?,
         ) {
-            val bitmap = pixels?.let { AnkiquestArt.bitmap(context, art, it) }
+            // The cow's colours are drawn into a bitmap, so the small layouts need one too.
+            val cow = AnkiquestCompanion.choice() == AnkiquestCompanion.Choice.COW
+            val edge = pixels ?: (SMALL_COMPANION_DP * context.resources.displayMetrics.density).roundToInt().takeIf { cow }
+            val bitmap = edge?.let { AnkiquestCompanion.bitmap(context, aki, it) }
             if (bitmap == null) {
-                views.setImageViewResource(R.id.ankiquest_streak_companion, art)
+                views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
                 return
             }
             views.setImageViewBitmap(R.id.ankiquest_streak_companion, bitmap)

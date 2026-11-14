@@ -129,7 +129,7 @@ internal object AnkiquestPicture {
         if (!AnkiquestCompanion.visible()) {
             return null
         }
-        return AnkiquestArt.bitmap(context, AnkiquestCompanion.resource(card.art), size)
+        return AnkiquestCompanion.bitmap(context, card.art, size)
     }
 
     /** The largest number size up to [NUMBER_SIZE] that keeps [number] on one line. */

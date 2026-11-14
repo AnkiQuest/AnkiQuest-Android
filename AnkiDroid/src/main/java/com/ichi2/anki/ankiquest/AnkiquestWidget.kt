@@ -641,13 +641,12 @@ open class AnkiquestWidget : AppWidgetProvider() {
             views.scaleBox(R.id.ankiquest_widget_refresh, 32f, 32f, scale)
             views.setViewVisibility(R.id.ankiquest_widget_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
             if (AnkiquestCompanion.visible()) {
-                val art = AnkiquestCompanion.resource(R.drawable.aki_face)
                 val pixels = (COMPANION_DP * scale * context.resources.displayMetrics.density).toInt()
-                val bitmap = AnkiquestArt.bitmap(context, art, pixels)
+                val bitmap = AnkiquestCompanion.bitmap(context, R.drawable.aki_face, pixels)
                 if (bitmap != null) {
                     views.setImageViewBitmap(R.id.ankiquest_widget_companion, bitmap)
                 } else {
-                    views.setImageViewResource(R.id.ankiquest_widget_companion, art)
+                    views.setImageViewResource(R.id.ankiquest_widget_companion, AnkiquestCompanion.resource(R.drawable.aki_face))
                 }
             }
             val header = settings.header(context)

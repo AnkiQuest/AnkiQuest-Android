@@ -54,7 +54,6 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
-import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
@@ -156,6 +155,8 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         for (key in listOf(R.string.ankiquest_avatar_key, R.string.ankiquest_companion_key, R.string.ankiquest_sign_out_key)) {
             requirePreference<Preference>(key).isVisible = account != null
         }
+        // The companion screen saves the choice; this row names it.
+        requirePreference<Preference>(R.string.ankiquest_companion_key).setSummary(AnkiquestCompanion.choice().title)
         requirePreference<PreferenceCategory>(R.string.ankiquest_notify_group_key).isVisible = account != null
         requirePreference<PreferenceCategory>(R.string.ankiquest_sharing_group_key).isVisible = account != null
     }
@@ -165,7 +166,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             if (signedIn() == null) showSignIn()
             true
         }
-        bindCompanion()
         requirePreference<Preference>(R.string.ankiquest_avatar_key).setOnPreferenceClickListener {
             pictureAction {
                 val account = checkNotNull(AnkiquestAvatars.account()) { getString(R.string.ankiquest_nudges_unavailable) }
@@ -588,79 +588,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             } finally {
                 preference.isEnabled = true
             }
-        }
-    }
-
-    private fun bindCompanion() {
-        val preference = requirePreference<ListPreference>(R.string.ankiquest_companion_key)
-        var generation = 0
-        var saving = false
-        var refreshPending = false
-        preference.isPersistent = false
-        preference.isEnabled = false
-        val refresh = refresh@{
-            val request = ++generation
-            preference.isEnabled = false
-            val account = signedIn() ?: return@refresh
-            preference.summary = getString(R.string.ankiquest_check_running)
-            if (saving) {
-                refreshPending = true
-                return@refresh
-            }
-            lifecycleScope.launch {
-                try {
-                    val choice = AnkiquestHomeData.companion(account)
-                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
-                    AnkiquestCompanion.remember(account, choice)
-                    preference.value = choice
-                    preference.summary = preference.entry
-                    preference.isEnabled = true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (request == generation && isAdded) {
-                        preference.summary = getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
-                    }
-                }
-            }
-        }
-        refreshServerSettings.add { refresh() }
-        preference.setOnPreferenceChangeListener { _, value ->
-            val account = AnkiquestHomeData.account() ?: return@setOnPreferenceChangeListener false
-            val request = ++generation
-            saving = true
-            preference.isEnabled = false
-            lifecycleScope.launch {
-                try {
-                    val choice = AnkiquestHomeData.saveCompanion(account, value.toString())
-                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
-                    AnkiquestCompanion.remember(account, choice)
-                    preference.value = choice
-                    preference.summary = preference.entry
-                    preference.isEnabled = true
-                    AnkiquestWidget.requestUpdate(requireContext())
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (request == generation && isAdded) {
-                        AlertDialog
-                            .Builder(requireContext())
-                            .setTitle(preference.title)
-                            .setMessage(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show()
-                    }
-                } finally {
-                    saving = false
-                    if (refreshPending && isAdded) {
-                        refreshPending = false
-                        refresh()
-                    } else if (request == generation && isAdded && !preference.isEnabled) {
-                        refresh()
-                    }
-                }
-            }
-            false
         }
     }
 

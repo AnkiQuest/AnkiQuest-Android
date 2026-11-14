@@ -179,6 +179,34 @@ internal object AnkiquestHomeData {
             }
         }
 
+    /** The ids of the companions [account] has unlocked (`GET /api/unlocks/{user}`). */
+    suspend fun unlocks(account: HomeAccount): Set<String> = unlocksRequest(account, null)
+
+    /** Tells the server [account] unlocked [unlock]; answers all of the account's unlocks. */
+    suspend fun saveUnlock(
+        account: HomeAccount,
+        unlock: String,
+    ): Set<String> = unlocksRequest(account, unlock)
+
+    private suspend fun unlocksRequest(
+        account: HomeAccount,
+        unlock: String?,
+    ): Set<String> =
+        withContext(Dispatchers.IO) {
+            val request =
+                AnkiquestApi
+                    .request(account, "api/unlocks/${account.encodedUser}")
+                    .apply {
+                        if (unlock != null) {
+                            post(AnkiquestApi.body(JSONObject().put("unlock", unlock)))
+                        }
+                    }.build()
+            AnkiquestApi.call(account, request) { response ->
+                val ids = AnkiquestApi.jsonObject(response).optJSONArray("unlocks") ?: return@call emptySet()
+                (0 until ids.length()).mapNotNull { ids.opt(it) as? String }.toSet()
+            }
+        }
+
     suspend fun local(): HomeLocal =
         CollectionManager.withCol {
             val now = TimeManager.time.intTimeMS()
