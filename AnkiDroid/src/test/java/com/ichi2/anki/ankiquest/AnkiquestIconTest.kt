@@ -54,11 +54,19 @@ class AnkiquestIconTest : RobolectricTest() {
     fun `the mood follows today's streak`() {
         assertEquals(Mood.HAPPY, AnkiquestIcon.mood(profile("studied", 12, 10), now))
         assertEquals(Mood.FROZEN, AnkiquestIcon.mood(profile("protected", 12, 10), now))
-        assertEquals(Mood.DEFAULT, AnkiquestIcon.mood(profile("pending", 12, 10), now))
         assertEquals(Mood.WORRIED, AnkiquestIcon.mood(profile("pending", 12, 3), now))
         assertEquals(Mood.SLEEPY, AnkiquestIcon.mood(profile("pending", 0, 3), now))
-        assertEquals(Mood.DEFAULT, AnkiquestIcon.mood(profile("studied", 12, -1), now), "an ended day says nothing about today")
+        assertEquals(Mood.WORRIED, AnkiquestIcon.mood(profile("studied", 12, -1), now), "the day after a counted one")
+        assertEquals(Mood.DEFAULT, AnkiquestIcon.mood(profile("pending", 12, -1), now), "an ended open day says nothing about today")
+        assertEquals(Mood.DEFAULT, AnkiquestIcon.mood(profile("studied", 12, -25), now), "nor does one from two days ago")
         assertEquals(Mood.DEFAULT, AnkiquestIcon.mood(null, now))
+    }
+
+    @Test
+    fun `a streak with no study today is worried all day`() {
+        for (hoursLeft in listOf(23L, 10L, 3L)) {
+            assertEquals(Mood.WORRIED, AnkiquestIcon.mood(profile("pending", 12, hoursLeft), now), "$hoursLeft hours left")
+        }
     }
 
     @Test
@@ -179,7 +187,7 @@ class AnkiquestIconTest : RobolectricTest() {
         val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
         lifecycle.currentState = Lifecycle.State.RESUMED
         try {
-            AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+            AnkiquestIcon.update(targetContext, profile("pending", 13, 2), now, prefs)
             clock.addM(121)
 
             lifecycle.currentState = Lifecycle.State.CREATED

@@ -73,6 +73,9 @@ internal object AnkiquestArt {
             "nudge" -> R.drawable.aki_nudge
             "challenge_invite", "challenge_accepted" -> R.drawable.aki_challenge
             "challenge_complete" -> R.drawable.aki_challenge_won
+            // The server sends these only to a streak not studied today; the streak's length is not in the notice.
+            "reminder_urgent", "reminder_milestone" -> AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 1)
+            "reminder_freeze_used" -> AnkiquestMood.pose(AnkiquestMood.Mood.FROZEN_1, 1)
             "reminder_weekly_recap" -> place(topic?.removePrefix("place:")?.toIntOrNull()) ?: R.drawable.aki_face
             else -> R.drawable.aki_face
         }

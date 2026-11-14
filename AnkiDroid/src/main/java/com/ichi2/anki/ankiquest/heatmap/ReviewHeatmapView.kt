@@ -17,7 +17,9 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestMood
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
+import com.ichi2.anki.common.time.TimeManager
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -92,14 +94,20 @@ class ReviewHeatmapView
                 if (ReviewHeatmap.searchForDay(currentData, date) != null) onDaySelected?.invoke(currentData, date)
             }
             setLoading()
+            showCompanion()
+        }
+
+        /** The companion beside the title, in today's mood. */
+        private fun showCompanion() {
             val companion = findViewById<android.widget.ImageView>(R.id.review_heatmap_aki)
             companion.isVisible = AnkiDroidApp.sharedPrefsOrNull() != null && AnkiquestNavigation.enabled() &&
                 com.ichi2.anki.ankiquest.AnkiquestCompanion
                     .visible()
             if (companion.isVisible) {
+                val pose = AnkiquestMood.ownPose(TimeManager.time.intTimeMS())
                 companion.setImageResource(
                     com.ichi2.anki.ankiquest.AnkiquestCompanion
-                        .resource(R.drawable.aki_streak),
+                        .resource(pose),
                 )
             }
         }
@@ -112,6 +120,8 @@ class ReviewHeatmapView
         ) {
             this.data = data
             this.state = state
+            // Studying reloads the heatmap, and may change the mood.
+            showCompanion()
             loading.isVisible = false
             retry.isVisible = false
             status.isVisible = data.reviews.isEmpty()

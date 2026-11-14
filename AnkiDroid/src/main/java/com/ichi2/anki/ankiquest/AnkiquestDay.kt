@@ -28,6 +28,7 @@ internal object AnkiquestDay {
     private const val PREF_SERVER_DAY = "ankiquestServerToday"
     private const val PREF_LOCAL_DAY = "ankiquestLocalToday"
     private const val MINUTE_MS = 60_000L
+    private const val DAY_MS = 86_400_000L
 
     /** Revlog rows the upload sends: answers, not manual rescheduling. */
     const val UPLOADED_REVIEWS = "ease > 0 and type < 4"
@@ -157,6 +158,31 @@ internal object AnkiquestDay {
         return verdict(server, evidence(server, reviews))
     }
 
+    /**
+     * [server] carried into the next day, for the hours after a counted day ends and before the
+     * server answers for the new one: the streak still runs and nothing counts yet. Any other day
+     * is returned as it is, so an ended day that did not count still says nothing about today.
+     * Only the companion's mood uses this; streak verdicts and their words wait for the server.
+     */
+    fun carried(
+        server: Server?,
+        now: Long,
+    ): Server? {
+        if (server == null || now < server.dayEndsAt || server.streakState != "studied") {
+            return server
+        }
+        if (now >= server.dayEndsAt + DAY_MS) {
+            return server
+        }
+        return server.copy(
+            streakState = "pending",
+            dayEndsAt = server.dayEndsAt + DAY_MS,
+            startsAt = server.dayEndsAt,
+            reviews = 0,
+            timeMs = 0,
+        )
+    }
+
     private data class Evidence(
         val count: Int = 0,
         val timeMs: Long = 0,
@@ -267,6 +293,9 @@ internal object AnkiquestDay {
     }
 
     internal fun own(now: Long): Verdict? = judgeOwn(last(), now)
+
+    /** Like [own], with a counted day that has just ended [carried] into today: for the companion's mood, not for verdicts. */
+    internal fun ownCarried(now: Long): Verdict? = judgeOwn(carried(last(), now), now)
 
     internal fun words(
         context: Context,

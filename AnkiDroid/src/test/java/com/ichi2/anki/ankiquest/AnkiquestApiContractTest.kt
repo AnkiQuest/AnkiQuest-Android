@@ -194,7 +194,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 AnkiquestDailyGoal.ServerGoal(AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, 14), since = 20754),
                 AnkiquestDailyGoal.cached(AnkiDroidApp.sharedPrefs(), account.scope),
             )
-            assertEquals(AnkiquestAki.Mood.STREAK, AnkiquestAki.mood(null, profile))
+            assertEquals(AnkiquestAki.Message.STREAK, AnkiquestAki.mood(null, profile).message)
             assertTrue(assertNotNull(profile.optJSONArray("quests")).objects().all { it.optString("title").isNotEmpty() })
 
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }

@@ -32,7 +32,11 @@ import java.util.concurrent.TimeUnit
 object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
     private const val NOW_NAME = "ankiquestPollNow"
+    private const val DAY_END_NAME = "ankiquestPollDayEnd"
     private const val LAST_SUCCESS = "ankiquestLastSuccessfulPoll"
+
+    /** How long after a study day ends the day-end poll runs, so the server already answers for the new day. */
+    private const val DAY_END_DELAY_MS = 60_000L
 
     internal const val PREF_CACHE = "ankiquestWidgetLeaderboard"
 
@@ -54,6 +58,39 @@ object AnkiquestPoll {
                 .enqueueUniquePeriodicWork(PERIODIC_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
         } catch (e: Exception) {
             Timber.w(e, "ankiquest could not schedule polling")
+        }
+    }
+
+    @Volatile
+    private var dayEndQueued = 0L
+
+    /**
+     * Polls once just after [dayEndsAt], without waiting for a network, so the streak widgets show
+     * the new day even when the periodic poll comes late. Offline, the poll draws the cached day.
+     */
+    internal fun atDayEnd(
+        context: Context,
+        dayEndsAt: Long,
+    ) {
+        // Every redraw asks again; only a new day end replaces the queued poll.
+        if (dayEndsAt == dayEndQueued) {
+            return
+        }
+        val delay = dayEndsAt + DAY_END_DELAY_MS - TimeManager.time.intTimeMS()
+        if (delay <= 0) {
+            return
+        }
+        try {
+            val request =
+                OneTimeWorkRequestBuilder<AnkiquestPollWorker>()
+                    .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                    .build()
+            WorkManager
+                .getInstance(context)
+                .enqueueUniqueWork(DAY_END_NAME, ExistingWorkPolicy.REPLACE, request)
+            dayEndQueued = dayEndsAt
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest could not schedule the day-end poll")
         }
     }
 
