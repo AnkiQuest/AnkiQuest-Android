@@ -10,7 +10,7 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.common.destinations.BrowserDestination
 import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.launchCatchingTask
-import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
+import com.ichi2.anki.utils.ext.collectInLifecycle
 import com.ichi2.anki.widgets.DeckAdapter
 
 /** Shows the review heatmap as one footer after the DeckPicker's deck rows. */
@@ -36,8 +36,8 @@ object ReviewHeatmapFooter {
                 onRetry = { heatmapViewModel.refresh() },
             )
         with(activity) {
-            activity.viewModel.flowOfDecksReloaded.launchCollectionInLifecycleScope { heatmapViewModel.refresh() }
-            heatmapViewModel.state.launchCollectionInLifecycleScope { state ->
+            activity.viewModel.flowOfDecksReloaded.collectInLifecycle { heatmapViewModel.refresh() }
+            heatmapViewModel.state.collectInLifecycle { state ->
                 when (state) {
                     ReviewHeatmapViewModel.State.Loading -> heatmapAdapter.setLoading()
                     is ReviewHeatmapViewModel.State.Loaded -> heatmapAdapter.setData(state.data)
