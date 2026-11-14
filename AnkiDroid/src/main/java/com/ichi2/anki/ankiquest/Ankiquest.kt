@@ -114,6 +114,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         ChangeManager.subscribe(this, owner = null)
         ProcessLifecycleOwner.get().lifecycle.addObserver(AnkiquestIcon)
         AnkiquestPoll.schedule(app)
+        AnkiquestSettingsSync.start(app)
     }
 
     /** The player's profile, as served by `/api/profile/<user>`. */
