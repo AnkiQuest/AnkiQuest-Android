@@ -17,7 +17,6 @@ import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapView
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
-import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,114 +27,51 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.ichi2.anki.common.android.R as CommonR
 
+/**
+ * Checks [AnkiquestMood] against `tests/fixtures/streak_moods.json` from the ankiquest server, which
+ * the desktop add-on also tests against. The ankiquest_fixtures workflow keeps this copy identical.
+ */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestMoodTest : RobolectricTest() {
-    private fun mood(
-        state: State,
-        streak: Int,
-        reviews: Int = 0,
-        frozen: Int = 0,
-        goal: Goal = Goal.OPEN,
-    ) = AnkiquestMood.of(state, reviews, streak, frozen, goal)
+    private val fixtures =
+        JSONObject(
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
+        )
 
-    /** A heatmap ending today, oldest first: "f" frozen, "m" met, "n" none. */
-    private fun heatmap(days: String): JSONArray =
-        JSONArray().apply {
-            for (day in days) {
-                put(
-                    JSONObject().put("frozen", day == 'f').put(
-                        "state",
-                        if (day == 'f') {
-                            "frozen"
-                        } else if (day == 'm') {
-                            "met"
-                        } else {
-                            "none"
-                        },
-                    ),
-                )
-            }
+    /** The fixture's cases under [key]; each rule the fixture defines has its own key. */
+    private fun cases(key: String): List<JSONObject> = fixtures.getJSONArray(key).objects().also { check(it.isNotEmpty()) }
+
+    /** A fixture mood or state: the lowercase name of the enum entry. */
+    private inline fun <reified T : Enum<T>> named(name: String): T = enumValueOf(name.uppercase())
+
+    @Test
+    fun `every shared mood and pose matches`() {
+        for (case in cases("moods")) {
+            val name = case.getString("name")
+            val today = case.getJSONObject("today")
+            val expected = case.getJSONObject("expected")
+            val streak = today.getInt("streak")
+            val goal = if (today.getBoolean("goal_reached")) Goal.REACHED else Goal.OPEN
+
+            // The mood from today's verdict, then the pose for that mood by drawable name.
+            val state = named<State>(today.getString("state"))
+            val mood = AnkiquestMood.of(state, today.getInt("reviews"), streak, today.getInt("frozen_days"), goal)
+            assertEquals(named<Mood>(expected.getString("mood")), mood, name)
+            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak)), name)
         }
+    }
 
     @Test
-    fun `no study yet is sad with a streak and asleep without one`() {
-        for (streak in listOf(1, 6, 7, 29, 30, 99, 100, 365)) {
-            assertEquals(Mood.SAD, mood(State.PENDING, streak), "$streak")
-            assertEquals(R.drawable.aki_at_risk, AnkiquestMood.pose(Mood.SAD, streak))
+    fun `the shared moods cover every mood`() {
+        val covered = cases("moods").map { named<Mood>(it.getJSONObject("expected").getString("mood")) }.toSet()
+        assertEquals(Mood.entries.toSet(), covered)
+    }
+
+    @Test
+    fun `every shared frozen run matches`() {
+        for (case in cases("frozen_run")) {
+            assertEquals(case.getInt("expected"), AnkiquestMood.frozenRun(case.optJSONArray("heatmap")), case.getString("name"))
         }
-        assertEquals(Mood.ASLEEP, mood(State.PENDING, 0))
-        assertEquals(R.drawable.aki_sleeping, AnkiquestMood.pose(Mood.ASLEEP, 0))
-    }
-
-    @Test
-    fun `some study below the minimum is hopeful`() {
-        for (streak in listOf(0, 1, 6, 7, 29, 30, 99, 100, 365)) {
-            assertEquals(Mood.HOPEFUL, mood(State.SHORT, streak, reviews = 3), "$streak")
-        }
-        assertEquals(R.drawable.aki_welcome, AnkiquestMood.pose(Mood.HOPEFUL, 64))
-    }
-
-    @Test
-    fun `a counted day burns by streak tier`() {
-        val expected =
-            mapOf(
-                1 to R.drawable.aki_streak,
-                6 to R.drawable.aki_streak,
-                7 to R.drawable.aki_streak_hot,
-                29 to R.drawable.aki_streak_hot,
-                30 to R.drawable.aki_streak_blazing,
-                64 to R.drawable.aki_streak_blazing,
-                99 to R.drawable.aki_streak_blazing,
-                100 to R.drawable.aki_streak_legend,
-                365 to R.drawable.aki_streak_legend,
-            )
-        for ((streak, pose) in expected) {
-            assertEquals(Mood.FIRE, mood(State.STUDIED, streak, reviews = 20), "$streak")
-            assertEquals(pose, AnkiquestMood.pose(Mood.FIRE, streak), "$streak")
-        }
-        assertEquals(Heat.WARM, Heat.of(0), "an unknown streak burns as day one")
-    }
-
-    @Test
-    fun `a reached goal is on fire before the minimum`() {
-        assertEquals(Mood.FIRE, mood(State.SHORT, 64, reviews = 5, goal = Goal.REACHED))
-        assertEquals(Mood.FIRE, mood(State.PENDING, 64, goal = Goal.REACHED))
-    }
-
-    @Test
-    fun `unknown days show the face`() {
-        assertEquals(Mood.UNKNOWN, mood(State.UNKNOWN, 10, reviews = 4))
-        assertEquals(R.drawable.aki_face, AnkiquestMood.pose(Mood.UNKNOWN, 10))
-    }
-
-    @Test
-    fun `frozen days before today set the frozen level until the player studies`() {
-        assertEquals(Mood.FROZEN_1, mood(State.PROTECTED, 10), "the server's protected day alone")
-        assertEquals(Mood.FROZEN_1, mood(State.PROTECTED, 10, frozen = 1))
-        assertEquals(Mood.FROZEN_2, mood(State.PROTECTED, 10, frozen = 2))
-        assertEquals(Mood.FROZEN_3, mood(State.PROTECTED, 10, frozen = 3))
-        assertEquals(Mood.FROZEN_3, mood(State.PROTECTED, 10, frozen = 4), "3 means 3 or more")
-        assertEquals(R.drawable.aki_freeze_used, AnkiquestMood.pose(Mood.FROZEN_1, 10))
-        assertEquals(R.drawable.aki_freeze, AnkiquestMood.pose(Mood.FROZEN_2, 10))
-        assertEquals(R.drawable.aki_freeze_used, AnkiquestMood.pose(Mood.FROZEN_3, 10))
-
-        // Once the player studies, the freeze no longer decides.
-        assertEquals(Mood.HOPEFUL, mood(State.PROTECTED, 10, reviews = 2, frozen = 2))
-        assertEquals(Mood.FIRE, mood(State.STUDIED, 11, reviews = 20, frozen = 2))
-        assertEquals(R.drawable.aki_streak_hot, AnkiquestMood.pose(mood(State.STUDIED, 11, reviews = 20, frozen = 2), 11))
-    }
-
-    @Test
-    fun `the frozen run counts frozen days in a row ending yesterday`() {
-        assertEquals(0, AnkiquestMood.frozenRun(null))
-        assertEquals(0, AnkiquestMood.frozenRun(heatmap("mmn")))
-        assertEquals(1, AnkiquestMood.frozenRun(heatmap("mmfn")))
-        assertEquals(2, AnkiquestMood.frozenRun(heatmap("mffn")))
-        assertEquals(3, AnkiquestMood.frozenRun(heatmap("mfffn")))
-        assertEquals(4, AnkiquestMood.frozenRun(heatmap("ffffn")), "the whole history")
-        assertEquals(1, AnkiquestMood.frozenRun(heatmap("ffmfn")), "a met day ends the run")
-        assertEquals(0, AnkiquestMood.frozenRun(heatmap("fffmn")), "only the run ending yesterday counts")
-        assertEquals(0, AnkiquestMood.frozenRun(heatmap("mmf")), "today's own cell is not before today")
     }
 
     @Test
