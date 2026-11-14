@@ -138,7 +138,11 @@ class AnkiquestGreetingTest : RobolectricTest() {
         controller.recreate()
         advanceRobolectricLooper()
 
-        val greetings = controller.get().supportFragmentManager.fragments.filterIsInstance<AnkiquestGreetingDialog>()
+        val greetings =
+            controller
+                .get()
+                .supportFragmentManager.fragments
+                .filterIsInstance<AnkiquestGreetingDialog>()
         assertEquals(1, greetings.size)
         assertTrue(greetings.single().dialog?.isShowing == true)
     }
