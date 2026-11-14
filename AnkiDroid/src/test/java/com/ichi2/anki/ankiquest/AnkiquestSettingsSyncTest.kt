@@ -57,6 +57,9 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
     /** Runs while the server answers a read, as a player changing a setting meanwhile. */
     @Volatile private var duringRead: () -> Unit = {}
 
+    /** Runs while the server answers a capability request. */
+    @Volatile private var duringCapabilities: () -> Unit = {}
+
     @Before
     fun prepare() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
@@ -69,7 +72,10 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             val body = exchange.requestBody.bufferedReader().use { it.readText() }
             val answer =
                 when {
-                    path == "/api/capabilities" -> """{"version":1,"features":$features}"""
+                    path == "/api/capabilities" -> {
+                        duringCapabilities()
+                        """{"version":1,"features":$features}"""
+                    }
                     exchange.requestMethod == "GET" -> {
                         duringRead()
                         JSONObject().put("settings", stored).toString()
@@ -119,6 +125,8 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
     private fun records(): JSONObject = JSONObject(assertNotNull(prefs().getString(AnkiquestSettingsSync.PREF_CHANGED, null)))
 
     private fun prefs() = targetContext.sharedPrefs()
+
+    private fun switchOff() = prefs().edit(commit = true) { putBoolean(AnkiquestSettingsSync.PREF_SWITCH, false) }
 
     private fun account() = assertNotNull(AnkiquestHomeData.account())
 
@@ -283,6 +291,53 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             assertTrue(requests.none { it.contains("/api/settings/") })
             assertTrue(prefs().getBoolean(AnkiquestNotifier.PREF_RANK, true))
             assertEquals(NOW, records().getJSONObject("open_today").getLong("at"))
+        }
+
+    @Test
+    fun `switching sync off during a read prevents the following write`() =
+        runBlocking {
+            prefs().edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+            assertTrue(AnkiquestSettingsSync.note(Setting.OPEN_TODAY))
+            duringRead = { switchOff() }
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertEquals(listOf("GET /api/capabilities", "GET /api/settings/cerro"), requests.toList())
+            assertTrue(sent.isEmpty(), "the switch stopped outgoing changes")
+        }
+
+    @Test
+    fun `switching sync off while capabilities are fetched prevents the read`() =
+        runBlocking {
+            prefs().edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+            assertTrue(AnkiquestSettingsSync.note(Setting.OPEN_TODAY))
+            duringCapabilities = { switchOff() }
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertEquals(listOf("GET /api/capabilities"), requests.toList())
+            assertTrue(sent.isEmpty(), "the switch stopped outgoing changes")
+        }
+
+    @Test
+    fun `changes held back by the switch are sent once it is on again`() =
+        runBlocking {
+            prefs().edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+            assertTrue(AnkiquestSettingsSync.note(Setting.OPEN_TODAY))
+            duringRead = { switchOff() }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            assertTrue(sent.isEmpty())
+
+            // The value and its change time wait here until the switch is on again.
+            assertEquals(NOW, records().getJSONObject("open_today").getLong("at"))
+            duringRead = {}
+            clock.addM(1)
+            prefs().edit(commit = true) { putBoolean(AnkiquestSettingsSync.PREF_SWITCH, true) }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            val push = sent.single()
+            assertEquals(entry(true, NOW).toString(), push.getJSONObject("open_today").toString())
+            assertTrue(prefs().getBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, false))
         }
 
     @Test

@@ -127,6 +127,17 @@ internal object AnkiquestSettingsSync {
         val updatedAt: Long,
     )
 
+    /** Whether a sync that began for an account may still send requests or apply an answer. */
+    private enum class Gate {
+        OPEN,
+
+        /** The switch went off; values and change times stay here and go out once it is on again. */
+        SWITCHED_OFF,
+
+        /** Another account signed in, or none. */
+        ACCOUNT_CHANGED,
+    }
+
     /** This phone's value and change time after a merge, and what to send ([push]), if anything. */
     data class Merged(
         val value: Any,
@@ -222,21 +233,21 @@ internal object AnkiquestSettingsSync {
         trigger: Trigger,
     ) {
         val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return
-        if (!enabled() || !supported(account, trigger) || throttled(account, trigger)) {
+        if (gate(account) != Gate.OPEN || !supported(account, trigger) || throttled(account, trigger)) {
             return
         }
         last = account.scope to TimeManager.time.intTimeMS()
 
         // Merge every key against what the server has.
         val start = locals()
-        val remote = read(account)
+        val remote = read(account) ?: return
         val merged = Setting.entries.associateWith { merge(it, start.getValue(it), remote[it.key]) }
         val stamps = merged.mapValuesTo(mutableMapOf<Setting, Long>()) { it.value.changedAt }
         val push = merged.mapNotNull { (setting, result) -> result.push?.let { setting to it } }.toMap()
 
         // Keep the server's time for what it stored, so a fast clock here does not resend forever.
         if (push.isNotEmpty()) {
-            val saved = write(account, push)
+            val saved = write(account, push) ?: return
             for ((setting, sent) in push) {
                 val stored = saved[setting.key] ?: continue
                 if (stored.value == sent.value) {
@@ -291,8 +302,8 @@ internal object AnkiquestSettingsSync {
         }
 
     /**
-     * Applies a finished sync. Dropped when the account changed or the switch went off meanwhile; a
-     * setting changed here meanwhile keeps its value and time, and the next sync sends it.
+     * Applies a finished sync. Dropped unless [gate] is still open; a setting changed here meanwhile
+     * keeps its value and time, and the next sync sends it.
      */
     private fun settle(
         context: Context,
@@ -304,7 +315,7 @@ internal object AnkiquestSettingsSync {
         val applied = mutableSetOf<Setting>()
         synchronized(lock) {
             val prefs = AnkiDroidApp.sharedPrefs()
-            if (AnkiquestHomeData.account(prefs)?.scope != account.scope || !enabled(prefs)) {
+            if (gate(account, prefs) != Gate.OPEN) {
                 return
             }
             val records = records(prefs).toMutableMap()
@@ -330,6 +341,17 @@ internal object AnkiquestSettingsSync {
             AnkiquestIcon.refresh(context, TimeManager.time.intTimeMS())
         }
     }
+
+    /** Checked before each request and before applying an answer, as the switch or account can change at every wait. */
+    private fun gate(
+        account: HomeAccount,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Gate =
+        when {
+            AnkiquestHomeData.account(prefs)?.scope != account.scope -> Gate.ACCOUNT_CHANGED
+            !enabled(prefs) -> Gate.SWITCHED_OFF
+            else -> Gate.OPEN
+        }
 
     /** Records the time of a change made here and syncs it. */
     private fun changed(key: String?) {
@@ -360,26 +382,35 @@ internal object AnkiquestSettingsSync {
             true
         }
 
-    private suspend fun read(account: HomeAccount): Map<String, Entry> = entries(call(account, "GET", null))
+    /** The server's entries; null when [gate] closed before the request went out. */
+    private suspend fun read(account: HomeAccount): Map<String, Entry>? = call(account, "GET", null)?.let { entries(it) }
 
+    /** The server's entries after storing [push]; null when [gate] closed before the request went out. */
     private suspend fun write(
         account: HomeAccount,
         push: Map<Setting, Entry>,
-    ): Map<String, Entry> {
+    ): Map<String, Entry>? {
         val settings = JSONObject()
         for ((setting, entry) in push) {
             settings.put(setting.key, JSONObject().put("value", entry.value).put("updated_at", entry.updatedAt))
         }
-        return entries(call(account, "PUT", JSONObject().put("settings", settings)))
+        return call(account, "PUT", JSONObject().put("settings", settings))?.let { entries(it) }
     }
 
-    /** One request for [account], which must still be the signed-in one when it is sent and when it answers. */
+    /**
+     * One request for [account], which must still be the signed-in one when it is sent and when it
+     * answers. Not sent, and null, unless [gate] is open.
+     */
     private suspend fun call(
         account: HomeAccount,
         method: String,
         body: JSONObject?,
-    ): JSONObject =
+    ): JSONObject? =
         withContext(Dispatchers.IO) {
+            // Checked after the last wait, so a switch turned off during an earlier request stops this one.
+            if (gate(account) != Gate.OPEN) {
+                return@withContext null
+            }
             val request =
                 AnkiquestApi
                     .request(account, "api/settings/${account.encodedUser}")
