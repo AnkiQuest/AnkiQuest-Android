@@ -92,12 +92,6 @@ internal data class AnkiquestWidgetSettings(
     companion object {
         const val DEFAULT_PERIOD = "week"
 
-        /**
-         * The player setting in `GET /api/decks/{user}` that servers with a global board have. They
-         * also answer `scope` (friends, group, global) on `/api/leaderboard`.
-         */
-        const val GLOBAL_SETTING = "global_leaderboard"
-
         private const val KEY = "ankiquestWidgetSettings"
 
         /** Where widgets saved their period before they had settings. */

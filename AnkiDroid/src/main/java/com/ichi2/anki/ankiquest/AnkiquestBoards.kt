@@ -18,6 +18,9 @@ import java.net.URLEncoder
  * for the player's own profile, `GET /api/wins/{user}` (docs/mobile-api.md, "leaderboards and profiles").
  */
 internal object AnkiquestBoards {
+    /** The deck setting present on servers with explicit leaderboard scopes. */
+    const val GLOBAL_SETTING = "global_leaderboard"
+
     /** The leaderboard periods, in the order the website's tabs show them; [path] is their web page. */
     enum class Period(
         val query: String,
@@ -207,11 +210,14 @@ internal object AnkiquestBoards {
         }
 
     /** Older servers ignore scopes, so never offer a Global board unless the setting is present. */
-    suspend fun hasScopes(account: HomeAccount): Boolean =
+    suspend fun hasScopes(
+        account: HomeAccount,
+        timeout: AnkiquestApi.Timeout = AnkiquestApi.Timeout.QUICK,
+    ): Boolean =
         withContext(Dispatchers.IO) {
             val request = AnkiquestApi.request(account, "api/decks/${account.encodedUser}").build()
-            AnkiquestApi.call(account, request, AnkiquestApi.Timeout.QUICK) {
-                AnkiquestApi.jsonObject(it).has(AnkiquestWidgetSettings.GLOBAL_SETTING)
+            AnkiquestApi.call(account, request, timeout) {
+                AnkiquestApi.jsonObject(it).has(GLOBAL_SETTING)
             }
         }
 

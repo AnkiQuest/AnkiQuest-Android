@@ -318,7 +318,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `the Global listing switch is offered from the settings and saved with the server's answer`() =
         runBlocking {
-            val global = AnkiquestWidgetSettings.GLOBAL_SETTING
+            val global = AnkiquestBoards.GLOBAL_SETTING
             assertTrue(AnkiquestBoards.hasScopes(account))
             assertEquals(true, Ankiquest.notificationSwitches().opt(global) as? Boolean)
             assertTrue(Ankiquest.setNotificationSwitch(global, true).getBoolean(global))
@@ -707,7 +707,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             return false
         }
         val body = JSONObject(sent)
-        return body.optBoolean(AnkiquestWidgetSettings.GLOBAL_SETTING) && body.optJSONArray("decks")?.length() == 0
+        return body.optBoolean(AnkiquestBoards.GLOBAL_SETTING) && body.optJSONArray("decks")?.length() == 0
     }
 
     /** The recorded answer for sending a moment: to a group, or to chosen friends. */

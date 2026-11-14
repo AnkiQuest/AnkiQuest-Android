@@ -501,7 +501,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     .filter { (_, id) -> settingsOf(id).ownBoard }
             if (placed.isEmpty() || circle == null) return
             val account = AnkiquestHomeData.account() ?: return
-            val scoped = fetch { AnkiquestBoards.hasScopes(account) }
+            val scoped = fetch { AnkiquestBoards.hasScopes(account, AnkiquestApi.Timeout.STANDARD) }
             val fetched = mutableMapOf<String, Result<JSONArray>>()
             var overview: Result<AnkiquestSocial.Overview>? = null
             for ((style, id) in placed) {
