@@ -224,7 +224,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         assertTrue(nightly.nightly)
         assertEquals(50_017_003, nightly.versionCode)
         assertEquals("Nightly quest-17+3 (1a2b3c4)", nightly.name)
-        assertEquals("https://github.com/float3/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk", nightly.apkUrl)
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk", nightly.apkUrl)
         assertNull(AnkiquestUpdater.parseNightly(JSONObject(nightlyJson.toString()).put("version_code", 0)))
     }
 

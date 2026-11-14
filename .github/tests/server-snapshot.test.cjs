@@ -115,7 +115,7 @@ test("normal contract and fixture runs never substitute server master", () => {
         const workflow = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
         assert.doesNotMatch(
             workflow,
-            /inputs\.server_ref\s*\|\|\s*'master'|raw\.githubusercontent\.com\/float3\/ankiquest\/master/,
+            /inputs\.server_ref\s*\|\|\s*'master'|raw\.githubusercontent\.com\/AnkiQuest\/ankiquest\/master/,
         );
         assert.match(workflow, /server_ref:/);
         assert.match(workflow, /ankiquest_server_snapshot\.cjs/);

@@ -1,7 +1,7 @@
 # Android exports of the alpha cleanup
 
 These five 336px WebPs come from the approved local cleanup of Aki's comeback,
-freeze-used, hot, blazing and legend PNG masters in float3/ankiquest#88.
+freeze-used, hot, blazing and legend PNG masters in AnkiQuest/ankiquest#88.
 The master edit removes only pixels with alpha 1 through 4; pixels above alpha
 4 and all dimensions remain unchanged. It preserves the original contours,
 colors and glow.

@@ -1,4 +1,4 @@
-AnkiDroid with [AnkiQuest](https://github.com/float3/ankiquest): study, shared goals, and progress in one place.
+AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/ankiquest): study, shared goals, and progress in one place.
 
 **Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 

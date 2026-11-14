@@ -5,7 +5,7 @@ poses. The chosen companion gets the same pose. Challenge-lost art is included
 for an explicit losing result; this change does not infer one from completion.
 
 The eight 336 px WebPs come from the transparent masters and recorded prompts
-in [server PR #237](https://github.com/float3/ankiquest/pull/237), commit
+in [server PR #237](https://github.com/AnkiQuest/ankiquest/pull/237), commit
 `660e119bee68d56b0e6e6a646eae66b657130f8f`. All 38 drawables match that exporter
 byte for byte; the existing 30 files are unchanged.
 
