@@ -72,6 +72,10 @@ header - see https://github.com/ankidroid/Anki-Android/pull/11803 --->
 
 AnkiQuest for Android is built on the work of [AnkiDroid's contributors](https://github.com/ankidroid/Anki-Android/graphs/contributors). See also [this fork's contributors](https://github.com/float3/AnkiQuest-Android/graphs/contributors).
 
+### Art
+
+[Anki-tan](https://shigeyukey.github.io/shige-addons-wiki/Anki-tan.html) by [Shigeyuki](https://www.patreon.com/Shigeyuki), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). See [docs/branding/anki-tan.md](docs/branding/anki-tan.md).
+
 ### [Translators](https://crowdin.com/project/ankidroid/activity-stream)
 
 Thanks to our 1400 translators, for allowing us to be available, partially or totally, in 99 languages as of July 2022.
@@ -81,4 +85,5 @@ License
 * [GPL-3.0 License](https://github.com/float3/AnkiQuest-Android/blob/main/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
 * [AGPL-3.0 License](https://github.com/float3/AnkiQuest-Android/blob/main/LICENSES/AGPL-3.0-only.txt) for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-only`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `.github/ankiquest-release.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
+* [CC BY-SA 4.0 License](https://github.com/float3/AnkiQuest-Android/blob/main/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
 * [LGPL-3.0 License](https://github.com/float3/AnkiQuest-Android/blob/main/api/COPYING.LESSER) for the AnkiDroid API
