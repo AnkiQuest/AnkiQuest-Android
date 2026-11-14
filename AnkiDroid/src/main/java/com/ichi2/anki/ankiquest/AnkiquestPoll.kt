@@ -180,14 +180,6 @@ object AnkiquestPoll {
             Timber.w(e, "ankiquest profile fetch failed")
         }
 
-        // Unlocks reach a new sign-in and a server that has just gained them without opening Today.
-        try {
-            AnkiquestHomeData.account(prefs)?.let { AnkiquestUnlocks.sync(it) }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.w(e, "ankiquest unlocks could not be synced")
-        }
         val result =
             try {
                 Ankiquest.completionNotifications()?.let { (account, notifications, scope) ->
@@ -228,6 +220,16 @@ object AnkiquestPoll {
 
         // After the features are current, so a server that just gained settings sync is used.
         AnkiquestSettingsSync.sync(context, AnkiquestSettingsSync.Trigger.POLL)
+
+        // Unlocks reach a new sign-in and a server that has just gained them without opening Today;
+        // after the features are current, so this reads them instead of asking early.
+        try {
+            AnkiquestHomeData.account(prefs)?.let { AnkiquestUnlocks.sync(it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest unlocks could not be synced")
+        }
         return result
     }
 }

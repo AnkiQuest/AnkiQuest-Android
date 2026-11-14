@@ -88,18 +88,20 @@ class AnkiquestCompanionTest : RobolectricTest() {
         val shadow = requireNotNull(AnkiquestCompanion.silhouette(targetContext, R.drawable.aki_face, size, Choice.ANKILOPE))
         assertEquals(art.width to art.height, shadow.width to shadow.height)
 
-        // Where the art is opaque, the silhouette is the desktop's grey at its opacity (allowing for rounding).
-        val opaque =
+        // Where the art is mostly opaque, the silhouette is the desktop's grey at the art's opacity scaled
+        // to the silhouette's (allowing for rounding). The art has soft edges, so few pixels are fully opaque.
+        val solid =
             (0 until art.width)
                 .flatMap { x -> (0 until art.height).map { y -> x to y } }
-                .filter { (x, y) -> Color.alpha(art[x, y]) == OPAQUE }
-        assertTrue(opaque.isNotEmpty())
-        for ((x, y) in opaque) {
+                .filter { (x, y) -> Color.alpha(art[x, y]) >= MOSTLY_OPAQUE }
+        assertTrue(solid.isNotEmpty())
+        for ((x, y) in solid) {
             val pixel = shadow[x, y]
             for (channel in listOf(Color.red(pixel), Color.green(pixel), Color.blue(pixel))) {
                 assertTrue(channel in SILHOUETTE_GREY - ROUNDING..SILHOUETTE_GREY + ROUNDING, "grey at $x,$y: $channel")
             }
-            assertTrue(Color.alpha(pixel) in SILHOUETTE_ALPHA - ROUNDING..SILHOUETTE_ALPHA + ROUNDING, "opacity at $x,$y")
+            val alpha = Color.alpha(art[x, y]) * SILHOUETTE_ALPHA / OPAQUE
+            assertTrue(Color.alpha(pixel) in alpha - ROUNDING..alpha + ROUNDING, "opacity at $x,$y")
         }
     }
 
@@ -120,6 +122,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
 
     private companion object {
         const val OPAQUE = 255
+        const val MOSTLY_OPAQUE = 200
 
         /** The desktop's silhouette: grey 128 at an opacity of 110. */
         const val SILHOUETTE_GREY = 128
