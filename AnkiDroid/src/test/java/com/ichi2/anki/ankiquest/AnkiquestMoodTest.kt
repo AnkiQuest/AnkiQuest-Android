@@ -165,6 +165,30 @@ class AnkiquestMoodTest : RobolectricTest() {
     }
 
     @Test
+    fun `the flame is lit only once today counts`() {
+        val flames = Mood.entries.associateWith(AnkiquestMood::flame)
+        assertEquals(AnkiquestMood.Flame.LIT, flames[Mood.FIRE])
+        assertEquals(AnkiquestMood.Flame.UNLIT, flames[Mood.SAD])
+        assertEquals(AnkiquestMood.Flame.UNLIT, flames[Mood.HOPEFUL])
+        for (frozen in listOf(Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3)) {
+            assertEquals(AnkiquestMood.Flame.ICY, flames[frozen], frozen.name)
+        }
+        assertEquals(AnkiquestMood.Flame.NONE, flames[Mood.ASLEEP])
+        assertEquals(AnkiquestMood.Flame.NONE, flames[Mood.UNKNOWN])
+    }
+
+    @Test
+    fun `the line under the number nudges until today counts`() {
+        assertEquals("36 days to 100 🔥", AnkiquestMood.line(targetContext, AnkiquestMood.Flame.LIT, 64))
+        val nudge = "Study today to keep it"
+        assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.UNLIT, 64))
+        assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.ICY, 64))
+        assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.UNLIT, 1))
+        assertNull(AnkiquestMood.line(targetContext, AnkiquestMood.Flame.NONE, 64))
+        assertNull(AnkiquestMood.line(targetContext, AnkiquestMood.Flame.UNLIT, 0))
+    }
+
+    @Test
     fun `the next milestone counts down`() {
         assertEquals("36 days to 100 🔥", AnkiquestMood.nextLine(targetContext, 64))
         assertEquals("1 day to 7 🔥", AnkiquestMood.nextLine(targetContext, 6))
