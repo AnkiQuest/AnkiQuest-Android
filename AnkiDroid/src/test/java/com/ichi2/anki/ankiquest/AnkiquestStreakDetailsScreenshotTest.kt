@@ -132,11 +132,12 @@ class AnkiquestStreakDetailsScreenshotTest : ScreenshotTest() {
                                 "$size clips status height at $rowIndex/$column: ${status.layout.height}px into ${status.height}px"
                         }
                     }
-                    if (size == Size.LARGE || size == Size.HUGE) {
-                        val companion = widget.findViewById<View>(R.id.ankiquest_streak_companion)
-                        if (companion.isVisible && companion.height < 24 * density) {
-                            layoutProblems += "$size leaves only ${companion.height / density} dp for Aki at $rowIndex/$column"
-                        }
+                    // From 2x2 up the companion is the widget's main element.
+                    val minimum = companionMinimumDp(size)
+                    val companion = widget.findViewById<View>(R.id.ankiquest_streak_companion)
+                    val shown = minOf(companion.width, companion.height)
+                    if (minimum != null && companion.isVisible && shown < minimum * density) {
+                        layoutProblems += "$size leaves only ${shown / density} dp for Aki at $rowIndex/$column"
                     }
                     val goal = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_goal)
                     if (goal.isVisible) {
@@ -175,5 +176,18 @@ class AnkiquestStreakDetailsScreenshotTest : ScreenshotTest() {
             )
         }
         assertTrue(layoutProblems.isEmpty(), layoutProblems.joinToString("\n"))
+    }
+
+    /** The smallest companion edge [size] may show at its minimum widget size; the 1x1 face has none. */
+    private fun companionMinimumDp(size: Size): Int? =
+        when (size) {
+            Size.SMALL -> null
+            Size.MEDIUM -> MEDIUM_COMPANION_DP
+            Size.LARGE, Size.HUGE -> BIG_COMPANION_DP
+        }
+
+    private companion object {
+        const val MEDIUM_COMPANION_DP = 48
+        const val BIG_COMPANION_DP = 24
     }
 }
