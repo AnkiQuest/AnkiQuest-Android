@@ -25,7 +25,7 @@ class IcuRegexSyntaxDetectorTest {
                 """,
             ).indented(),
         ).expectErrorCount(2)
-            .expectContains("Inline flag `(?U)` uses `U`, which ICU rejects")
+            .expectContains("Inline flag (?U) uses U, which ICU rejects")
     }
 
     @Test
@@ -106,7 +106,7 @@ class IcuRegexSyntaxDetectorTest {
                 """,
             ).indented(),
         ).expectErrorCount(2)
-            .expectContains("Unescaped `}` outside a {n,m} quantifier")
+            .expectContains("Unescaped } outside a {n,m} quantifier")
     }
 
     @Test
