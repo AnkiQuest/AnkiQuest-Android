@@ -4,11 +4,14 @@ package com.ichi2.anki.widget.cardanalysis
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.graphics.Path
 import android.graphics.Rect
+import android.graphics.Region
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.RemoteViews
@@ -191,6 +194,7 @@ class CardAnalysisWidgetLayoutTest : RobolectricTest() {
             assertTrue(contrast >= 4.5, "count ${count.text} contrast is $contrast")
             assertEquals(listOf("12", "3", "25")[index], count.text.toString())
             inside(widget, count)
+            insideOutline(widget, count)
             val needed = count.paint.measureText(count.text.toString()) + count.compoundPaddingLeft + count.compoundPaddingRight
             assertTrue(needed <= count.width + 1, "count ${count.text} clips horizontally")
             assertTrue(
@@ -201,6 +205,7 @@ class CardAnalysisWidgetLayoutTest : RobolectricTest() {
         val name = widget.findViewById<TextView>(WidgetR.id.deckNameCardAnalysis)
         if (name.isVisible) {
             inside(widget, name)
+            insideOutline(widget, name)
             val line = minOf(name.layout.lineCount, name.maxLines) - 1
             assertTrue(line >= 0 && name.height > name.compoundPaddingTop + name.compoundPaddingBottom, "deck name has no usable space")
             assertTrue(
@@ -214,6 +219,47 @@ class CardAnalysisWidgetLayoutTest : RobolectricTest() {
         } else {
             assertTrue(widget.contentDescription.toString().contains("Pharmacology"), "hidden name must remain accessible")
         }
+    }
+
+    /** The frame clips to its rounded outline, so the glyphs must stay inside the rounded corners. */
+    private fun insideOutline(
+        widget: ViewGroup,
+        view: TextView,
+    ) {
+        val frame = widget.findViewById<ViewGroup>(android.R.id.background) ?: widget
+        val radius = (frame.background as GradientDrawable).cornerRadius
+        val outline =
+            Path().apply {
+                addRoundRect(0f, 0f, frame.width.toFloat(), frame.height.toFloat(), radius, radius, Path.Direction.CW)
+            }
+        val visible = Region().apply { setPath(outline, Region(0, 0, frame.width, frame.height)) }
+
+        // Trace each line's glyphs where TextView draws them: after padding and vertical centering.
+        val origin = Rect()
+        frame.offsetDescendantRectToMyCoords(view, origin)
+        val layout = view.layout
+        val box = view.height - view.extendedPaddingTop - view.extendedPaddingBottom
+        val centered = (view.gravity and Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL
+        val offset = if (centered && layout.height < box) (box - layout.height) / 2 else 0
+        val text = layout.text.toString()
+        val glyphs = Path()
+        for (line in 0 until layout.lineCount) {
+            val linePath = Path()
+            view.paint.getTextPath(
+                text,
+                layout.getLineStart(line),
+                layout.getLineVisibleEnd(line),
+                origin.left + view.compoundPaddingLeft + layout.getLineLeft(line),
+                (origin.top + view.extendedPaddingTop + offset + layout.getLineBaseline(line)).toFloat(),
+                linePath,
+            )
+            glyphs.addPath(linePath)
+        }
+
+        // Any glyph area outside the rounded outline is cut off on screen.
+        val outside = Region().apply { setPath(glyphs, Region(-frame.width, -frame.height, 2 * frame.width, 2 * frame.height)) }
+        outside.op(visible, Region.Op.DIFFERENCE)
+        assertTrue(outside.isEmpty, "${view.text} is cut by the rounded corners at ${outside.bounds}")
     }
 
     private fun inside(
