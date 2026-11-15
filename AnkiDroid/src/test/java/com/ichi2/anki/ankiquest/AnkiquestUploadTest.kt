@@ -65,6 +65,9 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Volatile
     private var reviewStatus = 200
 
+    @Volatile
+    private var noticedConquests = JSONArray()
+
     private enum class ReplyOwner { CURRENT, CHANGED }
 
     @Volatile
@@ -706,6 +709,49 @@ class AnkiquestUploadTest : RobolectricTest() {
                 ),
             ).put("recipients", JSONArray())
 
+    @Test
+    fun `an accepted upload records the conquest's home deck before it moves`() =
+        runTest {
+            val at = col.db.queryLongScalar("select max(id) from revlog")
+            val cid = col.db.queryLongScalar("select cid from revlog where id = ?", at)
+            val card = col.getCard(cid)
+            card.did = col.decks.id("Mandarin::Lesson 3")
+            col.updateCard(card)
+            noticedConquests = JSONArray().put(JSONObject().put("at", at))
+            uploadReviews()
+            card.did = col.decks.id("5 Archive::Moved")
+            col.updateCard(card)
+            assertEquals("Mandarin › Lesson 3", AnkiquestShare.conqueredCardDeck(at))
+            assertTrue(requests.none { it.body?.has("conquests") == true }, "snapshots are local, not uploaded")
+        }
+
+    @Test
+    fun `an accepted batch keeps its deck snapshot when the next batch fails`() =
+        runTest {
+            val at = col.db.queryLongScalar("select max(id) from revlog")
+            val cid = col.db.queryLongScalar("select cid from revlog where id = ?", at)
+            val card = col.getCard(cid)
+            card.did = col.decks.id("Mandarin::Lesson 3")
+            col.updateCard(card)
+            // The upload contract accepts 5,000 rows per request; the last row needs a second one.
+            val batchSize = 5000
+            col.db.execute(
+                """with recursive samples(n) as (select 1 union all select n + 1 from samples where n < ?)
+                   insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type)
+                   select ? + n, ?, -1, 3, 4, 1, 2500, 9000, 1 from samples""",
+                batchSize,
+                at,
+                cid,
+            )
+            noticedConquests = JSONArray().put(JSONObject().put("at", at))
+            Ankiquest.runFromSettings(targetContext, uploadAll = true) { _, _ -> reviewStatus = 503 }
+            assertEquals(2, requests.count { it.method == "POST" && it.path == "/api/reviews/cerro" })
+            assertEquals(at + batchSize - 1, AnkiDroidApp.sharedPrefs().getLong("$PREF_LEGACY_MARK:$url/cerro", 0))
+            card.did = col.decks.id("5 Archive::Moved")
+            col.updateCard(card)
+            assertEquals("Mandarin › Lesson 3", AnkiquestShare.conqueredCardDeck(at))
+        }
+
     private fun profile(): JSONObject =
         JSONObject()
             .put("display", "Cerro")
@@ -718,4 +764,5 @@ class AnkiquestUploadTest : RobolectricTest() {
             .put("lifetime", JSONObject().put("reviews", 1))
             .put("quests", JSONArray())
             .put("achievements", JSONArray())
+            .put("conquests", noticedConquests)
 }
