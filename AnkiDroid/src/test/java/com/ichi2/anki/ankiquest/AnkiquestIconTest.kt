@@ -82,14 +82,39 @@ class AnkiquestIconTest : RobolectricTest() {
     }
 
     @Test
-    fun `companions without their own icons use Aki's`() {
+    fun `Aki has an icon for every mood`() {
         for (mood in Mood.entries) {
             val aki = Icon.of("aki", mood)
             assertEquals("aki", aki.companion)
             assertEquals(mood, aki.mood)
-            assertEquals(aki, Icon.of("ankilope", mood), mood.name)
-            assertEquals(aki, Icon.of("none", mood), mood.name)
         }
+    }
+
+    @Test
+    fun `every companion shows its own icon`() {
+        // Ankilope and Bluma (the cow) showed Aki's faces (#313); no companion shows no one's.
+        for (companion in listOf("ankilope", "cow", "none")) {
+            for (mood in Mood.entries) {
+                assertEquals(companion, Icon.of(companion, mood).companion, "$companion, ${mood.name}")
+            }
+        }
+    }
+
+    @Test
+    fun `unknown companions use Aki's icons`() {
+        for (mood in Mood.entries) {
+            assertEquals(Icon.of("aki", mood), Icon.of("someone new", mood), mood.name)
+        }
+    }
+
+    @Test
+    fun `the launcher shows Ankilope when she is the companion`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        AnkiquestIcon.show(targetContext, Mood.WORRIED, prefs, "ankilope")
+        val shown = enabled()
+        assertEquals(1, shown.size, "$shown")
+        assertEquals("ankilope", shown.single().companion, "not Aki's worried face")
     }
 
     @Test
