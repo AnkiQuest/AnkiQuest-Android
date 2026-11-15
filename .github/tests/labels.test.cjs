@@ -26,10 +26,10 @@ const SYNC = "workflows/ankiquest_labels.yml";
 // A workflow that adds, removes or creates labels.
 const LABELLING = /addLabels|removeLabel|actions\/labeler@|\$GITHUB_REPOSITORY\/labels/;
 
-// Upstream AnkiDroid workflows that apply labels. They stay as upstream has
-// them and are disabled in this repository; the shared ankiquest_ workflows
-// do their work.
-const UPSTREAM = [".github/workflows/conflict.yaml", ".github/workflows/label.yml"];
+// Upstream AnkiDroid workflows that apply labels. conflict.yaml stays as
+// upstream has it and is disabled in this repository; ankiquest_conflicts.yml
+// does its work. Upstream's label.yml was removed for ankiquest_pr_labels.yml.
+const UPSTREAM = [".github/workflows/conflict.yaml"];
 
 // Files the copy check compares, from SHARED_FILES in the sync workflow.
 function sharedFiles() {
@@ -128,6 +128,10 @@ test("labels.json entries are well formed and unique ignoring case", () => {
             seen.add(name.toLowerCase());
         }
     }
+});
+
+test("upstream's pull request labeller is replaced by the shared one", () => {
+    assert.ok(!fs.existsSync(path.join(github, "workflows", "label.yml")));
 });
 
 test("labels.json holds every label the workflows apply, spelled the same", () => {
