@@ -195,6 +195,20 @@ internal object AnkiquestHomeData {
             AnkiquestApi.call(account, request) { AnkiquestApi.jsonObject(it) }
         }
 
+    /** Tells the server [account] unlocked [unlock] (`POST /api/unlocks/{user}`); answers as [unlocks]. */
+    suspend fun saveUnlock(
+        account: HomeAccount,
+        unlock: String,
+    ): JSONObject =
+        withContext(Dispatchers.IO) {
+            val request =
+                AnkiquestApi
+                    .request(account, "api/unlocks/${account.encodedUser}")
+                    .post(AnkiquestApi.body(JSONObject().put("unlock", unlock)))
+                    .build()
+            AnkiquestApi.call(account, request) { AnkiquestApi.jsonObject(it) }
+        }
+
     suspend fun local(): HomeLocal =
         CollectionManager.withCol {
             val now = TimeManager.time.intTimeMS()

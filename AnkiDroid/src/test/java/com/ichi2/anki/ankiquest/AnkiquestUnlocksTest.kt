@@ -62,7 +62,13 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             val answer =
                 when {
                     path == "/api/capabilities" -> JSONObject().put("version", 1).put("features", JSONArray(features))
-                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features -> unlocksAnswer()
+                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features -> {
+                        // A reported unlock is granted; the server no longer checks taps.
+                        if (sent.isNotEmpty()) {
+                            unlocks = unlocks + JSONObject(sent).getString("unlock")
+                        }
+                        unlocksAnswer()
+                    }
                     path.startsWith("/api/companion/") -> {
                         if (sent.isNotEmpty()) {
                             val header = exchange.requestHeaders.getFirst(COMPANIONS_HEADER)
@@ -332,7 +338,34 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             assertEquals(Choice.COW, AnkiquestCompanion.choice())
         }
 
+    @Test
+    fun `unlocks that are not choices here are kept by id`() =
+        runBlocking {
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            unlocks = setOf(Choice.COW.id, ANKI_TAN)
+
+            AnkiquestUnlocks.sync(account)
+
+            val found = assertNotNull(AnkiquestUnlocks.found(account))
+            assertEquals(setOf(Choice.COW), found.unlocks)
+            assertEquals(setOf(Choice.COW.id, ANKI_TAN), found.ids)
+        }
+
+    @Test
+    fun `a tapped chibi is reported without its taps and kept`() =
+        runBlocking {
+            serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
+            unlocks = setOf(ANKI_TAN)
+            val chibi = AnkiquestChibi.ALL.single { it.base == ANKI_TAN }
+
+            AnkiquestUnlocks.claim(account, chibi)
+
+            assertEquals("POST /api/unlocks/cerro {\"unlock\":\"${chibi.id}\"}", requests.single { it.startsWith("POST") })
+            assertEquals(setOf(ANKI_TAN, chibi.id), AnkiquestUnlocks.found(account)?.ids)
+        }
+
     private companion object {
+        const val ANKI_TAN = "anki_tan"
         const val OK = 200
         const val NOT_FOUND = 404
         const val CONFLICT = 409

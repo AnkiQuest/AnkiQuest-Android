@@ -47,10 +47,14 @@ internal object AnkiquestUnlocks {
         val goal: Int,
     )
 
-    /** The server's answer: the companions the player has unlocked, and progress toward each locked one that shows. */
+    /**
+     * The server's answer: the companions the player has unlocked, and progress toward each locked
+     * one that shows. [ids] also lists unlocks that are not choices here, such as a chibi or its base.
+     */
     data class Found(
         val unlocks: Set<Choice>,
         val progress: Map<Choice, Progress>,
+        val ids: Set<String> = unlocks.mapTo(mutableSetOf()) { it.id },
     ) {
         companion object {
             /** A server without [FEATURE]: nothing unlocked, no progress. */
@@ -58,16 +62,17 @@ internal object AnkiquestUnlocks {
 
             /** A `GET /api/unlocks/{user}` answer, leaving out what this app cannot read or show. */
             fun parse(answer: JSONObject): Found {
-                val ids = answer.optJSONArray("unlocks")
-                val unlocks = (0 until (ids?.length() ?: 0)).mapNotNull { known(ids?.opt(it) as? String) }.toSet()
-                val listed = answer.optJSONObject("progress") ?: return Found(unlocks, emptyMap())
+                val listedIds = answer.optJSONArray("unlocks")
+                val ids = (0 until (listedIds?.length() ?: 0)).mapNotNull { listedIds?.opt(it) as? String }.toSet()
+                val unlocks = ids.mapNotNull { known(it) }.toSet()
+                val listed = answer.optJSONObject("progress") ?: return Found(unlocks, emptyMap(), ids)
                 val progress =
                     listed
                         .keys()
                         .asSequence()
                         .mapNotNull { id -> known(id)?.let { choice -> progress(listed.optJSONObject(id))?.let { choice to it } } }
                         .toMap()
-                return Found(unlocks, progress)
+                return Found(unlocks, progress, ids)
             }
 
             private fun known(id: String?): Choice? = Choice.entries.firstOrNull { it.id == id }
@@ -144,6 +149,24 @@ internal object AnkiquestUnlocks {
             } else {
                 JSONObject()
             }
+        keep(account, answer)
+    }
+
+    /**
+     * Tells [account]'s server the player tapped [chibi] free and keeps its answer. Only the result
+     * is sent: the server trusts the app's count.
+     */
+    suspend fun claim(
+        account: HomeAccount,
+        chibi: AnkiquestChibi.Chibi,
+    ) {
+        keep(account, AnkiquestHomeData.saveUnlock(account, chibi.id))
+    }
+
+    private fun keep(
+        account: HomeAccount,
+        answer: JSONObject,
+    ) {
         AnkiDroidApp.sharedPrefs().edit { putString(key(account), answer.toString()) }
     }
 

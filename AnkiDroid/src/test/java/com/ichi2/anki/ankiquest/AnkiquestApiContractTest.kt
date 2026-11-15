@@ -428,6 +428,19 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `a chibi unlock is reported and the server's answer kept`() =
+        runBlocking {
+            AnkiquestCapabilities.refresh(account)
+
+            AnkiquestUnlocks.claim(account, AnkiquestChibi.ALL.first())
+
+            val unlocks = JSONObject(example("unlocks_save")).getJSONArray("unlocks")
+            val found = assertNotNull(AnkiquestUnlocks.found(account))
+            assertEquals((0 until unlocks.length()).map { unlocks.getString(it) }.toSet(), found.ids)
+            assertTrue("POST /api/unlocks/hill" in requests, "$requests")
+        }
+
+    @Test
     fun `a companion that joined is a shareable moment with its own art`() {
         val entries = JSONArray(example("notifications_companion"))
         val row = (0 until entries.length()).map { entries.getJSONObject(it) }.first { it.optString("topic") == "companion" }
@@ -816,6 +829,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/records" -> "records"
             path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
             path == "/api/unlocks/hill" && method == "GET" -> "unlocks"
+            path == "/api/unlocks/hill" && method == "POST" -> "unlocks_save"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"

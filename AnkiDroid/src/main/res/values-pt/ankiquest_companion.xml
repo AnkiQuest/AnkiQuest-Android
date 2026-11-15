@@ -8,4 +8,9 @@
     <string name="ankiquest_companion_level_progress">Nível %1$d de %2$d</string>
     <string name="ankiquest_companion_hours_goal">Estudar %1$d horas no total</string>
     <string name="ankiquest_companion_hours_progress">%1$d de %2$d horas</string>
+    <plurals name="ankiquest_companion_chibi_hint">
+        <item quantity="one">Estás a %1$d toque do chibi</item>
+        <item quantity="many">Estás a %1$d toques do chibi</item>
+        <item quantity="other">Estás a %1$d toques do chibi</item>
+    </plurals>
 </resources>
