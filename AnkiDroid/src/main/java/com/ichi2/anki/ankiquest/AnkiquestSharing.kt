@@ -206,7 +206,7 @@ internal object AnkiquestSharing {
     ): Sent {
         val body = JSONObject().put("moment", moment.json()).put("to", audience.json())
         note?.let {
-            require(it.length <= MAX_NOTE)
+            require(it.codePointCount(0, it.length) <= MAX_NOTE)
             body.put("note", it)
         }
         val answer = call(account, "POST", "api/share/${account.encodedUser}", body)

@@ -63,8 +63,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
     }
 
     /**
-     * Like Duolingo's: a tiny face and number at 1x1, the usual card at 2x2, a big companion from 3x3
-     * up, and from about 4x5 a giant number under a companion that fills the card.
+     * Like Duolingo's: a tiny face and number at 1x1, the companion beside the number at 2x2, a big
+     * companion from 3x3 up, and from about 4x5 a giant number under a companion that fills the card.
      */
     enum class Size(
         @LayoutRes val layout: Int,
@@ -324,8 +324,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val goal = setGoalProgress(views, language, day, me.takeIf { player == Ankiquest.player() }, now)
             if (style == Style.TRANSPARENT && progress != null) {
                 // The same RemoteViews progress keeps a contrasting edge on either wallpaper tone.
-                val ring = size == Size.SMALL || size == Size.MEDIUM
-                val outline = if (ring) R.drawable.ankiquest_streak_clear_ring else R.drawable.ankiquest_streak_clear_meter
+                val outline = if (ringed(size)) R.drawable.ankiquest_streak_clear_ring else R.drawable.ankiquest_streak_clear_meter
                 views.setInt(R.id.ankiquest_streak_progress, "setBackgroundResource", outline)
                 val edge =
                     language.resources.displayMetrics.density
@@ -334,7 +333,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 views.setViewPadding(R.id.ankiquest_streak_progress, edge, edge, edge, edge)
             }
             val milestone = setStreakTier(views, language, AnkiquestMood.flame(mood), streak, size, number, style)
-            if (size == Size.SMALL || size == Size.MEDIUM) {
+            if (ringed(size)) {
                 val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
                 views.setViewVisibility(R.id.ankiquest_streak_badge, badge)
             }
@@ -393,17 +392,21 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             views.setImageViewBitmap(R.id.ankiquest_streak_companion, bitmap)
         }
 
-        /** The layout's largest companion; the small layouts keep theirs small. */
+        /** Only the 1x1 face rings the companion with the minimum-time progress; larger layouts draw a bar. */
+        private fun ringed(size: Size) = size == Size.SMALL
+
+        /** The layout's largest companion; the 1x1 face keeps its drawable. */
         @DimenRes
         private fun companionDimen(size: Size): Int? =
             when (size) {
+                Size.MEDIUM -> R.dimen.ankiquest_streak_companion_medium
                 Size.LARGE -> R.dimen.ankiquest_streak_companion_large
                 Size.HUGE -> R.dimen.ankiquest_streak_companion_huge
-                Size.SMALL, Size.MEDIUM -> null
+                Size.SMALL -> null
             }
 
         /**
-         * The companion's largest edge in pixels for [size], or null for the small layouts. The square
+         * The companion's largest edge in pixels for [size], or null for the 1x1 face. The square
          * pose fits within the widget's largest width and height from [options] and the layout's limit.
          */
         private fun companionPx(
@@ -470,7 +473,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val (widthDp, heightDp, textSp) =
                 when (size) {
                     Size.SMALL -> Triple(49f, 20f, 20f)
-                    Size.MEDIUM -> Triple(56f, 25f, 44f)
+                    // The 2x2 number column: its widest box (ankiquest_streak_number_medium) above both meters.
+                    Size.MEDIUM -> Triple(48f, 40f, 20f)
                     Size.LARGE -> Triple(168f, 54f, 72f)
                     Size.HUGE -> Triple(252f, 140f, 120f)
                 }
@@ -533,11 +537,10 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     else -> Tone.GRAY
                 }
             val pending = day != null && !day.confirmed && day.unsent > 0
-            val ring = size == Size.SMALL || size == Size.MEDIUM
             val layout =
                 when {
-                    ring && pending -> tone.pendingRing
-                    ring -> tone.ring
+                    ringed(size) && pending -> tone.pendingRing
+                    ringed(size) -> tone.ring
                     pending -> tone.pendingMeter
                     else -> tone.meter
                 }

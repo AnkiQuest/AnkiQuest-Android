@@ -53,6 +53,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private lateinit var url: String
     private val requests = CopyOnWriteArrayList<String>()
     private val shareRetractions = CopyOnWriteArrayList<String>()
+    private val shareBodies = CopyOnWriteArrayList<JSONObject>()
 
     private enum class UndoServer { LEGACY, SCOPED }
 
@@ -74,6 +75,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 shareRetractions += exchange.requestURI.toString()
             }
             val sent = exchange.requestBody.bufferedReader().use { it.readText() }
+            if (exchange.requestMethod == "POST" && path.startsWith("/api/share/")) {
+                shareBodies += JSONObject(sent)
+            }
             val body = route(exchange.requestMethod, path, sent, exchange.requestURI.query)?.let(::example)?.toByteArray(Charsets.UTF_8)
             exchange.responseHeaders.set("Content-Type", "application/json")
             if (body == null) {
@@ -478,6 +482,19 @@ class AnkiquestApiContractTest : RobolectricTest() {
                         it
                 },
             )
+        }
+
+    @Test
+    fun `a moment accepts 140 Unicode characters without splitting or rejecting them`() =
+        runBlocking {
+            val note = "\uD83C\uDF31".repeat(AnkiquestSharing.MAX_NOTE)
+            val sent = AnkiquestSharing.send(account, AnkiquestSharing.MomentRef.Win(6), AnkiquestSharing.Audience.Circle, note)
+            assertEquals(6L, sent.win)
+            assertEquals(note, shareBodies.single().getString("note"))
+            assertFailsWith<IllegalArgumentException> {
+                AnkiquestSharing.send(account, AnkiquestSharing.MomentRef.Win(6), AnkiquestSharing.Audience.Circle, note + "x")
+            }
+            assertEquals(1, shareBodies.size, "an overlong note never reaches the server")
         }
 
     @Test
