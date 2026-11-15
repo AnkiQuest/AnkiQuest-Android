@@ -26,10 +26,9 @@ const SYNC = "workflows/ankiquest_labels.yml";
 // A workflow that adds, removes or creates labels.
 const LABELLING = /addLabels|removeLabel|actions\/labeler@|\$GITHUB_REPOSITORY\/labels/;
 
-// Upstream AnkiDroid workflows that apply labels. conflict.yaml stays as
-// upstream has it and is disabled in this repository; ankiquest_conflicts.yml
-// does its work. Upstream's label.yml was removed for ankiquest_pr_labels.yml.
-const UPSTREAM = [".github/workflows/conflict.yaml"];
+// Upstream AnkiDroid's labelling workflows, replaced by the shared ones:
+// label.yml by ankiquest_pr_labels.yml, conflict.yaml by ankiquest_conflicts.yml.
+const REPLACED = ["label.yml", "conflict.yaml"];
 
 // Files the copy check compares, from SHARED_FILES in the sync workflow.
 function sharedFiles() {
@@ -45,13 +44,12 @@ function triggerPaths(event) {
     return [...block[1].matchAll(/- (\S+)/g)].map((match) => match[1]);
 }
 
-// Workflows in this repository that apply labels, other than upstream's.
+// Workflows in this repository that apply labels.
 function labellingWorkflows() {
     return fs
         .readdirSync(path.join(github, "workflows"))
         .filter((file) => /\.ya?ml$/.test(file) && LABELLING.test(read(path.join("workflows", file))))
-        .map((file) => `.github/workflows/${file}`)
-        .filter((file) => !UPSTREAM.includes(file));
+        .map((file) => `.github/workflows/${file}`);
 }
 
 // Label names in the shared workflow scripts: LABEL constants and add/remove calls.
@@ -130,8 +128,10 @@ test("labels.json entries are well formed and unique ignoring case", () => {
     }
 });
 
-test("upstream's pull request labeller is replaced by the shared one", () => {
-    assert.ok(!fs.existsSync(path.join(github, "workflows", "label.yml")));
+test("upstream's labelling workflows are replaced by the shared ones", () => {
+    for (const file of REPLACED) {
+        assert.ok(!fs.existsSync(path.join(github, "workflows", file)), file);
+    }
 });
 
 test("labels.json holds every label the workflows apply, spelled the same", () => {
