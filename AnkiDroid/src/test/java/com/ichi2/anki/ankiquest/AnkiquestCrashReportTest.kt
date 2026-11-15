@@ -14,7 +14,10 @@ import okhttp3.Response
 import org.acra.ReportField
 import org.acra.builder.ReportBuilder
 import org.acra.collector.SharedPreferencesCollector
+import org.acra.config.HttpSenderConfiguration
 import org.acra.data.CrashReportData
+import org.acra.data.StringFormat
+import org.acra.sender.HttpSender
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.Test
@@ -22,12 +25,29 @@ import org.junit.runner.RunWith
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.net.InetSocketAddress
+import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestCrashReportTest : RobolectricTest() {
+    /** AnkiQuest builds must never send reports to AnkiDroid's server (#329). */
+    @Test
+    fun `crash reports go to the AnkiQuest server`() {
+        val config = CrashReportService.acraCoreConfigBuilder.build()
+        val sender = config.pluginConfigurations.filterIsInstance<HttpSenderConfiguration>().single()
+
+        // Not ankidroid.org or any of its subdomains.
+        val host = URI(sender.uri).host
+        assertFalse(host == ANKIDROID_HOST || host.endsWith(".$ANKIDROID_HOST"), sender.uri)
+
+        // The server endpoint takes a JSON body by POST.
+        assertEquals("${AnkiquestAccount.DEFAULT_SERVER}/api/crash-reports", sender.uri)
+        assertEquals(HttpSender.Method.POST, sender.httpMethod)
+        assertEquals(StringFormat.JSON, config.reportFormat)
+    }
+
     @Test
     fun `crash reports omit AnkiQuest credentials and account caches`() {
         val keys =
@@ -127,5 +147,6 @@ class AnkiquestCrashReportTest : RobolectricTest() {
 
     companion object {
         private const val SECRET = "synthetic-private-token"
+        private const val ANKIDROID_HOST = "ankidroid.org"
     }
 }
