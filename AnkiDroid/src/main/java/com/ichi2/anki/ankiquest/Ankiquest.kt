@@ -114,6 +114,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         ChangeManager.subscribe(this, owner = null)
         ProcessLifecycleOwner.get().lifecycle.addObserver(AnkiquestIcon)
         AnkiquestPoll.schedule(app)
+        AnkiquestSettingsSync.start(app)
     }
 
     /** The player's profile, as served by `/api/profile/<user>`. */
@@ -651,7 +652,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     listOfNotNull(
                         text?.let { language.getString(R.string.aq_conquest_popup_card, it) },
                         language.resources.getQuantityString(R.plurals.aq_conquest_lapses, lapses, lapses.toString()),
-                        deck?.let { language.getString(R.string.aq_conquest_deck, it) },
                     ).joinToString(" · ")
                 val title =
                     language.getString(
@@ -761,6 +761,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             }
         val clock = clock()
         val stamps = AnkiquestReviewOffsets.read(prefs)
+        val deckSource = if (onlyTest) null else AnkiquestDeckNames.source(owner)
 
         val windowStart = startedAt - UNDO_WINDOW_MS
         val recent = recentUploads(prefs, recentKey(account), windowStart)
@@ -817,6 +818,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .build()
             profile = AnkiquestApi.call(owner, request, recheck = false) { AnkiquestApi.jsonObject(it) }
             if (!onlyTest) prefs.edit { putLong(markKey, maxOf(known, mark)) }
+            deckSource?.let { AnkiquestDeckNames.capture(it, profile.optJSONArray("conquests")) }
             sent += batch.length()
             progress?.invoke(sent, maxOf(sent, total))
             first = false
