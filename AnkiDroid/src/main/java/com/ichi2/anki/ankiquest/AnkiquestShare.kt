@@ -535,10 +535,7 @@ internal object AnkiquestShare {
      */
     suspend fun conqueredCardDeck(at: Long): String? =
         try {
-            CollectionManager.withCol {
-                val cid = db.queryLongScalar("select cid from revlog where id = ?", at)
-                if (cid == 0L) null else decks.nameIfExists(getCard(cid).currentDeckId())?.ifEmpty { null }
-            }
+            AnkiquestDeckNames.find(at)?.name?.ifEmpty { null }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
