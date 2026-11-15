@@ -16,5 +16,6 @@ The Ankilope additions (ankilope_sad.webp, ankilope_hopeful.webp,
 ankilope_frozen.webp, ankilope_sleeping.webp and ankilope_neglected.webp)
 come from generated masters in AnkiQuest/AnkiQuest-Desktop commit
 0f12507ef07956937a90416a0f1832eba63a634a, using the same tool and documented
-alpha cleanup. Their current Windows exports are provisional until the
-canonical Linux export is verified.
+alpha cleanup. All five files match the canonical Linux export byte for
+byte, verified on 2026-11-15 in PR #323:
+https://github.com/AnkiQuest/AnkiQuest-Android/pull/323#issuecomment-6894937822
