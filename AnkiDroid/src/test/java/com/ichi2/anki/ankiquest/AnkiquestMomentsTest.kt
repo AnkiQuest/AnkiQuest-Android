@@ -191,6 +191,26 @@ class AnkiquestMomentsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a moment about a companion this app cannot draw is never shown`() {
+        // The server's Bluma moment: this app has no cow, and showed Ankilope's art for her.
+        val rows = JSONArray(example("notifications_companion"))
+        val bluma = (0 until rows.length()).map { rows.getJSONObject(it) }.first { it.optString("moment") == "companion:cow" }
+        val tan = celebration(2, "companion", moment = "companion:anki_tan")
+        for (row in listOf(bluma, tan)) {
+            assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, row, foreground = true), row.toString())
+            assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, row, foreground = false), row.toString())
+        }
+        assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
+
+        // A companion it draws still shows.
+        val ankilope = celebration(3, "companion", moment = "companion:ankilope")
+        assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, ankilope, foreground = true))
+    }
+
+    private fun example(name: String): String =
+        assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/$name.json"), name).readText(Charsets.UTF_8)
+
+    @Test
     fun `waiting moments survive being stored`() {
         val conquered = moment("conquered:5", Kind.LEECH).copy(conquest = 5, lapses = 9, deck = "Español", win = 3)
         AnkiquestMoments.offer(prefs, account, listOf(conquered))
