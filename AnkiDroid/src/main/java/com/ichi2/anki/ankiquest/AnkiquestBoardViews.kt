@@ -294,6 +294,6 @@ internal suspend fun boardAttempt(work: suspend () -> Unit): Int? =
         Timber.w(e, "AnkiQuest board unreachable")
         R.string.aq_board_offline
     } catch (e: JSONException) {
-        Timber.w(e, "AnkiQuest board unreadable")
+        Timber.w(AnkiquestApi.redacted(e), "AnkiQuest board unreadable")
         R.string.aq_board_server_error
     }
