@@ -432,7 +432,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 when (size) {
                     Size.SMALL -> Triple(49f, 20f, 20f)
                     // The 2x2 number column: its widest box (ankiquest_streak_number_medium) above both meters.
-                    Size.MEDIUM -> Triple(48f, 40f, 24f)
+                    Size.MEDIUM -> Triple(48f, 40f, 20f)
                     Size.LARGE -> Triple(168f, 54f, 72f)
                     Size.HUGE -> Triple(252f, 140f, 120f)
                 }
