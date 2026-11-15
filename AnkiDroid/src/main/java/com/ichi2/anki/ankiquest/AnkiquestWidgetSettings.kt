@@ -9,8 +9,6 @@ import androidx.annotation.StringRes
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import org.json.JSONException
 import org.json.JSONObject
@@ -72,7 +70,7 @@ internal data class AnkiquestWidgetSettings(
 
     /**
      * The `GET /api/leaderboard` request for a widget with its own standings ([ownBoard]). Servers
-     * without scopes ([hasScopes]) ignore `scope` and `group` and answer the circle.
+     * without scopes ([AnkiquestBoards.hasScopes]) ignore `scope` and `group` and answer the circle.
      */
     fun leaderboardUrl(account: HomeAccount): HttpUrl =
         account
@@ -93,20 +91,6 @@ internal data class AnkiquestWidgetSettings(
 
     companion object {
         const val DEFAULT_PERIOD = "week"
-
-        /**
-         * The player setting in `GET /api/decks/{user}` that servers with a global board have. They
-         * also answer `scope` (friends, group, global) on `/api/leaderboard`.
-         */
-        const val GLOBAL_SETTING = "global_leaderboard"
-
-        /** Whether [account]'s server has a global board and answers `scope`, from its deck settings. */
-        suspend fun hasScopes(account: HomeAccount): Boolean =
-            withContext(Dispatchers.IO) {
-                AnkiquestApi
-                    .json(account, AnkiquestApi.request(account, "api/decks/${account.encodedUser}").build())
-                    .has(GLOBAL_SETTING)
-            }
 
         private const val KEY = "ankiquestWidgetSettings"
 
