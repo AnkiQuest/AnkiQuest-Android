@@ -29,7 +29,10 @@ import timber.log.Timber
 internal object AnkiquestIcon : DefaultLifecycleObserver {
     const val PREF_ENABLED = "ankiquestMoodIcon"
     private const val AKI = "aki"
+    private const val ANKILOPE = "ankilope"
+    private const val COW = "cow"
     private const val ANKI_TAN = "anki_tan"
+    private const val NONE = "none"
     private const val PREF_CURRENT = "ankiquestMoodIconCurrent"
     private const val PREF_LAST_PROFILE = "ankiquestMoodIconProfile"
 
@@ -58,7 +61,10 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         SLEEPY,
     }
 
-    /** A launcher alias: one companion's face for one mood. Companions without their own faces use Aki's. */
+    /**
+     * A launcher alias: one companion's face for one mood, or the plain app icon for no companion.
+     * Unknown companions use Aki's.
+     */
     enum class Icon(
         val alias: String,
         val companion: String,
@@ -75,10 +81,17 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         ANKI_TAN_HAPPY("AnkiquestIconAnkiTanHappy", ANKI_TAN, Mood.HAPPY),
         ANKI_TAN_WORRIED("AnkiquestIconAnkiTanWorried", ANKI_TAN, Mood.WORRIED),
         ANKI_TAN_SLEEPY("AnkiquestIconAnkiTanSleepy", ANKI_TAN, Mood.SLEEPY),
+
+        // Ankilope has only a face so far; Bluma, the cow, is Ankilope's face turned purple.
+        ANKILOPE_DEFAULT("AnkiquestIconAnkilopeDefault", ANKILOPE, Mood.DEFAULT),
+        BLUMA_DEFAULT("AnkiquestIconBlumaDefault", COW, Mood.DEFAULT),
+
+        // No companion: AnkiDroid's own icon, which shows no character.
+        PLAIN("AnkiquestIconPlain", NONE, Mood.DEFAULT),
         ;
 
         companion object {
-            /** [companion]'s face for [mood], its default face when it has none for [mood], or Aki's. */
+            /** [companion]'s face for [mood], its default face when it has none for [mood], or Aki's for an unknown companion. */
             fun of(
                 companion: String,
                 mood: Mood,
@@ -128,7 +141,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
             false
         }
 
-    /** Requests the mood for [profile], or the plain icon when off, and remembers [profile] for [showLastKnown]. */
+    /** Requests the mood for [profile], or the default face when off, and remembers [profile] for [showLastKnown]. */
     fun update(
         context: Context,
         profile: JSONObject?,
@@ -140,7 +153,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         show(context, mood, prefs)
     }
 
-    /** Shows the mood, or the plain icon when off, after the setting changed outside the settings screen. */
+    /** Shows the mood, or the default face when off, after the setting changed outside the settings screen. */
     fun refresh(
         context: Context,
         now: Long,
@@ -155,7 +168,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
 
     /**
      * Requests the mood for the last profile without waiting for the next poll, as when the setting
-     * is turned on. Until a profile has been seen that is the plain icon.
+     * is turned on. Until a profile has been seen that is the default face.
      */
     fun showLastKnown(
         context: Context,
@@ -323,7 +336,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     internal fun current(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Icon? =
         Icon.entries.firstOrNull { it.name == prefs.getString(PREF_CURRENT, null) }
 
-    /** The setting that makes [icon]'s alias [on]: Aki's plain icon is enabled in the manifest, the others are not. */
+    /** The setting that makes [icon]'s alias [on]: Aki's default icon is enabled in the manifest, the others are not. */
     private fun wanted(
         icon: Icon,
         on: Boolean,
