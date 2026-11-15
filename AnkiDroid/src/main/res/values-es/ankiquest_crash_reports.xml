@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_feedback_title">Comentarios de AnkiQuest</string>
+    <string name="ankiquest_feedback_auto_toast_text">AnkiQuest ha encontrado un problema; se está enviando un informe a los desarrolladores de AnkiQuest…</string>
+    <string name="ankiquest_feedback_manual_toast_text">Se está preparando un informe de error para los desarrolladores de AnkiQuest…</string>
+    <string name="ankiquest_error_reporting_choice">Informes de error a AnkiQuest</string>
+    <string name="ankiquest_feedback_disclaimer">Los informes van al servidor de AnkiQuest y se borran a los 30 días. Un informe contiene el error, las últimas líneas del registro de la app, tus ajustes sin datos de la cuenta, tu comentario, un ID de instalación aleatorio, y el modelo de tu dispositivo y la versión de Android.</string>
+</resources>

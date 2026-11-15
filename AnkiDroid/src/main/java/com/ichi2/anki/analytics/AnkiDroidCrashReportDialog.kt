@@ -12,6 +12,7 @@ import android.view.View
 import androidx.core.content.edit
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestCrashReports
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.crashreporting.CrashReporter
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -38,8 +39,8 @@ class AnkiDroidCrashReportDialog :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val dialogBuilder = AlertDialog.Builder(this)
-        dialogBuilder.setIcon(R.drawable.logo_star_144dp)
-        dialogBuilder.setTitle(CommonString.feedback_title)
+        dialogBuilder.setIcon(AnkiquestCrashReports.ICON)
+        dialogBuilder.setTitle(R.string.ankiquest_feedback_title)
         dialogBuilder.setPositiveButton(getString(CommonString.feedback_report), this@AnkiDroidCrashReportDialog)
         dialogBuilder.setNegativeButton(CommonString.dialog_cancel, this@AnkiDroidCrashReportDialog)
         helper = CrashReportDialogHelper(this, intent)

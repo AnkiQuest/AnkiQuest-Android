@@ -72,8 +72,8 @@ private object AcraCrashReporter : CrashReporter {
     private enum class ToastType(
         @StringRes private val toastMessageRes: Int,
     ) {
-        AUTO_TOAST(CommonString.feedback_auto_toast_text),
-        MANUAL_TOAST(CommonString.feedback_for_manual_toast_text),
+        AUTO_TOAST(R.string.ankiquest_feedback_auto_toast_text),
+        MANUAL_TOAST(R.string.ankiquest_feedback_manual_toast_text),
         ;
 
         fun getToastMessage(context: Context) = context.getString(toastMessageRes)
@@ -123,10 +123,10 @@ private object AcraCrashReporter : CrashReporter {
                     DialogConfigurationBuilder()
                         .withReportDialogClass(AnkiDroidCrashReportDialog::class.java)
                         .withCommentPrompt(application.getString(CommonString.empty_string))
-                        .withTitle(application.getString(CommonString.feedback_title))
+                        .withTitle(application.getString(R.string.ankiquest_feedback_title))
                         .withText(application.getString(CommonString.feedback_default_text))
                         .withPositiveButtonText(application.getString(CommonString.feedback_report))
-                        .withResIcon(R.drawable.logo_star_144dp)
+                        .withResIcon(AnkiquestCrashReports.ICON)
                         .withEnabled(dialogEnabled)
                         .build(),
                     // AnkiQuest's own server, not ankidroid.org (#329).
