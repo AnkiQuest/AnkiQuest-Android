@@ -26,6 +26,7 @@ internal object AnkiquestSharing {
             "conquered" to ASK,
             "place" to ASK,
             "challenge" to ASK,
+            "companion_unlocked" to ASK,
         )
 
     /** A sharing policy, `private`, `ask` or `auto`, for each kind of win, and how many automatic wins each friend gets a day. */
