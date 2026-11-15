@@ -8,9 +8,19 @@ AnkiQuest adds XP, streaks, friends, leaderboards and moments to Anki. It has th
 
 These rules apply to every agent (Claude, Codex, others) and to people too. Everything above "This repository" is the same in all three repositories: change it in AnkiQuest-Server first, then copy it to the other two. CI fails while a copy differs.
 
-## Ownership
+## People
 
-You are the owner and long-term maintainer of this codebase, and its design is up to you.
+- hill (GitHub float3).
+- Aldana (GitHub AldanaBRZ).
+- The AnkiQuest team: hill and Aldana together. They decide and approve.
+- Claude: Claude Code agents.
+- Astra: Aldana's Codex agent, which posts as AldanaBRZ.
+
+Name the person who approved something: "hill approved…", "Aldana approved…". An agent passing on an approval links the person's own words.
+
+## Maintenance
+
+You maintain this codebase long term, and its design is up to you.
 
 Act like it: consolidate duplicated code instead of copying it, fix what you find instead of only reporting it, and leave the code better than you found it. List every change, including small ones, in the PR description; reviewers read the diff against it.
 
@@ -37,8 +47,7 @@ Write new code in Rust, or TypeScript for the web, when the platform allows it. 
 - Short function names, under 30 characters.
 - Enums instead of booleans for function parameters.
 - Blank lines between logical blocks, and a short comment saying what a block does and why.
-- Keep members private. Widening visibility (private to internal or public) needs the owner's explicit approval; link to it in the PR. Never claim an approval you can't link.
-- The owner is hill (GitHub float3). Only hill's own words count as owner approval; an approval relayed by another person or agent does not. Name who approved: write "Aldana approved…" for Aldana's decisions.
+- Keep members private. Widening visibility (private to internal or public) needs explicit approval from the AnkiQuest team (hill or Aldana); link to it in the PR and name who approved. Never claim an approval you can't link.
 - Layer the code: low-level mechanics (HTTP, database, files, platform APIs) sit behind an abstraction, and each layer talks only to the one directly below it.
 - Prefer targeted edits over rewriting whole files.
 - Keep all state explicit. Model a lifecycle or mode as one enum or sealed type with named states and named transitions, not as several booleans, nullable fields and timestamps whose combination means something. Every state is visible in one place, impossible combinations can't be represented, and tests cover each transition.
@@ -81,9 +90,9 @@ Mannered prose substitutes metaphor and flourish for direct statement. Instead o
 
 AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 
-- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Ownership covers upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
+- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Maintenance covers upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
 - **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies, in this section. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
 - **Shared instructions.** Everything above "This repository" in this file is a copy of AnkiQuest-Server's `AGENTS.md`; the `ankiquest agents copy` workflow fails while they differ. Change it there first.
-- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest-Desktop until the split moves them to AnkiQuest-Server (AnkiQuest/AnkiQuest-Desktop#306). The bump PR brings server changes in; whoever's server change breaks it fixes it. Example ownership is listed in `ankiquest-api/names.json`.
+- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest-Desktop until the split moves them to AnkiQuest-Server (AnkiQuest/AnkiQuest-Desktop#306). The bump PR brings server changes in; whoever's server change breaks it fixes it. The examples Android reads are listed in `ankiquest-api/names.json`.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `main` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
 - **Checks to run** before pushing: `./gradlew ktlintCheck` and the unit tests you touched (`./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'`). Leave the full suites to CI.
