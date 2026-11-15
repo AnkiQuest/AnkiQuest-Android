@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.SharedPreferences
 import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.core.content.edit
@@ -16,8 +17,8 @@ internal object AnkiquestCompanion {
 
     fun normalize(value: String?) = value?.takeIf { it in choices } ?: "aki"
 
-    fun selected(): String {
-        val prefs = AnkiDroidApp.sharedPrefsOrNull() ?: return "aki"
+    fun selected(prefs: SharedPreferences? = AnkiDroidApp.sharedPrefsOrNull()): String {
+        if (prefs == null) return "aki"
         val account = HomeAccount.current(prefs) ?: return "aki"
         return normalize(prefs.getString(KEY_PREFIX + account.scope, "aki"))
     }
@@ -27,7 +28,13 @@ internal object AnkiquestCompanion {
         value: String,
     ): Boolean {
         if (AnkiquestHomeData.account()?.scope != account.scope) return false
+        val previous = selected()
         AnkiDroidApp.sharedPrefs().edit { putString(KEY_PREFIX + account.scope, normalize(value)) }
+
+        // The launcher icon shows the companion's face.
+        if (selected() != previous) {
+            AnkiquestIcon.onAppStart(AnkiDroidApp.instance)
+        }
         return true
     }
 

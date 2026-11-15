@@ -83,15 +83,23 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             movementMethod = LinkMovementMethod.getInstance()
         }
 
-        // License text
+        // License text, with the credit Anki-tan's CC BY-SA licence asks for
         val gplLicenseLink = getString(R.string.licence_wiki)
         val agplLicenseLink = getString(R.string.link_agpl_wiki)
         val sourceCodeLink = sourceLink(repository)
         val dependencyLicenseLink = getString(R.string.dependency_license_wiki)
+        val ankiTan =
+            getString(
+                R.string.ankiquest_about_anki_tan,
+                getString(R.string.ankiquest_link_anki_tan),
+                getString(R.string.ankiquest_link_shigeyuki),
+                getString(R.string.ankiquest_link_cc_by_sa),
+            )
         binding.licenseDescription.apply {
             text =
                 (
                     getString(R.string.ankiquest_about_license, gplLicenseLink, agplLicenseLink, sourceCodeLink) + "<br>" +
+                        ankiTan + "<br>" +
                         getString(CommonString.other_licenses, dependencyLicenseLink)
                 ).parseAsHtml()
             movementMethod = LinkMovementMethod.getInstance()
