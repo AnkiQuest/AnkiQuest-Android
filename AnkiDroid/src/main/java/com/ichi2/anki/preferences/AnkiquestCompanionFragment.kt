@@ -16,6 +16,7 @@ import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
+import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -142,6 +143,9 @@ class AnkiquestCompanionFragment : SettingsFragment() {
                 writes.withLock { AnkiquestUnlocks.claim(account, chibi) }
             } catch (e: CancellationException) {
                 throw e
+            } catch (_: HomeAccountChanged) {
+                // The taps were another account's; the screen now shows the new one.
+                return@launch
             } catch (e: Exception) {
                 if (isAdded) {
                     showStatus(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))

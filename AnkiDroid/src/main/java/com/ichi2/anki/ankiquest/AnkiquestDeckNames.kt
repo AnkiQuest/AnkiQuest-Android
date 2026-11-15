@@ -126,10 +126,7 @@ internal object AnkiquestDeckNames {
     private fun line(value: String): String = value.trim().replace(SPACE, " ")
 
     // Match Python's character limit without splitting a supplementary character.
-    private fun limit(value: String): String {
-        val count = minOf(AnkiquestShare.MAX_LABEL, value.codePointCount(0, value.length))
-        return value.take(value.offsetByCodePoints(0, count))
-    }
+    private fun limit(value: String): String = AnkiquestTextLimit.take(value, AnkiquestShare.MAX_LABEL)
 
     private fun parts(path: String): List<String> =
         buildList {

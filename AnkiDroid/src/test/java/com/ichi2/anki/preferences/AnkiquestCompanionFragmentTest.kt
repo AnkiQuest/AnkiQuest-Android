@@ -10,6 +10,7 @@ import androidx.core.content.edit
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.CHECKED_STATE_TRUE
 import androidx.core.view.children
+import androidx.preference.Preference
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
@@ -22,6 +23,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
+import com.ichi2.anki.ankiquest.HomeAccountChanged
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -36,10 +38,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.android.controller.ActivityController
+import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowToast
+import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** The companion screen with the server's unlocks example: Bluma unlocked, Ankilope locked at a level. */
 @RunWith(AndroidJUnit4::class)
@@ -70,6 +76,8 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
     /** The locked Ankilope card's description: its name and both lines. */
     private val lockedAnkilope get() = lockedLines.joinToString(", ")
+
+    private lateinit var controller: ActivityController<PreferencesActivity>
 
     @Before
     fun prepare() {
@@ -148,9 +156,48 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         coVerify(exactly = 0) { AnkiquestHomeData.saveUnlock(any(), any()) }
     }
 
+    @Test
+    fun `a save refused for a changed account shows no error`() {
+        coEvery { AnkiquestHomeData.saveCompanion(any(), any()) } answers {
+            signIn("another-member")
+            throw HomeAccountChanged()
+        }
+        val fragment = open()
+
+        fragment.card("Bluma").performClick()
+        idle()
+
+        assertNull(ShadowDialog.getLatestDialog())
+        assertEquals("Aki", fragment.chosen())
+        assertFalse(fragment.status().isVisible)
+    }
+
+    @Test
+    fun `the previous account's error is gone when another account returns to the screen`() {
+        coEvery { AnkiquestHomeData.companion(any()) } throws IOException("offline")
+        val fragment = open()
+        assertTrue(fragment.status().isVisible)
+
+        coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
+        signIn("another-member")
+        controller.pause().resume()
+        idle()
+
+        assertFalse(fragment.status().isVisible)
+        coVerify { AnkiquestHomeData.companion(match { it.user == "another-member" }) }
+    }
+
+    private fun signIn(user: String) =
+        AnkiDroidApp.sharedPrefs().edit(commit = true) {
+            putString(Ankiquest.PREF_USER, user)
+            putString(Ankiquest.PREF_TOKEN, "token-$user")
+        }
+
+    private fun AnkiquestCompanionFragment.status() = requirePreference<Preference>(R.string.ankiquest_companion_status_key)
+
     private fun open(): AnkiquestCompanionFragment {
         val intent = PreferencesActivity.getIntent(targetContext, AnkiquestCompanionFragment::class)
-        val controller = Robolectric.buildActivity(PreferencesActivity::class.java, intent).setup()
+        controller = Robolectric.buildActivity(PreferencesActivity::class.java, intent).setup()
         saveControllerForCleanup(controller)
         idle()
         val fragment = (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(R.id.settings_container)

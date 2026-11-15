@@ -63,5 +63,5 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": []
+    "not_yet": ["notifications_companion", "unlocks", "unlocks_save"]
 }

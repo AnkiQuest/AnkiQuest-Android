@@ -2,7 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.text.InputFilter
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -65,7 +64,7 @@ internal object AnkiquestDeckNameDialog {
         val field =
             MaterialAutoCompleteTextView(host).apply {
                 setSingleLine(true)
-                filters = arrayOf(nameLimit())
+                filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
                 threshold = 0
                 setAdapter(ArrayAdapter(host, android.R.layout.simple_dropdown_item_1line, deck.picks.filter(String::isNotEmpty)))
                 setText(deck.name, false)
@@ -121,19 +120,6 @@ internal object AnkiquestDeckNameDialog {
                 .create(),
         )
     }
-
-    /** Count characters like the shared cleaner, including when replacing a selection. */
-    private fun nameLimit() =
-        InputFilter { source, start, end, destination, replacedStart, replacedEnd ->
-            val remaining =
-                AnkiquestShare.MAX_LABEL - Character.codePointCount(destination, 0, destination.length) +
-                    Character.codePointCount(destination, replacedStart, replacedEnd)
-            when {
-                Character.codePointCount(source, start, end) <= remaining -> null
-                remaining <= 0 -> ""
-                else -> source.subSequence(start, Character.offsetByCodePoints(source, start, remaining))
-            }
-        }
 
     private fun fail(
         host: FragmentActivity,
