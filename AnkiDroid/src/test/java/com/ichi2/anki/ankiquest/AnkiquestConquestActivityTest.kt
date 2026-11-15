@@ -189,7 +189,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     @Test
     fun `the owner shares the card's words, deck, picture and page`() {
         val picture = "https://anki.example.test/w/tok.png"
-        coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Español::Animales"
+        coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Animales"
         coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
             AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
         every { AnkiquestShare.cardPng(any(), any(), picture) } returns "the server's PNG".toByteArray()
@@ -198,14 +198,14 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         mockkStatic(FileProvider::class)
         every { FileProvider.getUriForFile(any(), any(), any()) } returns stream
         val card = launch()
-        assertTrue(card.hasText(card.getString(R.string.aq_conquest_deck, "Español::Animales")))
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_deck, "Animales")))
         card.click(card.getString(R.string.ankiquest_share))
         val sent = card.sent()
         assertEquals("image/png", sent.type)
         assertEquals(stream, IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
         val text = sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
         assertTrue(text.startsWith(card.resources.getQuantityString(R.plurals.aq_conquest_share_label_mine, 4, "el murciélago", 4)))
-        assertTrue(text.contains(card.getString(R.string.aq_conquest_share_deck, "Español::Animales")))
+        assertTrue(text.contains(card.getString(R.string.aq_conquest_share_deck, "Animales")))
         assertTrue(text.endsWith("https://anki.example.test/conquered/hill/$AT"))
     }
 
