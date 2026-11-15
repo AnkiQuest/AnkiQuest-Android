@@ -183,7 +183,8 @@ internal object AnkiquestHomeData {
                             post(AnkiquestApi.body(JSONObject().put("companion", choice)))
                         }
                     }.build()
-            AnkiquestApi.call(request) {
+            // A request queued behind another, or answered, after the account changed must not touch the old account.
+            AnkiquestApi.call(account, request) {
                 AnkiquestCompanion.normalize(JSONObject(it.body.string()).getString("companion"))
             }
         }
