@@ -33,6 +33,7 @@ import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.net.InetSocketAddress
+import java.time.Duration
 import kotlin.math.abs
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -44,6 +45,7 @@ import kotlin.test.assertTrue
 @Config(sdk = [33])
 class AnkiquestWidgetSettingsTest : RobolectricTest() {
     private val account = HomeAccount("https://anki.example.test", "member", "member-token")
+    private val slowScope = Duration.ofSeconds(4)
 
     @Test
     fun `a few dp either side of the old size steps barely change the scale`() {
@@ -336,9 +338,45 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         }
     }
 
+    @Test
+    fun `slow scope replies preserve global and group widget boards`() {
+        withServer(decks = """{"global_leaderboard":false}""", delay = slowScope) { requests ->
+            val manager = AppWidgetManager.getInstance(targetContext)
+            val global = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
+            val group = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
+            AnkiquestWidgetSettings.save(global, AnkiquestWidgetSettings(Who.GLOBAL))
+            AnkiquestWidgetSettings.save(group, AnkiquestWidgetSettings(Who.GROUP, 7, "Study group"))
+            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false)
+
+            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board()) }
+
+            assertEquals(2, requests.count { it.startsWith("/api/leaderboard") }, "slow replies must not choose the old-server fallback")
+            for (id in listOf(global, group)) {
+                val stored = JSONObject(assertNotNull(AnkiDroidApp.sharedPrefs().getString("${AnkiquestWidget.BOARD_KEY}:$id", null)))
+                assertFalse(stored.getBoolean("offline"))
+                assertEquals(3, stored.getJSONArray("board").length())
+            }
+        }
+    }
+
+    @Test
+    fun `slow scope replies still offer Everyone in widget settings`() {
+        withServer(decks = """{"global_leaderboard":false}""", delay = slowScope) { _ ->
+            val intent = Intent(targetContext, AnkiquestWidgetConfig::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 12)
+            val controller = Robolectric.buildActivity(AnkiquestWidgetConfig::class.java, intent).setup()
+            saveControllerForCleanup(controller)
+            val activity = controller.get()
+            val who = activity.findViewById<RadioGroup>(R.id.aq_widget_settings_who)
+            // Group loading follows the scope reply, including when the quick timeout lost it.
+            advanceRobolectricLooperUntil { who.tags().contains("group:7") }
+            assertTrue(who.tags().contains("GLOBAL"), "Everyone must remain available on a slow connection")
+        }
+    }
+
     /** Signs in to a local server answering the deck settings with [decks], and hands the paths and queries it was asked. */
     private fun withServer(
         decks: String,
+        delay: Duration = Duration.ZERO,
         block: (List<String>) -> Unit,
     ) {
         val requests = java.util.concurrent.CopyOnWriteArrayList<String>()
@@ -346,6 +384,9 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         server.createContext("/") { exchange ->
             val path = exchange.requestURI.path
             requests.add(path + (exchange.requestURI.rawQuery?.let { "?$it" } ?: ""))
+            if (path.startsWith("/api/decks/")) {
+                Thread.sleep(delay.toMillis())
+            }
             val body =
                 when {
                     path.startsWith("/api/decks/") -> decks

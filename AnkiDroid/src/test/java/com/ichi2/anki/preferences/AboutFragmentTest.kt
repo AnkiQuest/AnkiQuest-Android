@@ -21,7 +21,7 @@ class AboutFragmentTest : RobolectricTest() {
     fun `About links to the source of this AnkiQuest build`() {
         val license = licence()
         val urls = license.getSpans(0, license.length, URLSpan::class.java).map(URLSpan::getURL)
-        assertContains(urls, "https://github.com/float3/AnkiQuest-Android/tree/${BuildConfig.GIT_COMMIT_HASH}")
+        assertContains(urls, "https://github.com/AnkiQuest/AnkiQuest-Android/tree/${BuildConfig.GIT_COMMIT_HASH}")
     }
 
     @Test
