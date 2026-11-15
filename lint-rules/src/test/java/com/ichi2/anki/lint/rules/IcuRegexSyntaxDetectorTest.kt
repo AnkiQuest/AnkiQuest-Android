@@ -12,7 +12,7 @@ import org.junit.Test
 
 class IcuRegexSyntaxDetectorTest {
     @Test
-    fun `reports the (?U) flag that crashed AnkiquestDeckNames`() {
+    fun `reports the U flag that crashed AnkiquestDeckNames`() {
         lintFiles(
             kotlin(
                 """
