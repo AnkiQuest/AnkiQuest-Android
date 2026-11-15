@@ -38,6 +38,7 @@
         "share_to_friends",
         "share_to_link",
         "share_undo",
+        "share_undo_send",
         "sharing",
         "sign_in",
         "sign_in_browser",
@@ -51,7 +52,6 @@
         "upload"
     ],
     "unused": [
-        "share_undo_send",
         "unlocks_save"
     ],
     "boards": [

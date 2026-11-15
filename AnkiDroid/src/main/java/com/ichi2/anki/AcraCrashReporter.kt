@@ -12,7 +12,7 @@ import androidx.core.content.pm.PackageInfoCompat
 import androidx.webkit.WebViewCompat
 import com.ichi2.anki.analytics.AnkiDroidCrashReportDialog
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
-import com.ichi2.anki.ankiquest.AnkiquestCrashReportHooks
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.crashreporting.CrashReporter
@@ -86,7 +86,7 @@ private object AcraCrashReporter : CrashReporter {
                     "hkey",
                     "currentSyncUri",
                     "browser_search_history",
-                    AnkiquestCrashReportHooks.PRIVATE_PREFERENCES,
+                    AnkiquestPreferences.NAMESPACE,
                 ).withSharedPreferencesName("acra")
                 .withReportContent(
                     ReportField.REPORT_ID,

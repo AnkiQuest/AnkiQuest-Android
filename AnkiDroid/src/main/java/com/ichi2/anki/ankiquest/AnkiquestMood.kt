@@ -45,6 +45,21 @@ internal object AnkiquestMood {
         FIRE,
     }
 
+    /** The flame beside the streak number: lit only once today counts, as Duolingo's. */
+    enum class Flame {
+        /** No streak, or nothing known about today. */
+        NONE,
+
+        /** Today counts: the tier's colour. */
+        LIT,
+
+        /** A streak that today has not counted for yet. */
+        UNLIT,
+
+        /** A freeze kept the days before today, and today has not counted yet. */
+        ICY,
+    }
+
     /** Whether today's daily goal is reached. */
     enum class Goal { OPEN, REACHED }
 
@@ -134,6 +149,15 @@ internal object AnkiquestMood {
         return pose(of(day, last?.optInt("frozen_days") ?: 0, goal), day?.streak ?: 0)
     }
 
+    /** The flame for [mood], so the flame says what Aki would even with no companion shown. */
+    fun flame(mood: Mood): Flame =
+        when (mood) {
+            Mood.UNKNOWN, Mood.ASLEEP -> Flame.NONE
+            Mood.SAD, Mood.HOPEFUL -> Flame.UNLIT
+            Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3 -> Flame.ICY
+            Mood.FIRE -> Flame.LIT
+        }
+
     /** Aki's pose for [mood] with a [streak] of that many days. */
     @DrawableRes
     fun pose(
@@ -209,5 +233,24 @@ internal object AnkiquestMood {
         val next = next(streak) ?: return null
         val remaining = next - streak
         return context.resources.getQuantityString(R.plurals.ankiquest_streak_milestone, remaining, remaining, next)
+    }
+
+    /**
+     * The line under the streak number for [flame]: the next milestone once today counts, a nudge to
+     * study while it does not, or null without a streak.
+     */
+    fun line(
+        context: Context,
+        flame: Flame,
+        streak: Int,
+    ): String? {
+        if (streak <= 0) {
+            return null
+        }
+        return when (flame) {
+            Flame.NONE -> null
+            Flame.LIT -> nextLine(context, streak)
+            Flame.UNLIT, Flame.ICY -> context.getString(R.string.ankiquest_streak_nudge)
+        }
     }
 }

@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.ColorFilter
 import android.graphics.ColorMatrix
@@ -104,21 +105,29 @@ internal object AnkiquestCompanion {
 
     fun normalize(value: String?) = Choice.of(value).id
 
-    /** The current account's companion, Aki without an account. */
-    fun choice(): Choice {
-        val prefs = AnkiDroidApp.sharedPrefsOrNull() ?: return Choice.AKI
+    /** The current account's companion in [prefs], Aki without an account. */
+    fun choice(prefs: SharedPreferences? = AnkiDroidApp.sharedPrefsOrNull()): Choice {
+        if (prefs == null) {
+            return Choice.AKI
+        }
         val account = HomeAccount.current(prefs) ?: return Choice.AKI
         return Choice.of(prefs.getString(KEY_PREFIX + account.scope, null))
     }
 
-    fun selected(): String = choice().id
+    fun selected(prefs: SharedPreferences? = AnkiDroidApp.sharedPrefsOrNull()): String = choice(prefs).id
 
     fun remember(
         account: HomeAccount,
         value: String,
     ): Boolean {
         if (AnkiquestHomeData.account()?.scope != account.scope) return false
+        val previous = selected()
         AnkiDroidApp.sharedPrefs().edit { putString(KEY_PREFIX + account.scope, normalize(value)) }
+
+        // The launcher icon shows the companion's face.
+        if (selected() != previous) {
+            AnkiquestIcon.onAppStart(AnkiDroidApp.instance)
+        }
         return true
     }
 

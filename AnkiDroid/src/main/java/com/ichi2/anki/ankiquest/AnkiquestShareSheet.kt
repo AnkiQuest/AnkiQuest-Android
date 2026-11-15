@@ -333,18 +333,18 @@ internal class AnkiquestShareSheet(
             account,
             message,
             perform = { done -> done() },
-            inverse = { retract(answer.win) },
+            inverse = { retract(answer) },
             closed = { closed(Exit.SENT) },
         )
     }
 
     /** Takes the moment back; it outlives the screen, which may close as Undo is pressed. */
-    private fun retract(win: Long) {
+    private fun retract(sent: Sent) {
         val context = host.applicationContext
         applicationScope.launch {
             val message =
                 try {
-                    AnkiquestMomentShare.retract(account, win)
+                    AnkiquestMomentShare.retract(account, sent)
                     R.string.aq_conquest_untold
                 } catch (e: CancellationException) {
                     throw e

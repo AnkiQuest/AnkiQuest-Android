@@ -22,7 +22,7 @@ function run(id, options = {}) {
 function harness(batches = [[run(42)]], artifacts = {}) {
   const queries = [], artifactQueries = [], waits = [], messages = [];
   const context = {
-    repo: { owner: 'float3', repo: 'AnkiQuest-Android' },
+    repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
     payload: { pull_request: { base: { sha: 'base-sha', ref: 'main' } } },
   };
@@ -62,7 +62,7 @@ test('the workflow passes its matching run to the artifact download', async () =
     file => require(path.join(__dirname, '../..', file)));
   assert.equal(result, 42);
   assert.deepEqual(fixture.queries[0], {
-    owner: 'float3', repo: 'AnkiQuest-Android', workflow_id: 'ankiquest_screenshot_store.yml',
+    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', workflow_id: 'ankiquest_screenshot_store.yml',
     head_sha: 'base-sha', per_page: 100,
   });
 });

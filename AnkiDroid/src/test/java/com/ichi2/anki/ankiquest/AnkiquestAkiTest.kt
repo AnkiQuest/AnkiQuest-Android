@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestAki.Message
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -108,6 +109,54 @@ class AnkiquestAkiTest : RobolectricTest() {
         assertEquals(AnkiquestMood.Mood.FIRE, studied.mood)
         assertEquals(AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 13), studied.image)
         assertEquals(Message.REVIEW, studied.message)
+    }
+
+    @Test
+    fun `the home companion follows every shared streak mood`() {
+        // The Home card and the widget show the same mood for the same day (#309), using the
+        // cases in streak_moods.json that the desktop add-on also tests.
+        val fixtures =
+            JSONObject(
+                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
+            )
+        val cases = fixtures.getJSONArray("moods").objects()
+        var checked = 0
+        for (case in cases) {
+            val name = case.getString("name")
+            val today = case.getJSONObject("today")
+            val expected = case.getJSONObject("expected")
+            val profile = homeProfile(today) ?: continue
+            val card = AnkiquestAki.mood(null, profile)
+            assertEquals(enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase()), card.mood, name)
+            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(card.image), name)
+            checked++
+        }
+        assertTrue(checked > 0)
+    }
+
+    /**
+     * A server profile that the Home card judges as the fixture's [today], or null for an unknown
+     * day: Home learns the goal and frozen days from the same profile, so it has neither then.
+     */
+    private fun homeProfile(today: JSONObject): JSONObject? {
+        val state = today.getString("state")
+        if (state == "unknown") {
+            return null
+        }
+
+        // A short day is pending on the server, with reviews short of the minimum.
+        val serverState = if (state == "short") "pending" else state
+        val frozen = today.getInt("frozen_days")
+        val heatmap = JSONArray()
+        repeat(frozen) { heatmap.put(JSONObject().put("frozen", true)) }
+        heatmap.put(JSONObject())
+        return JSONObject()
+            .put("streak_state", serverState)
+            .put("streak", today.getInt("streak"))
+            .put("day_ends_at", Long.MAX_VALUE)
+            .put("today", JSONObject().put("reviews", today.getInt("reviews")).put("streak_minutes", 10))
+            .put("heatmap", heatmap)
+            .put("goal", JSONObject().put("reached", today.getBoolean("goal_reached")))
     }
 
     @Test

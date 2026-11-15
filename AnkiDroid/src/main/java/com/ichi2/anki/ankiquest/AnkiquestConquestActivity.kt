@@ -29,10 +29,10 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.ioDispatcher
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -542,7 +542,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             try {
                 val image = if (owns(current, card)) winImage(current, card) else null
                 val chooser =
-                    withContext(Dispatchers.IO) { AnkiquestShare.cardChooser(applicationContext, text, image, fallback = picture) }
+                    withContext(ioDispatcher) { AnkiquestShare.cardChooser(applicationContext, text, image, fallback = picture) }
                 AnkiquestApi.requireCurrent(current)
                 if (account?.scope == current.scope && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                     openChooser(chooser)
@@ -570,7 +570,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         if (busy) return
         val picture = picture(current, card)
         lifecycleScope.launch {
-            val saving = withContext(Dispatchers.IO) { AnkiquestShare.download(applicationContext, picture) }
+            val saving = withContext(ioDispatcher) { AnkiquestShare.download(applicationContext, picture) }
             if (saving == null) {
                 showThemedToast(this@AnkiquestConquestActivity, getString(R.string.ankiquest_picture_failed), shortLength = false)
                 return@launch
