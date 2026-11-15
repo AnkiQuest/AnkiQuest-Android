@@ -73,29 +73,38 @@
             android:layout_marginTop="4dp"
             android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceSmall" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/aq_moment_deck"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:textAllCaps="false"
+            android:visibility="gone"
+            app:icon="@drawable/ic_mode_edit_white" />
+        <!-- Full-width actions retain readable words when the card or font is large. -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:orientation="horizontal">
+            android:orientation="vertical">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/aq_moment_open"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/aq_conquest_popup_open"
                 android:visibility="gone" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/aq_moment_tell"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
                 android:text="@string/aq_conquest_tell" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/aq_moment_share"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/ankiquest_share" />
             <!-- Saving is separate from Share, so it never makes a public link. -->
