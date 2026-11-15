@@ -4,8 +4,10 @@ package com.ichi2.anki.ankiquest
 
 import android.appwidget.AppWidgetManager
 import android.graphics.Color
+import android.graphics.Rect
 import android.os.Build
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -341,6 +343,39 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
                 status.text.toString(),
                 tag,
             )
+        }
+    }
+
+    @Test
+    fun `the compact widget keeps its number and meters without a companion`() {
+        val account = assertNotNull(HomeAccount.current(prefs))
+        prefs.edit { putString("ankiquestCompanion:${account.scope}", "none") }
+        val profile = profile()
+        remember(profile)
+        val widget = render(profile) as ViewGroup
+        widget.layoutDirection = View.LAYOUT_DIRECTION_LTR
+        val density = widget.resources.displayMetrics.density
+        widget.measure(
+            View.MeasureSpec.makeMeasureSpec((100 * density).toInt(), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec((90 * density).toInt(), View.MeasureSpec.EXACTLY),
+        )
+        widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
+
+        // The number and both meters stay in the card once the companion is gone.
+        assertEquals(View.GONE, widget.findViewById<View>(R.id.ankiquest_streak_companion).visibility)
+        val number = widget.findViewById<TextView>(R.id.ankiquest_streak_number)
+        assertTrue(number.width > 0 && number.height >= number.layout.height, "the number is clipped")
+        val meters =
+            widget.allViews
+                .filterIsInstance<ProgressBar>()
+                .filter { it.isVisible }
+                .toList()
+        assertEquals(2, meters.size)
+        for (meter in meters) {
+            val bounds = Rect(0, 0, meter.width, meter.height)
+            widget.offsetDescendantRectToMyCoords(meter, bounds)
+            assertTrue(bounds.width() > 0 && bounds.height() > 0, "a meter has no area: $bounds")
+            assertTrue(Rect(0, 0, widget.width, widget.height).contains(bounds), "a meter leaves the card: $bounds")
         }
     }
 

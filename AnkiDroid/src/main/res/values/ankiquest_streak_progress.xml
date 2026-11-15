@@ -5,6 +5,8 @@
         <item name="android:importantForAccessibility">no</item>
         <item name="android:indeterminate">false</item>
         <item name="android:minHeight">0dp</item>
+        <!-- The platform's 48dp minimum would widen the 2x2 number column the meters share. -->
+        <item name="android:minWidth">0dp</item>
     </style>
     <color name="ankiquest_streak_warm">#FF7A2F</color>
     <color name="ankiquest_streak_amber">#E7C45D</color>
