@@ -120,7 +120,7 @@ internal object AnkiquestMomentShare {
             .split(Regex("""\s+"""))
             .filter { it.isNotEmpty() }
             .joinToString(" ")
-            .take(AnkiquestSharing.MAX_NOTE)
+            .let { AnkiquestTextLimit.take(it, AnkiquestSharing.MAX_NOTE) }
             .ifEmpty { null }
 
     /** Sends [moment] to [choice] with [note], and remembers the chosen people for next time. */

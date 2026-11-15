@@ -13,12 +13,15 @@ import io.mockk.coVerify
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -118,6 +121,89 @@ class AnkiquestMomentShareTest : RobolectricTest() {
         assertNull(AnkiquestMomentShare.note("   "))
         assertEquals(AnkiquestSharing.MAX_NOTE, AnkiquestMomentShare.note("x".repeat(200))?.length)
     }
+
+    @Test
+    fun `recipient order follows the shared cases`() =
+        runBlocking {
+            val cases = fixture().getJSONArray("order")
+            for (index in 0 until cases.length()) {
+                val case = cases.getJSONObject(index)
+                val who = account.copy(server = "https://quest.example.test/$index", user = case.getString("me"))
+                val social = case.getJSONObject("social")
+                val groups = social.getJSONArray("groups")
+                coEvery { AnkiquestSocial.overview(who) } returns
+                    overview.copy(
+                        friends = people(social.getJSONArray("friends")),
+                        groups =
+                            (0 until groups.length()).map { groupIndex ->
+                                val group = groups.getJSONObject(groupIndex)
+                                AnkiquestSocial.Group(
+                                    group.getLong("id"),
+                                    group.getString("name"),
+                                    owner = false,
+                                    invite = null,
+                                    members = people(group.getJSONArray("members")),
+                                )
+                            },
+                    )
+                val actual = AnkiquestMomentShare.order(AnkiquestMomentShare.targets(who), strings(case.getJSONArray("recent")))
+                assertEquals(strings(case.getJSONArray("keys")), actual.map { it.key }, case.getString("name"))
+            }
+        }
+
+    @Test
+    fun `exclusive recipient choices follow the shared cases`() {
+        val cases = fixture().getJSONArray("selection")
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            var choice: Choice = Choice.Nobody
+            for (tap in strings(case.getJSONArray("taps"))) {
+                choice =
+                    when {
+                        tap == "circle" -> choice.toggleEveryone()
+                        tap.startsWith("user:") -> choice.toggle(Target.Friend(tap.removePrefix("user:"), tap))
+                        else -> choice.toggle(Target.Group(tap.removePrefix("group:").toLong(), tap))
+                    }
+            }
+            val expected =
+                when {
+                    case.isNull("to") -> null
+                    case.optString("to") == "circle" -> Audience.Circle
+                    else -> {
+                        val to = case.getJSONObject("to")
+                        val groups = to.getJSONArray("groups")
+                        Audience.Chosen(strings(to.getJSONArray("friends")), (0 until groups.length()).map { groups.getLong(it) })
+                    }
+                }
+            assertEquals(expected, choice.audience(), case.toString())
+        }
+    }
+
+    @Test
+    fun `notes follow the shared Unicode cases`() {
+        val cases = fixture().getJSONArray("notes")
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val text = if (case.has("unit")) case.getString("unit").repeat(case.getInt("repeat")) else case.getString("text")
+            val expected =
+                when {
+                    case.has("unit") -> case.getString("unit").repeat(case.getInt("expected_repeat"))
+                    case.isNull("expected") -> null
+                    else -> case.getString("expected")
+                }
+            assertEquals(expected, AnkiquestMomentShare.note(text), "shared note case $index")
+        }
+    }
+
+    private fun fixture() = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/share_targets.json")).readText())
+
+    private fun strings(values: JSONArray) = (0 until values.length()).map { values.getString(it) }
+
+    private fun people(values: JSONArray) =
+        (0 until values.length()).map {
+            val person = values.getJSONObject(it)
+            AnkiquestSocial.Person(person.getString("user"), person.optString("display"))
+        }
 
     @Test
     fun `search matches names and usernames, ignoring case`() {
