@@ -50,6 +50,9 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     /** The value each live companion's milestone has reached, for its progress. */
     @Volatile private var reached = 0
 
+    /** Runs once the fake server has handled a companion request, before it answers. */
+    @Volatile private var beforeCompanionAnswer: () -> Unit = {}
+
     @Before
     fun serve() {
         AnkiquestCapabilities.forgetMemory()
@@ -74,6 +77,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
                                 companion = chosen
                             }
                         }
+                        beforeCompanionAnswer()
                         JSONObject().put("companion", companion)
                     }
                     else -> null
@@ -330,6 +334,57 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
             assertEquals("cow", companion)
             assertEquals(Choice.COW, AnkiquestCompanion.choice())
+        }
+
+    @Test
+    fun `a choice queued for a signed-out account is never sent`() =
+        runBlocking {
+            val previous = account
+            signIn("another-member")
+
+            assertFailsWith<HomeAccountChanged> { AnkiquestCompanion.choose(previous, Choice.NONE) }
+
+            assertTrue(requests.none { it.startsWith("POST /api/companion/") }, "$requests")
+            assertEquals("aki", companion)
+        }
+
+    @Test
+    fun `a choice answered after the account changed is not used`() =
+        runBlocking {
+            AnkiquestCompanion.remember(account, Choice.AKI.id)
+            val previous = account
+            beforeCompanionAnswer = { signIn("another-member") }
+
+            assertFailsWith<HomeAccountChanged> { AnkiquestCompanion.choose(previous, Choice.NONE) }
+
+            // Neither account's companion on this phone took the late answer.
+            assertEquals(Choice.AKI, AnkiquestCompanion.choice())
+            beforeCompanionAnswer = {}
+            signIn("cerro")
+            assertEquals(Choice.AKI, AnkiquestCompanion.choice())
+        }
+
+    @Test
+    fun `a refresh queued for a signed-out account reads nothing`() =
+        runBlocking {
+            val previous = account
+            signIn("another-member")
+
+            assertFailsWith<HomeAccountChanged> { AnkiquestCompanion.refresh(previous) }
+
+            assertTrue(requests.none { it.contains("/api/companion/") }, "$requests")
+        }
+
+    @Test
+    fun `a refresh answered after the account changed is not used`() =
+        runBlocking {
+            companion = Choice.NONE.id
+            val previous = account
+            beforeCompanionAnswer = { signIn("another-member") }
+
+            assertFailsWith<HomeAccountChanged> { AnkiquestCompanion.refresh(previous) }
+
+            assertEquals(Choice.AKI, AnkiquestCompanion.choice())
         }
 
     private companion object {
