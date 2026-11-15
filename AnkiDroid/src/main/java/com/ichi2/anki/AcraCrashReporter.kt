@@ -12,6 +12,7 @@ import androidx.core.content.pm.PackageInfoCompat
 import androidx.webkit.WebViewCompat
 import com.ichi2.anki.analytics.AnkiDroidCrashReportDialog
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.ankiquest.AnkiquestCrashReports
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.crashreporting.CrashReportService
@@ -34,6 +35,7 @@ import org.acra.config.HttpSenderConfigurationBuilder
 import org.acra.config.LimiterConfigurationBuilder
 import org.acra.config.LimiterData
 import org.acra.config.ToastConfigurationBuilder
+import org.acra.data.StringFormat
 import org.acra.sender.HttpSender
 import timber.log.Timber
 
@@ -88,6 +90,7 @@ private object AcraCrashReporter : CrashReporter {
                     "browser_search_history",
                     AnkiquestPreferences.NAMESPACE,
                 ).withSharedPreferencesName("acra")
+                .withReportFormat(StringFormat.JSON)
                 .withReportContent(
                     ReportField.REPORT_ID,
                     ReportField.APP_VERSION_CODE,
@@ -126,9 +129,10 @@ private object AcraCrashReporter : CrashReporter {
                         .withResIcon(R.drawable.logo_star_144dp)
                         .withEnabled(dialogEnabled)
                         .build(),
+                    // AnkiQuest's own server, not ankidroid.org (#329).
                     HttpSenderConfigurationBuilder()
-                        .withHttpMethod(HttpSender.Method.PUT)
-                        .withUri(BuildConfig.ACRA_URL)
+                        .withHttpMethod(HttpSender.Method.POST)
+                        .withUri(AnkiquestCrashReports.URL)
                         .withEnabled(true)
                         .build(),
                     ToastConfigurationBuilder()
