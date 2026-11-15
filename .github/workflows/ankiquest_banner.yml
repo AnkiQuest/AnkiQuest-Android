@@ -110,22 +110,35 @@ jobs:
     if: github.event_name != 'pull_request' && needs.render.outputs.changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Writes go through UPSTREAM_SYNC_TOKEN: a pull request opened or pushed with GITHUB_TOKEN
+    # starts no CI, so it could never pass the required checks (#270).
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
+      - name: Require the sync token
+        env:
+          UPSTREAM_SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+        run: |
+          if [ -z "$UPSTREAM_SYNC_TOKEN" ]; then
+            echo "::error::Set UPSTREAM_SYNC_TOKEN: a token for this repository with Contents and Pull requests read and write. Pull requests opened with GITHUB_TOKEN start no CI."
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: banner
           path: ${{ runner.temp }}/banner
 
+      # Push the banner branch, then open its pull request unless one is already open. Any
+      # failure fails the job, so a banner that never reaches main is visible (#270).
       - name: Open a pull request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
           SOURCE: ${{ github.ref_name }}
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -136,8 +149,14 @@ jobs:
           git switch -c "$branch"
           git commit -m "README banner for $SOURCE" -- docs/graphics/logos/banner_readme.png
           git push --force origin "$branch"
-          body="The README banner rendered from $SOURCE by tools/ankiquest-banner ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID))."
-          if ! gh pr create --base main --head "$branch" --title "README banner for $SOURCE" --body "$body"; then
-            # Needs "Allow GitHub Actions to create and approve pull requests" in the repository settings.
-            echo "::warning::Could not open the pull request; open it from $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch"
+
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            echo "Pull request #$open already proposes $branch"
+            exit 0
           fi
+
+          body="The README banner rendered from $SOURCE by tools/ankiquest-banner ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID))."
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+            --title "README banner for $SOURCE" --body "$body"
