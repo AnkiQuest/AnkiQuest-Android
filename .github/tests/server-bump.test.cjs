@@ -6,13 +6,13 @@ const test = require("node:test");
 const { alertStale, updatePullRequest, serverCommits } = require("../ankiquest_server_bump.cjs");
 
 const now = Date.parse("2026-11-11T12:00:00Z");
-const context = { repo: { owner: "float3", repo: "AnkiQuest-Android" } };
+const context = { repo: { owner: "AnkiQuest", repo: "AnkiQuest-Android" } };
 const head = "c".repeat(40);
 const pr = {
     number: 204,
-    html_url: "https://github.com/float3/AnkiQuest-Android/pull/204",
+    html_url: "https://github.com/AnkiQuest/AnkiQuest-Android/pull/204",
     body: "",
-    head: { sha: head, repo: { full_name: "float3/AnkiQuest-Android" } },
+    head: { sha: head, repo: { full_name: "AnkiQuest/AnkiQuest-Android" } },
 };
 
 function api({ pulls = [pr], checks = [], history = [] } = {}) {
@@ -24,7 +24,7 @@ function api({ pulls = [pr], checks = [], history = [] } = {}) {
         rest: {
             pulls: {
                 list: async args => {
-                    assert.equal(args.head, "float3:bot/server-bump");
+                    assert.equal(args.head, "AnkiQuest:bot/server-bump");
                     assert.equal(args.base, "main");
                     return { data: pulls };
                 },
