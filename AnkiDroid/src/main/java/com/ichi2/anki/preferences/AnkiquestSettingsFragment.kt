@@ -4,6 +4,8 @@ package com.ichi2.anki.preferences
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
@@ -38,6 +40,7 @@ import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
+import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
@@ -56,7 +59,6 @@ import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
-import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
@@ -131,6 +133,21 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         bindSharing(deckSettings)
         bindApp()
         showAccount()
+        openRequestedSignIn()
+    }
+
+    /** Opens the sign-in dialog once when the screen was opened for it, as by Aki's greeting. */
+    private fun openRequestedSignIn() {
+        val intent = requireActivity().intent
+        if (!intent.getBooleanExtra(EXTRA_SIGN_IN, false)) {
+            return
+        }
+
+        // Consumed here so a rotation or a return to the screen does not open it again.
+        intent.removeExtra(EXTRA_SIGN_IN)
+        if (signedIn() == null) {
+            showSignIn()
+        }
     }
 
     /** The signed-in account that server settings belong to, or null on a phone that is not signed in. */
@@ -473,7 +490,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             },
         )
         // Older servers omit the global listing field.
-        val global = AnkiquestWidgetSettings.GLOBAL_SETTING
+        val global = AnkiquestBoards.GLOBAL_SETTING
         bindServerToggle(
             R.string.ankiquest_show_global_key,
             read = { switches().opt(global) as? Boolean },
@@ -1085,5 +1102,13 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     override fun onStop() {
         deckUndo?.clear()
         super.onStop()
+    }
+
+    companion object {
+        private const val EXTRA_SIGN_IN = "ankiquest.sign_in"
+
+        /** This screen with the sign-in dialog open. */
+        fun signInIntent(context: Context): Intent =
+            PreferencesActivity.getIntent(context, AnkiquestSettingsFragment::class).putExtra(EXTRA_SIGN_IN, true)
     }
 }

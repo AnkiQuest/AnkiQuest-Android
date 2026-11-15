@@ -216,11 +216,15 @@ internal object AnkiquestSharing {
         )
     }
 
-    /** Takes [win] back from those it was sent to by hand who have not seen it; answers how many. */
+    /** Takes [sent] back from unread recipients; older servers retain their whole-win Undo. */
     suspend fun retract(
         account: HomeAccount,
-        win: Long,
-    ): Int = call(account, "DELETE", "api/share/${account.encodedUser}/$win").optInt("retracted")
+        sent: Sent,
+    ): Int {
+        // Old servers ignore the selector; stale capabilities must never broaden Undo.
+        val selector = "?until=${requireNotNull(sent.undoUntil)}"
+        return call(account, "DELETE", "api/share/${account.encodedUser}/${sent.win}$selector").optInt("retracted")
+    }
 
     /** One request for the captured [account], which must still be the signed-in one when it is sent and when it answers. */
     private suspend fun call(

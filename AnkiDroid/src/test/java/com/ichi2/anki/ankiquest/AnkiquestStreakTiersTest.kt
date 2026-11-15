@@ -75,11 +75,16 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
     }
 
     @Test
-    fun `missing stale and zero streaks clear the optional details on reapply`() {
-        val stale = board(100).apply { getJSONObject(0).put("day_ends_at", TimeManager.time.intTimeMS()) }
+    fun `missing unknown and zero streaks clear the optional details on reapply`() {
+        // An ended day that did not count says nothing about today.
+        val now = TimeManager.time.intTimeMS()
+        val unknown =
+            board(100).apply {
+                getJSONObject(0).put("streak_state", "pending").put("day_ends_at", now)
+            }
         for (size in Size.entries) {
             val view = render(board(100), size)
-            for (missing in listOf(null, JSONArray(), board(0), stale)) {
+            for (missing in listOf(null, JSONArray(), board(0), unknown)) {
                 AnkiquestStreakWidget.views(targetContext, missing, "hill", size).reapply(targetContext, view)
                 assertNull(view.findViewById<TextView>(R.id.ankiquest_streak_number).compoundDrawablesRelative[2], size.name)
                 val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
@@ -88,6 +93,23 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
                 } else {
                     assertNull(milestone, size.name)
                 }
+            }
+        }
+    }
+
+    @Test
+    fun `a counted day that has just ended keeps its number with the flame out`() {
+        // The redraw at the day's end comes before the server answers for the new day.
+        val stale = board(100).apply { getJSONObject(0).put("day_ends_at", TimeManager.time.intTimeMS()) }
+        for (size in Size.entries) {
+            val view = render(board(100), size)
+            AnkiquestStreakWidget.views(targetContext, stale, "hill", size).reapply(targetContext, view)
+            val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
+            assertEquals("100", number.text.toString(), size.name)
+            assertNotNull(number.compoundDrawablesRelative[2], size.name)
+            if (size == Size.LARGE || size == Size.HUGE) {
+                val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
+                assertEquals("Study today to keep it", milestone.text.toString(), size.name)
             }
         }
     }

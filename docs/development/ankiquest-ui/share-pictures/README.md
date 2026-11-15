@@ -1,6 +1,6 @@
 # Local share pictures
 
-Part of [#248](https://github.com/float3/AnkiQuest-Android/issues/248).
+Part of [#248](https://github.com/AnkiQuest/AnkiQuest-Android/issues/248).
 
 Every card share supplies its public display content to `AnkiquestShare.cardPng`.
 The win's link gets the standard request deadline; the server's PNG gets one

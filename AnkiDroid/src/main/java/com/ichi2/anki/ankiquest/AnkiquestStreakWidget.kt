@@ -116,16 +116,42 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
          */
         private const val COMPANION_MAX_PX = 1024
 
-        /** The flame beside the number grows and deepens in colour with the streak. */
+        /**
+         * The flame beside the number grows and deepens in colour with the streak. Before today counts
+         * it is grey, or icy blue after a freeze, at the same size.
+         */
         private enum class StreakTier(
             val days: Int,
-            @DrawableRes val flame: Int,
+            @DrawableRes val lit: Int,
+            @DrawableRes val unlit: Int,
+            @DrawableRes val icy: Int,
         ) {
-            START(1, R.drawable.ankiquest_streak_tier_1),
-            WEEK(7, R.drawable.ankiquest_streak_tier_7),
-            MONTH(30, R.drawable.ankiquest_streak_tier_30),
-            HUNDRED(100, R.drawable.ankiquest_streak_tier_100),
-            YEAR(365, R.drawable.ankiquest_streak_tier_365),
+            START(1, R.drawable.ankiquest_streak_tier_1, R.drawable.ankiquest_streak_unlit_1, R.drawable.ankiquest_streak_icy_1),
+            WEEK(7, R.drawable.ankiquest_streak_tier_7, R.drawable.ankiquest_streak_unlit_7, R.drawable.ankiquest_streak_icy_7),
+            MONTH(30, R.drawable.ankiquest_streak_tier_30, R.drawable.ankiquest_streak_unlit_30, R.drawable.ankiquest_streak_icy_30),
+            HUNDRED(
+                100,
+                R.drawable.ankiquest_streak_tier_100,
+                R.drawable.ankiquest_streak_unlit_100,
+                R.drawable.ankiquest_streak_icy_100,
+            ),
+            YEAR(
+                365,
+                R.drawable.ankiquest_streak_tier_365,
+                R.drawable.ankiquest_streak_unlit_365,
+                R.drawable.ankiquest_streak_icy_365,
+            ),
+            ;
+
+            /** The drawable for [flame], or null for no flame. */
+            @DrawableRes
+            fun drawable(flame: AnkiquestMood.Flame): Int? =
+                when (flame) {
+                    AnkiquestMood.Flame.NONE -> null
+                    AnkiquestMood.Flame.LIT -> lit
+                    AnkiquestMood.Flame.UNLIT -> unlit
+                    AnkiquestMood.Flame.ICY -> icy
+                }
         }
 
         /** XML variants keep tint and pending alpha compatible with RemoteViews on Android 7. */
@@ -256,16 +282,18 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
             val number = streak?.let { numbers.format(it) } ?: "–"
 
-            // Aki's mood for today, from the same day the status describes.
+            // Today's mood, from the same day the status describes: it sets the companion and the flame.
+            val profile = sameDay(me, now)
+            val goalState = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
+            val frozen = profile?.optInt("frozen_days") ?: 0
+            // Until the server answers for a new day, a counted day carries into it: the streak waits.
+            val today = day ?: carriedDay(own, row, now)
+            val mood = AnkiquestMood.of(today, frozen, goalState)
+
+            // Aki shows the mood when chosen; otherwise only the flame does.
             val companionVisible = AnkiquestCompanion.visible()
             views.setViewVisibility(R.id.ankiquest_streak_companion, if (companionVisible) View.VISIBLE else View.GONE)
             if (companionVisible) {
-                val profile = sameDay(me, now)
-                val goal = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
-                val frozen = profile?.optInt("frozen_days") ?: 0
-                // Until the server answers for a new day, a counted day carries into it: the streak waits.
-                val today = day ?: carriedDay(own, row, now)
-                val mood = AnkiquestMood.of(today, frozen, goal)
                 val days = (if (day != null) streak else today?.streak) ?: 0
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
@@ -301,7 +329,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                         .coerceAtLeast(1)
                 views.setViewPadding(R.id.ankiquest_streak_progress, edge, edge, edge, edge)
             }
-            val milestone = setStreakTier(views, language, state, streak, size, number, style)
+            val milestone = setStreakTier(views, language, AnkiquestMood.flame(mood), streak, size, number, style)
             if (ringed(size)) {
                 val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
                 views.setViewVisibility(R.id.ankiquest_streak_badge, badge)
@@ -392,25 +420,30 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             return edge.coerceAtMost(COMPANION_MAX_PX)
         }
 
-        /** Clear optional details on reapply when the cached day is no longer trustworthy. */
+        /**
+         * The [flame] and the line under the number. Clears both on reapply when today's mood is
+         * unknown, so a cached day that is no longer trustworthy shows neither.
+         */
         private fun setStreakTier(
             views: RemoteViews,
             context: Context,
-            state: State,
+            flame: AnkiquestMood.Flame,
             streak: Int?,
             size: Size,
             number: String,
             style: Style,
         ): String? {
-            val current = streak?.takeIf { state != State.UNKNOWN && it > 0 }
+            val current = streak?.takeIf { it > 0 }
             val tier = current?.let { days -> StreakTier.entries.lastOrNull { it.days <= days } }
-            views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, tier?.flame ?: 0, 0)
-            fitLegacyNumber(views, context, size, number, tier, style)
+            val drawable = tier?.drawable(flame)
+            views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, drawable ?: 0, 0)
+            fitLegacyNumber(views, context, size, number, drawable, style)
             if (size == Size.SMALL || size == Size.MEDIUM) {
                 return null
             }
 
-            val label = current?.let { AnkiquestMood.nextLine(context, it) }
+            // The milestone's flame shows only once today counts; until then the line asks for study.
+            val label = current?.let { AnkiquestMood.line(context, flame, it) }
             views.setTextViewText(R.id.ankiquest_streak_milestone, label.orEmpty())
             views.setViewVisibility(R.id.ankiquest_streak_milestone, if (label == null) View.GONE else View.VISIBLE)
             return label
@@ -422,7 +455,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             context: Context,
             size: Size,
             number: String,
-            tier: StreakTier?,
+            @DrawableRes flame: Int?,
             style: Style,
         ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -442,7 +475,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
                     textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSp, metrics)
                 }
-            val flameWidth = tier?.let { AppCompatResources.getDrawable(context, it.flame)?.intrinsicWidth } ?: 0
+            val flameWidth = flame?.let { AppCompatResources.getDrawable(context, it)?.intrinsicWidth } ?: 0
             val available = widthDp * metrics.density - flameWidth
             // The transparent compact layouts reserve two more dp for the outlined goal meter.
             val height = heightDp - if (style == Style.TRANSPARENT && (size == Size.SMALL || size == Size.MEDIUM)) 2f else 0f
