@@ -18,6 +18,7 @@ import kotlin.math.roundToInt
 
 /** The reviewer's short, touch-through celebration. */
 internal object AnkiquestStreakCue {
+    const val PREF_ENABLED = "ankiquestStreakCue"
     private const val TAG = "ankiquest_streak_cue"
     private const val TOP_DP = 72
     private const val ICON_DP = 32
@@ -40,7 +41,7 @@ internal object AnkiquestStreakCue {
         if (host.isFinishing || host.isDestroyed) {
             return null
         }
-        if (!prefs.getBoolean(host.getString(R.string.ankiquest_streak_cue_key), true)) {
+        if (!prefs.getBoolean(PREF_ENABLED, true)) {
             return null
         }
         val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return null
