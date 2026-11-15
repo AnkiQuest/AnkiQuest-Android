@@ -38,6 +38,7 @@ import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
+import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
@@ -55,7 +56,6 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
-import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
@@ -473,7 +473,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             },
         )
         // Older servers omit the global listing field.
-        val global = AnkiquestWidgetSettings.GLOBAL_SETTING
+        val global = AnkiquestBoards.GLOBAL_SETTING
         bindServerToggle(
             R.string.ankiquest_show_global_key,
             read = { switches().opt(global) as? Boolean },

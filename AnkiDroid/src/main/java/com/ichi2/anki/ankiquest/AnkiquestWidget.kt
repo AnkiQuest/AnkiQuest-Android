@@ -485,7 +485,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
         /**
          * Fetches the standings of every placed widget that shows one group or everyone, and draws
          * those widgets. Widgets asking the same thing share one request. A server without
-         * scopes ([AnkiquestWidgetSettings.hasScopes]) gets a group's standings from [circle], the
+         * scopes ([AnkiquestBoards.hasScopes]) gets a group's standings from [circle], the
          * standings every widget shares, by keeping the group's members; it has no global board.
          * A group the player is no longer in (`403`) shows nobody. When a fetch fails otherwise, the
          * widget keeps what it showed, marked offline.
@@ -501,7 +501,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     .filter { (_, id) -> settingsOf(id).ownBoard }
             if (placed.isEmpty() || circle == null) return
             val account = AnkiquestHomeData.account() ?: return
-            val scoped = fetch { AnkiquestWidgetSettings.hasScopes(account) }
+            val scoped = fetch { AnkiquestBoards.hasScopes(account, AnkiquestApi.Timeout.STANDARD) }
             val fetched = mutableMapOf<String, Result<JSONArray>>()
             var overview: Result<AnkiquestSocial.Overview>? = null
             for ((style, id) in placed) {
