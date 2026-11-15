@@ -147,7 +147,11 @@ internal object AnkiquestCompanion {
             .filterValues { it != Offer.Hidden }
     }
 
-    /** Saves [choice] for [account] on the server; answers the saved choice. */
+    /**
+     * Saves [choice] for [account] on the server; answers the saved choice.
+     *
+     * @throws HomeAccountChanged when [account] is no longer signed in before the request is sent or once it is answered
+     */
     suspend fun choose(
         account: HomeAccount,
         choice: Choice,
@@ -160,6 +164,8 @@ internal object AnkiquestCompanion {
     /**
      * Brings [account]'s unlocks and the server's choice to this phone. Answers whether the shown
      * companion changed.
+     *
+     * @throws HomeAccountChanged when [account] is no longer signed in before the choice is read or once it is answered
      */
     suspend fun refresh(account: HomeAccount): Boolean {
         syncUnlocks(account)
@@ -175,6 +181,8 @@ internal object AnkiquestCompanion {
         try {
             AnkiquestUnlocks.sync(account)
         } catch (e: CancellationException) {
+            throw e
+        } catch (e: HomeAccountChanged) {
             throw e
         } catch (e: Exception) {
             Timber.w(e, "AnkiQuest unlocks could not be read")
