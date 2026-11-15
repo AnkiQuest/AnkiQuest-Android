@@ -43,8 +43,8 @@ import java.util.concurrent.TimeUnit
 object AnkiquestUpdater {
     enum class Channel { STABLE, NIGHTLY }
 
-    private const val LATEST_URL = "https://api.github.com/repos/float3/AnkiQuest-Android/releases/latest"
-    private const val NIGHTLY_URL = "https://github.com/float3/AnkiQuest-Android/releases/download/nightly/"
+    private const val LATEST_URL = "https://api.github.com/repos/AnkiQuest/AnkiQuest-Android/releases/latest"
+    private const val NIGHTLY_URL = "https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/"
     private const val TAG_PREFIX = "quest-"
     const val PREF_CHANNEL = "ankiquestUpdateChannel"
     private const val PREF_CHECKED_AT = "ankiquestUpdateCheckedAt"

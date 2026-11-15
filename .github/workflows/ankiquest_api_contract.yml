@@ -16,8 +16,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
@@ -45,7 +47,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: float3/ankiquest
+          repository: AnkiQuest/AnkiQuest-Desktop
           ref: ${{ steps.server-ref.outputs.ref }}
           path: server
           persist-credentials: false

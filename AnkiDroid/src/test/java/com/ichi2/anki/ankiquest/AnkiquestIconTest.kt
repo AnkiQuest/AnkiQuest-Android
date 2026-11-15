@@ -14,6 +14,7 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.AnkiquestIcon.Icon
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
@@ -27,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
+import java.io.File
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -39,6 +41,7 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 class AnkiquestIconTest : RobolectricTest() {
     private val hour = 3_600_000L
+    private val ankiTan = "anki_tan"
     private val now = 100 * hour
 
     private fun profile(
@@ -70,12 +73,52 @@ class AnkiquestIconTest : RobolectricTest() {
     }
 
     @Test
+    fun `Anki-tan has her own icon for each mood she has a face for`() {
+        assertEquals(Icon.ANKI_TAN_DEFAULT, Icon.of(ankiTan, Mood.DEFAULT))
+        assertEquals(Icon.ANKI_TAN_HAPPY, Icon.of(ankiTan, Mood.HAPPY))
+        assertEquals(Icon.ANKI_TAN_WORRIED, Icon.of(ankiTan, Mood.WORRIED))
+        assertEquals(Icon.ANKI_TAN_SLEEPY, Icon.of(ankiTan, Mood.SLEEPY))
+        assertEquals(Icon.ANKI_TAN_DEFAULT, Icon.of(ankiTan, Mood.FROZEN), "she has no frozen face")
+    }
+
+    @Test
+    fun `companions without their own icons use Aki's`() {
+        for (mood in Mood.entries) {
+            val aki = Icon.of("aki", mood)
+            assertEquals("aki", aki.companion)
+            assertEquals(mood, aki.mood)
+            assertEquals(aki, Icon.of("ankilope", mood), mood.name)
+            assertEquals(aki, Icon.of("none", mood), mood.name)
+        }
+    }
+
+    @Test
+    fun `the launcher shows the companion's face`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        AnkiquestIcon.show(targetContext, Mood.WORRIED, prefs, ankiTan)
+        assertEquals(listOf(Icon.ANKI_TAN_WORRIED), enabled())
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs, ankiTan)
+        assertEquals(listOf(Icon.ANKI_TAN_DEFAULT), enabled(), "Aki's plain icon stays off")
+        assertEquals(Icon.ANKI_TAN_DEFAULT, AnkiquestIcon.current(prefs))
+        AnkiquestIcon.show(targetContext, Mood.WORRIED, prefs, "aki")
+        assertEquals(listOf(Icon.AKI_WORRIED), enabled())
+    }
+
+    @Test
+    fun `the quest manifest declares every icon`() {
+        val manifest = File("src/quest/AndroidManifest.xml").readText()
+        val declared = Regex("com\\.ichi2\\.anki\\.ankiquest\\.(AnkiquestIcon\\w+)").findAll(manifest).map { it.groupValues[1] }.toSet()
+        assertEquals(Icon.entries.map { it.alias }.toSet(), declared)
+    }
+
+    @Test
     fun `builds without the quest aliases keep their launcher entry`() {
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
         assertFalse(AnkiquestIcon.available(targetContext))
         AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
-        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, state(Mood.HAPPY))
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, state(Icon.AKI_HAPPY))
     }
 
     @Test
@@ -93,7 +136,7 @@ class AnkiquestIconTest : RobolectricTest() {
         AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
         AnkiquestIcon.onAppStart(targetContext, prefs)
         AnkiquestIcon.showLastKnown(targetContext, now, prefs)
-        for (mood in Mood.entries) assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, state(mood), mood.name)
+        for (icon in Icon.entries) assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, state(icon), icon.name)
     }
 
     @Test
@@ -102,10 +145,10 @@ class AnkiquestIconTest : RobolectricTest() {
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, false) }
         AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
-        assertEquals(listOf(Mood.DEFAULT), enabled(), "off shows the plain icon")
+        assertEquals(listOf(Icon.AKI_DEFAULT), enabled(), "off shows the plain icon")
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
         AnkiquestIcon.showLastKnown(targetContext, now, prefs)
-        assertEquals(listOf(Mood.HAPPY), enabled(), "the profile seen while off is used without another poll")
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled(), "the profile seen while off is used without another poll")
     }
 
     @Test
@@ -115,13 +158,13 @@ class AnkiquestIconTest : RobolectricTest() {
         prefs.edit { remove(AnkiquestIcon.PREF_ENABLED) }
         assertNull(AnkiquestIcon.lastKnown(prefs))
         AnkiquestIcon.onAppStart(targetContext, prefs)
-        assertEquals(listOf(Mood.DEFAULT), enabled(), "nothing known yet keeps the plain icon")
+        assertEquals(listOf(Icon.AKI_DEFAULT), enabled(), "nothing known yet keeps the plain icon")
         val clock = TimeManager.time.intTimeMS()
         val protected = JSONObject().put("streak_state", "protected").put("streak", 12).put("day_ends_at", clock + 10 * hour)
         AnkiquestIcon.update(targetContext, protected, clock, prefs)
         AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
         AnkiquestIcon.onAppStart(targetContext, prefs)
-        assertEquals(listOf(Mood.FROZEN), enabled())
+        assertEquals(listOf(Icon.AKI_FROZEN), enabled())
     }
 
     @Test
@@ -131,12 +174,12 @@ class AnkiquestIconTest : RobolectricTest() {
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
         AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
-        assertEquals(listOf(Mood.HAPPY), enabled())
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled())
         AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
-        assertEquals(listOf(Mood.WORRIED), enabled())
+        assertEquals(listOf(Icon.AKI_WORRIED), enabled())
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, false) }
         AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
-        assertEquals(listOf(Mood.DEFAULT), enabled())
+        assertEquals(listOf(Icon.AKI_DEFAULT), enabled())
     }
 
     @Test
@@ -145,10 +188,10 @@ class AnkiquestIconTest : RobolectricTest() {
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
         AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
-        assertEquals(listOf(Mood.WORRIED), enabled())
+        assertEquals(listOf(Icon.AKI_WORRIED), enabled())
         AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
-        assertEquals(listOf(Mood.HAPPY), enabled())
-        assertEquals(Mood.HAPPY, AnkiquestIcon.current(prefs))
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled())
+        assertEquals(Icon.AKI_HAPPY, AnkiquestIcon.current(prefs))
     }
 
     @Test
@@ -158,20 +201,20 @@ class AnkiquestIconTest : RobolectricTest() {
         TimeManager.resetWith(MockTime(now))
         AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
         val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
-        val original = Mood.entries.map(::state)
+        val original = Icon.entries.map(::state)
 
         lifecycle.currentState = Lifecycle.State.RESUMED
         try {
             AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
-            assertEquals(original, Mood.entries.map(::state), "the reviewer still owns a visible task")
+            assertEquals(original, Icon.entries.map(::state), "the reviewer still owns a visible task")
 
             lifecycle.currentState = Lifecycle.State.STARTED
             AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
-            assertEquals(original, Mood.entries.map(::state), "a paused activity can still be visible")
+            assertEquals(original, Icon.entries.map(::state), "a paused activity can still be visible")
 
             lifecycle.currentState = Lifecycle.State.CREATED
-            assertEquals(Mood.HAPPY, switchedFrom(prefs, Mood.DEFAULT))
-            assertEquals(listOf(Mood.HAPPY), enabled(), "apply the latest mood when the app stops")
+            assertEquals(Icon.AKI_HAPPY, switchedFrom(prefs, Icon.AKI_DEFAULT))
+            assertEquals(listOf(Icon.AKI_HAPPY), enabled(), "apply the latest mood when the app stops")
         } finally {
             lifecycle.currentState = Lifecycle.State.CREATED
         }
@@ -192,8 +235,8 @@ class AnkiquestIconTest : RobolectricTest() {
 
             lifecycle.currentState = Lifecycle.State.CREATED
 
-            assertEquals(Mood.DEFAULT, switchedFrom(prefs, Mood.WORRIED))
-            assertEquals(listOf(Mood.DEFAULT), enabled())
+            assertEquals(Icon.AKI_DEFAULT, switchedFrom(prefs, Icon.AKI_WORRIED))
+            assertEquals(listOf(Icon.AKI_DEFAULT), enabled())
         } finally {
             lifecycle.currentState = Lifecycle.State.CREATED
         }
@@ -213,8 +256,8 @@ class AnkiquestIconTest : RobolectricTest() {
 
             lifecycle.currentState = Lifecycle.State.CREATED
 
-            assertEquals(Mood.DEFAULT, switchedFrom(prefs, Mood.WORRIED))
-            assertEquals(listOf(Mood.DEFAULT), enabled())
+            assertEquals(Icon.AKI_DEFAULT, switchedFrom(prefs, Icon.AKI_WORRIED))
+            assertEquals(listOf(Icon.AKI_DEFAULT), enabled())
         } finally {
             lifecycle.currentState = Lifecycle.State.CREATED
         }
@@ -237,8 +280,8 @@ class AnkiquestIconTest : RobolectricTest() {
 
             lifecycle.currentState = Lifecycle.State.CREATED
 
-            assertEquals(Mood.FROZEN, switchedFrom(prefs, Mood.DEFAULT))
-            assertEquals(listOf(Mood.FROZEN), enabled())
+            assertEquals(Icon.AKI_FROZEN, switchedFrom(prefs, Icon.AKI_DEFAULT))
+            assertEquals(listOf(Icon.AKI_FROZEN), enabled())
         } finally {
             lifecycle.currentState = Lifecycle.State.CREATED
         }
@@ -272,7 +315,7 @@ class AnkiquestIconTest : RobolectricTest() {
             CompletableFuture.runAsync { AnkiquestIcon.onStart(owner) }.get(1, TimeUnit.SECONDS)
         } finally {
             release.countDown()
-            switchedFrom(prefs, Mood.DEFAULT)
+            switchedFrom(prefs, Icon.AKI_DEFAULT)
             AnkiquestIcon.onStop(owner)
         }
     }
@@ -292,10 +335,10 @@ class AnkiquestIconTest : RobolectricTest() {
 
         ReflectionHelpers.callInstanceMethod<Unit>(AnkiquestIcon, "applyPending", ClassParameter.from(pending.javaClass, pending))
 
-        assertEquals(listOf(Mood.DEFAULT), enabled(), "the resumed task leaves the aliases alone")
+        assertEquals(listOf(Icon.AKI_DEFAULT), enabled(), "the resumed task leaves the aliases alone")
         AnkiquestIcon.onStop(owner)
-        assertEquals(Mood.HAPPY, switchedFrom(prefs, Mood.DEFAULT))
-        assertEquals(listOf(Mood.HAPPY), enabled())
+        assertEquals(Icon.AKI_HAPPY, switchedFrom(prefs, Icon.AKI_DEFAULT))
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled())
     }
 
     private fun selectAccount(
@@ -311,8 +354,8 @@ class AnkiquestIconTest : RobolectricTest() {
 
     private fun switchedFrom(
         prefs: SharedPreferences,
-        previous: Mood,
-    ): Mood =
+        previous: Icon,
+    ): Icon =
         runBlocking {
             withTimeout(5000) {
                 while (AnkiquestIcon.current(prefs) == previous) {
@@ -327,16 +370,16 @@ class AnkiquestIconTest : RobolectricTest() {
         registerAliases()
         val prefs = targetContext.sharedPrefs()
         AnkiquestIcon.show(targetContext, Mood.HAPPY, prefs)
-        assertEquals(listOf(Mood.HAPPY), enabled())
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled())
         // A switch the system undid or that stopped halfway: the plain icon is back and happy is off.
         val packageManager = targetContext.packageManager
-        packageManager.setComponentEnabledSetting(component(Mood.HAPPY), PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, 0)
-        packageManager.setComponentEnabledSetting(component(Mood.DEFAULT), PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, 0)
-        assertEquals(Mood.HAPPY, AnkiquestIcon.current(prefs), "the pref still says happy")
+        packageManager.setComponentEnabledSetting(component(Icon.AKI_HAPPY), PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, 0)
+        packageManager.setComponentEnabledSetting(component(Icon.AKI_DEFAULT), PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, 0)
+        assertEquals(Icon.AKI_HAPPY, AnkiquestIcon.current(prefs), "the pref still says happy")
 
         AnkiquestIcon.show(targetContext, Mood.HAPPY, prefs)
 
-        assertEquals(listOf(Mood.HAPPY), enabled())
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled())
     }
 
     @Test
@@ -346,36 +389,36 @@ class AnkiquestIconTest : RobolectricTest() {
         AnkiquestIcon.show(targetContext, Mood.FROZEN, prefs)
         val packageManager = targetContext.packageManager
         // Equivalent to the manifest's own state, so nothing needs to change for the launcher.
-        packageManager.setComponentEnabledSetting(component(Mood.HAPPY), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 0)
+        packageManager.setComponentEnabledSetting(component(Icon.AKI_HAPPY), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 0)
 
         AnkiquestIcon.show(targetContext, Mood.FROZEN, prefs)
 
-        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, state(Mood.HAPPY), "an alias that is already off is not touched")
-        assertEquals(listOf(Mood.FROZEN), enabled())
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, state(Icon.AKI_HAPPY), "an alias that is already off is not touched")
+        assertEquals(listOf(Icon.AKI_FROZEN), enabled())
     }
 
     /** The aliases come from the quest build's manifest, which unit tests do not merge. */
     private fun registerAliases() {
-        for (mood in Mood.entries) {
+        for (icon in Icon.entries) {
             shadowOf(targetContext.packageManager).addOrUpdateActivity(
                 ActivityInfo().apply {
                     packageName = targetContext.packageName
-                    name = component(mood).className
+                    name = component(icon).className
                     targetActivity = "com.ichi2.anki.IntentHandler"
-                    enabled = mood == Mood.DEFAULT
+                    enabled = icon == Icon.AKI_DEFAULT
                 },
             )
         }
     }
 
-    private fun component(mood: Mood) = ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${mood.alias}")
+    private fun component(icon: Icon) = ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${icon.alias}")
 
-    private fun state(mood: Mood) = targetContext.packageManager.getComponentEnabledSetting(component(mood))
+    private fun state(icon: Icon) = targetContext.packageManager.getComponentEnabledSetting(component(icon))
 
-    private fun enabled(): List<Mood> =
-        Mood.entries.filter { mood ->
-            val state = state(mood)
+    private fun enabled(): List<Icon> =
+        Icon.entries.filter { icon ->
+            val state = state(icon)
             state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
-                (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && mood == Mood.DEFAULT)
+                (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == Icon.AKI_DEFAULT)
         }
 }

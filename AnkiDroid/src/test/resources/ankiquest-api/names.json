@@ -37,6 +37,7 @@
         "share_to_friends",
         "share_to_link",
         "share_undo",
+        "share_undo_send",
         "sharing",
         "sign_in",
         "sign_in_browser",
@@ -48,9 +49,7 @@
         "study",
         "upload"
     ],
-    "unused": [
-        "share_undo_send"
-    ],
+    "unused": [],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",

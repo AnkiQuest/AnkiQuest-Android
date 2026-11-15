@@ -231,7 +231,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             Timber.w(e, "AnkiQuest friends unreachable")
             R.string.aq_friends_offline
         } catch (e: JSONException) {
-            Timber.w(e, "AnkiQuest friends unreadable")
+            Timber.w(AnkiquestApi.redacted(e), "AnkiQuest friends unreadable")
             R.string.aq_friends_server_error
         }
 
