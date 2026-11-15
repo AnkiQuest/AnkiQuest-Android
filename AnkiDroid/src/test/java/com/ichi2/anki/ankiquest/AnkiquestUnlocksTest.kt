@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Found
@@ -363,6 +364,14 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             assertEquals("POST /api/unlocks/cerro {\"unlock\":\"${chibi.id}\"}", requests.single { it.startsWith("POST") })
             assertEquals(setOf(ANKI_TAN, chibi.id), AnkiquestUnlocks.found(account)?.ids)
         }
+
+    @Test
+    fun `the chibi hint is worded as the fixture says`() {
+        for (left in 1..AnkiquestChibi.TAPS - AnkiquestChibi.HINT_FROM) {
+            val shown = targetContext.resources.getQuantityString(R.plurals.ankiquest_companion_chibi_hint, left, left)
+            assertEquals(ChibiFixture.hint(left), shown)
+        }
+    }
 
     private companion object {
         const val ANKI_TAN = "anki_tan"

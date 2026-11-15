@@ -13,11 +13,12 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** The chibi Easter egg against the shared fixture `tests/fixtures/companion_unlock.json`. */
+/**
+ * The chibi Easter egg against the shared fixture `tests/fixtures/companion_unlock.json`, with the
+ * cases still pending in the server bump ([ChibiFixture]).
+ */
 class AnkiquestChibiTest {
-    /** The shared fixture from the pinned server commit. */
-    private val fixture =
-        JSONObject(checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_unlock.json")).readText())
+    private val fixture = ChibiFixture.json
 
     /** Every chibi as live, as flipping the fixture's `status` makes it. */
     private val live = AnkiquestChibi.ALL.map { it.copy(status = Status.LIVE) }
@@ -26,20 +27,13 @@ class AnkiquestChibiTest {
 
     @Test
     fun `the chibis are the fixture's tap companions`() {
-        val companions = fixture.getJSONArray("companions")
-        val tapped =
-            (0 until companions.length())
-                .map { companions.getJSONObject(it) }
-                .filter { it.getString("kind") == "taps" }
-                .map { Chibi(it.getString("companion"), it.getString("requires"), status(it.getString("status"))) }
-        assertEquals(tapped, AnkiquestChibi.ALL)
+        val tapped = ChibiFixture.objects(fixture.getJSONArray("companions")).filter { it.getString("kind") == "taps" }
+        val chibis = tapped.map { Chibi(it.getString("companion"), it.getString("requires"), status(it.getString("status"))) }
+        assertEquals(chibis, AnkiquestChibi.ALL)
 
         // Each chibi's goal is the rule's tap count.
-        for (i in 0 until companions.length()) {
-            val entry = companions.getJSONObject(i)
-            if (entry.getString("kind") == "taps") {
-                assertEquals(AnkiquestChibi.TAPS, entry.getInt("goal"), entry.getString("companion"))
-            }
+        for (entry in tapped) {
+            assertEquals(AnkiquestChibi.TAPS, entry.getInt("goal"), entry.getString("companion"))
         }
     }
 
@@ -47,32 +41,44 @@ class AnkiquestChibiTest {
     fun `the tap rule is the fixture's`() {
         assertEquals(fixture.getInt("taps"), AnkiquestChibi.TAPS)
         assertEquals(fixture.getLong("max_gap_ms"), AnkiquestChibi.MAX_GAP_MS)
+        assertEquals(fixture.getInt("hint_from"), AnkiquestChibi.HINT_FROM)
     }
 
     @Test
     fun `the fixture cases decide each tap run`() {
-        val cases = cases()
+        val cases = ChibiFixture.objects(fixture.getJSONArray("cases"))
         assertTrue(cases.isNotEmpty())
         for (case in cases) {
-            val taps = Taps(live)
-            val sequence = case.getJSONArray("sequence")
-            var last: Step = Step.Silent
-            for (i in 0 until sequence.length()) {
-                val tap = sequence.getJSONArray(i)
-                last = taps.tap(tap.getString(0), tap.getLong(1), setOf(chibi.base))
-            }
-            assertEquals(case.getBoolean("unlocks"), last == Step.Done(chibi), case.getString("name"))
+            val steps = run(case.getJSONArray("sequence"), setOf(chibi.base))
+            assertEquals(case.getBoolean("unlocks"), steps.last() == Step.Done(chibi), case.getString("name"))
         }
     }
 
     @Test
-    fun `the player hears how many taps are left from the fourth tap`() {
+    fun `the fixture gives the hint after each tap count`() {
         val taps = Taps(live)
+        for (entry in ChibiFixture.objects(fixture.getJSONArray("hints"))) {
+            val count = entry.getInt("taps")
+            val step = taps.tap(chibi.base, count * QUICK_MS, setOf(chibi.base))
+            assertEquals(entry.opt("hint").takeIf { it != JSONObject.NULL }, hint(step), "after $count taps")
+        }
+    }
 
-        val steps = (0 until AnkiquestChibi.TAPS).map { taps.tap(chibi.base, it * QUICK_MS, setOf(chibi.base)) }
-
-        val hints = (AnkiquestChibi.TAPS - AnkiquestChibi.HINT_FROM downTo 1).map { Step.Hint(it) }
-        assertEquals(List(AnkiquestChibi.HINT_FROM - 1) { Step.Silent } + hints + Step.Done(chibi), steps)
+    @Test
+    fun `the fixture chibi cases decide hints and unlocks`() {
+        val cases = ChibiFixture.objects(fixture.getJSONArray("chibi_taps"))
+        assertTrue(cases.isNotEmpty())
+        for (case in cases) {
+            val name = case.getString("name")
+            val unlocked = case.getJSONArray("unlocked").let { all -> (0 until all.length()).map { all.getString(it) }.toSet() }
+            val steps = run(case.getJSONArray("sequence"), unlocked)
+            val hints =
+                case.getJSONArray("hints").let { all ->
+                    (0 until all.length()).map { all.opt(it).takeIf { h -> h != JSONObject.NULL } }
+                }
+            assertEquals(hints, steps.map { hint(it) }, name)
+            assertEquals(case.getBoolean("unlocks"), steps.last() == Step.Done(chibi), name)
+        }
     }
 
     @Test
@@ -132,50 +138,25 @@ class AnkiquestChibiTest {
         assertEquals(listOf(1, 2, 1), counts)
     }
 
-    /**
-     * The pinned fixture's cases and the [localCases] it does not have yet, by name.
-     */
-    private fun cases(): List<JSONObject> {
-        val pinned = fixture.getJSONArray("cases").objects()
-        val names = pinned.map { it.getString("name") }.toSet()
-        return pinned + JSONArray(localCases).objects().filter { it.getString("name") !in names }
+    /** The steps of a fixture [sequence] of [choice, milliseconds] taps, with [unlocked] companions. */
+    private fun run(
+        sequence: JSONArray,
+        unlocked: Set<String>,
+    ): List<Step> {
+        val taps = Taps(live)
+        return (0 until sequence.length()).map {
+            val tap = sequence.getJSONArray(it)
+            taps.tap(tap.getString(0), tap.getLong(1), unlocked)
+        }
     }
 
-    private fun status(id: String) = Status.entries.single { it.id == id }
+    /** The fixture's text for [step]'s hint, or null when it shows none. */
+    private fun hint(step: Step): String? = (step as? Step.Hint)?.let { ChibiFixture.hint(it.left) }
 
-    private fun JSONArray.objects() = (0 until length()).map { getJSONObject(it) }
+    private fun status(id: String) = Status.entries.single { it.id == id }
 
     private companion object {
         /** A tap well inside the rule's gap. */
         const val QUICK_MS = 300L
-
-        /**
-         * LOCAL COPY, not yet in the pinned fixture: the cases AnkiQuest/AnkiQuest-Desktop#289 adds
-         * to `tests/fixtures/companion_unlock.json` (earlier, same-time and 64-bit-overflowing
-         * taps). Delete once the server bump brings them; the pinned cases replace these by name.
-         */
-        val localCases =
-            """
-            [
-              {"name": "an earlier tap starts again",
-               "sequence": [["anki_tan", 9000], ["anki_tan", 8000], ["anki_tan", 7000], ["anki_tan", 6000], ["anki_tan", 5000],
-                            ["anki_tan", 4000], ["anki_tan", 3000], ["anki_tan", 2000], ["anki_tan", 1000]],
-               "unlocks": false},
-              {"name": "taps at the same time continue the run",
-               "sequence": [["anki_tan", 1000], ["anki_tan", 1000], ["anki_tan", 1000], ["anki_tan", 1000], ["anki_tan", 1000],
-                            ["anki_tan", 1000], ["anki_tan", 1000], ["anki_tan", 1000], ["anki_tan", 1000]],
-               "unlocks": true},
-              {"name": "a gap too wide for 64 bits starts again",
-               "sequence": [["anki_tan", -9223372036854775808], ["anki_tan", -9223372036854775508], ["anki_tan", -9223372036854775208],
-                            ["anki_tan", -9223372036854774908], ["anki_tan", -9223372036854774608], ["anki_tan", -9223372036854774308],
-                            ["anki_tan", -9223372036854774008], ["anki_tan", -9223372036854773708], ["anki_tan", 9223372036854775807]],
-               "unlocks": false},
-              {"name": "a tap that wraps around to the earliest time starts again",
-               "sequence": [["anki_tan", 9223372036854773707], ["anki_tan", 9223372036854774007], ["anki_tan", 9223372036854774307],
-                            ["anki_tan", 9223372036854774607], ["anki_tan", 9223372036854774907], ["anki_tan", 9223372036854775207],
-                            ["anki_tan", 9223372036854775507], ["anki_tan", 9223372036854775807], ["anki_tan", -9223372036854775808]],
-               "unlocks": false}
-            ]
-            """.trimIndent()
     }
 }
