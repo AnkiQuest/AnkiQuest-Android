@@ -1,12 +1,20 @@
 # Agent instructions
 
-AnkiQuest-Android is AnkiDroid with AnkiQuest added: streaks, friends, leaderboards and moments, talking to the server in [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop). These rules apply to every agent (Claude, Codex, others) and to people too.
+AnkiQuest adds XP, streaks, friends, leaderboards and moments to Anki. It has three repositories:
+
+- [AnkiQuest/AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server): the server (Rust), its web pages (TypeScript), the API examples, the shared fixtures and the companion art masters.
+- [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop): the Anki desktop add-on (Python).
+- [AnkiQuest/AnkiQuest-Android](https://github.com/AnkiQuest/AnkiQuest-Android): the Android app (Kotlin), a fork of AnkiDroid.
+
+These rules apply to every agent (Claude, Codex, others) and to people too. Everything above "This repository" is the same in all three repositories: change it in AnkiQuest-Server first, then copy it to the other two. CI fails while a copy differs.
 
 ## Ownership
 
 You are the owner and long-term maintainer of this codebase, and its design is up to you.
 
 Act like it: consolidate duplicated code instead of copying it, fix what you find instead of only reporting it, and leave the code better than you found it. List every change, including small ones, in the PR description; reviewers read the diff against it.
+
+Don't hold on to the past. Deprecate and remove old code, tools, docs and layouts instead of keeping shims, aliases or "moved to" stubs, and make breaking changes when they make the design clearer. Say in the PR what breaks and who has to act. Two limits still apply: released apps keep working, so old endpoints, fields and API examples stay until no supported client uses them; and companion art is never deleted (see below).
 
 ## Bugs: test first
 
@@ -49,7 +57,7 @@ Write new code in Rust, or TypeScript for the web, when the platform allows it. 
 AnkiQuest has two clients: the Android app ([AnkiQuest/AnkiQuest-Android](https://github.com/AnkiQuest/AnkiQuest-Android)) and the Anki desktop add-on (`addon/` in [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop)). A player should get the same AnkiQuest on both.
 
 - A user-facing feature or behaviour change lands on both clients, unless the platform can't do it (home-screen widgets, for example). Do both in one go when you can. Otherwise open an issue in the other repository, labelled `parity`, and link it from the PR.
-- Rules both clients compute (streak verdicts, heatmap, card labels, deck names) are defined once, as cases in `tests/fixtures/*.json` in AnkiQuest/AnkiQuest-Desktop. Both clients test against the same cases. Change the fixture first, then both implementations.
+- Rules both clients compute (streak verdicts, heatmap, card labels, deck names) are defined once, as cases in `tests/fixtures/*.json` in [AnkiQuest/AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server/tree/master/tests/fixtures). Both clients test against the same cases. Change the fixture first, then both implementations.
 - Use the same names, wording and order for the same thing on both clients.
 - When you find a gap between the clients, open a `parity` issue for it.
 
@@ -60,7 +68,7 @@ Companion art means every picture of a character: poses, moment and card picture
 - Never delete companion art, even when nothing uses it any more. Remove the references, keep the files, so they can be reused or merged later.
 - Each character needs a core set of poses before it goes live in the apps: face, asleep, happy, streak (on fire), sad, hopeful, frozen and neglected. A character without the full core set stays hidden.
 - Every other pose is an extension: streak tiers, milestones, frozen days 2 and 3, hurt, dead, welcome, a defeated leech, and poses for other rare moments. Extensions are optional. A missing extension falls back to its core pose (a streak tier to streak, frozen 3 to frozen, a defeated leech to happy).
-- The core set, the extensions and their fallbacks are defined once, in float3/ankiquest `tests/fixtures/companion_poses.json`; both clients use that list.
+- The core set, the extensions and their fallbacks are defined once, in [`tests/fixtures/companion_poses.json`](https://github.com/AnkiQuest/AnkiQuest-Server/blob/master/tests/fixtures/companion_poses.json) in AnkiQuest-Server; both clients use that list.
 
 ## Writing
 
@@ -70,8 +78,11 @@ Mannered prose substitutes metaphor and flourish for direct statement. Instead o
 
 ## This repository
 
-- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Ownership covers upstream AnkiDroid code too, but every change there can conflict with the daily upstream merge: keep such changes self-contained and say in the PR why they are worth it.
-- **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
-- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The bump PR brings server changes in; whoever's server change breaks it fixes it. Example ownership is listed in `ankiquest-api/names.json`.
+AnkiQuest-Android is AnkiDroid with AnkiQuest added.
+
+- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Ownership covers upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
+- **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies, in this section. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
+- **Shared instructions.** Everything above "This repository" in this file is a copy of AnkiQuest-Server's `AGENTS.md`; the `ankiquest agents copy` workflow fails while they differ. Change it there first.
+- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest-Desktop until the split moves them to AnkiQuest-Server (AnkiQuest/AnkiQuest-Desktop#306). The bump PR brings server changes in; whoever's server change breaks it fixes it. Example ownership is listed in `ankiquest-api/names.json`.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `main` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
 - **Checks to run** before pushing: `./gradlew ktlintCheck` and the unit tests you touched (`./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'`). Leave the full suites to CI.
