@@ -15,7 +15,7 @@ import anki.collection.OpChanges
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
+import com.ichi2.anki.ankiquest.AnkiquestIcon.Icon
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
@@ -126,12 +126,12 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             registerAliases()
             answer = profile("pending", 12, 2)
             Ankiquest.uploadPending()
-            assertEquals(listOf(Mood.WORRIED), enabled(), "a streak not studied today worries Aki")
+            assertEquals(listOf(Icon.AKI_WORRIED), enabled(), "a streak not studied today worries Aki")
 
             answer = profile("studied", 13, 2)
             Ankiquest.uploadPending()
 
-            assertEquals(listOf(Mood.HAPPY), enabled())
+            assertEquals(listOf(Icon.AKI_HAPPY), enabled())
             assertEquals("studied", AnkiquestIcon.lastKnown()!!.getString("streak_state"), "the next app start begins from it")
             assertEquals(0, synchronized(paths) { paths.count { it.startsWith("/api/profile") } }, "the upload's answer is enough")
             verify(exactly = 0) { AnkiquestPoll.refreshNow(any()) }
@@ -150,7 +150,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
 
         // Launcher and widget read the persisted unsent totals.
         AnkiquestIcon.showLastKnown(targetContext, now)
-        assertEquals(listOf(Mood.HAPPY), enabled())
+        assertEquals(listOf(Icon.AKI_HAPPY), enabled())
         val widget =
             AnkiquestStreakWidget
                 .views(targetContext, JSONArray(), "hill", now = now)
@@ -166,7 +166,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
         AnkiquestDay.remember(pending)
         AnkiquestIcon.showLastKnown(targetContext, now)
-        assertEquals(listOf(Mood.WORRIED), enabled())
+        assertEquals(listOf(Icon.AKI_WORRIED), enabled())
     }
 
     @Test
@@ -380,24 +380,24 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
 
     /** The aliases come from the quest build's manifest, which unit tests do not merge. */
     private fun registerAliases() {
-        for (mood in Mood.entries) {
+        for (icon in Icon.entries) {
             shadowOf(targetContext.packageManager).addOrUpdateActivity(
                 ActivityInfo().apply {
                     packageName = targetContext.packageName
-                    name = component(mood).className
+                    name = component(icon).className
                     targetActivity = "com.ichi2.anki.IntentHandler"
-                    enabled = mood == Mood.DEFAULT
+                    enabled = icon == Icon.AKI_DEFAULT
                 },
             )
         }
     }
 
-    private fun component(mood: Mood) = ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${mood.alias}")
+    private fun component(icon: Icon) = ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${icon.alias}")
 
-    private fun enabled(): List<Mood> =
-        Mood.entries.filter { mood ->
-            val state = targetContext.packageManager.getComponentEnabledSetting(component(mood))
+    private fun enabled(): List<Icon> =
+        Icon.entries.filter { icon ->
+            val state = targetContext.packageManager.getComponentEnabledSetting(component(icon))
             state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
-                (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && mood == Mood.DEFAULT)
+                (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == Icon.AKI_DEFAULT)
         }
 }

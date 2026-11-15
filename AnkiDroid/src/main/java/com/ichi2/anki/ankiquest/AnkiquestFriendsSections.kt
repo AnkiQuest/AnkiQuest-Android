@@ -358,7 +358,7 @@ private class FeedSection(
             Timber.w(e, "AnkiQuest activity unreachable")
             R.string.aq_feed_offline
         } catch (e: JSONException) {
-            Timber.w(e, "AnkiQuest activity unreadable")
+            Timber.w(AnkiquestApi.redacted(e), "AnkiQuest activity unreadable")
             R.string.aq_feed_server_error
         }
 

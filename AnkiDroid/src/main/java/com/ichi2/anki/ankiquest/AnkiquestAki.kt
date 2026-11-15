@@ -131,9 +131,9 @@ internal object AnkiquestAki {
         if (!AnkiquestCompanion.visible()) {
             null
         } else {
-            AnkiquestArt.bitmap(
+            AnkiquestCompanion.bitmap(
                 context,
-                AnkiquestCompanion.resource(art),
+                art,
                 context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width),
             )
         }

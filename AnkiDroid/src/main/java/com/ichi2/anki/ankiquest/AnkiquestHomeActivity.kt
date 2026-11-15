@@ -206,10 +206,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                         }
                         if (current.token.isNotEmpty()) {
                             try {
-                                val companion = AnkiquestHomeData.companion(current)
-                                if (turn == generation && AnkiquestHomeData.account()?.scope == current.scope &&
-                                    AnkiquestCompanion.selected() != companion && AnkiquestCompanion.remember(current, companion)
-                                ) {
+                                // Unlocks and the choice, both kept per account on the server.
+                                if (AnkiquestCompanion.refresh(current)) {
                                     AnkiquestWidget.requestUpdate(this@AnkiquestHomeActivity)
                                 }
                             } catch (e: CancellationException) {

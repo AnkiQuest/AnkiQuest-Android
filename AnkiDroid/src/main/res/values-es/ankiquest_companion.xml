@@ -4,4 +4,8 @@
     <string name="ankiquest_companion_title">Compañero de estudio</string>
     <string name="ankiquest_companion_summary">Elige Aki, Ankilope o ninguno. Se sincroniza en todos tus dispositivos.</string>
     <string name="ankiquest_companion_none">Sin compañero</string>
+    <string name="ankiquest_companion_level_goal">Alcanza el nivel %1$d</string>
+    <string name="ankiquest_companion_level_progress">Nivel %1$d de %2$d</string>
+    <string name="ankiquest_companion_hours_goal">Estudia durante %1$d horas en total</string>
+    <string name="ankiquest_companion_hours_progress">%1$d de %2$d horas</string>
 </resources>

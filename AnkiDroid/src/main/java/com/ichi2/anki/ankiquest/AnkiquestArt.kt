@@ -5,8 +5,12 @@ package com.ichi2.anki.ankiquest
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
 import android.util.LruCache
 import androidx.annotation.DrawableRes
+import androidx.core.graphics.createBitmap
 import com.ichi2.anki.R
 
 /**
@@ -59,6 +63,26 @@ internal object AnkiquestArt {
     }
 
     /**
+     * [bitmap] drawn through [filter], cached under [name] next to the plain bitmap. For art
+     * recoloured on the phone; RemoteViews cannot apply a filter, so the colours are drawn in.
+     */
+    fun filtered(
+        context: Context,
+        @DrawableRes resource: Int,
+        size: Int,
+        name: String,
+        filter: ColorFilter,
+    ): Bitmap? {
+        val plain = bitmap(context, resource, size) ?: return null
+        val key = "$name:$resource:${plain.width}"
+        cache.get(key)?.let { return it }
+        val drawn = createBitmap(plain.width, plain.height)
+        Canvas(drawn).drawBitmap(plain, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter = filter })
+        cache.put(key, drawn)
+        return drawn
+    }
+
+    /**
      * Art for an inbox notification of [kind]. [topic] is what a celebration or a friend's shared win
      * is about ("streak", "goal", "secured", "conquered", "achievement", …) or "place:N" for a weekly recap; older
      * servers send none.
@@ -88,6 +112,7 @@ internal object AnkiquestArt {
             topic == "secured" -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 1)
             topic == "goal" -> R.drawable.aki_goal
             topic == "conquered" -> R.drawable.aki_deck_conquered
+            topic == "companion" -> R.drawable.aki_celebrate
             topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: R.drawable.aki_achievement
             else -> R.drawable.aki_achievement
         }
