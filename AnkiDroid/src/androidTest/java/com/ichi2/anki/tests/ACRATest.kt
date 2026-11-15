@@ -9,7 +9,7 @@ import androidx.core.content.edit
 import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.CommonString
+import com.ichi2.anki.R
 import com.ichi2.anki.acraCoreConfigBuilder
 import com.ichi2.anki.analytics.AnalyticsExceptionHandler
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
@@ -111,7 +111,7 @@ class ACRATest : InstrumentedTest() {
         setProductionACRAConfig(sharedPrefs)
         verifyACRANotDisabled()
 
-        assertToastMessage(CommonString.feedback_for_manual_toast_text)
+        assertToastMessage(R.string.ankiquest_feedback_manual_toast_text)
         assertToastIsEnabled()
         assertDialogEnabledStatus("Dialog should be enabled", true)
     }
@@ -188,7 +188,7 @@ class ACRATest : InstrumentedTest() {
         setProductionACRAConfig(sharedPrefs)
         verifyACRANotDisabled()
 
-        assertToastMessage(CommonString.feedback_auto_toast_text)
+        assertToastMessage(R.string.ankiquest_feedback_auto_toast_text)
         assertToastIsEnabled()
         assertDialogEnabledStatus("Dialog should not be enabled", false)
     }
@@ -204,12 +204,12 @@ class ACRATest : InstrumentedTest() {
         verifyACRANotDisabled()
 
         assertDialogEnabledStatus("dialog should be disabled when status is ALWAYS", false)
-        assertToastMessage(CommonString.feedback_auto_toast_text)
+        assertToastMessage(R.string.ankiquest_feedback_auto_toast_text)
 
         setAcraReportingMode(FEEDBACK_REPORT_ASK)
 
         assertDialogEnabledStatus("dialog should be re-enabled after changed to ASK", true)
-        assertToastMessage(CommonString.feedback_for_manual_toast_text)
+        assertToastMessage(R.string.ankiquest_feedback_manual_toast_text)
     }
 
     @Test
@@ -222,11 +222,11 @@ class ACRATest : InstrumentedTest() {
         setProductionACRAConfig(sharedPrefs)
         verifyACRANotDisabled()
 
-        assertToastMessage(CommonString.feedback_for_manual_toast_text)
+        assertToastMessage(R.string.ankiquest_feedback_manual_toast_text)
 
         setAcraReportingMode(FEEDBACK_REPORT_ALWAYS)
 
-        assertToastMessage(CommonString.feedback_auto_toast_text)
+        assertToastMessage(R.string.ankiquest_feedback_auto_toast_text)
     }
 
     @Test
