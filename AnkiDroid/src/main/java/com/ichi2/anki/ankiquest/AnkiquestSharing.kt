@@ -150,9 +150,6 @@ internal object AnkiquestSharing {
     /** The capability of servers that send a moment to chosen friends and groups, with a note, and take it back. */
     const val FEATURE_MOMENTS = "share_moments"
 
-    /** Servers that can retract one send instead of every send of a win. */
-    private const val FEATURE_UNDO_SEND = "share_undo_send"
-
     /** The server keeps a note to one line of this many characters. */
     const val MAX_NOTE = 140
 
@@ -224,13 +221,8 @@ internal object AnkiquestSharing {
         account: HomeAccount,
         sent: Sent,
     ): Int {
-        val selector =
-            if (AnkiquestCapabilities.has(account, FEATURE_UNDO_SEND)) {
-                // A missing receipt must never fall back to undoing unrelated sends.
-                "?until=${requireNotNull(sent.undoUntil)}"
-            } else {
-                ""
-            }
+        // Old servers ignore the selector; stale capabilities must never broaden Undo.
+        val selector = "?until=${requireNotNull(sent.undoUntil)}"
         return call(account, "DELETE", "api/share/${account.encodedUser}/${sent.win}$selector").optInt("retracted")
     }
 

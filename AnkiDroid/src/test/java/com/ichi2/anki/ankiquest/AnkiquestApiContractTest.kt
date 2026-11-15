@@ -53,6 +53,10 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private lateinit var url: String
     private val requests = CopyOnWriteArrayList<String>()
     private val shareRetractions = CopyOnWriteArrayList<String>()
+
+    private enum class UndoServer { LEGACY, SCOPED }
+
+    private var undoServer = UndoServer.SCOPED
     private val manager get() = targetContext.getSystemService<NotificationManager>()!!
 
     @Before
@@ -400,6 +404,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `a moment sent to chosen friends or a group answers its win and can be taken back`() =
         runBlocking {
+            undoServer = UndoServer.LEGACY
             val conquest = AnkiquestSharing.MomentRef.Conquest(1_793_097_000_000L)
             val friends = AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList())
             val told = AnkiquestSharing.send(account, conquest, friends, "Took me a month!")
@@ -419,7 +424,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
             } finally {
                 unmockkObject(AnkiquestCapabilities)
             }
-            assertEquals(listOf("/api/share/hill/6"), shareRetractions.toList(), "older servers keep the original endpoint")
+            assertEquals(
+                listOf("/api/share/hill/6?until=${told.undoUntil}"),
+                shareRetractions.toList(),
+                "older servers ignore the selector and keep their original Undo response",
+            )
             assertEquals(
                 listOf("POST /api/share/hill", "POST /api/share/hill", "DELETE /api/share/hill/6"),
                 requests.filter {
@@ -427,6 +436,34 @@ class AnkiquestApiContractTest : RobolectricTest() {
                         it
                 },
             )
+        }
+
+    @Test
+    fun `Undo keeps the send selector when cached capabilities predate the server upgrade`() =
+        runBlocking {
+            val captured = account
+            val cached =
+                JSONObject()
+                    .put("features", JSONArray(listOf("share_moments")))
+                    .put("at", EXAMPLE_NOW)
+                    .put("scope", captured.scope)
+            AnkiDroidApp.sharedPrefs().edit {
+                putString(scopedKey(AnkiquestCapabilities.PREF_CAPABILITIES, captured.server), cached.toString())
+            }
+            AnkiquestCapabilities.forgetMemory()
+            assertFalse(AnkiquestCapabilities.has(captured, "share_undo_send"))
+
+            val told =
+                AnkiquestSharing.send(
+                    captured,
+                    AnkiquestSharing.MomentRef.Win(6),
+                    AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList()),
+                    null,
+                )
+            assertEquals(1, AnkiquestSharing.retract(captured, told))
+            assertEquals(listOf("/api/share/hill/6?until=${told.undoUntil}"), shareRetractions.toList())
+            assertFailsWith<IllegalArgumentException> { AnkiquestSharing.retract(captured, told.copy(undoUntil = null)) }
+            assertEquals(1, shareRetractions.size, "a missing receipt must not send a whole-win DELETE")
         }
 
     @Test
@@ -678,6 +715,22 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertTrue("GET /api/study/hill" in requests)
         }
 
+    @Test
+    fun `settings sync applies the server's settings and saves a newer one from here`() =
+        runBlocking {
+            val prefs = AnkiDroidApp.sharedPrefs()
+            prefs.edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+            AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPEN_TODAY)
+            assertTrue("settings_sync" in AnkiquestCapabilities.refresh(account))
+
+            AnkiquestSettingsSync.sync(targetContext, AnkiquestSettingsSync.Trigger.CHANGE)
+
+            assertFalse(prefs.getBoolean(AnkiquestNotifier.PREF_RANK, true))
+            assertEquals("4", prefs.getString(AnkiquestNotifier.PREF_STREAK_HOURS, null))
+            assertTrue(prefs.getBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, false))
+            assertTrue(requests.containsAll(listOf("GET /api/settings/hill", "PUT /api/settings/hill")))
+        }
+
     private fun Notification.title() = extras.getCharSequence(Notification.EXTRA_TITLE).toString()
 
     private fun Notification.text() = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -706,7 +759,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/profile/cerro" -> "player_profile"
             parts.size == 2 && parts[0] == "wins" -> "wins"
             parts.size == 3 && parts[0] == "share" && method == "DELETE" ->
-                if (params.any { it.startsWith("until=") }) "share_undo_send" else "share_undo"
+                if (undoServer == UndoServer.SCOPED && params.any { it.startsWith("until=") }) "share_undo_send" else "share_undo"
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).has("moment") -> shareMoment(sent)
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).optString("to") == "link" -> "share_to_link"
             path == "/api/accounts" && method == "POST" -> "sign_up"
@@ -719,6 +772,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
             path == "/api/accounts/hill" && method == "GET" -> "account"
             path == "/api/records" -> "records"
+            path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"

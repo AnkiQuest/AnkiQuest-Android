@@ -30,6 +30,8 @@
         "records",
         "reminders",
         "reminders_save",
+        "settings",
+        "settings_save",
         "share_moment",
         "share_moment_group",
         "share_to_friends",
@@ -47,7 +49,7 @@
         "study",
         "upload"
     ],
-    "unused": ["settings", "settings_save"],
+    "unused": [],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",
