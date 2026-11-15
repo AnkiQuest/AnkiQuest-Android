@@ -207,6 +207,12 @@ class AnkiquestMomentsTest : RobolectricTest() {
         assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, ankilope, foreground = true))
     }
 
+    @Test
+    fun `every request names the companions this app draws`() {
+        val request = AnkiquestApi.request(identity, "api/notifications/hill").build()
+        assertEquals("aki, ankilope", request.header("X-AnkiQuest-Companion-Art"))
+    }
+
     private fun example(name: String): String =
         assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/$name.json"), name).readText(Charsets.UTF_8)
 

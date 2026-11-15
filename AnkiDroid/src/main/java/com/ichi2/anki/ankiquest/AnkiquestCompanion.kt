@@ -13,7 +13,11 @@ import com.ichi2.anki.R
 /** Account-scoped artwork cache. The server owns the choice; offline UI uses its last answer. */
 internal object AnkiquestCompanion {
     private const val KEY_PREFIX = "ankiquestCompanion:"
-    private val choices = setOf("aki", "ankilope", "none")
+    private const val NONE = "none"
+    private val choices = setOf("aki", "ankilope", NONE)
+
+    /** The companions this app has art for, as the server names them. */
+    val drawn: List<String> = choices.filter { it != NONE }
 
     fun normalize(value: String?) = value?.takeIf { it in choices } ?: "aki"
 
@@ -38,7 +42,7 @@ internal object AnkiquestCompanion {
         return true
     }
 
-    fun visible() = selected() != "none"
+    fun visible() = selected() != NONE
 
     @DrawableRes
     fun resource(

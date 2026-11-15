@@ -43,6 +43,9 @@ internal object AnkiquestMoments {
     /** `streak`, the first day and the length. */
     private const val STREAK_KEY_PARTS = 3
 
+    /** The inbox topic of a companion joining, whose moment key is `companion:{companion}`. */
+    private const val COMPANION_TOPIC = "companion"
+
     /** Kept for continuity with the conquest pop-up this replaces: the review ids of conquests already seen. */
     private const val PREF_CONQUESTS_SEEN = "ankiquestConquestsShown"
 
@@ -388,6 +391,12 @@ internal object AnkiquestMoments {
         )
     }
 
+    /** Whether this app draws the companion a companion moment's [key] names; false when it names none. */
+    private fun drawable(key: String): Boolean {
+        val companion = key.substringAfter("$COMPANION_TOPIC:", missingDelimiterValue = "")
+        return companion in AnkiquestCompanion.drawn
+    }
+
     /** The streak in a milestone's event key, `streak:{first day}:{days}`. */
     private fun keyStreak(key: String): Int? {
         val parts = key.split(':')
@@ -419,8 +428,9 @@ internal object AnkiquestMoments {
 
     /**
      * Decides what becomes of an inbox [entry] for [account]: its moment is queued when the app is in
-     * [foreground], counted quietly when routine, or skipped when already seen. Anything else is left
-     * to a system notification; call [markShown] once that is posted.
+     * [foreground], counted quietly when routine, or skipped when already seen or about a companion
+     * this app cannot draw. Anything else is left to a system notification; call [markShown] once
+     * that is posted.
      * SECURED notices use the daily claim before the quiet flag so a routine minimum still gets its once-daily moment.
      */
     @Synchronized
@@ -432,6 +442,11 @@ internal object AnkiquestMoments {
     ): Route {
         val moment = fromNotice(entry) ?: return Route.NOTIFY
         if (known(prefs, account, moment.key)) return Route.SEEN
+
+        // A companion this app has no art for would be shown as another one: skip it.
+        if (entry.optString("topic") == COMPANION_TOPIC && !drawable(moment.key)) {
+            return Route.SEEN
+        }
         if (moment.kind == Kind.SECURED) {
             return routeMinimum(prefs, account, moment, foreground)
         }
