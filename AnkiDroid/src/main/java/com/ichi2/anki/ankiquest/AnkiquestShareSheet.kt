@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.graphics.Bitmap
-import android.text.InputFilter
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
@@ -137,7 +136,7 @@ internal class AnkiquestShareSheet(
         content.addView(search, wide())
         search.doAfterTextChanged { render() }
         content.addView(targets, wide())
-        note.filters = arrayOf(InputFilter.LengthFilter(AnkiquestSharing.MAX_NOTE))
+        note.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestSharing.MAX_NOTE))
         note.imeOptions = EditorInfo.IME_ACTION_DONE
         content.addView(note, wide())
 
