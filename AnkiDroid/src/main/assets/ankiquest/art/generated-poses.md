@@ -24,3 +24,10 @@ e8794893e539622078dbbdab4b4ffdd2a20c2e78 byte for byte:
 https://github.com/AnkiQuest/AnkiQuest-Desktop/actions/runs/43789530883
 They were inspected on light and dark backgrounds at 64 and 128 px.
 Pose selection is maintained separately from these asset additions.
+
+The canonical asleep name is now anki_tan_asleep.webp. It comes from
+Linux export run 43866525279, source 10acab35622c12651086586c8dcbf333a0eb19e8:
+https://github.com/AnkiQuest/AnkiQuest-Desktop/actions/runs/43866525279
+Its bytes match the earlier sleeping export exactly; that file remains
+unchanged. Active masters use the fixture pose names under static/anki-tan/,
+with chibi derivatives in static/anki-tan/chibi/, under the same licence.
