@@ -403,30 +403,40 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         coEvery { AnkiquestSharing.win(any(), any()) } returns null
         coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
         every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
-        coEvery { AnkiquestSharing.send(any(), any(), AnkiquestSharing.Audience.Circle, null) } returns
-            AnkiquestSharing.Sent(1, 17, clock.intTimeMS() + 60_000)
+        coEvery { AnkiquestSharing.send(any(), any(), AnkiquestSharing.Audience.Circle, null) } answers {
+            val reference = secondArg<AnkiquestSharing.MomentRef>()
+            AnkiquestSharing.Sent(1, (reference as? AnkiquestSharing.MomentRef.Win)?.id ?: 17, clock.intTimeMS() + 60_000)
+        }
         val controller = host()
         try {
             val host = controller.get()
             val identity = assertNotNull(AnkiquestHomeData.account())
+            // Every kept kind, including a companion unlock, uses the same chosen-recipient flow.
+            val kept =
+                AnkiquestMoments.Kind.entries.mapIndexed { index, kind ->
+                    val win = 1000L + index
+                    val key = if (kind == AnkiquestMoments.Kind.COMPANION) "companion:aki" else "kept:$index"
+                    AnkiquestMoments.Moment(key, kind, kind.name, "", clock.intTimeMS(), win = win) to
+                        AnkiquestSharing.MomentRef.Win(win)
+                }
             val cases =
-                listOf(
-                    AnkiquestMoments.Moment("level:4", AnkiquestMoments.Kind.LEVEL, "Level 4", "", clock.intTimeMS(), win = 17) to
-                        AnkiquestSharing.MomentRef.Win(17),
-                    AnkiquestMoments.Moment(
-                        "conquered:100",
-                        AnkiquestMoments.Kind.CONQUERED,
-                        "Card conquered",
-                        "",
-                        clock.intTimeMS(),
-                        conquest = 100,
-                    ) to AnkiquestSharing.MomentRef.Conquest(100),
-                    AnkiquestMoments.Moment("rank:1", AnkiquestMoments.Kind.RANK, "First place", "", clock.intTimeMS(), place = 1) to
-                        AnkiquestSharing.MomentRef.Place(1),
-                )
+                kept +
+                    listOf(
+                        AnkiquestMoments.Moment(
+                            "conquered:100",
+                            AnkiquestMoments.Kind.CONQUERED,
+                            "Card conquered",
+                            "",
+                            clock.intTimeMS(),
+                            conquest = 100,
+                        ) to AnkiquestSharing.MomentRef.Conquest(100),
+                        AnkiquestMoments.Moment("rank:1", AnkiquestMoments.Kind.RANK, "First place", "", clock.intTimeMS(), place = 1) to
+                            AnkiquestSharing.MomentRef.Place(1),
+                    )
             for ((moment, reference) in cases) {
                 AnkiquestMomentCard.show(host, identity, listOf(moment), prefs)
                 val card = card()

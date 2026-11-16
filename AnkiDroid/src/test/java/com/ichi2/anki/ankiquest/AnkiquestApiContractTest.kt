@@ -486,7 +486,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
     @Test
     fun `a current weekly place sends the rank and selected audience`() =
-        runBlocking {
+        runBlocking<Unit> {
             val told =
                 AnkiquestSharing.send(
                     account,
