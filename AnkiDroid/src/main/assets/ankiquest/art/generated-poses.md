@@ -9,13 +9,13 @@ and docs/branding/core-poses-2026-11/ in that repository.
 The neglected pose has one unlit headband star; its edit record is
 docs/branding/ankitan-full-2026-11/neglected-revision.json.
 
-Aki's sad, hopeful, frozen and neglected poses use masters in static/aki/,
-with records in docs/branding/core-poses-2026-11/. The repository licence
-applies to those poses.
+Aki's sad, hopeful, frozen and neglected poses use masters in static/aki/
+in AnkiQuest/AnkiQuest-Desktop, with records in
+docs/branding/core-poses-2026-11/. The repository licence applies.
 
 Ankilope's sad, hopeful, frozen, asleep and neglected poses use masters
-in static/ankilope/, with records in docs/branding/core-poses-2026-11/.
-The repository licence applies.
+in static/ankilope/ in AnkiQuest/AnkiQuest-Desktop, with records in
+docs/branding/core-poses-2026-11/. The repository licence applies.
 
 These poses were generated with OpenAI image_gen, which did not expose
 its model identifier. Android WebPs are generated from the masters by
