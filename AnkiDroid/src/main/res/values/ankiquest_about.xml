@@ -3,8 +3,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
     tools:keep="@string/about_contributors_description,@string/about_contributors_description_no_donate,@string/license_description,@string/link_source">
     <!-- Preserve upstream About resources for future upstream merges. -->
-    <string name="ankiquest_link_source" translatable="false">https://github.com/float3/AnkiQuest-Android</string>
-    <string name="ankiquest_link_server_source" translatable="false">https://github.com/float3/ankiquest</string>
+    <string name="ankiquest_link_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Android</string>
+    <string name="ankiquest_link_server_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Desktop</string>
     <string name="ankiquest_link_anki_tan" translatable="false">https://shigeyukey.github.io/shige-addons-wiki/Anki-tan.html</string>
     <string name="ankiquest_link_shigeyuki" translatable="false">https://www.patreon.com/Shigeyuki</string>
     <string name="ankiquest_link_cc_by_sa" translatable="false">https://creativecommons.org/licenses/by-sa/4.0/</string>

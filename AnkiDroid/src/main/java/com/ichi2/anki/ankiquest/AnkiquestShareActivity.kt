@@ -17,6 +17,7 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.ioDispatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -296,7 +297,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                             null
                         }
                     val chooser =
-                        withContext(Dispatchers.IO) {
+                        withContext(ioDispatcher) {
                             if (link == null) {
                                 AnkiquestShare.textChooser(applicationContext, share.title, share.body, friends, art)
                             } else {

@@ -18,8 +18,10 @@ import java.text.Normalizer
 internal object AnkiquestDeckNames {
     private const val KEY = "ankiquestConquestDecks:"
     private const val SHORT_NAME = 3
-    private val PREFIX = Regex("""(?U)^(?:#?\d+[\s.)_-]+|\[[A-Za-z0-9]+\]\s*)""")
-    private val SPACE = Regex("""(?U)\s+""")
+
+    // Explicit Unicode classes, not the UNICODE_CHARACTER_CLASS flag: Android's ICU regex rejects it.
+    private val PREFIX = Regex("""^(?:#?\p{Nd}+[\s\p{Z}.)_-]+|\[[A-Za-z0-9]+\][\s\p{Z}]*)""")
+    private val SPACE = Regex("""[\s\p{Z}]+""")
     private val WORD = Regex("""\p{L}+""")
     private val FILING =
         setOf(
@@ -126,10 +128,7 @@ internal object AnkiquestDeckNames {
     private fun line(value: String): String = value.trim().replace(SPACE, " ")
 
     // Match Python's character limit without splitting a supplementary character.
-    private fun limit(value: String): String {
-        val count = minOf(AnkiquestShare.MAX_LABEL, value.codePointCount(0, value.length))
-        return value.take(value.offsetByCodePoints(0, count))
-    }
+    private fun limit(value: String): String = AnkiquestTextLimit.take(value, AnkiquestShare.MAX_LABEL)
 
     private fun parts(path: String): List<String> =
         buildList {

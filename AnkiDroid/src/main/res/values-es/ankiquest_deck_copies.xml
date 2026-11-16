@@ -9,7 +9,6 @@
     <string name="aq_copies_offer">%1$s compartió %2$s</string>
     <string name="aq_copies_share">Compartir un mazo</string>
     <string name="aq_copies_choose_deck">Elige un mazo</string>
-    <string name="aq_copies_choose_friends">Compartir %1$s con</string>
     <string name="aq_copies_choose_one">Elige al menos un amigo.</string>
     <string name="aq_copies_sending">Preparando y enviando la copia del mazo…</string>
     <string name="aq_copies_sent">Copia del mazo enviada.</string>

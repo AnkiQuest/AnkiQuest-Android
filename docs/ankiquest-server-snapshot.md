@@ -43,7 +43,7 @@ An interrupted alert retries only the destination that did not receive it.
 The bot uses the existing `UPSTREAM_SYNC_TOKEN` so its pushes start normal PR
 CI. The repository owner must grant that token **Contents**, **Pull requests**
 and **Issues** read/write on this repository. No token value belongs in the
-repository. Scheduled automation is restricted to `float3/AnkiQuest-Android`.
+repository. Scheduled automation is restricted to `AnkiQuest/AnkiQuest-Android`.
 It executes reviewed helpers from main, retained outside the bump checkout;
 server data and unmerged changes on the bump branch are never executed by
 the privileged updater.

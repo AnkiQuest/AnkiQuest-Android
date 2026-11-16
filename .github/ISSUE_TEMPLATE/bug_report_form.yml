@@ -9,7 +9,7 @@ body:
     id: contact
     attributes:
       label: Checked for duplicates?
-      description: Search [AnkiQuest Android issues](https://github.com/float3/AnkiQuest-Android/issues?q=is%3Aissue) for a similar issue.
+      description: Search [AnkiQuest Android issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues?q=is%3Aissue) for a similar issue.
       options:
         - label: This issue is not a duplicate
           required: true
@@ -61,7 +61,7 @@ body:
       label: Research
       description: Confirm the points below
       options:
-        - label: I checked the [AnkiQuest Android README](https://github.com/float3/AnkiQuest-Android#readme) and did not find a solution.
+        - label: I checked the [AnkiQuest Android README](https://github.com/AnkiQuest/AnkiQuest-Android#readme) and did not find a solution.
           required: true
-        - label: (Optional) I confirmed the issue still happens on the [latest AnkiQuest nightly](https://github.com/float3/AnkiQuest-Android/releases/tag/nightly).
+        - label: (Optional) I confirmed the issue still happens on the [latest AnkiQuest nightly](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/nightly).
           required: false

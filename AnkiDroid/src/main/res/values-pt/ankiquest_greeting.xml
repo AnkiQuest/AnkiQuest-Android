@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_greeting_title">Olá, sou a Aki!</string>
+    <string name="ankiquest_greeting_text">O AnkiQuest acrescenta sequências, amigos e classificações ao Anki. Faço-te companhia enquanto estudas.</string>
+    <string name="ankiquest_greeting_image">Aki a acenar</string>
+    <string name="ankiquest_greeting_later">Mais tarde</string>
+    <string name="ankiquest_greeting_study">Vamos estudar</string>
+</resources>

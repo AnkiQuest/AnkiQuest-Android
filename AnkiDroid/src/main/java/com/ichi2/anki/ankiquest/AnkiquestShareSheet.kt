@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.graphics.Bitmap
-import android.text.InputFilter
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
@@ -137,7 +136,7 @@ internal class AnkiquestShareSheet(
         content.addView(search, wide())
         search.doAfterTextChanged { render() }
         content.addView(targets, wide())
-        note.filters = arrayOf(InputFilter.LengthFilter(AnkiquestSharing.MAX_NOTE))
+        note.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestSharing.MAX_NOTE))
         note.imeOptions = EditorInfo.IME_ACTION_DONE
         content.addView(note, wide())
 
@@ -333,18 +332,18 @@ internal class AnkiquestShareSheet(
             account,
             message,
             perform = { done -> done() },
-            inverse = { retract(answer.win) },
+            inverse = { retract(answer) },
             closed = { closed(Exit.SENT) },
         )
     }
 
     /** Takes the moment back; it outlives the screen, which may close as Undo is pressed. */
-    private fun retract(win: Long) {
+    private fun retract(sent: Sent) {
         val context = host.applicationContext
         applicationScope.launch {
             val message =
                 try {
-                    AnkiquestMomentShare.retract(account, win)
+                    AnkiquestMomentShare.retract(account, sent)
                     R.string.aq_conquest_untold
                 } catch (e: CancellationException) {
                     throw e

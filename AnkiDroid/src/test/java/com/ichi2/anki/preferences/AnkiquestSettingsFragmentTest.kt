@@ -21,6 +21,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
+import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminder
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
@@ -32,7 +33,6 @@ import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
-import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.SubscriptionRepository
@@ -235,7 +235,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     @Test
     fun `global listing reflects the server and saves only that choice`() {
-        val field = AnkiquestWidgetSettings.GLOBAL_SETTING
+        val field = AnkiquestBoards.GLOBAL_SETTING
         coEvery { Ankiquest.notificationSwitches() } returns JSONObject().put(field, true)
         coEvery { Ankiquest.setNotificationSwitch(field, false) } returns JSONObject().put(field, false)
 
@@ -260,7 +260,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         AnkiquestNotifier.setRankAlerts(false)
         val prefs = AnkiDroidApp.sharedPrefs()
         val old = CompletableDeferred<JSONObject>()
-        val field = AnkiquestWidgetSettings.GLOBAL_SETTING
+        val field = AnkiquestBoards.GLOBAL_SETTING
         val current = JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, false).put(field, true)
         coEvery { Ankiquest.notificationSwitches() } coAnswers {
             if (prefs.getString(Ankiquest.PREF_USER, null) == "member") old.await() else current
