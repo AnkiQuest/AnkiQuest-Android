@@ -105,7 +105,6 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
         scroll.scrollTo(0, bounds.top)
         advanceRobolectricLooper()
         assertTrue(stop.getGlobalVisibleRect(Rect()), "Stop deck alerts must be reachable in the feed")
-        assertFullLabel(stop)
         if (stage == Stage.UNDO) {
             stop.performClick()
             // Show the snackbar without advancing through its timeout.
@@ -122,6 +121,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
             assertTrue(undoBounds.bottom <= navBounds.top, "Undo must not cover the tabs")
         }
         captureScreen("deck_alerts_${stage.name.lowercase()}_${size.name.lowercase()}")
+        assertFullLabel(stop)
     }
 
     private fun assertFullLabel(label: TextView) {
@@ -129,9 +129,11 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
         val width = label.width - label.compoundPaddingLeft - label.compoundPaddingRight
         for (line in 0 until layout.lineCount) {
             assertEquals(0, layout.getEllipsisCount(line), "The sender name must not be ellipsized")
+            // Wrapping can leave an invisible space past the line edge; measure the visible text.
+            val visibleWidth = layout.getLineMax(line)
             assertTrue(
-                layout.getLineWidth(line) <= width + 1,
-                "The complete Stop label must fit: line ${layout.getLineWidth(line)}, available $width",
+                visibleWidth <= width + 1,
+                "The complete Stop label must fit: visible $visibleWidth, full ${layout.getLineWidth(line)}, available $width",
             )
         }
         assertEquals(label.text.length, layout.getLineEnd(layout.lineCount - 1))
