@@ -555,15 +555,16 @@ private class FeedSection(
             }
             chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
         }
+        if (unread) chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
+        if (actions.isEmpty()) panel.removeView(actions)
+        if (item.replied) text(panel, getString(R.string.aq_feed_reply_sent), small = true)
         if (item.kind == "completion" && account?.let { deckAlerts.canStop(it, item.sender) } == true) {
-            chip(actions, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
+            // A full-width button can wrap the sender name at large text sizes.
+            button(panel, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
                 account?.let { deckAlerts.stop(it, item.sender) { render() } }
                 render()
             }
         }
-        if (unread) chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
-        if (actions.isEmpty()) panel.removeView(actions)
-        if (item.replied) text(panel, getString(R.string.aq_feed_reply_sent), small = true)
     }
 
     private fun renderSent() {
