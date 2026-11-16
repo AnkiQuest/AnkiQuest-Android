@@ -161,6 +161,63 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a late mute result cannot replace a newer deck alert Undo`() {
+        val friend = AnkiquestSocial.Person("friend", "Friend")
+        val overview = AnkiquestSocial.Overview(listOf(friend), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        val muted = CompletableDeferred<AnkiquestSocial.Overview>()
+        coEvery { AnkiquestSocial.overview(identity) } returns overview
+        coEvery { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("friend")) } coAnswers { muted.await() }
+        coEvery { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("friend")) } returns overview
+        val completion =
+            AnkiquestFeed.item(
+                JSONObject()
+                    .put("id", 31)
+                    .put("title", "Cerro finished Spanish")
+                    .put("body", "Spanish is done for today.")
+                    .put("created_at", 1793183400)
+                    .put("sender", "cerro")
+                    .put("kind", "completion"),
+            )!!
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
+            page.copy(items = listOf(completion), attention = emptyList())
+        val repository = mockk<SubscriptionRepository>()
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        mockkObject(AnkiquestSubscriptions)
+        try {
+            every { AnkiquestSubscriptions.repository } returns repository
+            coEvery { repository.load(identity) } returns settings
+            coEvery { repository.setSubscribed(identity, "cerro", false) } returns
+                settings.copy(unsubscribedSenders = setOf("cerro"))
+            coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
+            val feed = launch()
+            feed
+                .findViewById<View>(R.id.aq_feed_content)
+                .allViews
+                .filterIsInstance<TextView>()
+                .first { it.text.toString() == feed.getString(R.string.aq_friends_mute) }
+                .performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("friend")) }
+            feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_deck_alerts_stop, "cerro") }.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+
+            // The older write finishes after Stop; its stale Undo must not replace the latest one.
+            muted.complete(overview.copy(muted = listOf(friend)))
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            assertEquals(
+                feed.getString(R.string.aq_deck_alerts_stopped, "cerro"),
+                feed.findViewById<TextView>(com.google.android.material.R.id.snackbar_text).text.toString(),
+            )
+            assertNotNull(feed.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+            coVerify(exactly = 0) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("friend")) }
+        } finally {
+            unmockkObject(AnkiquestSubscriptions)
+        }
+    }
+
+    @Test
     fun `a failed reply says why and keeps the reply buttons`() {
         coEvery { AnkiquestFeed.reply(identity, any(), any()) } throws IOException("offline")
         val feed = launch()

@@ -136,6 +136,60 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `notification Stop and Undo refresh the profile subscription control`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        val initial = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        var settings = initial
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        val restored = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.load(identity) } coAnswers { settings }
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await().also { settings = it } }
+        coEvery { repository.setSubscribed(identity, "cerro", true) } coAnswers { restored.await().also { settings = it } }
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        val start = screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")
+        assertTrue(screen.hasText(stop))
+
+        // Complete each write after startup so Undo is inspected before its timeout.
+        stopped.complete(initial.copy(unsubscribedSenders = setOf("cerro")))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertTrue(screen.hasText(start), "Stop must reload the profile's subscription")
+        assertFalse(screen.hasText(stop))
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertFalse(screen.views<TextView>().first { it.text.toString() == start }.isEnabled, "Undo must block a competing write")
+
+        restored.complete(initial)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertFalse(screen.hasText(start))
+        assertTrue(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled)
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
+    fun `the profile subscription waits for notification Stop and recovers after failure`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.load(identity) } returns settings
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await() }
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        assertFalse(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled, "Stop is already being sent")
+
+        stopped.completeExceptionally(IOException("offline"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertTrue(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled, "A failed request must allow retry")
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+    }
+
+    @Test
     fun `controls the server cannot tell about stay hidden, and the player's own profile pauses streak protection`() {
         coEvery { AnkiquestBoards.player(identity, "cerro") } returns
             AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
