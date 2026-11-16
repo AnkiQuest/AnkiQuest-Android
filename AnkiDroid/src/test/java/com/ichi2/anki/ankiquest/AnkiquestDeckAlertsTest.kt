@@ -196,6 +196,52 @@ class AnkiquestDeckAlertsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a paused write cannot follow a changed account`() {
+        val controller = launch()
+        val screen = controller.get()
+        val action = AnkiquestDeckAlerts(screen)
+        val answer = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { answer.await() }
+        var refreshed = 0
+        action.stop(identity, "cerro") { refreshed++ }
+        idle()
+        controller.pause().stop()
+        account = identity.copy(token = "replacement-token")
+        answer.complete(enabled.copy(unsubscribedSenders = setOf("other", "cerro")))
+        idle()
+        controller.start().resume()
+        idle()
+        assertFalse(action.busy())
+        assertNull(undo(screen))
+        assertEquals(0, refreshed)
+        coVerify(exactly = 0) { repository.setSubscribed(any(), any(), true) }
+    }
+
+    @Test
+    fun `a failed paused write reports on return`() {
+        val controller = launch()
+        val screen = controller.get()
+        val action = AnkiquestDeckAlerts(screen)
+        val answer = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { answer.await() }
+        var refreshed = 0
+        action.stop(identity, "cerro") { refreshed++ }
+        idle()
+        controller.pause().stop()
+        answer.completeExceptionally(IOException("offline"))
+        idle()
+        assertEquals(0, refreshed)
+        assertNull(undo(screen))
+        controller.start().resume()
+        idle()
+        assertEquals(1, refreshed)
+        assertFalse(action.busy())
+        assertNull(undo(screen))
+        assertEquals(screen.getString(R.string.aq_deck_alerts_failed), ShadowToast.getTextOfLatestToast())
+        assertTrue(action.canStop(identity, "cerro"))
+    }
+
+    @Test
     fun `notification names the sender`() {
         val action =
             assertNotNull(

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="aq_deck_alerts_stop">Stapelmeldungen stoppen</string>
-    <string name="aq_deck_alerts_stopped">Stapelmeldungen gestoppt.</string>
-    <string name="aq_deck_alerts_restored">Stapelmeldungen wieder aktiviert.</string>
-    <string name="aq_deck_alerts_already_stopped">Stapelmeldungen sind bereits gestoppt.</string>
+    <string name="aq_deck_alerts_stop">Stapelmeldungen von %1$s stoppen</string>
+    <string name="aq_deck_alerts_stopped">Du erhältst keine Stapelmeldungen mehr von %1$s.</string>
+    <string name="aq_deck_alerts_restored">Du erhältst wieder Stapelmeldungen von %1$s.</string>
+    <string name="aq_deck_alerts_already_stopped">Du erhältst bereits keine Stapelmeldungen von %1$s.</string>
+    <string name="aq_deck_alerts_unavailable">%1$s teilt keine Stapelmeldungen mehr.</string>
     <string name="aq_deck_alerts_failed">Stapelmeldungen konnten nicht geändert werden. Versuche es erneut.</string>
     <string name="ankiquest_group_account">Konto</string>
     <string name="ankiquest_group_notify">Benachrichtige mich über</string>

@@ -143,15 +143,18 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
             coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
                 page.copy(items = listOf(completion), attention = emptyList())
             val feed = launch()
-            feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_deck_alerts_stop) }.performClick()
+            feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_deck_alerts_stop, "cerro") }.performClick()
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
             coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
-            assertFalse(feed.hasText(feed.getString(R.string.aq_deck_alerts_stop)), "A stopped sender must not keep the Stop action")
+            assertFalse(
+                feed.hasText(feed.getString(R.string.aq_deck_alerts_stop, "cerro")),
+                "A stopped sender must not keep the Stop action",
+            )
             assertEquals(null, shadowOf(feed).nextStartedActivity)
             assertNotNull(feed.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
             coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
-            assertTrue(feed.hasText(feed.getString(R.string.aq_deck_alerts_stop)))
+            assertTrue(feed.hasText(feed.getString(R.string.aq_deck_alerts_stop, "cerro")))
         } finally {
             unmockkObject(AnkiquestSubscriptions)
         }

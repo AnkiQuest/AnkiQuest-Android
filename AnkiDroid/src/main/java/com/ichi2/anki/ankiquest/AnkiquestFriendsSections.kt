@@ -555,8 +555,8 @@ private class FeedSection(
             }
             chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
         }
-        if (item.kind == "completion" && item.sender.isNotBlank() && item.sender != account?.user) {
-            chip(actions, getString(R.string.aq_deck_alerts_stop), enabled = !deckAlerts.busy()) {
+        if (item.kind == "completion" && account?.let { deckAlerts.canStop(it, item.sender) } == true) {
+            chip(actions, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
                 account?.let { deckAlerts.stop(it, item.sender) { render() } }
                 render()
             }

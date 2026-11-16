@@ -26,28 +26,53 @@ import timber.log.Timber
 internal class AnkiquestDeckAlerts(
     private val host: FragmentActivity,
     saved: Bundle? = null,
+    private val undo: AnkiquestUndo = AnkiquestUndo(host),
 ) : DefaultLifecycleObserver {
     private sealed interface State {
         data object Ready : State
 
         data class Working(
             val job: Job,
-            val finished: () -> Unit,
+            val request: Request,
+            val phase: Phase,
         ) : State
 
         data class Paused(
-            val refresh: () -> Unit,
+            val request: Request,
+        ) : State
+
+        data class Settled(
+            val request: Request,
+            val result: Result,
         ) : State
     }
 
+    private enum class Phase { READING, WRITING }
+
     private enum class Action { STOP, RESTORE }
 
-    private enum class Result { CHANGED, ALREADY_STOPPED }
+    private enum class Result { CHANGED, ALREADY_STOPPED, UNAVAILABLE, FAILED }
 
     private enum class Entry { PENDING, CONSUMED }
 
+    private data class Request(
+        val account: HomeAccount,
+        val sender: String,
+        val action: Action,
+        val finished: () -> Unit,
+    )
+
+    private sealed interface Known {
+        data object Unknown : Known
+
+        data class Settings(
+            val account: HomeAccount,
+            val value: IncomingSubscriptions,
+        ) : Known
+    }
+
     private var state: State = State.Ready
-    private val undo = AnkiquestUndo(host)
+    private var known: Known = Known.Unknown
     private var entry = Entry.entries.firstOrNull { it.name == saved?.getString(STATE_ENTRY) } ?: Entry.PENDING
 
     init {
@@ -55,6 +80,18 @@ internal class AnkiquestDeckAlerts(
     }
 
     fun busy(): Boolean = state is State.Working
+
+    /** Hide an action once a subscription response says it cannot change anything. */
+    fun canStop(
+        account: HomeAccount,
+        sender: String,
+    ): Boolean {
+        if (sender.isBlank() || sender == account.user) {
+            return false
+        }
+        val settings = (known as? Known.Settings)?.takeIf { it.account == account }?.value ?: return true
+        return sender !in settings.unsubscribedSenders && settings.senders.any { it.user == sender }
+    }
 
     /** A notification action is explicit consent, once, for its original account. */
     private fun openRequest() {
@@ -72,7 +109,9 @@ internal class AnkiquestDeckAlerts(
             say(R.string.aq_home_account_route_changed)
             return
         }
-        if (intent.getLongExtra(EXTRA_NOTICE, 0) <= 0) return
+        if (intent.getLongExtra(EXTRA_NOTICE, 0) <= 0) {
+            return
+        }
         stop(account, intent.getStringExtra(AnkiquestProfileActivity.EXTRA_USER).orEmpty())
     }
 
@@ -85,79 +124,138 @@ internal class AnkiquestDeckAlerts(
         sender: String,
         finished: () -> Unit = {},
     ) {
-        if (busy() || !owns(account) || sender.isBlank() || sender == account.user) return
-        undo.apply(
-            account,
-            host.getString(R.string.aq_deck_alerts_stopped),
-            perform = { done ->
-                change(account, sender, Action.STOP, finished) { result ->
-                    if (result == Result.CHANGED) done() else say(R.string.aq_deck_alerts_already_stopped)
-                }
-            },
-            inverse = {
-                change(account, sender, Action.RESTORE, finished) { say(R.string.aq_deck_alerts_restored) }
-            },
-        )
+        if (busy() || !owns(account) || sender.isBlank() || sender == account.user) {
+            return
+        }
+        undo.clear()
+        change(Request(account, sender, Action.STOP, finished))
     }
 
     private fun owns(account: HomeAccount): Boolean =
         host.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && AnkiquestHomeData.account() == account
 
-    private fun change(
-        account: HomeAccount,
-        sender: String,
-        action: Action,
-        finished: () -> Unit,
-        done: (Result) -> Unit,
-    ) {
-        if (busy() || !owns(account)) return
+    private fun change(request: Request) {
+        val (account, sender, action) = request
+        if (busy() || !owns(account)) {
+            return
+        }
         val job =
             host.lifecycleScope.launch(start = CoroutineStart.LAZY) {
                 try {
-                    if (!owns(account)) return@launch
+                    if (!owns(account)) {
+                        return@launch
+                    }
                     val repository = AnkiquestSubscriptions.repository
                     val current = repository.load(account)
-                    if (!owns(account)) return@launch
+                    if (!owns(account)) {
+                        return@launch
+                    }
+                    known = Known.Settings(account, current)
 
                     // An old alert may outlive its subscription. It must not create an Undo
                     // that subscribes someone who had already stopped these alerts.
-                    val stopped = sender in current.unsubscribedSenders || current.senders.none { it.user == sender }
                     val result =
-                        if (action == Action.STOP && stopped) {
-                            Result.ALREADY_STOPPED
-                        } else {
-                            repository.setSubscribed(account, sender, action == Action.RESTORE)
-                            Result.CHANGED
+                        when {
+                            current.senders.none { it.user == sender } -> Result.UNAVAILABLE
+                            action == Action.STOP && sender in current.unsubscribedSenders -> Result.ALREADY_STOPPED
+                            else -> {
+                                // Once sent, let the write settle through pause. Its result is
+                                // presented only when this screen owns the same account again.
+                                state = State.Working(currentCoroutineContext()[Job]!!, request, Phase.WRITING)
+                                val saved = repository.setSubscribed(account, sender, action == Action.RESTORE)
+                                if (AnkiquestHomeData.account() == account) {
+                                    known = Known.Settings(account, saved)
+                                }
+                                Result.CHANGED
+                            }
                         }
-                    if (owns(account)) done(result)
+                    settle(request, result)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Timber.w(e, "AnkiQuest deck alert change failed")
-                    if (owns(account)) say(R.string.aq_deck_alerts_failed)
+                    settle(request, Result.FAILED)
                 } finally {
                     if ((state as? State.Working)?.job == currentCoroutineContext()[Job]) {
                         state = State.Ready
-                        if (owns(account)) finished()
                     }
                 }
             }
-        state = State.Working(job, finished)
+        state = State.Working(job, request, Phase.READING)
         job.start()
     }
 
-    private fun say(message: Int) = showThemedToast(host, host.getString(message), shortLength = false)
+    private fun settle(
+        request: Request,
+        result: Result,
+    ) {
+        state = State.Ready
+        if (AnkiquestHomeData.account() != request.account) {
+            return
+        }
+        if (!owns(request.account)) {
+            state = State.Settled(request, result)
+            return
+        }
+        present(request, result)
+    }
+
+    private fun present(
+        request: Request,
+        result: Result,
+    ) {
+        val (account, sender, action, finished) = request
+        if (!owns(account)) {
+            return
+        }
+        when (result) {
+            Result.CHANGED -> {
+                if (action == Action.STOP) {
+                    // Start a fresh snackbar after success, including a write settled while paused.
+                    undo.apply(
+                        account,
+                        host.getString(R.string.aq_deck_alerts_stopped, sender),
+                        perform = { done -> done() },
+                        inverse = { change(request.copy(action = Action.RESTORE)) },
+                    )
+                } else {
+                    say(R.string.aq_deck_alerts_restored, sender)
+                }
+            }
+            Result.ALREADY_STOPPED -> say(R.string.aq_deck_alerts_already_stopped, sender)
+            Result.UNAVAILABLE -> say(R.string.aq_deck_alerts_unavailable, sender)
+            Result.FAILED -> say(R.string.aq_deck_alerts_failed)
+        }
+        finished()
+    }
+
+    private fun say(
+        message: Int,
+        vararg args: Any,
+    ) = showThemedToast(host, host.getString(message, *args), shortLength = false)
 
     override fun onPause(owner: LifecycleOwner) {
         val work = state as? State.Working ?: return
-        state = State.Paused(work.finished)
+        if (work.phase == Phase.WRITING) {
+            return
+        }
+        state = State.Paused(work.request)
         work.job.cancel()
     }
 
     override fun onResume(owner: LifecycleOwner) {
-        (state as? State.Paused)?.let { paused ->
-            state = State.Ready
-            paused.refresh()
+        when (val pending = state) {
+            is State.Paused -> {
+                state = State.Ready
+                if (owns(pending.request.account)) {
+                    pending.request.finished()
+                }
+            }
+            is State.Settled -> {
+                state = State.Ready
+                present(pending.request, pending.result)
+            }
+            else -> Unit
         }
         openRequest()
     }
@@ -208,7 +306,7 @@ internal class AnkiquestDeckAlerts(
             return NotificationCompat.Action
                 .Builder(
                     R.drawable.ic_star_notify,
-                    AnkiquestLanguage.context(context).getString(R.string.aq_deck_alerts_stop),
+                    AnkiquestLanguage.context(context).getString(R.string.aq_deck_alerts_stop, sender),
                     PendingIntent.getActivity(
                         context,
                         tag,

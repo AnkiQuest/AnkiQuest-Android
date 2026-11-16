@@ -96,7 +96,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
         }
         val stop =
             screen.window.decorView.allViews.filterIsInstance<TextView>().first {
-                it.text.toString() == screen.getString(R.string.aq_deck_alerts_stop)
+                it.text.toString() == screen.getString(R.string.aq_deck_alerts_stop, "cerro")
             }
         val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
         val bounds = Rect(0, 0, stop.width, stop.height)

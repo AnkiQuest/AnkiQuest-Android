@@ -57,7 +57,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
         undo = AnkiquestUndo(this)
-        deckAlertAction = AnkiquestDeckAlerts(this, savedInstanceState)
+        deckAlertAction = AnkiquestDeckAlerts(this, savedInstanceState, undo)
         views = AnkiquestBoardViews(this)
         content = findViewById(R.id.aq_board_content)
         scroll = findViewById(R.id.aq_board_scroll)
