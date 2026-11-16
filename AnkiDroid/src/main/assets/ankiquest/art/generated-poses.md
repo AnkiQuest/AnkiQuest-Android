@@ -12,7 +12,7 @@ with records in docs/branding/core-poses-2026-11/. The repository licence
 applies to those poses.
 
 Ankilope's sad, hopeful, frozen, asleep and neglected poses use masters
-in static/ankilope/, with records in docs/branding/ankilope-core-2026-11/.
+in static/ankilope/, with records in docs/branding/core-poses-2026-11/.
 The repository licence applies.
 
 These poses were generated with OpenAI image_gen, which did not expose
