@@ -607,7 +607,11 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 advanceRobolectricLooper()
             }
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
-            advanceRobolectricLooperUntil { shadowOf(host).peekNextStartedActivity() != null }
+            // Wait for this export, then consume its chooser before the next fixture case.
+            advanceRobolectricLooperUntil {
+                caption.get() != null && prepared.get() != null && shadowOf(host).peekNextStartedActivity() != null
+            }
+            assertEquals(Intent.ACTION_CHOOSER, assertNotNull(shadowOf(host).nextStartedActivity).action)
             if (case != null) {
                 val page = "https://anki.example.test/conquered/member/$at"
                 assertEquals(
