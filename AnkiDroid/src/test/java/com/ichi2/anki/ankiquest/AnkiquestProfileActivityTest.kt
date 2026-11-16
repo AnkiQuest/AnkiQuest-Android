@@ -18,6 +18,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -119,9 +120,14 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         coEvery { AnkiquestBoards.player(identity, "cerro") } throws IOException("profile offline")
         val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
         coEvery { repository.load(identity) } returns settings
-        coEvery { repository.setSubscribed(identity, "cerro", false) } returns settings.copy(unsubscribedSenders = setOf("cerro"))
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await() }
         coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
         val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        // Startup drains the looper through snackbar timeouts. Finish the request after startup
+        // so the test inspects Undo while it is visible, just as the player would.
+        stopped.complete(settings.copy(unsubscribedSenders = setOf("cerro")))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
         coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
         assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()

@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package com.ichi2.anki.ankiquest
+
+import android.graphics.Rect
+import android.os.Looper
+import android.view.View
+import android.widget.TextView
+import androidx.core.view.allViews
+import androidx.core.view.isVisible
+import androidx.core.widget.NestedScrollView
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.ichi2.anki.R
+import com.ichi2.anki.ScreenshotTest
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import java.io.IOException
+import java.time.Duration
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+/** The alert action and its Undo stay visible on narrow screens and at large text sizes. */
+class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
+    private enum class Stage { ALERT, UNDO }
+
+    private enum class TextSize { NORMAL, LARGE }
+
+    override fun applyDeviceConfig() {
+        super.applyDeviceConfig()
+        if (device == DeviceConfig.PHONE) RuntimeEnvironment.setQualifiers("w320dp-h740dp-port-mdpi")
+    }
+
+    @Before
+    fun prepare() {
+        val account = HomeAccount("https://quest.example.test", "hill", "visual-test-token")
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions)
+        every { AnkiquestHomeData.account(any()) } returns account
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
+        val completion =
+            AnkiquestFeed.item(
+                JSONObject()
+                    .put("id", 31)
+                    .put("title", "Cerro finished Spanish")
+                    .put("body", "Spanish is done for today.")
+                    .put("created_at", 1793183400)
+                    .put("sender", "cerro")
+                    .put("kind", "completion"),
+            )!!
+        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        coEvery { AnkiquestFeed.page(account, any(), any(), any()) } returns
+            page.copy(items = listOf(completion), attention = emptyList())
+        val repository = mockk<SubscriptionRepository>()
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        every { AnkiquestSubscriptions.repository } returns repository
+        coEvery { repository.load(account) } returns settings
+        coEvery { repository.setSubscribed(account, "cerro", false) } returns settings.copy(unsubscribedSenders = setOf("cerro"))
+    }
+
+    @After
+    fun cleanup() {
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions)
+        RuntimeEnvironment.setFontScale(1f)
+    }
+
+    @Test
+    fun alert() = capture(Stage.ALERT, TextSize.NORMAL)
+
+    @Test
+    fun alertLarge() = capture(Stage.ALERT, TextSize.LARGE)
+
+    @Test
+    fun undo() = capture(Stage.UNDO, TextSize.NORMAL)
+
+    @Test
+    fun undoLarge() = capture(Stage.UNDO, TextSize.LARGE)
+
+    private fun capture(
+        stage: Stage,
+        size: TextSize,
+    ) {
+        RuntimeEnvironment.setFontScale(if (size == TextSize.LARGE) 2f else 1f)
+        val screen =
+            startActivityNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
+        advanceRobolectricLooperUntil {
+            !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&
+                !screen.findViewById<View>(R.id.aq_friends_feed_loading).isVisible
+        }
+        val stop =
+            screen.window.decorView.allViews.filterIsInstance<TextView>().first {
+                it.text.toString() == screen.getString(R.string.aq_deck_alerts_stop)
+            }
+        val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
+        val bounds = Rect(0, 0, stop.width, stop.height)
+        scroll.offsetDescendantRectToMyCoords(stop, bounds)
+        scroll.scrollTo(0, bounds.top)
+        advanceRobolectricLooper()
+        assertTrue(stop.getGlobalVisibleRect(Rect()), "Stop deck alerts must be reachable in the feed")
+        if (stage == Stage.UNDO) {
+            stop.performClick()
+            // Show the snackbar without advancing through its timeout.
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+            val undoBounds = Rect()
+            assertTrue(undo.getGlobalVisibleRect(undoBounds))
+            val navigation =
+                screen.window.decorView.allViews
+                    .filterIsInstance<BottomNavigationView>()
+                    .first { it.isVisible }
+            val navBounds = Rect()
+            assertTrue(navigation.getGlobalVisibleRect(navBounds))
+            assertTrue(undoBounds.bottom <= navBounds.top, "Undo must not cover the tabs")
+        }
+        captureScreen("deck_alerts_${stage.name.lowercase()}_${size.name.lowercase()}")
+    }
+}
