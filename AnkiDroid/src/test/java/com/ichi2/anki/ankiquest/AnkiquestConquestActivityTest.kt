@@ -238,6 +238,10 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
                     )
                 coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns saved
                 coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns case.getString("deck").takeIf(String::isNotBlank)
+                coEvery { AnkiquestShare.conqueredCardLabels(AT) } returns
+                    found.optString("suggestion").takeIf(String::isNotBlank)?.let {
+                        AnkiquestShare.Labels(it, found.getJSONObject("fields").getString("Front"))
+                    }
                 var caption: String? = null
                 var picture: AnkiquestShare.Card? = null
                 every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
@@ -248,7 +252,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
                 val screen = launch()
                 screen.click(screen.getString(R.string.ankiquest_share))
                 val page = AnkiquestCommunity.conquestLink(identity.server, identity.user, AT)
-                assertEquals(plain(case.getString("caption")), plain(assertNotNull(caption).removeSuffix(page)), case.getString("name"))
+                assertEquals("${case.getString("caption")}\n$page", plain(assertNotNull(caption)), case.getString("name"))
                 val rendered = assertNotNull(picture)
                 assertEquals(
                     plain(case.getString("picture")),
@@ -289,8 +293,8 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     private fun shareFixture() = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/conquest_share.json")).readText())
 
-    /** Decorations and layout whitespace are separate from the shared words. */
-    private fun plain(text: String) = text.replace("\uD83C\uDFC6", "").trim().replace(Regex("\\s+"), " ")
+    /** Remove the decorative trophy prefix; every line break belongs to the shared wording. */
+    private fun plain(text: String) = text.removePrefix("\uD83C\uDFC6 ")
 
     @Test
     fun `a conquest without a server win shares a local picture`() {

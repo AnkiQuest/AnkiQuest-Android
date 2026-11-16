@@ -421,7 +421,27 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         }
     }
 
-    private fun plain(text: String) = text.replace("\uD83C\uDFC6", "").trim().replace(Regex("\\s+"), " ")
+    private fun plain(text: String) = text.removePrefix("\uD83C\uDFC6 ")
+
+    @Test
+    fun `offline conquest captions keep the shared line breaks`() {
+        val account = HomeAccount("https://anki.example.test", "member", "secret")
+        val moment =
+            AnkiquestMoments.Moment(
+                "conquered:100",
+                AnkiquestMoments.Kind.CONQUERED,
+                "Card conquered",
+                "Private unsaved text",
+                clock.intTimeMS(),
+                conquest = 100,
+                lapses = 2,
+                deck = "Spanish",
+            )
+        assertEquals(
+            "I finally learned a card I had forgotten 2 times.\nFrom my deck “Spanish”.\nhttps://anki.example.test/conquered/member/100",
+            plain(AnkiquestMomentCard.conquestText(targetContext, account, moment, null)),
+        )
+    }
 
     @Test
     fun `returning from the conquest forgets a label the player has removed there`() {
@@ -585,7 +605,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                     "conquered:$at",
                     AnkiquestMoments.Kind.CONQUERED,
                     "Card conquered",
-                    "PRIVATE UNSHARED FIELD",
+                    case?.getJSONObject("found")?.let {
+                        listOfNotNull(it.optString("suggestion"), it.optJSONObject("fields")?.optString("Front")).joinToString("\n")
+                    } ?: "PRIVATE UNSHARED FIELD",
                     clock.intTimeMS(),
                     conquest = at,
                     lapses = raw?.getInt("lapses") ?: 4,
@@ -615,8 +637,8 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             if (case != null) {
                 val page = "https://anki.example.test/conquered/member/$at"
                 assertEquals(
-                    plain(case.getString("caption")),
-                    plain(assertNotNull(caption.get()).removeSuffix(page)),
+                    "${case.getString("caption")}\n$page",
+                    plain(assertNotNull(caption.get())),
                     case.getString("name"),
                 )
             }
