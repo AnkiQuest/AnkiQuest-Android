@@ -340,7 +340,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
                 .first { it is TextView && it.text.toString() == "Cerro" }
                 .performClick()
             sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
-            card.settle()
+            advanceRobolectricLooperUntil { !sheet.isShowing }
             coVerify(exactly = 1) { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) }
             coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
             assertFalse(sheet.isShowing)

@@ -435,7 +435,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
                 views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
                 sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
-                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+                advanceRobolectricLooperUntil {
+                    !sheet.isShowing && card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action) != null
+                }
                 coVerify(exactly = 1) { AnkiquestSharing.send(identity, reference, AnkiquestSharing.Audience.Circle, null) }
                 assertFalse(sheet.isShowing)
                 assertTrue(card.isShowing)
