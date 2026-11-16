@@ -418,7 +418,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
             .findViewById<View>(android.R.id.content)!!
             .allViews
             .filterIsInstance<TextView>()
-            .first { it.text == home.getString(R.string.aq_home_change_deck) }
+            .first { it.text == home.getString(R.string.aq_copies_choose_deck) }
             .performClick()
         val fragment = assertNotNull(home.supportFragmentManager.findFragmentByTag(AnkiquestCopyDialog.TAG))
         val picker = assertNotNull(fragment.childFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)

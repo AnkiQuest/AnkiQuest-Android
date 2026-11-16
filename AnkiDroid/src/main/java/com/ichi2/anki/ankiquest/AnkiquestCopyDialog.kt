@@ -36,26 +36,29 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     private var state: State = State.Closed
     private lateinit var deckName: TextView
-    private val people get() = requireArguments().getStringArrayList(PEOPLE).orEmpty()
-    private val decks get() = BundleCompat.getParcelableArrayList(requireArguments(), DECKS, SelectableDeck.Deck::class.java).orEmpty()
+    private val people get() = requireArguments().getStringArrayList(ARG_PEOPLE).orEmpty()
+    private val decks get() = BundleCompat.getParcelableArrayList(requireArguments(), ARG_DECKS, SelectableDeck.Deck::class.java).orEmpty()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val saved = savedInstanceState ?: requireArguments()
         state =
-            if (saved.getString(PHASE) == Phase.CLOSED.name) {
+            if (savedInstanceState?.getString(STATE_PHASE) == Phase.CLOSED.name) {
                 State.Closed
             } else {
                 State.Choosing(
-                    saved.getParcelableCompat(DECK),
-                    saved
-                        .getStringArrayList(RECIPIENTS)
+                    if (savedInstanceState != null) {
+                        savedInstanceState.getParcelableCompat(STATE_DECK)
+                    } else {
+                        requireArguments().getParcelableCompat(ARG_DECK)
+                    },
+                    savedInstanceState
+                        ?.getStringArrayList(STATE_RECIPIENTS)
                         .orEmpty()
                         .toSet()
                         .intersect(people.toSet()),
                 )
             }
-        childFragmentManager.setFragmentResultListener(CHANGE, this) { _, result ->
+        childFragmentManager.setFragmentResultListener(REQUEST_CHANGE, this) { _, result ->
             val choice = state as? State.Choosing ?: return@setFragmentResultListener
             val selected = result.getParcelableCompat<SelectableDeck>(DeckSelectionDialog.RESULT_SELECTED_DECK) as? SelectableDeck.Deck
             if (selected != null && owns()) {
@@ -85,7 +88,7 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         heading.addView(deckName)
         heading.addView(
             MaterialButton(requireContext()).apply {
-                setText(R.string.aq_home_change_deck)
+                setText(R.string.aq_copies_choose_deck)
                 setOnClickListener { changeDeck() }
             },
         )
@@ -93,7 +96,7 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         return MaterialAlertDialogBuilder(requireContext())
             .setCustomTitle(heading)
             .setMultiChoiceItems(
-                requireArguments().getStringArrayList(NAMES).orEmpty().toTypedArray(),
+                requireArguments().getStringArrayList(ARG_NAMES).orEmpty().toTypedArray(),
                 BooleanArray(people.size) { people[it] in choice?.recipients.orEmpty() },
             ) { _, index, checked ->
                 val current = state as? State.Choosing ?: return@setMultiChoiceItems
@@ -134,11 +137,11 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         super.onSaveInstanceState(outState)
         when (val current = state) {
             is State.Choosing -> {
-                outState.putParcelable(DECK, current.deck)
-                outState.putStringArrayList(RECIPIENTS, ArrayList(current.recipients))
-                outState.putString(PHASE, Phase.CHOOSING.name)
+                outState.putParcelable(STATE_DECK, current.deck)
+                outState.putStringArrayList(STATE_RECIPIENTS, ArrayList(current.recipients))
+                outState.putString(STATE_PHASE, Phase.CHOOSING.name)
             }
-            State.Closed -> outState.putString(PHASE, Phase.CLOSED.name)
+            State.Closed -> outState.putString(STATE_PHASE, Phase.CLOSED.name)
         }
     }
 
@@ -158,7 +161,7 @@ internal class AnkiquestCopyDialog : DialogFragment() {
             .newInstance(
                 title = getString(R.string.aq_copies_choose_deck),
                 decks = decks,
-                requestKey = CHANGE,
+                requestKey = REQUEST_CHANGE,
                 allowAll = false,
                 allowFiltered = false,
             ).showNow(childFragmentManager, DeckSelectionDialog.TAG)
@@ -172,11 +175,11 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         // Consume the form before delivering its result, including for a retained button.
         state = State.Closed
         parentFragmentManager.setFragmentResult(
-            RESULT,
+            REQUEST_COPY,
             Bundle().apply {
-                putString(AnkiquestDeckChoices.SCOPE, requireArguments().getString(AnkiquestDeckChoices.SCOPE))
-                putParcelable(DECK, choice.deck)
-                putStringArrayList(RECIPIENTS, ArrayList(people.filter { it in choice.recipients }))
+                putString(RESULT_SCOPE, requireArguments().getString(AnkiquestDeckChoices.ARG_SCOPE))
+                putParcelable(RESULT_DECK, choice.deck)
+                putStringArrayList(RESULT_RECIPIENTS, ArrayList(people.filter { it in choice.recipients }))
             },
         )
         dismiss()
@@ -184,7 +187,7 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     private fun owns(): Boolean =
         isAdded && activity?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true &&
-            AnkiquestHomeData.account()?.scope == requireArguments().getString(AnkiquestDeckChoices.SCOPE)
+            AnkiquestHomeData.account()?.scope == requireArguments().getString(AnkiquestDeckChoices.ARG_SCOPE)
 
     private fun close() {
         state = State.Closed
@@ -193,14 +196,18 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     companion object {
         const val TAG = "ankiquest.copy"
-        const val RESULT = "ankiquest.copy.result"
-        const val DECK = "deck"
-        const val RECIPIENTS = "recipients"
-        private const val DECKS = "decks"
-        private const val PEOPLE = "people"
-        private const val NAMES = "names"
-        private const val PHASE = "phase"
-        private const val CHANGE = "ankiquest.copy.deck"
+        const val REQUEST_COPY = "ankiquest.copy.result"
+        const val RESULT_SCOPE = "ankiquest.deck_choice.scope"
+        const val RESULT_DECK = "deck"
+        const val RESULT_RECIPIENTS = "recipients"
+        private const val ARG_DECKS = "decks"
+        private const val ARG_DECK = "deck"
+        private const val ARG_PEOPLE = "people"
+        private const val ARG_NAMES = "names"
+        private const val STATE_PHASE = "phase"
+        private const val STATE_DECK = "deck"
+        private const val STATE_RECIPIENTS = "recipients"
+        private const val REQUEST_CHANGE = "ankiquest.copy.deck"
 
         fun newInstance(
             account: HomeAccount,
@@ -217,11 +224,11 @@ internal class AnkiquestCopyDialog : DialogFragment() {
                         }.distinctBy { it.optString("user") }
                 arguments =
                     Bundle().apply {
-                        putString(AnkiquestDeckChoices.SCOPE, account.scope)
-                        putParcelableArrayList(DECKS, ArrayList(choices))
-                        putParcelable(DECK, choices.firstOrNull { it.deckId == selected })
-                        putStringArrayList(PEOPLE, ArrayList(people.map { it.getString("user") }))
-                        putStringArrayList(NAMES, ArrayList(people.map { it.optString("display").ifBlank { it.getString("user") } }))
+                        putString(AnkiquestDeckChoices.ARG_SCOPE, account.scope)
+                        putParcelableArrayList(ARG_DECKS, ArrayList(choices))
+                        putParcelable(ARG_DECK, choices.firstOrNull { it.deckId == selected })
+                        putStringArrayList(ARG_PEOPLE, ArrayList(people.map { it.getString("user") }))
+                        putStringArrayList(ARG_NAMES, ArrayList(people.map { it.optString("display").ifBlank { it.getString("user") } }))
                     }
             }
     }

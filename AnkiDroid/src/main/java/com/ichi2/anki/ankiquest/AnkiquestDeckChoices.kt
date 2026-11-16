@@ -24,25 +24,27 @@ internal class AnkiquestDeckChoices(
     private val fragments get() = host.supportFragmentManager
 
     init {
-        fragments.setFragmentResultListener(FOCUS, host) { _, result ->
+        fragments.setFragmentResultListener(REQUEST_FOCUS, host) { _, result ->
             val picker = fragments.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog
             val args = picker?.arguments
-            if (args?.getString(PHASE) != Phase.CHOOSING.name) {
+            if (args?.getString(ARG_PHASE) != Phase.CHOOSING.name) {
                 return@setFragmentResultListener
             }
-            args.putString(PHASE, Phase.CLOSED.name)
+            args.putString(ARG_PHASE, Phase.CLOSED.name)
             picker.dismissAllowingStateLoss()
-            val scope = args.getString(SCOPE)
+            val scope = args.getString(ARG_SCOPE)
             val deck = result.getParcelableCompat<SelectableDeck>(DeckSelectionDialog.RESULT_SELECTED_DECK) as? SelectableDeck.Deck
             if (deck != null && owns(scope)) {
                 focus(deck.deckId, scope)
             }
         }
-        fragments.setFragmentResultListener(AnkiquestCopyDialog.RESULT, host) { _, result ->
+        fragments.setFragmentResultListener(AnkiquestCopyDialog.REQUEST_COPY, host) { _, result ->
             val current = AnkiquestHomeData.account() ?: return@setFragmentResultListener
-            val deck = result.getParcelableCompat<SelectableDeck.Deck>(AnkiquestCopyDialog.DECK)
-            val recipients = result.getStringArrayList(AnkiquestCopyDialog.RECIPIENTS).orEmpty()
-            if (deck != null && recipients.isNotEmpty() && result.getString(SCOPE) == current.scope && owns(current.scope)) {
+            val deck = result.getParcelableCompat<SelectableDeck.Deck>(AnkiquestCopyDialog.RESULT_DECK)
+            val recipients = result.getStringArrayList(AnkiquestCopyDialog.RESULT_RECIPIENTS).orEmpty()
+            if (deck != null && recipients.isNotEmpty() && result.getString(AnkiquestCopyDialog.RESULT_SCOPE) == current.scope &&
+                owns(current.scope)
+            ) {
                 copy(current, deck, recipients)
             }
         }
@@ -57,12 +59,12 @@ internal class AnkiquestDeckChoices(
             .newInstance(
                 title = host.getString(R.string.aq_home_change_deck),
                 decks = decks.map { SelectableDeck.Deck(it.id, it.name) },
-                requestKey = FOCUS,
+                requestKey = REQUEST_FOCUS,
                 allowAll = false,
                 allowFiltered = false,
             ).apply {
-                requireArguments().putString(SCOPE, AnkiquestHomeData.account()?.scope)
-                requireArguments().putString(PHASE, Phase.CHOOSING.name)
+                requireArguments().putString(ARG_SCOPE, AnkiquestHomeData.account()?.scope)
+                requireArguments().putString(ARG_PHASE, Phase.CHOOSING.name)
             }.showNow(fragments, DeckSelectionDialog.TAG)
     }
 
@@ -89,8 +91,8 @@ internal class AnkiquestDeckChoices(
     override fun onResume(owner: LifecycleOwner) {
         for (tag in listOf(DeckSelectionDialog.TAG, AnkiquestCopyDialog.TAG)) {
             val picker = fragments.findFragmentByTag(tag) as? DialogFragment ?: continue
-            if (!owns(picker.arguments?.getString(SCOPE))) {
-                picker.arguments?.putString(PHASE, Phase.CLOSED.name)
+            if (!owns(picker.arguments?.getString(ARG_SCOPE))) {
+                picker.arguments?.putString(ARG_PHASE, Phase.CLOSED.name)
                 picker.dismissAllowingStateLoss()
             }
         }
@@ -103,16 +105,16 @@ internal class AnkiquestDeckChoices(
         // Rotation retains choices; leaving Today ends this attempt and drops late results.
         for (tag in listOf(DeckSelectionDialog.TAG, AnkiquestCopyDialog.TAG)) {
             val picker = fragments.findFragmentByTag(tag) as? DialogFragment ?: continue
-            picker.arguments?.putString(PHASE, Phase.CLOSED.name)
+            picker.arguments?.putString(ARG_PHASE, Phase.CLOSED.name)
             picker.dismissAllowingStateLoss()
         }
-        fragments.clearFragmentResult(FOCUS)
-        fragments.clearFragmentResult(AnkiquestCopyDialog.RESULT)
+        fragments.clearFragmentResult(REQUEST_FOCUS)
+        fragments.clearFragmentResult(AnkiquestCopyDialog.REQUEST_COPY)
     }
 
     companion object {
-        const val SCOPE = "ankiquest.deck_choice.scope"
-        private const val FOCUS = "ankiquest.focus_deck"
-        private const val PHASE = "ankiquest.deck_choice.phase"
+        const val ARG_SCOPE = "ankiquest.deck_choice.scope"
+        private const val REQUEST_FOCUS = "ankiquest.focus_deck"
+        private const val ARG_PHASE = "ankiquest.deck_choice.phase"
     }
 }
