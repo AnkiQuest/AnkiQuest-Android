@@ -63,6 +63,7 @@ import java.util.Calendar
 internal class AnkiquestFriendsSections(
     private val activity: AnkiActivity,
     savedState: Bundle?,
+    undo: AnkiquestUndo,
 ) {
     enum class Destination { FEED, LEADERBOARD }
 
@@ -80,7 +81,7 @@ internal class AnkiquestFriendsSections(
     private val restored = savedState?.takeIf { it.getString(STATE_ACCOUNT) == AnkiquestHomeData.account()?.scope }
     private val initial = Destination.entries.firstOrNull { it.name == activity.intent.getStringExtra(EXTRA_SECTION) }
     private var pendingTarget = initial.takeIf { savedState == null }
-    private val feed = FeedSection(activity, restored, initial)
+    private val feed = FeedSection(activity, restored, initial, undo)
     private val board =
         LeaderboardSection(
             activity,
@@ -214,6 +215,7 @@ private class FeedSection(
     activity: AnkiActivity,
     saved: Bundle?,
     initial: AnkiquestFriendsSections.Destination?,
+    undo: AnkiquestUndo,
 ) : FriendsSection(
         activity,
         AnkiquestFriendsSections.Destination.FEED,
@@ -241,7 +243,7 @@ private class FeedSection(
     private val busy = mutableSetOf<Long>()
     private var markingAll = false
     private val pictures = mutableMapOf<String, Bitmap?>()
-    private val deckAlerts = AnkiquestDeckAlerts(activity)
+    private val deckAlerts = AnkiquestDeckAlerts(activity, undo = undo)
     private var generation = 0
     private var loadJob: Job? = null
 

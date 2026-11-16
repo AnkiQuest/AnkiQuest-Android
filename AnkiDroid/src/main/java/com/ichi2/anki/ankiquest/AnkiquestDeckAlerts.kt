@@ -27,6 +27,7 @@ internal class AnkiquestDeckAlerts(
     private val host: FragmentActivity,
     saved: Bundle? = null,
     private val undo: AnkiquestUndo = AnkiquestUndo(host),
+    private val changed: () -> Unit = {},
 ) : DefaultLifecycleObserver {
     private sealed interface State {
         data object Ready : State
@@ -178,10 +179,15 @@ internal class AnkiquestDeckAlerts(
                 } finally {
                     if ((state as? State.Working)?.job == currentCoroutineContext()[Job]) {
                         state = State.Ready
+                        if (owns(account)) {
+                            changed()
+                        }
                     }
                 }
             }
         state = State.Working(job, request, Phase.READING)
+        // Both Stop and its inverse must disable competing controls before their read starts.
+        changed()
         job.start()
     }
 
@@ -227,6 +233,9 @@ internal class AnkiquestDeckAlerts(
             Result.FAILED -> say(R.string.aq_deck_alerts_failed)
         }
         finished()
+        if (owns(account)) {
+            changed()
+        }
     }
 
     private fun say(
@@ -249,6 +258,7 @@ internal class AnkiquestDeckAlerts(
                 state = State.Ready
                 if (owns(pending.request.account)) {
                     pending.request.finished()
+                    changed()
                 }
             }
             is State.Settled -> {

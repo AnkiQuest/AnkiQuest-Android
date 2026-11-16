@@ -89,7 +89,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         }
         findViewById<View>(R.id.aq_feed_loading).contentDescription = getString(R.string.aq_friends_loading)
         AnkiquestTabBar.attach(this, findViewById(R.id.aq_feed_root), R.id.ankiquest_nav_friends)
-        sections = AnkiquestFriendsSections(this, savedInstanceState)
+        sections = AnkiquestFriendsSections(this, savedInstanceState, undo)
         account = AnkiquestHomeData.account()
         if (savedInstanceState == null) {
             val addressed = intent.getStringExtra(EXTRA_ACCOUNT)
