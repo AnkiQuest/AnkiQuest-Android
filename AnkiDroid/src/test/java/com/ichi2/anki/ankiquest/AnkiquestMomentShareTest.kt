@@ -10,6 +10,7 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing.Audience
 import com.ichi2.anki.ankiquest.AnkiquestSharing.MomentRef
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
@@ -53,6 +54,23 @@ class AnkiquestMomentShareTest : RobolectricTest() {
     @After
     fun cleanup() {
         unmockkObject(AnkiquestSocial, AnkiquestSharing)
+    }
+
+    @Test
+    fun `current weekly places require their own server capability`() {
+        mockkObject(AnkiquestCapabilities)
+        var features = setOf("share_moments")
+        every { AnkiquestCapabilities.has(account, any()) } answers { secondArg<String>() in features }
+        try {
+            assertTrue(AnkiquestMomentShare.available(account, MomentRef.Win(17)))
+            assertFalse(AnkiquestMomentShare.available(account, MomentRef.Place(1)))
+            features = setOf("share_moments", "share_place")
+            assertTrue(AnkiquestMomentShare.available(account, MomentRef.Place(1)))
+            features = setOf("share_place")
+            assertFalse(AnkiquestMomentShare.available(account, MomentRef.Place(1)))
+        } finally {
+            unmockkObject(AnkiquestCapabilities)
+        }
     }
 
     @Test

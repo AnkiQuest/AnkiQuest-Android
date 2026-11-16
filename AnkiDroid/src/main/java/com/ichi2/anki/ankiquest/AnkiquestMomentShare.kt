@@ -19,6 +19,7 @@ import org.json.JSONException
 internal object AnkiquestMomentShare {
     private const val PREF_RECENT = "ankiquestShareRecent"
     private const val MAX_RECENT = 20
+    private const val FEATURE_PLACE = "share_place"
 
     /** Someone a moment can be sent to. [key] is stable across loads, for remembering recent choices. */
     sealed class Target {
@@ -74,6 +75,12 @@ internal object AnkiquestMomentShare {
 
     /** Whether [account]'s server last reported that it takes chosen recipients and a note. */
     fun available(account: HomeAccount): Boolean = AnkiquestCapabilities.has(account, AnkiquestSharing.FEATURE_MOMENTS)
+
+    /** New reference kinds require their own advertised capability as well as the picker API. */
+    fun available(
+        account: HomeAccount,
+        moment: MomentRef,
+    ): Boolean = available(account) && (moment !is MomentRef.Place || AnkiquestCapabilities.has(account, FEATURE_PLACE))
 
     /** [account]'s friends and groups, those sent to most recently first. */
     suspend fun targets(account: HomeAccount): List<Target> {

@@ -57,8 +57,10 @@ class AnkiquestShareActivity : AnkiActivity() {
         val share = Share(win, notification, place, title, body, scope)
         when {
             intent.getStringExtra(AnkiquestShare.EXTRA_DESTINATION) == AnkiquestShare.DESTINATION_FRIENDS -> {
-                shareWithFriends(applicationContext, share)
-                finish()
+                if (!withRecipients(current, share)) {
+                    shareWithFriends(applicationContext, share)
+                    finish()
+                }
             }
             win != null && intent.getStringExtra(AnkiquestShare.EXTRA_TOPIC) == "conquered" -> askAboutCard(current, win, share)
             else -> chooseDestination(share)
@@ -92,15 +94,7 @@ class AnkiquestShareActivity : AnkiActivity() {
      */
     private fun chooseDestination(share: Share) {
         val account = AnkiquestHomeData.account()?.takeIf { it.scope == share.scope }
-        if (share.win != null && account != null && AnkiquestMomentShare.available(account)) {
-            AnkiquestShareSheet(
-                this,
-                account,
-                AnkiquestSharing.MomentRef.Win(share.win),
-                AnkiquestShare.Card(share.title, share.body, AnkiquestShare.art(intent, share.place)),
-                elsewhere = { shareElsewhere(share, null) },
-                closed = { if (it != AnkiquestShareSheet.Exit.ELSEWHERE) finish() },
-            ).show()
+        if (account != null && withRecipients(account, share)) {
             return
         }
         if (AnkiquestShare.sheetOffersFriends()) {
@@ -126,6 +120,31 @@ class AnkiquestShareActivity : AnkiActivity() {
                 }
             }.setOnDismissListener { if (!leaving) finish() }
             .show()
+    }
+
+    /** The normal share action and Android's AnkiQuest shortcut use the same recipient choice. */
+    private fun withRecipients(
+        account: HomeAccount,
+        share: Share,
+    ): Boolean {
+        val reference =
+            when {
+                share.win != null -> AnkiquestSharing.MomentRef.Win(share.win)
+                share.place != null -> AnkiquestSharing.MomentRef.Place(share.place)
+                else -> return false
+            }
+        if (!AnkiquestMomentShare.available(account, reference)) {
+            return false
+        }
+        AnkiquestShareSheet(
+            this,
+            account,
+            reference,
+            AnkiquestShare.Card(share.title, share.body, AnkiquestShare.art(intent, share.place)),
+            elsewhere = { shareElsewhere(share, null) },
+            closed = { if (it != AnkiquestShareSheet.Exit.ELSEWHERE) finish() },
+        ).show()
+        return true
     }
 
     /**

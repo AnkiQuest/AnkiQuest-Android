@@ -7,6 +7,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
@@ -280,5 +281,45 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(controller.get().isFinishing)
         assertNull(shadowOf(controller.get()).nextStartedActivity)
+    }
+
+    @Test
+    fun `weekly places and the friends shortcut wait for the same recipient picker`() {
+        every { AnkiquestMomentShare.available(account, any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(account) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(account, any(), AnkiquestSharing.Audience.Circle, null) } returns AnkiquestSharing.Sent(1, 17, null)
+        val places =
+            intent().apply {
+                removeExtra(AnkiquestShare.EXTRA_WIN)
+                putExtra(AnkiquestShare.EXTRA_PLACE, 2)
+            }
+        val shortcut = intent().putExtra(AnkiquestShare.EXTRA_DESTINATION, AnkiquestShare.DESTINATION_FRIENDS)
+        val cases =
+            listOf(
+                places to AnkiquestSharing.MomentRef.Place(2),
+                shortcut to AnkiquestSharing.MomentRef.Win(17),
+            )
+        for ((launch, reference) in cases) {
+            val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, launch).setup()
+            try {
+                val host = controller.get()
+                val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+                coVerify(exactly = 0) { AnkiquestSharing.send(account, reference, any(), any()) }
+                coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
+                coVerify(exactly = 0) { Ankiquest.shareWin(any(), any(), any()) }
+                assertNull(shadowOf(host).nextStartedActivity)
+                val everyone = host.getString(R.string.ankiquest_share_all_friends)
+                val content = sheet.window!!.decorView
+                advanceRobolectricLooperUntil { content.allViews.any { it is TextView && it.text.toString() == everyone } }
+                content.allViews.first { it is TextView && it.text.toString() == everyone }.performClick()
+                sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+                advanceRobolectricLooperUntil { !sheet.isShowing && host.isFinishing }
+                coVerify(exactly = 1) { AnkiquestSharing.send(account, reference, AnkiquestSharing.Audience.Circle, null) }
+            } finally {
+                controller.close()
+            }
+        }
     }
 }

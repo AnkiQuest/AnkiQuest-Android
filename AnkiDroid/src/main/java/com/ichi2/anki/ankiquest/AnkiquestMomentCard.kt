@@ -638,8 +638,9 @@ internal object AnkiquestMomentCard {
             val scope = scope ?: return
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             val win = moment.win ?: extras[moment.key]?.win
+            val reference = reference(moment)
             // Tell -> share sheet -> chosen send. Older servers keep their existing route.
-            if ((moment.conquest != null || win != null) && AnkiquestMomentShare.available(signedIn)) {
+            if (reference != null && AnkiquestMomentShare.available(signedIn, reference)) {
                 share(moment, position)
                 return
             }
@@ -718,14 +719,8 @@ internal object AnkiquestMomentCard {
             position: Int,
         ) {
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
-            val win = moment.win ?: extras[moment.key]?.win
-            val ref =
-                when {
-                    moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
-                    win != null -> AnkiquestSharing.MomentRef.Win(win)
-                    else -> null
-                }
-            if (ref == null || !AnkiquestMomentShare.available(signedIn)) {
+            val ref = reference(moment)
+            if (ref == null || !AnkiquestMomentShare.available(signedIn, ref)) {
                 elsewhere(moment)
                 return
             }
@@ -741,6 +736,17 @@ internal object AnkiquestMomentCard {
                 },
                 root = root,
             ).show()
+        }
+
+        /** Tell and Share resolve the same server-backed moment. */
+        private fun reference(moment: Moment): AnkiquestSharing.MomentRef? {
+            val win = moment.win ?: extras[moment.key]?.win
+            return when {
+                moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
+                win != null -> AnkiquestSharing.MomentRef.Win(win)
+                moment.place != null -> AnkiquestSharing.MomentRef.Place(moment.place)
+                else -> null
+            }
         }
 
         /**

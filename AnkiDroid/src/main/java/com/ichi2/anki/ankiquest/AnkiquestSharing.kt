@@ -165,10 +165,16 @@ internal object AnkiquestSharing {
             val at: Long,
         ) : MomentRef()
 
+        /** A current top-three weekly place, verified by the server before sending. */
+        data class Place(
+            val rank: Int,
+        ) : MomentRef()
+
         fun json(): JSONObject =
             when (this) {
                 is Win -> JSONObject().put("win", id)
                 is Conquest -> JSONObject().put("conquest", at)
+                is Place -> JSONObject().put("place", rank)
             }
     }
 

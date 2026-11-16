@@ -485,6 +485,25 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `a current weekly place sends the rank and selected audience`() =
+        runBlocking {
+            val told =
+                AnkiquestSharing.send(
+                    account,
+                    AnkiquestSharing.MomentRef.Place(2),
+                    AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList()),
+                    "A good study week",
+                )
+            val request = shareBodies.single()
+            assertEquals("{\"place\":2}", request.getJSONObject("moment").toString())
+            val friends = request.getJSONObject("to").getJSONArray("friends")
+            assertEquals(listOf("cerro"), (0 until friends.length()).map(friends::getString))
+            assertEquals("A good study week", request.getString("note"))
+            assertEquals(1, told.recipients)
+            assertNotNull(told.undoUntil)
+        }
+
+    @Test
     fun `a moment accepts 140 Unicode characters without splitting or rejecting them`() =
         runBlocking {
             val note = "\uD83C\uDF31".repeat(AnkiquestSharing.MAX_NOTE)

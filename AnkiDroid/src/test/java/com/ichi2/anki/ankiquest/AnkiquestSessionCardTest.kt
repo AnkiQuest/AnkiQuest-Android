@@ -351,6 +351,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
         every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
@@ -423,6 +424,8 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                         clock.intTimeMS(),
                         conquest = 100,
                     ) to AnkiquestSharing.MomentRef.Conquest(100),
+                    AnkiquestMoments.Moment("rank:1", AnkiquestMoments.Kind.RANK, "First place", "", clock.intTimeMS(), place = 1) to
+                        AnkiquestSharing.MomentRef.Place(1),
                 )
             for ((moment, reference) in cases) {
                 AnkiquestMomentCard.show(host, identity, listOf(moment), prefs)
