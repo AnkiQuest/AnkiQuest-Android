@@ -2,8 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
-import androidx.fragment.app.DialogFragment
+import android.os.Bundle
+import android.os.Parcelable
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -11,6 +14,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.utils.ext.getParcelableCompat
+import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 
 /** Deck choices belong to their original account, outside Today's refreshed content. */
@@ -19,23 +23,51 @@ internal class AnkiquestDeckChoices(
     private val focus: (Long, String?) -> Unit,
     private val copy: (HomeAccount, SelectableDeck.Deck, List<String>) -> Unit,
 ) : DefaultLifecycleObserver {
-    private enum class Phase { CHOOSING, CLOSED }
+    private sealed interface FocusState : Parcelable {
+        @Parcelize
+        data class Choosing(
+            val scope: String?,
+        ) : FocusState
+
+        @Parcelize
+        data object Closed : FocusState
+    }
 
     private val fragments get() = host.supportFragmentManager
+    private var focusState =
+        host.savedStateRegistry
+            .consumeRestoredStateForKey(STATE_KEY)
+            ?.getParcelableCompat<FocusState>(STATE_FOCUS) ?: FocusState.Closed
 
     init {
+        // This controller owns the focus phase; the native picker's arguments remain immutable.
+        host.savedStateRegistry.registerSavedStateProvider(STATE_KEY) {
+            Bundle().apply { putParcelable(STATE_FOCUS, focusState) }
+        }
+        fragments.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentDetached(
+                    fm: FragmentManager,
+                    fragment: Fragment,
+                ) {
+                    if (fragment is DeckSelectionDialog && fragment.tag == DeckSelectionDialog.TAG) {
+                        focusState = FocusState.Closed
+                    }
+                }
+            },
+            false,
+        )
         fragments.setFragmentResultListener(REQUEST_FOCUS, host) { _, result ->
+            val choice = focusState as? FocusState.Choosing ?: return@setFragmentResultListener
             val picker = fragments.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog
-            val args = picker?.arguments
-            if (args?.getString(ARG_PHASE) != Phase.CHOOSING.name) {
+            if (picker?.dialog?.isShowing != true) {
                 return@setFragmentResultListener
             }
-            args.putString(ARG_PHASE, Phase.CLOSED.name)
+            focusState = FocusState.Closed
             picker.dismissAllowingStateLoss()
-            val scope = args.getString(ARG_SCOPE)
             val deck = result.getParcelableCompat<SelectableDeck>(DeckSelectionDialog.RESULT_SELECTED_DECK) as? SelectableDeck.Deck
-            if (deck != null && owns(scope)) {
-                focus(deck.deckId, scope)
+            if (deck != null && owns(choice.scope)) {
+                focus(deck.deckId, choice.scope)
             }
         }
         fragments.setFragmentResultListener(AnkiquestCopyDialog.REQUEST_COPY, host) { _, result ->
@@ -55,6 +87,7 @@ internal class AnkiquestDeckChoices(
         if (!available() || decks.isEmpty()) {
             return
         }
+        focusState = FocusState.Choosing(AnkiquestHomeData.account()?.scope)
         DeckSelectionDialog
             .newInstance(
                 title = host.getString(R.string.aq_home_change_deck),
@@ -62,10 +95,7 @@ internal class AnkiquestDeckChoices(
                 requestKey = REQUEST_FOCUS,
                 allowAll = false,
                 allowFiltered = false,
-            ).apply {
-                requireArguments().putString(ARG_SCOPE, AnkiquestHomeData.account()?.scope)
-                requireArguments().putString(ARG_PHASE, Phase.CHOOSING.name)
-            }.showNow(fragments, DeckSelectionDialog.TAG)
+            ).showNow(fragments, DeckSelectionDialog.TAG)
     }
 
     fun copy(
@@ -89,32 +119,19 @@ internal class AnkiquestDeckChoices(
             AnkiquestHomeData.account()?.scope == scope
 
     override fun onResume(owner: LifecycleOwner) {
-        for (tag in listOf(DeckSelectionDialog.TAG, AnkiquestCopyDialog.TAG)) {
-            val picker = fragments.findFragmentByTag(tag) as? DialogFragment ?: continue
-            if (!owns(picker.arguments?.getString(ARG_SCOPE))) {
-                picker.arguments?.putString(ARG_PHASE, Phase.CLOSED.name)
-                picker.dismissAllowingStateLoss()
-            }
-        }
-    }
-
-    override fun onStop(owner: LifecycleOwner) {
-        if (host.isChangingConfigurations) {
-            return
-        }
-        // Rotation retains choices; leaving Today ends this attempt and drops late results.
-        for (tag in listOf(DeckSelectionDialog.TAG, AnkiquestCopyDialog.TAG)) {
-            val picker = fragments.findFragmentByTag(tag) as? DialogFragment ?: continue
-            picker.arguments?.putString(ARG_PHASE, Phase.CLOSED.name)
+        val picker = fragments.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog ?: return
+        val choice = focusState as? FocusState.Choosing
+        if (choice == null || !owns(choice.scope)) {
+            focusState = FocusState.Closed
             picker.dismissAllowingStateLoss()
+            fragments.clearFragmentResult(REQUEST_FOCUS)
         }
-        fragments.clearFragmentResult(REQUEST_FOCUS)
-        fragments.clearFragmentResult(AnkiquestCopyDialog.REQUEST_COPY)
     }
 
     companion object {
         const val ARG_SCOPE = "ankiquest.deck_choice.scope"
         private const val REQUEST_FOCUS = "ankiquest.focus_deck"
-        private const val ARG_PHASE = "ankiquest.deck_choice.phase"
+        private const val STATE_KEY = "ankiquest.deck_choices"
+        private const val STATE_FOCUS = "ankiquest.focus_choice"
     }
 }

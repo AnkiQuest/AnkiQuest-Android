@@ -68,10 +68,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var networkJob: Job? = null
     private var avatarJob: Job? = null
     private var copyJob: Job? = null
-    private var copyOwner: AnkiquestDialogOwner? = null
     private lateinit var deckChoices: AnkiquestDeckChoices
     private var copyInbox: CopyInbox = CopyInbox.Loading
-    private var copyBusy = false
+    private var copyState: CopyState = CopyState.Ready
+    private val copyBusy get() = copyState is CopyState.Working
     private var copyStatus: String? = null
     private var importedCopyFile: File? = null
     private val copyImporter =
@@ -92,6 +92,26 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         data class Ready(
             val data: JSONObject,
         ) : CopyInbox
+    }
+
+    private sealed interface CopyState {
+        data object Ready : CopyState
+
+        sealed interface Working : CopyState {
+            val account: HomeAccount
+        }
+
+        data class Sending(
+            override val account: HomeAccount,
+        ) : Working
+
+        data class Importing(
+            override val account: HomeAccount,
+        ) : Working
+
+        data class Dismissing(
+            override val account: HomeAccount,
+        ) : Working
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -153,8 +173,6 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
             // A new owner starts with empty caches and a fresh loading state.
-            copyOwner?.close()
-            copyOwner = null
             goalSetup = GoalSetup.READY
             account = current
             local = null
@@ -164,7 +182,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             profileFailure = null
             copyInbox = CopyInbox.Loading
             copyStatus = null
-            copyBusy = false
+            copyState = CopyState.Ready
         }
         val turn = ++generation
         lifecycleScope.launch {
@@ -545,7 +563,6 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (copyBusy || !ownsScope(current.scope)) {
             return
         }
-        copyOwner?.close()
         deckChoices.copy(current, decks, local?.focus?.id, friends)
     }
 
@@ -554,31 +571,17 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         deck: SelectableDeck.Deck,
         recipients: List<String>,
     ) {
-        if (copyBusy || !ownsScope(current.scope)) {
+        if (copyBusy || !ownsScope(current.scope) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             return
         }
-        copyOwner?.close()
-        val owner = AnkiquestDialogOwner(this, current)
-        copyOwner = owner
-        shareCopy(current, owner, deck, recipients)
-    }
-
-    private fun shareCopy(
-        current: HomeAccount,
-        owner: AnkiquestDialogOwner,
-        deck: SelectableDeck.Deck,
-        recipients: List<String>,
-    ) {
-        if (!owner.isCurrent()) {
-            owner.close()
-            return
-        }
-        copyBusy = true
+        val work = CopyState.Sending(current)
+        copyState = work
         copyStatus = getString(R.string.aq_copies_sending)
         render()
         lifecycleScope.launch {
-            if (!owner.isCurrent()) {
-                finishCopy(current, owner, null)
+            // Starting a send requires the same resumed account; an accepted send can finish while hidden.
+            if (!ownsCopy(work) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                finishCopy(work, null)
                 return@launch
             }
             val status =
@@ -586,11 +589,11 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     AnkiquestDeckCopies.share(current, deck.deckId, deck.name, recipients, cacheDir)
                     getString(R.string.aq_copies_sent)
                 } catch (error: CancellationException) {
-                    finishCopy(current, owner, null)
+                    finishCopy(work, null)
                     throw error
                 } catch (_: HomeAccountChanged) {
-                    finishCopy(current, owner, null)
-                    if (copyOwner === owner && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    finishCopy(work, null)
+                    if (copyState === work && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                         refresh()
                     }
                     return@launch
@@ -600,35 +603,40 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     Timber.w(error, "AnkiQuest deck copy could not be sent")
                     getString(R.string.aq_copies_failed)
                 }
-            finishCopy(current, owner, status)
+            finishCopy(work, status)
         }
     }
 
     private fun finishCopy(
-        current: HomeAccount,
-        owner: AnkiquestDialogOwner,
+        work: CopyState.Working,
         status: String?,
     ) {
-        if (copyOwner === owner && ownsScope(current.scope)) {
-            copyStatus = status
-            copyBusy = false
-            if (owner.isCurrent()) {
-                render()
-            }
-            copyOwner = null
+        if (!ownsCopy(work)) {
+            return
         }
-        owner.close()
+        copyStatus = status
+        copyState = CopyState.Ready
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            render()
+        }
     }
+
+    // A result from an earlier visit cannot finish a newer operation, even for the same account.
+    private fun ownsCopy(work: CopyState.Working): Boolean = copyState === work && ownsScope(work.account.scope)
 
     private fun importCopy(id: Long) {
         val current = account ?: return
-        copyBusy = true
+        if (copyBusy || !ownsScope(current.scope)) {
+            return
+        }
+        val work = CopyState.Importing(current)
+        copyState = work
         copyStatus = getString(R.string.aq_copies_downloading)
         render()
         lifecycleScope.launch {
             try {
                 val file = AnkiquestDeckCopies.download(current, id, cacheDir)
-                if (account?.scope == current.scope) {
+                if (ownsCopy(work)) {
                     copyStatus = null
                     importedCopyFile = file
                     copyImporter.launch(AnkiPackageImporterFragment.getIntent(this@AnkiquestHomeActivity, file.absolutePath))
@@ -636,39 +644,39 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     file.delete()
                 }
             } catch (error: CancellationException) {
+                finishCopy(work, null)
                 throw error
             } catch (error: Exception) {
                 Timber.w(error, "AnkiQuest deck copy could not be imported")
-                if (account?.scope == current.scope) copyStatus = getString(R.string.aq_copies_failed)
+                if (ownsCopy(work)) {
+                    copyStatus = getString(R.string.aq_copies_failed)
+                }
             }
-            if (account?.scope == current.scope) {
-                copyBusy = false
-                render()
-            }
+            finishCopy(work, copyStatus)
         }
     }
 
     private fun dismissCopy(id: Long) {
         val current = account ?: return
-        copyBusy = true
+        if (copyBusy || !ownsScope(current.scope)) {
+            return
+        }
+        val work = CopyState.Dismissing(current)
+        copyState = work
         render()
         lifecycleScope.launch {
             try {
                 AnkiquestDeckCopies.dismiss(current, id)
-                if (account?.scope == current.scope) {
-                    copyStatus = null
-                    copyBusy = false
+                if (ownsCopy(work)) {
+                    finishCopy(work, null)
                     refreshCopies(current)
                 }
             } catch (error: CancellationException) {
+                finishCopy(work, null)
                 throw error
             } catch (error: Exception) {
                 Timber.w(error, "AnkiQuest deck copy could not be dismissed")
-                if (account?.scope == current.scope) {
-                    copyStatus = getString(R.string.aq_copies_failed)
-                    copyBusy = false
-                    render()
-                }
+                finishCopy(work, getString(R.string.aq_copies_failed))
             }
         }
     }

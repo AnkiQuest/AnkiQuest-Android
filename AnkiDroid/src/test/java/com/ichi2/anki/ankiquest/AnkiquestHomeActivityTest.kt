@@ -388,6 +388,23 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a restored focus choice can select another deck`() {
+        val spanish = col.decks.id("Spanish")
+        val geography = col.decks.id("Geography")
+        col.decks.select(spanish)
+        coEvery { AnkiquestHomeData.local() } returns
+            HomeLocal(listOf(HomeDeck(spanish, "Spanish", 1, 0, 0), HomeDeck(geography, "Geography", 1, 0, 0)), spanish)
+        val controller = launchController()
+        controller.get().click(controller.get().getString(R.string.aq_home_change_deck))
+        controller.recreate()
+        advanceRobolectricLooper()
+        val picker =
+            assertNotNull(controller.get().supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        chooseNativeDeck(picker, "Geography")
+        assertEquals(geography, col.decks.selected())
+    }
+
+    @Test
     fun `copy recipients survive recreation without sending`() {
         mockCopies()
         val controller = launchController()
@@ -588,6 +605,47 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         controller.start().resume()
         advanceRobolectricLooper()
         assertTrue(copyDialog(controller.get()).isShowing)
+    }
+
+    @Test
+    fun `an earlier copy cannot finish a newer send`() {
+        mockCopies()
+        val earlier = CompletableDeferred<JSONObject>()
+        val latest = CompletableDeferred<JSONObject>()
+        var uploads = 0
+        coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } coAnswers {
+            if (uploads++ == 0) earlier.await() else latest.await()
+        }
+        val controller = launchController()
+        val home = controller.get()
+        val first = copyDialog(home)
+        pickCopyFriend(first)
+        first.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+
+        // Returning to the same account must not revive its previous request's UI ownership.
+        switchCopyOwner()
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        every { AnkiquestHomeData.account(any()) } returns identity
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        val second = copyDialog(home)
+        pickCopyFriend(second)
+        second.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        val shareButton = {
+            home.findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().first {
+                it.text.toString() == home.getString(R.string.aq_copies_share) && it.isClickable
+            }
+        }
+        earlier.complete(JSONObject())
+        advanceRobolectricLooper()
+        assertFalse(shareButton().isEnabled, "Only the newer send may release its busy state")
+        latest.complete(JSONObject())
+        advanceRobolectricLooper()
+        assertTrue(shareButton().isEnabled)
+        coVerify(exactly = 2) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
     }
 
     private fun mockCopies() {

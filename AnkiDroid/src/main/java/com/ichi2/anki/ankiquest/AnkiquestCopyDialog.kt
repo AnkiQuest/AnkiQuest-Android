@@ -6,6 +6,7 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Parcelable
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -19,18 +20,19 @@ import com.ichi2.anki.R
 import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.utils.ext.getParcelableCompat
+import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 
 /** One explicit deck-copy form. Restoring its choices never restores a send action. */
 internal class AnkiquestCopyDialog : DialogFragment() {
-    private enum class Phase { CHOOSING, CLOSED }
-
-    private sealed interface State {
+    private sealed interface State : Parcelable {
+        @Parcelize
         data class Choosing(
             val deck: SelectableDeck.Deck?,
             val recipients: Set<String>,
         ) : State
 
+        @Parcelize
         data object Closed : State
     }
 
@@ -41,23 +43,8 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        state =
-            if (savedInstanceState?.getString(STATE_PHASE) == Phase.CLOSED.name) {
-                State.Closed
-            } else {
-                State.Choosing(
-                    if (savedInstanceState != null) {
-                        savedInstanceState.getParcelableCompat(STATE_DECK)
-                    } else {
-                        requireArguments().getParcelableCompat(ARG_DECK)
-                    },
-                    savedInstanceState
-                        ?.getStringArrayList(STATE_RECIPIENTS)
-                        .orEmpty()
-                        .toSet()
-                        .intersect(people.toSet()),
-                )
-            }
+        state = savedInstanceState?.getParcelableCompat<State>(STATE_CHOICE)
+            ?: State.Choosing(requireArguments().getParcelableCompat(ARG_DECK), emptySet())
         childFragmentManager.setFragmentResultListener(REQUEST_CHANGE, this) { _, result ->
             val choice = state as? State.Choosing ?: return@setFragmentResultListener
             val selected = result.getParcelableCompat<SelectableDeck>(DeckSelectionDialog.RESULT_SELECTED_DECK) as? SelectableDeck.Deck
@@ -92,7 +79,11 @@ internal class AnkiquestCopyDialog : DialogFragment() {
                 setOnClickListener { changeDeck() }
             },
         )
-        heading.addView(TextView(requireContext()).apply { setText(R.string.aq_copies_choose_one) })
+        heading.addView(
+            TextView(requireContext()).apply {
+                setText(if (people.isEmpty()) R.string.aq_copies_no_friends else R.string.aq_copies_choose_one)
+            },
+        )
         return MaterialAlertDialogBuilder(requireContext())
             .setCustomTitle(heading)
             .setMultiChoiceItems(
@@ -123,13 +114,6 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         }
     }
 
-    override fun onStop() {
-        if (activity?.isChangingConfigurations != true) {
-            close()
-        }
-        super.onStop()
-    }
-
     override fun onDismiss(dialog: DialogInterface) {
         state = State.Closed
         super.onDismiss(dialog)
@@ -137,14 +121,8 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        when (val current = state) {
-            is State.Choosing -> {
-                outState.putParcelable(STATE_DECK, current.deck)
-                outState.putStringArrayList(STATE_RECIPIENTS, ArrayList(current.recipients))
-                outState.putString(STATE_PHASE, Phase.CHOOSING.name)
-            }
-            State.Closed -> outState.putString(STATE_PHASE, Phase.CLOSED.name)
-        }
+        // The form's choices and phase are one value across recreation and app switches.
+        outState.putParcelable(STATE_CHOICE, state)
     }
 
     private fun render() {
@@ -206,9 +184,7 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         private const val ARG_DECK = "deck"
         private const val ARG_PEOPLE = "people"
         private const val ARG_NAMES = "names"
-        private const val STATE_PHASE = "phase"
-        private const val STATE_DECK = "deck"
-        private const val STATE_RECIPIENTS = "recipients"
+        private const val STATE_CHOICE = "ankiquest.copy.choice"
         private const val REQUEST_CHANGE = "ankiquest.copy.deck"
 
         fun newInstance(
