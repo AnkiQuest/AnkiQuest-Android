@@ -515,7 +515,12 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         }
     }
 
-    private fun plain(text: String) = text.removePrefix("\uD83C\uDFC6 ")
+    private fun plain(text: String): String {
+        // Ignore only Android's decorative trophy, preserving all text and line breaks.
+        val lines = text.split("\n", limit = 2)
+        val first = lines.first().removeSuffix(" \uD83C\uDFC6")
+        return (listOf(first) + lines.drop(1)).joinToString("\n")
+    }
 
     @Test
     fun `offline conquest captions keep the shared line breaks`() {
