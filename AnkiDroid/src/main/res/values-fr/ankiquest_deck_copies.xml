@@ -9,7 +9,6 @@
     <string name="aq_copies_offer">%1$s a partagé %2$s</string>
     <string name="aq_copies_share">Partager un paquet</string>
     <string name="aq_copies_choose_deck">Choisis un paquet</string>
-    <string name="aq_copies_choose_friends">Partager %1$s avec</string>
     <string name="aq_copies_choose_one">Choisis au moins un ami.</string>
     <string name="aq_copies_sending">Préparation et envoi de la copie…</string>
     <string name="aq_copies_sent">Copie du paquet envoyée.</string>

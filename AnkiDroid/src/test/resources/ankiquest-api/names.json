@@ -51,7 +51,7 @@
         "unlocks",
         "upload"
     ],
-    "unused": ["activity_locked", "leaderboard_locked", "unlocks_save"],
+    "unused": ["unlocks_save"],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",
@@ -62,5 +62,5 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": []
+    "not_yet": ["activity_locked", "leaderboard_locked"]
 }

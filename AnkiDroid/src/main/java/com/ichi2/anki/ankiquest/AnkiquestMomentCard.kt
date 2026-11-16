@@ -913,6 +913,6 @@ internal object AnkiquestMomentCard {
             AnkiquestConquestShare.mine(context, moment.lapses),
             AnkiquestConquestShare.deck(context, moment.deck),
             AnkiquestCommunity.conquestLink(account.server, account.user, at),
-        ).joinToString(" ")
+        ).joinToString("\n")
     }
 }
