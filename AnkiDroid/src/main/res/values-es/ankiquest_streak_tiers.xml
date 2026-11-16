@@ -6,4 +6,5 @@
         <item quantity="other">Faltan %1$d días para %2$d 🔥</item>
     </plurals>
     <string name="ankiquest_streak_nudge">Estudia hoy para mantenerla</string>
+    <string name="ankiquest_streak_unsent">Sin subir aún</string>
 </resources>

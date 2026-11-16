@@ -7,4 +7,6 @@
     </plurals>
     <!-- Replaces the milestone line while today does not count yet. Short, so it stays on one line beside Aki. -->
     <string name="ankiquest_streak_nudge">Study today to keep it</string>
+    <!-- The large widgets' status for a counted day the server does not have yet; the flame says it counts. -->
+    <string name="ankiquest_streak_unsent">Not uploaded yet</string>
 </resources>
