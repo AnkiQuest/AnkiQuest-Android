@@ -275,13 +275,17 @@ object AnkiquestNotifier {
     }
 
     /** Posts the server's streak warning once per study day, within the chosen hours before it ends. */
-    fun onProfile(
+    internal fun onProfile(
         context: Context,
         profile: JSONObject,
+        streakDelivery: StreakDelivery,
     ) {
         val prefs = AnkiDroidApp.sharedPrefs()
         AnkiquestDailyGoal.remember(profile, prefs)
         AnkiquestIcon.update(context, profile, TimeManager.time.intTimeMS(), prefs)
+        if (streakDelivery == StreakDelivery.HOLD) {
+            return
+        }
         val hours = prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
         val warning = profile.optJSONObject("streak_warning")
         if (hours <= 0 || warning == null) return

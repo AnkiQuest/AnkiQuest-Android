@@ -19,6 +19,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.common.time.TimeManager
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
+import org.json.JSONObject
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -34,6 +35,7 @@ object AnkiquestPoll {
     private const val NOW_NAME = "ankiquestPollNow"
     private const val DAY_END_NAME = "ankiquestPollDayEnd"
     private const val LAST_SUCCESS = "ankiquestLastSuccessfulPoll"
+    private const val UNKNOWN_HOUR = -1
 
     /** How long after a study day ends the day-end poll runs, so the server already answers for the new day. */
     private const val DAY_END_DELAY_MS = 60_000L
@@ -113,7 +115,8 @@ object AnkiquestPoll {
         Ankiquest.uploadPending()
         val prefs = AnkiDroidApp.sharedPrefs()
         val configured = Ankiquest.dashboardUrl() != null
-        val cacheScope = AnkiquestHomeData.account(prefs)?.scope
+        val pollingAccount = AnkiquestHomeData.account(prefs)
+        val cacheScope = pollingAccount?.scope
         val cacheKey = scopedKey(PREF_CACHE, cacheScope)
         val cacheAtKey = scopedKey(PREF_CACHE_AT, cacheScope)
         val photoAccount = runCatching { AnkiquestAvatars.account() }.getOrNull()
@@ -172,7 +175,11 @@ object AnkiquestPoll {
                 if (photoBoard != null && !photoOffline && cacheScope != null) {
                     prefs.edit { putLong(scopedKey(LAST_SUCCESS, cacheScope), TimeManager.time.intTimeMS()) }
                 }
-                AnkiquestNotifier.onProfile(context, profile)
+                val delivery = pollingAccount?.let { streakDelivery(it, profile) } ?: StreakDelivery.HOLD
+                // Reading reminders can outlive an account or credential change.
+                if (AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
+                    AnkiquestNotifier.onProfile(context, profile, delivery)
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -232,7 +239,32 @@ object AnkiquestPoll {
         }
         return result
     }
+
+    private suspend fun streakDelivery(
+        account: HomeAccount,
+        profile: JSONObject,
+    ): StreakDelivery {
+        if (profile.optJSONObject("streak_warning") == null || !AnkiquestNotifier.streakReminder()) {
+            return StreakDelivery.HOLD
+        }
+        return try {
+            val reminders = AnkiquestCommunity.reminders(account)
+            if (reminders.holds(profile.optInt("local_hour", UNKNOWN_HOUR))) {
+                StreakDelivery.HOLD
+            } else {
+                StreakDelivery.ALLOW
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // A failed preference read must not bypass quiet hours or consume today's warning.
+            Timber.w(error, "ankiquest could not read quiet hours")
+            StreakDelivery.HOLD
+        }
+    }
 }
+
+internal enum class StreakDelivery { ALLOW, HOLD }
 
 class AnkiquestPollWorker(
     context: Context,

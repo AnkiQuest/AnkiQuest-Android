@@ -47,6 +47,8 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestPollTest : RobolectricTest() {
+    private enum class ReminderReply { NORMAL, FAIL, CHANGE_ACCOUNT }
+
     private lateinit var server: HttpServer
     private lateinit var url: String
     private val requests = CopyOnWriteArrayList<String>()
@@ -79,6 +81,9 @@ class AnkiquestPollTest : RobolectricTest() {
     private var reminderBody = "{\"quiet_start\":0,\"quiet_end\":0}"
 
     @Volatile
+    private var reminderReply = ReminderReply.NORMAL
+
+    @Volatile
     private var switchAccountDuringInbox = false
 
     @Before
@@ -87,7 +92,7 @@ class AnkiquestPollTest : RobolectricTest() {
         mockkObject(AnkiquestWidget, AnkiquestNotifier)
         every { AnkiquestWidget.render(any(), any(), any(), any()) } just Runs
         coEvery { AnkiquestNotifier.onLeaderboard(any()) } just Runs
-        every { AnkiquestNotifier.onProfile(any(), any()) } just Runs
+        every { AnkiquestNotifier.onProfile(any(), any(), any()) } just Runs
         every { AnkiquestNotifier.onDeckCompletions(any(), any(), any(), any()) } just Runs
 
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -105,6 +110,10 @@ class AnkiquestPollTest : RobolectricTest() {
                 }
             }
             val inbox = path.startsWith("/api/notifications/")
+            val reminders = path == "/api/community/reminders/cerro"
+            if (reminders && reminderReply == ReminderReply.CHANGE_ACCOUNT) {
+                AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "changed-token") }
+            }
             if (inbox && switchAccountDuringInbox) {
                 AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
             }
@@ -114,6 +123,7 @@ class AnkiquestPollTest : RobolectricTest() {
                     path == "/api/leaderboard" -> leaderboardStatus
                     path == "/api/avatars" -> avatarStatus
                     path.startsWith("/api/reviews/") -> reviewStatus
+                    reminders && reminderReply == ReminderReply.FAIL -> java.net.HttpURLConnection.HTTP_UNAVAILABLE
                     else -> 200
                 }
             val response =
@@ -121,7 +131,7 @@ class AnkiquestPollTest : RobolectricTest() {
                     inbox -> inboxBody
                     path == "/api/leaderboard" -> "[]"
                     path == "/api/profile/cerro" -> profileBody
-                    path == "/api/reminders/cerro" -> reminderBody
+                    path == "/api/community/reminders/cerro" -> reminderBody
                     else -> "{}"
                 }
             val bytes = response.toByteArray(Charsets.UTF_8)
@@ -146,14 +156,8 @@ class AnkiquestPollTest : RobolectricTest() {
         runBlocking {
             val manager = assertNotNull(targetContext.getSystemService<NotificationManager>())
             reminderBody = "{\"quiet_start\":22,\"quiet_end\":9}"
-            profileBody =
-                JSONObject()
-                    .put("local_hour", 2)
-                    .put("at_risk", true)
-                    .put("day_ends_at", TimeManager.time.intTimeMS() + 90 * 60_000L)
-                    .put("streak_warning", JSONObject().put("title", "Streak ending").put("body", "Study soon"))
-                    .toString()
-            every { AnkiquestNotifier.onProfile(any(), any()) } answers { callOriginal() }
+            profileBody = warningProfile().toString()
+            every { AnkiquestNotifier.onProfile(any(), any(), any()) } answers { callOriginal() }
             mockkObject(AnkiquestIcon)
             every { AnkiquestIcon.update(any(), any(), any(), any()) } just Runs
             try {
@@ -164,6 +168,11 @@ class AnkiquestPollTest : RobolectricTest() {
 
                 // Leaving quiet hours may deliver it once if the study day is still open.
                 reminderBody = "{\"quiet_start\":22,\"quiet_end\":22}"
+                reminderReply = ReminderReply.FAIL
+                assertEquals(Result.success(), worker().doWork())
+                assertEquals(0, shadowOf(manager).size(), "A failed settings read must not bypass quiet hours")
+                assertFalse(AnkiDroidApp.sharedPrefs().contains(cacheKey(AnkiquestNotifier.PREF_STREAK_DAY)))
+                reminderReply = ReminderReply.NORMAL
                 assertEquals(Result.success(), worker().doWork())
                 assertEquals(1, shadowOf(manager).size())
                 manager.cancelAll()
@@ -173,6 +182,22 @@ class AnkiquestPollTest : RobolectricTest() {
                 unmockkObject(AnkiquestIcon)
             }
         }
+
+    @Test
+    fun `quiet lookup stays account bound`() =
+        runBlocking {
+            profileBody = warningProfile().toString()
+            reminderReply = ReminderReply.CHANGE_ACCOUNT
+            assertEquals(Result.success(), worker().doWork())
+            verify(exactly = 0) { AnkiquestNotifier.onProfile(any(), any(), any()) }
+        }
+
+    private fun warningProfile(): JSONObject =
+        JSONObject()
+            .put("local_hour", 2)
+            .put("at_risk", true)
+            .put("day_ends_at", TimeManager.time.intTimeMS() + 90 * 60_000L)
+            .put("streak_warning", JSONObject().put("title", "Streak ending").put("body", "Study soon"))
 
     @After
     fun stopPollingServer() {
@@ -350,7 +375,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `cancellation during profile work is propagated before fetching inbox`() =
         runBlocking {
-            every { AnkiquestNotifier.onProfile(any(), any()) } throws CancellationException("Worker stopped")
+            every { AnkiquestNotifier.onProfile(any(), any(), any()) } throws CancellationException("Worker stopped")
 
             assertFailsWith<CancellationException> { worker().doWork() }
 

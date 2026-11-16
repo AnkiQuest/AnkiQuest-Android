@@ -530,7 +530,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "24") }
         val profile = atRisk(dayEndsIn = 3 * HOUR_MS)
         shadowOf(manager).setNotificationsEnabled(false)
-        AnkiquestNotifier.onProfile(targetContext, profile)
+        AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
         assertTrue(
             AnkiDroidApp
                 .sharedPrefs()
@@ -538,10 +538,10 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 .none { it.startsWith(AnkiquestNotifier.PREF_STREAK_DAY) },
         )
         shadowOf(manager).setNotificationsEnabled(true)
-        AnkiquestNotifier.onProfile(targetContext, profile)
+        AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
         assertEquals(1, shadowOf(manager).size())
         manager.cancelAll()
-        AnkiquestNotifier.onProfile(targetContext, profile)
+        AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
         assertEquals(0, shadowOf(manager).size())
     }
 
@@ -549,26 +549,26 @@ class AnkiquestNotifierTest : RobolectricTest() {
     fun `the streak reminder shows the server warning once per study day`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         val today = atRisk(dayEndsIn = 90 * 60 * 1000L)
-        AnkiquestNotifier.onProfile(targetContext, today)
+        AnkiquestNotifier.onProfile(targetContext, today, StreakDelivery.ALLOW)
         val posted = shadowOf(manager).getNotification(5_130_002)
         assertEquals("🔥 Your 12 day streak ends in 2h", posted.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("A freeze is available if you need a break.", posted.extras.getString(Notification.EXTRA_TEXT))
         manager.cancelAll()
 
-        AnkiquestNotifier.onProfile(targetContext, today)
+        AnkiquestNotifier.onProfile(targetContext, today, StreakDelivery.ALLOW)
         assertEquals(0, shadowOf(manager).size())
-        AnkiquestNotifier.onProfile(targetContext, today.put("day_ends_at", today.getLong("day_ends_at") + 1))
+        AnkiquestNotifier.onProfile(targetContext, today.put("day_ends_at", today.getLong("day_ends_at") + 1), StreakDelivery.ALLOW)
         assertEquals(1, shadowOf(manager).size(), "a new study day has a new end")
     }
 
     @Test
     fun `the streak reminder waits for the chosen hours and needs a server warning`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
-        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = 3 * HOUR_MS))
-        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS).put("streak_warning", JSONObject.NULL))
-        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = -HOUR_MS))
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = 3 * HOUR_MS), StreakDelivery.ALLOW)
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS).put("streak_warning", JSONObject.NULL), StreakDelivery.ALLOW)
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = -HOUR_MS), StreakDelivery.ALLOW)
         AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "0") }
-        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS))
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS), StreakDelivery.ALLOW)
         assertEquals(0, shadowOf(manager).size())
     }
 

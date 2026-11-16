@@ -201,7 +201,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `the profile gives the goal, the streak and the connection summary`() =
         runBlocking {
             val profile = Ankiquest.profile()
-            AnkiquestNotifier.onProfile(targetContext, profile)
+            AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
             assertEquals(
                 AnkiquestDailyGoal.ServerGoal(AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, 14), since = 20754),
                 AnkiquestDailyGoal.cached(AnkiDroidApp.sharedPrefs(), account.scope),
