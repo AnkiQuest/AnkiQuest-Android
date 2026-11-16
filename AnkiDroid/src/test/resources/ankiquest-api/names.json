@@ -23,6 +23,7 @@
         "leaderboard",
         "mute",
         "notifications",
+        "notifications_companion",
         "password_change",
         "profile",
         "rank",
@@ -37,6 +38,7 @@
         "share_to_friends",
         "share_to_link",
         "share_undo",
+        "share_undo_send",
         "sharing",
         "sign_in",
         "sign_in_browser",
@@ -46,10 +48,11 @@
         "social_change",
         "streak_freezes",
         "study",
+        "unlocks",
         "upload"
     ],
     "unused": [
-        "share_undo_send"
+        "unlocks_save"
     ],
     "boards": [
         "leaderboard_day",

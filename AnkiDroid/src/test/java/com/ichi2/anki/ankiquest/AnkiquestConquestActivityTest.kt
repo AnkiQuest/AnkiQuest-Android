@@ -17,6 +17,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ioDispatcher
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
 import com.ichi2.utils.openInputStreamSafe
 import io.mockk.clearMocks
@@ -31,8 +32,10 @@ import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.json.JSONObject
 import org.junit.After
 import org.junit.AfterClass
@@ -47,6 +50,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.util.ReflectionHelpers
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -68,6 +72,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     @Before
     fun prepareCard() {
+        // Picture work runs on the main looper, which settle() drains with no wall-clock
+        // limit; a cold first render on macOS took longer than the 10 s wait (#298).
+        ioDispatcher = Dispatchers.Main
         ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
@@ -189,7 +196,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     @Test
     fun `the owner shares the card's words, deck, picture and page`() {
         val picture = "https://anki.example.test/w/tok.png"
-        coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Español::Animales"
+        coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Animales"
         coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
             AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
         every { AnkiquestShare.cardPng(any(), any(), picture) } returns "the server's PNG".toByteArray()
@@ -198,14 +205,14 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         mockkStatic(FileProvider::class)
         every { FileProvider.getUriForFile(any(), any(), any()) } returns stream
         val card = launch()
-        assertTrue(card.hasText(card.getString(R.string.aq_conquest_deck, "Español::Animales")))
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_deck, "Animales")))
         card.click(card.getString(R.string.ankiquest_share))
         val sent = card.sent()
         assertEquals("image/png", sent.type)
         assertEquals(stream, IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
         val text = sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
         assertTrue(text.startsWith(card.resources.getQuantityString(R.plurals.aq_conquest_share_label_mine, 4, "el murciélago", 4)))
-        assertTrue(text.contains(card.getString(R.string.aq_conquest_share_deck, "Español::Animales")))
+        assertTrue(text.contains(card.getString(R.string.aq_conquest_share_deck, "Animales")))
         assertTrue(text.endsWith("https://anki.example.test/conquered/hill/$AT"))
     }
 
@@ -314,6 +321,29 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         )
         coVerify(exactly = 0) { AnkiquestShare.conqueredCardDeck(any()) }
         coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+    }
+
+    @Test
+    fun `the share picture is drawn on the injectable io dispatcher`() {
+        // Drawing and encoding the picture must run on ioDispatcher, so tests run it to
+        // completion instead of racing a wall-clock wait on Dispatchers.IO (#298).
+        val io = StandardTestDispatcher()
+        ioDispatcher = io
+        val drawnOn = AtomicReference<Thread>()
+        every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+            drawnOn.set(Thread.currentThread())
+            callOriginal()
+        }
+        coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
+            recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null, win = null)
+        val card = launch("cerro")
+        card.views<TextView>().first { it.text.toString() == card.getString(R.string.ankiquest_share) }.performClick()
+        advanceRobolectricLooper()
+
+        io.scheduler.advanceUntilIdle()
+        card.settle()
+        assertEquals(Thread.currentThread(), drawnOn.get(), "drawn on the test's dispatcher")
+        assertEquals("image/png", card.sent().type)
     }
 
     private fun AnkiquestConquestActivity.sent(): Intent {

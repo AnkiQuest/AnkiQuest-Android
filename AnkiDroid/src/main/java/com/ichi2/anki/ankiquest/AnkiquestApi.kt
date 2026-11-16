@@ -121,9 +121,22 @@ internal object AnkiquestApi {
                 check()
                 throw AnkiquestHttpException(response.code, text?.let(::explanation), text?.let(::reauth) == true)
             }
-            read(response).also { check() }
+            // A parse failure quotes the answer it could not read; keep it out of logs.
+            val value =
+                try {
+                    read(response)
+                } catch (e: JSONException) {
+                    throw redacted(e)
+                }
+            value.also { check() }
         }
     }
+
+    /**
+     * [error] without its message. org.json quotes the text it could not read, which can hold a token or
+     * private messages, and logged exceptions reach crash reports through logcat. The stack trace stays.
+     */
+    fun redacted(error: JSONException): JSONException = JSONException(UNREADABLE).also { it.stackTrace = error.stackTrace }
 
     /**
      * [call] for [account], which must be the signed-in account when the request is sent and, unless
@@ -175,6 +188,8 @@ internal object AnkiquestApi {
         }
 
     private const val ERROR_BYTES = 16L * 1024
+
+    private const val UNREADABLE = "Unreadable server answer"
 }
 
 /** Which servers credentials may be sent to. Kept apart from [AnkiquestApi] so checking an address builds no HTTP client. */

@@ -47,8 +47,18 @@ class ReleaseSmokeTest {
         uiAutomator {
             startApp(targetPackage)
             onElement { viewIdResourceName == "$targetPackage:id/get_started" }.click()
+
+            // AnkiQuest: Aki greets a fresh install once, over the deck list; "Later" closes it.
+            onElementOrNull(GREETING_WAIT_MS) { viewIdResourceName == "$targetPackage:id/ankiquest_greeting_image" }
+                ?.let { onElement { viewIdResourceName == "android:id/button2" }.click() }
+
             onElement { viewIdResourceName == "$targetPackage:id/fab_main" }
         }
 
     private fun shell(command: String): String = device.executeShellCommand(command)
+
+    private companion object {
+        /** How long the deck list may take to show AnkiQuest's first-open greeting. */
+        const val GREETING_WAIT_MS = 5_000L
+    }
 }

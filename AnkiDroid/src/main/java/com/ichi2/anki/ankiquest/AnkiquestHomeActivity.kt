@@ -27,13 +27,13 @@ import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -68,9 +68,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var networkJob: Job? = null
     private var avatarJob: Job? = null
     private var copyJob: Job? = null
-    private var copyOwner: AnkiquestDialogOwner? = null
+    private lateinit var deckChoices: AnkiquestDeckChoices
     private var copyInbox: CopyInbox = CopyInbox.Loading
-    private var copyBusy = false
+    private var copyState: CopyState = CopyState.Ready
+    private val copyBusy get() = copyState is CopyState.Working
     private var copyStatus: String? = null
     private var importedCopyFile: File? = null
     private val copyImporter =
@@ -91,6 +92,26 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         data class Ready(
             val data: JSONObject,
         ) : CopyInbox
+    }
+
+    private sealed interface CopyState {
+        data object Ready : CopyState
+
+        sealed interface Working : CopyState {
+            val account: HomeAccount
+        }
+
+        data class Sending(
+            override val account: HomeAccount,
+        ) : Working
+
+        data class Importing(
+            override val account: HomeAccount,
+        ) : Working
+
+        data class Dismissing(
+            override val account: HomeAccount,
+        ) : Working
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,6 +140,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         AnkiquestTabBar.attach(this, findViewById(R.id.aq_home_root), R.id.ankiquest_nav_today)
         account = AnkiquestHomeData.account()
+        deckChoices = AnkiquestDeckChoices(this, ::selectDeck, ::copyChosen)
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
     }
@@ -151,8 +173,6 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
             // A new owner starts with empty caches and a fresh loading state.
-            copyOwner?.close()
-            copyOwner = null
             goalSetup = GoalSetup.READY
             account = current
             local = null
@@ -162,7 +182,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             profileFailure = null
             copyInbox = CopyInbox.Loading
             copyStatus = null
-            copyBusy = false
+            copyState = CopyState.Ready
         }
         val turn = ++generation
         lifecycleScope.launch {
@@ -206,10 +226,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                         }
                         if (current.token.isNotEmpty()) {
                             try {
-                                val companion = AnkiquestHomeData.companion(current)
-                                if (turn == generation && AnkiquestHomeData.account()?.scope == current.scope &&
-                                    AnkiquestCompanion.selected() != companion && AnkiquestCompanion.remember(current, companion)
-                                ) {
+                                // Unlocks and the choice, both kept per account on the server.
+                                if (AnkiquestCompanion.refresh(current)) {
                                     AnkiquestWidget.requestUpdate(this@AnkiquestHomeActivity)
                                 }
                             } catch (e: CancellationException) {
@@ -545,78 +563,37 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (copyBusy || !ownsScope(current.scope)) {
             return
         }
-        copyOwner?.close()
-        val owner = AnkiquestDialogOwner(this, current)
-        copyOwner = owner
-        val dialog =
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.aq_copies_choose_deck)
-                .setItems(decks.map { it.name }.toTypedArray()) { dialog, position ->
-                    if (owner.take(dialog)) {
-                        chooseFriendsForCopy(current, owner, decks[position], friends)
-                    }
-                }.setNegativeButton(android.R.string.cancel, null)
-                .create()
-        owner.show(dialog)
+        deckChoices.copy(current, decks, local?.focus?.id, friends)
     }
 
-    private fun chooseFriendsForCopy(
+    private fun copyChosen(
         current: HomeAccount,
-        owner: AnkiquestDialogOwner,
-        deck: HomeDeck,
-        friends: List<JSONObject>,
-    ) {
-        val picked = BooleanArray(friends.size)
-        val dialog =
-            MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.aq_copies_choose_friends, deck.name))
-                .setMultiChoiceItems(friends.map { it.optString("display") }.toTypedArray(), picked) { _, which, selected ->
-                    picked[which] = selected
-                }.setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.aq_copies_share) { dialog, _ ->
-                    if (!owner.take(dialog)) {
-                        return@setPositiveButton
-                    }
-                    val selected = friends.indices.filter { picked[it] }.map { friends[it].getString("user") }
-                    if (selected.isEmpty()) {
-                        copyStatus = getString(R.string.aq_copies_choose_one)
-                        render()
-                        owner.close()
-                    } else {
-                        shareCopy(current, owner, deck, selected)
-                    }
-                }.create()
-        owner.show(dialog)
-    }
-
-    private fun shareCopy(
-        current: HomeAccount,
-        owner: AnkiquestDialogOwner,
-        deck: HomeDeck,
+        deck: SelectableDeck.Deck,
         recipients: List<String>,
     ) {
-        if (!owner.isCurrent()) {
-            owner.close()
+        if (copyBusy || !ownsScope(current.scope) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             return
         }
-        copyBusy = true
+        val work = CopyState.Sending(current)
+        copyState = work
         copyStatus = getString(R.string.aq_copies_sending)
         render()
         lifecycleScope.launch {
-            if (!owner.isCurrent()) {
-                finishCopy(current, owner, null)
+            // Starting a send requires the same resumed account; an accepted send can finish while hidden.
+            if (!ownsCopy(work) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                finishCopy(work, null)
                 return@launch
             }
             val status =
                 try {
-                    AnkiquestDeckCopies.share(current, deck.id, deck.name, recipients, cacheDir)
+                    AnkiquestDeckCopies.share(current, deck.deckId, deck.name, recipients, cacheDir)
                     getString(R.string.aq_copies_sent)
                 } catch (error: CancellationException) {
-                    finishCopy(current, owner, null)
+                    finishCopy(work, null)
                     throw error
                 } catch (_: HomeAccountChanged) {
-                    finishCopy(current, owner, null)
-                    if (copyOwner === owner && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    finishCopy(work, null)
+                    if (copyState === work && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                         refresh()
                     }
                     return@launch
@@ -626,35 +603,40 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     Timber.w(error, "AnkiQuest deck copy could not be sent")
                     getString(R.string.aq_copies_failed)
                 }
-            finishCopy(current, owner, status)
+            finishCopy(work, status)
         }
     }
 
     private fun finishCopy(
-        current: HomeAccount,
-        owner: AnkiquestDialogOwner,
+        work: CopyState.Working,
         status: String?,
     ) {
-        if (copyOwner === owner && ownsScope(current.scope)) {
-            copyStatus = status
-            copyBusy = false
-            if (owner.isCurrent()) {
-                render()
-            }
-            copyOwner = null
+        if (!ownsCopy(work)) {
+            return
         }
-        owner.close()
+        copyStatus = status
+        copyState = CopyState.Ready
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            render()
+        }
     }
+
+    // A result from an earlier visit cannot finish a newer operation, even for the same account.
+    private fun ownsCopy(work: CopyState.Working): Boolean = copyState === work && ownsScope(work.account.scope)
 
     private fun importCopy(id: Long) {
         val current = account ?: return
-        copyBusy = true
+        if (copyBusy || !ownsScope(current.scope)) {
+            return
+        }
+        val work = CopyState.Importing(current)
+        copyState = work
         copyStatus = getString(R.string.aq_copies_downloading)
         render()
         lifecycleScope.launch {
             try {
                 val file = AnkiquestDeckCopies.download(current, id, cacheDir)
-                if (account?.scope == current.scope) {
+                if (ownsCopy(work)) {
                     copyStatus = null
                     importedCopyFile = file
                     copyImporter.launch(AnkiPackageImporterFragment.getIntent(this@AnkiquestHomeActivity, file.absolutePath))
@@ -662,54 +644,45 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     file.delete()
                 }
             } catch (error: CancellationException) {
+                finishCopy(work, null)
                 throw error
             } catch (error: Exception) {
                 Timber.w(error, "AnkiQuest deck copy could not be imported")
-                if (account?.scope == current.scope) copyStatus = getString(R.string.aq_copies_failed)
+                if (ownsCopy(work)) {
+                    copyStatus = getString(R.string.aq_copies_failed)
+                }
             }
-            if (account?.scope == current.scope) {
-                copyBusy = false
-                render()
-            }
+            finishCopy(work, copyStatus)
         }
     }
 
     private fun dismissCopy(id: Long) {
         val current = account ?: return
-        copyBusy = true
+        if (copyBusy || !ownsScope(current.scope)) {
+            return
+        }
+        val work = CopyState.Dismissing(current)
+        copyState = work
         render()
         lifecycleScope.launch {
             try {
                 AnkiquestDeckCopies.dismiss(current, id)
-                if (account?.scope == current.scope) {
-                    copyStatus = null
-                    copyBusy = false
+                if (ownsCopy(work)) {
+                    finishCopy(work, null)
                     refreshCopies(current)
                 }
             } catch (error: CancellationException) {
+                finishCopy(work, null)
                 throw error
             } catch (error: Exception) {
                 Timber.w(error, "AnkiQuest deck copy could not be dismissed")
-                if (account?.scope == current.scope) {
-                    copyStatus = getString(R.string.aq_copies_failed)
-                    copyBusy = false
-                    render()
-                }
+                finishCopy(work, getString(R.string.aq_copies_failed))
             }
         }
     }
 
     private fun chooseDeck() {
-        val rows = local?.decks.orEmpty()
-        val owner = account?.scope
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.aq_home_change_deck)
-            .setItems(rows.map { "${it.name} · ${it.daily.label(this)}" }.toTypedArray()) { _, index ->
-                if (ownsScope(owner)) {
-                    selectDeck(rows[index].id, owner)
-                }
-            }.setNegativeButton(android.R.string.cancel, null)
-            .show()
+        deckChoices.focus(local?.decks.orEmpty())
     }
 
     private fun selectDeck(

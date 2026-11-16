@@ -26,6 +26,7 @@ internal object AnkiquestSharing {
             "conquered" to ASK,
             "place" to ASK,
             "challenge" to ASK,
+            "companion_unlocked" to ASK,
         )
 
     /** A sharing policy, `private`, `ask` or `auto`, for each kind of win, and how many automatic wins each friend gets a day. */
@@ -205,7 +206,7 @@ internal object AnkiquestSharing {
     ): Sent {
         val body = JSONObject().put("moment", moment.json()).put("to", audience.json())
         note?.let {
-            require(it.length <= MAX_NOTE)
+            require(it.codePointCount(0, it.length) <= MAX_NOTE)
             body.put("note", it)
         }
         val answer = call(account, "POST", "api/share/${account.encodedUser}", body)
@@ -216,11 +217,15 @@ internal object AnkiquestSharing {
         )
     }
 
-    /** Takes [win] back from those it was sent to by hand who have not seen it; answers how many. */
+    /** Takes [sent] back from unread recipients; older servers retain their whole-win Undo. */
     suspend fun retract(
         account: HomeAccount,
-        win: Long,
-    ): Int = call(account, "DELETE", "api/share/${account.encodedUser}/$win").optInt("retracted")
+        sent: Sent,
+    ): Int {
+        // Old servers ignore the selector; stale capabilities must never broaden Undo.
+        val selector = "?until=${requireNotNull(sent.undoUntil)}"
+        return call(account, "DELETE", "api/share/${account.encodedUser}/${sent.win}$selector").optInt("retracted")
+    }
 
     /** One request for the captured [account], which must still be the signed-in one when it is sent and when it answers. */
     private suspend fun call(

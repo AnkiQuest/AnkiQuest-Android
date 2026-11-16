@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!--
+The flame before today counts. One value for every card and theme: at least 3:1 on white, on black,
+and on both card backgrounds, so it also holds on the transparent widget over any wallpaper.
+-->
+<resources>
+    <!-- Unlit: a streak with today not counted yet. -->
+    <color name="ankiquest_streak_flame_unlit">#767676</color>
+    <!-- Icy: a freeze kept the days before today. -->
+    <color name="ankiquest_streak_flame_icy">#2F86D6</color>
+</resources>

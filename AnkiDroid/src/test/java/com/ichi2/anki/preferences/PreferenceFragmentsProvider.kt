@@ -39,6 +39,7 @@ class PreferenceFragmentsProvider : TestParameterValuesProvider() {
                 BackupLimitsSettingsFragment::class,
                 AnkiquestSettingsFragment::class,
                 AnkiquestSignInFragment::class,
+                AnkiquestCompanionFragment::class,
                 AdvancedSettingsFragment::class,
                 SwitchProfilesFragment::class,
                 DeveloperOptionsFragment::class,

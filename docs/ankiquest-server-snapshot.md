@@ -4,7 +4,9 @@
 commit used by Android's committed API examples and shared fixtures.
 Normal PR and main builds test those committed files. A cheap isolated job
 checks them against that SHA; it never substitutes server master or runs
-server code. The Gradle contract job receives no server checkout or new data
+server code. The art check runs the exporter from that pinned
+server commit, not from master, and takes no manual `server_ref`: it runs
+server code with a Rust cache shared with main. The Gradle contract job receives no server checkout or new data
 unless a manual `server_ref` is explicitly supplied.
 
 `ankiquest-api/names.json` assigns every example to exactly one group:
@@ -41,7 +43,7 @@ An interrupted alert retries only the destination that did not receive it.
 The bot uses the existing `UPSTREAM_SYNC_TOKEN` so its pushes start normal PR
 CI. The repository owner must grant that token **Contents**, **Pull requests**
 and **Issues** read/write on this repository. No token value belongs in the
-repository. Scheduled automation is restricted to `float3/AnkiQuest-Android`.
+repository. Scheduled automation is restricted to `AnkiQuest/AnkiQuest-Android`.
 It executes reviewed helpers from main, retained outside the bump checkout;
 server data and unmerged changes on the bump branch are never executed by
 the privileged updater.
@@ -61,10 +63,10 @@ Commit the data, SHA and any ownership/test changes together. No merge
 ordering is required. When the server change reaches master, the next bump
 has identical data or a small follow-up.
 
-Both the API-contract and shared-fixtures workflows accept an optional
+The API-contract, shared-fixtures and art-check workflows accept an optional
 `server_ref` on manual dispatch. Blank means the committed pin. An explicit
-ref tests its API examples or compares its data with the committed snapshot;
-it does not change main. Missing/empty server examples fail clearly.
+ref tests its API examples, compares its data with the committed snapshot or
+checks the app art against its exporter; it does not change main. Missing/empty server examples fail clearly.
 
 The server's `android-contract` check rejects removal or changed JSON types
 for Android's consumed examples; additive changes remain allowed. Server

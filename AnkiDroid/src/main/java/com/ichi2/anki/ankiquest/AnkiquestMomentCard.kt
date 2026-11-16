@@ -383,7 +383,7 @@ internal object AnkiquestMomentCard {
             Kind.LEECH -> R.drawable.aki_leech
             Kind.CONQUERED -> R.drawable.aki_deck_conquered
             Kind.GOAL -> R.drawable.aki_goal
-            Kind.UNLOCKS -> R.drawable.aki_celebrate
+            Kind.COMPANION, Kind.UNLOCKS -> R.drawable.aki_celebrate
             Kind.SECURED -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, moment.streak ?: 1)
         }
 
@@ -405,6 +405,7 @@ internal object AnkiquestMomentCard {
         val tell: MaterialButton = view.findViewById(R.id.aq_moment_tell)
         val share: MaterialButton = view.findViewById(R.id.aq_moment_share)
         val download: MaterialButton = view.findViewById(R.id.aq_moment_download)
+        val deck: MaterialButton = view.findViewById(R.id.aq_moment_deck)
     }
 
     /** Where the player went from the card; only a conquest screen changes what a moment shows. */
@@ -434,6 +435,20 @@ internal object AnkiquestMomentCard {
         private val told = mutableSetOf<String>()
         private var generation = 0
         private var away = Away.NONE
+        private val deckNames = mutableMapOf<String, DeckName>()
+
+        /** A lookup owns one state; returning from editing or saving replaces it. */
+        private sealed interface DeckName {
+            val name: String?
+
+            data class Loading(
+                override val name: String?,
+            ) : DeckName
+
+            data class Ready(
+                override val name: String?,
+            ) : DeckName
+        }
 
         /** Conquered cards whose telling friends can still be taken back. */
         private val undoable = mutableSetOf<String>()
@@ -449,7 +464,9 @@ internal object AnkiquestMomentCard {
             holder: Holder,
             position: Int,
         ) {
-            val moment = moments[position]
+            val original = moments[position]
+            val deck = deckNames[original.key]
+            val moment = if (deck != null) original.copy(deck = deck.name) else original
             val picture = pictures[moment.key]
 
             // The server's picture has its own design; otherwise a streak moment gets the hero.
@@ -465,7 +482,8 @@ internal object AnkiquestMomentCard {
                 holder.art.isVisible = true
                 holder.art.setImageBitmap(picture)
             } else {
-                AnkiquestCompanion.show(holder.art, art(moment), size)
+                // A new companion shows itself rather than the chosen one.
+                AnkiquestCompanion.show(holder.art, art(moment), size, AnkiquestMoments.joined(moment) ?: AnkiquestCompanion.choice())
             }
             holder.title.text = moment.title
             holder.detail.text = moment.detail
@@ -486,6 +504,20 @@ internal object AnkiquestMomentCard {
             holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
             holder.share.setOnClickListener { share(moment, position) }
             holder.download.setOnClickListener { download(moment) }
+            holder.deck.isVisible = moment.conquest != null
+            holder.deck.text = moment.deck?.let { host.getString(R.string.aq_share_deck_edit, it) }
+                ?: host.getString(R.string.aq_share_deck_title)
+            holder.deck.setOnClickListener {
+                moment.conquest?.let { at ->
+                    AnkiquestDeckNameDialog.show(host, account, at) { name ->
+                        deckNames[moment.key] = DeckName.Ready(name)
+                        changed(position)
+                    }
+                }
+            }
+            if (!deckNames.containsKey(moment.key)) {
+                loadDeck(moment, position)
+            }
             if (known == null) load(moment, position)
         }
 
@@ -506,7 +538,39 @@ internal object AnkiquestMomentCard {
             extras.clear()
             pictures.clear()
             undoable.clear()
+            deckNames.clear()
             moments.indices.forEach(::changed)
+        }
+
+        private fun loadDeck(
+            moment: Moment,
+            position: Int,
+        ) {
+            val at = moment.conquest ?: return
+            val scope = scope ?: return
+            if (deckNames.containsKey(moment.key)) {
+                return
+            }
+            val loading = DeckName.Loading(moment.deck?.let(AnkiquestDeckNames::clean)?.ifEmpty { null })
+            deckNames[moment.key] = loading
+            scope.launch {
+                var name = loading.name
+                try {
+                    val deck = AnkiquestDeckNames.find(at)
+                    if (deck != null) {
+                        name = deck.name.ifEmpty { null }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.w(error, "AnkiQuest moment deck choice unavailable")
+                }
+                if (current() == null || deckNames[moment.key] !== loading) {
+                    return@launch
+                }
+                deckNames[moment.key] = DeckName.Ready(name)
+                changed(position)
+            }
         }
 
         /** Asks the server whether friends heard [moment] and for its picture, once per visit. */
@@ -719,6 +783,7 @@ internal object AnkiquestMomentCard {
                                         moment.shareBody ?: moment.detail,
                                         art = art(moment),
                                         streak = moment.streak,
+                                        companion = AnkiquestMoments.joined(moment),
                                     )
                                 }
                             }
@@ -775,7 +840,13 @@ internal object AnkiquestMomentCard {
         private fun publicPicture(moment: Moment): AnkiquestShare.Card {
             val title = moment.shareTitle ?: moment.title
             if (moment.conquest == null) {
-                return AnkiquestShare.Card(title, moment.shareBody ?: moment.detail, art(moment), streak = moment.streak)
+                return AnkiquestShare.Card(
+                    title,
+                    moment.shareBody ?: moment.detail,
+                    art(moment),
+                    streak = moment.streak,
+                    companion = AnkiquestMoments.joined(moment),
+                )
             }
             return AnkiquestShare.Card(
                 title,

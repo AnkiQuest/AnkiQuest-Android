@@ -18,16 +18,18 @@ import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Aki's mood on the app icon, like a pet waiting on the home screen. On by default where the build
+ * The companion's mood on the app icon, like a pet waiting on the home screen. On by default where the build
  * has the moods; launchers redraw the icon when it changes, and some briefly drop it from the home
  * screen while they do.
  *
- * Each mood aliases AnkiquestLauncher, which forwards into DeckPicker's stable task so disabling
+ * Each [Icon] aliases AnkiquestLauncher, which forwards into DeckPicker's stable task so disabling
  * an alias cannot finish a review. Exactly one is enabled. Builds without the aliases keep
  * IntentHandler's launcher entry.
  */
 internal object AnkiquestIcon : DefaultLifecycleObserver {
     const val PREF_ENABLED = "ankiquestMoodIcon"
+    private const val AKI = "aki"
+    private const val ANKI_TAN = "anki_tan"
     private const val PREF_CURRENT = "ankiquestMoodIconCurrent"
     private const val PREF_LAST_PROFILE = "ankiquestMoodIconProfile"
 
@@ -48,14 +50,43 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         val prefs: SharedPreferences,
     )
 
-    enum class Mood(
+    enum class Mood {
+        DEFAULT,
+        HAPPY,
+        WORRIED,
+        FROZEN,
+        SLEEPY,
+    }
+
+    /** A launcher alias: one companion's face for one mood. Companions without their own faces use Aki's. */
+    enum class Icon(
         val alias: String,
+        val companion: String,
+        val mood: Mood,
     ) {
-        DEFAULT("AnkiquestIconDefault"),
-        HAPPY("AnkiquestIconHappy"),
-        WORRIED("AnkiquestIconWorried"),
-        FROZEN("AnkiquestIconFrozen"),
-        SLEEPY("AnkiquestIconSleepy"),
+        AKI_DEFAULT("AnkiquestIconDefault", AKI, Mood.DEFAULT),
+        AKI_HAPPY("AnkiquestIconHappy", AKI, Mood.HAPPY),
+        AKI_WORRIED("AnkiquestIconWorried", AKI, Mood.WORRIED),
+        AKI_FROZEN("AnkiquestIconFrozen", AKI, Mood.FROZEN),
+        AKI_SLEEPY("AnkiquestIconSleepy", AKI, Mood.SLEEPY),
+
+        // Shigeyuki's Anki-tan has no frozen face, so her frozen icon is her default one.
+        ANKI_TAN_DEFAULT("AnkiquestIconAnkiTanDefault", ANKI_TAN, Mood.DEFAULT),
+        ANKI_TAN_HAPPY("AnkiquestIconAnkiTanHappy", ANKI_TAN, Mood.HAPPY),
+        ANKI_TAN_WORRIED("AnkiquestIconAnkiTanWorried", ANKI_TAN, Mood.WORRIED),
+        ANKI_TAN_SLEEPY("AnkiquestIconAnkiTanSleepy", ANKI_TAN, Mood.SLEEPY),
+        ;
+
+        companion object {
+            /** [companion]'s face for [mood], its default face when it has none for [mood], or Aki's. */
+            fun of(
+                companion: String,
+                mood: Mood,
+            ): Icon {
+                val faces = entries.filter { it.companion == companion }.ifEmpty { entries.filter { it.companion == AKI } }
+                return faces.firstOrNull { it.mood == mood } ?: faces.first { it.mood == Mood.DEFAULT }
+            }
+        }
     }
 
     /** The mood for your [profile] at [now], as [AnkiquestMood] has it: worried from the start of a day not studied yet. */
@@ -91,7 +122,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     /** Whether this build has the mood aliases; only the quest build does. */
     fun available(context: Context): Boolean =
         try {
-            context.packageManager.getActivityInfo(component(context, Mood.DEFAULT), PackageManager.MATCH_DISABLED_COMPONENTS)
+            context.packageManager.getActivityInfo(component(context, Icon.AKI_DEFAULT), PackageManager.MATCH_DISABLED_COMPONENTS)
             true
         } catch (_: PackageManager.NameNotFoundException) {
             false
@@ -191,11 +222,15 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
 
     private fun lastProfileKey(prefs: SharedPreferences) = scopedKey(PREF_LAST_PROFILE, AnkiquestHomeData.account(prefs)?.scope)
 
-    /** Android can finish tasks when an alias is disabled. Wait until the last activity stops. */
+    /**
+     * Requests [companion]'s face for [mood]. Android can finish tasks when an alias is disabled,
+     * so wait until the last activity stops.
+     */
     fun show(
         context: Context,
         mood: Mood,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+        companion: String = AnkiquestCompanion.selected(prefs),
     ) {
         val apply =
             synchronized(lock) {
@@ -208,7 +243,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 }
             }
         if (apply) {
-            synchronized(changes) { applyMood(context, mood, prefs) }
+            synchronized(changes) { applyIcon(context, Icon.of(companion, mood), prefs) }
         }
     }
 
@@ -244,14 +279,14 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
             // A switch already started can finish safely because the task uses the stable launcher.
             val prefs = pending.prefs
             val mood = if (enabled(prefs)) lastMood(TimeManager.time.intTimeMS(), prefs) else Mood.DEFAULT
-            applyMood(pending.context, mood, prefs)
+            applyIcon(pending.context, Icon.of(AnkiquestCompanion.selected(prefs), mood), prefs)
         }
     }
 
     /** Check the actual components so a failed or partial switch can be retried. */
-    private fun applyMood(
+    private fun applyIcon(
         context: Context,
-        mood: Mood,
+        icon: Icon,
         prefs: SharedPreferences,
     ) {
         if (!available(context)) {
@@ -259,60 +294,60 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         }
         val packageManager = context.packageManager
         try {
-            val wrong = Mood.entries.filter { enabled(packageManager, context, it) != (it == mood) }
+            val wrong = Icon.entries.filter { enabled(packageManager, context, it) != (it == icon) }
             if (wrong.isEmpty()) {
-                if (prefs.getString(PREF_CURRENT, null) != mood.name) prefs.edit { putString(PREF_CURRENT, mood.name) }
+                if (prefs.getString(PREF_CURRENT, null) != icon.name) prefs.edit { putString(PREF_CURRENT, icon.name) }
                 return
             }
             // Enable the new icon before disabling the old one, so there is never no launcher entry.
-            for (other in wrong.sortedBy { it != mood }) {
+            for (other in wrong.sortedBy { it != icon }) {
                 packageManager.setComponentEnabledSetting(
                     component(context, other),
-                    wanted(other, other == mood),
+                    wanted(other, other == icon),
                     PackageManager.DONT_KILL_APP,
                 )
             }
-            if (Mood.entries.all { enabled(packageManager, context, it) == (it == mood) }) {
-                prefs.edit { putString(PREF_CURRENT, mood.name) }
+            if (Icon.entries.all { enabled(packageManager, context, it) == (it == icon) }) {
+                prefs.edit { putString(PREF_CURRENT, icon.name) }
             } else {
                 prefs.edit { remove(PREF_CURRENT) }
-                Timber.w("AnkiQuest icon did not change to %s", mood)
+                Timber.w("AnkiQuest icon did not change to %s", icon)
             }
         } catch (e: Exception) {
             prefs.edit { remove(PREF_CURRENT) }
-            Timber.w(e, "AnkiQuest icon could not change to %s", mood)
+            Timber.w(e, "AnkiQuest icon could not change to %s", icon)
         }
     }
 
-    /** The mood the icon was last switched to completely, or null when unknown or a switch failed. */
-    internal fun current(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Mood? =
-        Mood.entries.firstOrNull { it.name == prefs.getString(PREF_CURRENT, null) }
+    /** The icon last switched to completely, or null when unknown or a switch failed. */
+    internal fun current(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Icon? =
+        Icon.entries.firstOrNull { it.name == prefs.getString(PREF_CURRENT, null) }
 
-    /** The setting that makes [mood]'s alias [on]: the plain icon is enabled in the manifest, the moods are not. */
+    /** The setting that makes [icon]'s alias [on]: Aki's plain icon is enabled in the manifest, the others are not. */
     private fun wanted(
-        mood: Mood,
+        icon: Icon,
         on: Boolean,
     ): Int =
         when {
-            on == (mood == Mood.DEFAULT) -> PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+            on == (icon == Icon.AKI_DEFAULT) -> PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
             on -> PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             else -> PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         }
 
-    /** Whether [mood]'s alias is a launcher entry now. */
+    /** Whether [icon]'s alias is a launcher entry now. */
     private fun enabled(
         packageManager: PackageManager,
         context: Context,
-        mood: Mood,
+        icon: Icon,
     ): Boolean =
-        when (packageManager.getComponentEnabledSetting(component(context, mood))) {
+        when (packageManager.getComponentEnabledSetting(component(context, icon))) {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
-            PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> mood == Mood.DEFAULT
+            PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> icon == Icon.AKI_DEFAULT
             else -> false
         }
 
     private fun component(
         context: Context,
-        mood: Mood,
-    ) = ComponentName(context.packageName, "com.ichi2.anki.ankiquest.${mood.alias}")
+        icon: Icon,
+    ) = ComponentName(context.packageName, "com.ichi2.anki.ankiquest.${icon.alias}")
 }

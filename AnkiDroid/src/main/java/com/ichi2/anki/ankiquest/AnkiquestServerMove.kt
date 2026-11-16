@@ -100,7 +100,7 @@ internal object AnkiquestServerMove {
             )
         prefs.edit(commit = true) {
             for ((key, value) in settings) {
-                if (!key.startsWith("ankiquest") || key in ACCOUNT_KEYS) continue
+                if (!AnkiquestPreferences.owns(key) || key in ACCOUNT_KEYS) continue
                 val newKey = movedKey(key, from.server, to.server, hashes)
                 val newValue = movedValue(value, hashes)
                 if (newKey == key && newValue == value) continue

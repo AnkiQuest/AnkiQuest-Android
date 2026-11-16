@@ -1,0 +1,213 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package com.ichi2.anki.ankiquest
+
+import androidx.core.content.edit
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.libanki.Card
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [33])
+class AnkiquestDeckNamesTest : RobolectricTest() {
+    private val at = 1_793_183_600_000L
+
+    @Before
+    fun configure() {
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
+        account("hill")
+    }
+
+    @After
+    fun cleanup() {
+        SharedPreferencesTestHook.override = null
+    }
+
+    private fun account(user: String) {
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example.test")
+            putString(Ankiquest.PREF_USER, user)
+            putString(Ankiquest.PREF_TOKEN, "synthetic-$user-token")
+        }
+    }
+
+    @Test
+    fun `the reported archived path offers its meaningful deck name`() =
+        runTest {
+            val card = addBasicNote().firstCard()
+            card.did = col.decks.id("5 Archive::Mandarin — Modern Course::Mandarin modern 1")
+            col.updateCard(card)
+            col.db.execute(
+                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, ?, 0, 3, 25, 8, 2500, 7000, 1)",
+                at,
+                card.id,
+            )
+            assertEquals("Mandarin — Modern Course › Mandarin modern 1", AnkiquestShare.conqueredCardDeck(at))
+        }
+
+    @Test
+    fun `cleaned names follow all shared desktop cases`() {
+        val fixture = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/deck_names.json")).readText())
+        val cases = fixture.getJSONArray("cases")
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            assertEquals(case.getString("expected"), AnkiquestDeckNames.clean(case.getString("path")), case.getString("path"))
+        }
+    }
+
+    /** Android's ICU regex engine rejects Java's (?U) and (?u) flags; the JVM tests run on accepts them. */
+    @Test
+    fun `AnkiQuest patterns avoid regex flags Android rejects`() {
+        val unsupported = Regex("""\(\?[a-zA-Z]*[Uu][a-zA-Z]*\)""")
+        val sources =
+            File("src/main/java/com/ichi2/anki/ankiquest")
+                .walk()
+                .filter { it.extension == "kt" }
+                .toList()
+        assertTrue(sources.isNotEmpty(), "AnkiQuest sources not found")
+        assertEquals(emptyList(), sources.flatMap { lines(it, unsupported) })
+    }
+
+    /** "File.kt:line" for each line of [file] that matches [pattern]. */
+    private fun lines(
+        file: File,
+        pattern: Regex,
+    ) = file
+        .readLines()
+        .withIndex()
+        .filter { pattern.containsMatchIn(it.value) }
+        .map { "${file.name}:${it.index + 1}" }
+
+    @Test
+    fun `Unicode digits and spaces clean like ASCII ones`() {
+        assertEquals(AnkiquestDeckNames.clean("12. Spanish"), AnkiquestDeckNames.clean("１２. Spanish"))
+        assertEquals(AnkiquestDeckNames.clean("Spanish Core"), AnkiquestDeckNames.clean("Spanish\u00A0Core"))
+    }
+
+    @Test
+    fun `the desktop character limit never splits a supplementary character`() {
+        val name = "語".repeat(119) + "🐼"
+        assertEquals(name, AnkiquestDeckNames.clean("Languages::$name"))
+    }
+
+    @Test
+    fun `a short supplementary leaf keeps its parent like the desktop cleaner`() {
+        assertEquals("Japanese › 𠮷𠮷", AnkiquestDeckNames.clean("Japanese::𠮷𠮷"))
+    }
+
+    private fun reviewed(path: String): Card {
+        val card = addBasicNote().firstCard()
+        card.did = col.decks.id(path)
+        col.updateCard(card)
+        col.db.execute(
+            "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, ?, 0, 3, 25, 8, 2500, 7000, 1)",
+            at,
+            card.id,
+        )
+        return card
+    }
+
+    private fun conquests() = JSONArray().put(JSONObject().put("at", at))
+
+    @Test
+    fun `the first captured home deck survives later moves and snapshots`() =
+        runTest {
+            val card = reviewed("Spanish::Animals")
+            val source = AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account()))
+            AnkiquestDeckNames.capture(source, conquests())
+            card.did = col.decks.id("5 Archive::Spanish::Old words")
+            col.updateCard(card)
+            AnkiquestDeckNames.capture(source, conquests())
+            assertEquals("Animals", AnkiquestShare.conqueredCardDeck(at))
+        }
+
+    @Test
+    fun `an unavailable card cannot discard other snapshots from the same upload`() =
+        runTest {
+            val card = reviewed("Spanish::Animals")
+            col.db.execute(
+                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, ?, 0, 3, 25, 8, 2500, 7000, 1)",
+                at + 1,
+                card.id + 10_000,
+            )
+            val source = AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account()))
+            AnkiquestDeckNames.capture(source, JSONArray().put(JSONObject().put("at", at + 1)).put(JSONObject().put("at", at)))
+            card.did = col.decks.id("Spanish::New words")
+            col.updateCard(card)
+            assertEquals("Animals", AnkiquestShare.conqueredCardDeck(at))
+        }
+
+    @Test
+    fun `filtered reviews use the original deck and remember an editable or omitted name`() =
+        runTest {
+            val card = reviewed("Spanish::Animals")
+            card.oDid = card.did
+            card.did = col.decks.id("Custom Study Session")
+            col.updateCard(card)
+            val deck = assertNotNull(AnkiquestDeckNames.find(at))
+            assertEquals("Animals", deck.name)
+            assertEquals(listOf("Animals", "Spanish", ""), deck.picks)
+            deck.save("  My Spanish\nwords  ")
+            assertEquals("My Spanish words", AnkiquestShare.conqueredCardDeck(at))
+            deck.save("🐼".repeat(121))
+            assertEquals("🐼".repeat(120), AnkiquestShare.conqueredCardDeck(at), "saved choices use the shared character limit")
+            deck.save("")
+            assertEquals("", AnkiquestDeckNames.find(at)?.name)
+            assertNull(AnkiquestShare.conqueredCardDeck(at), "an omitted deck adds no empty caption")
+        }
+
+    @Test
+    fun `choices and retained callbacks stay with their account`() =
+        runTest {
+            reviewed("Spanish::Animals")
+            val old = assertNotNull(AnkiquestDeckNames.find(at))
+            old.save("Hill's deck")
+            account("other")
+            assertEquals("Animals", AnkiquestDeckNames.find(at)?.name)
+            assertFailsWith<HomeAccountChanged> { old.save("must not save") }
+            account("hill")
+            assertEquals("Hill's deck", AnkiquestDeckNames.find(at)?.name)
+        }
+
+    @Test
+    fun `a stale collection or account upload cannot record the new collection's deck`() =
+        runTest {
+            val card = reviewed("Spanish::Animals")
+            val source = AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account()))
+            AnkiquestDeckNames.capture(source.copy(collection = "another collection"), conquests())
+            account("other")
+            AnkiquestDeckNames.capture(source, conquests())
+            card.did = col.decks.id("Spanish::New words")
+            col.updateCard(card)
+            assertEquals("New words", AnkiquestDeckNames.find(at)?.name)
+            account("hill")
+            assertEquals("New words", AnkiquestDeckNames.find(at)?.name)
+        }
+
+    @Test
+    fun `a recorded name survives deletion while an unknown review invents nothing`() =
+        runTest {
+            val card = reviewed("Spanish::Animals")
+            AnkiquestDeckNames.capture(AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account())), conquests())
+            col.removeCardsAndOrphanedNotes(listOf(card.id))
+            assertEquals("Animals", AnkiquestDeckNames.find(at)?.name)
+            assertNull(AnkiquestDeckNames.find(at + 1))
+            assertTrue(AnkiquestDeckNames.clean("word ".repeat(100)).length <= AnkiquestShare.MAX_LABEL)
+        }
+}
