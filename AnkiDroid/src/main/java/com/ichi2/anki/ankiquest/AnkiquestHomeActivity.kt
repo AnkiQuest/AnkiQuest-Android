@@ -27,13 +27,13 @@ import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -69,6 +69,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var avatarJob: Job? = null
     private var copyJob: Job? = null
     private var copyOwner: AnkiquestDialogOwner? = null
+    private lateinit var deckChoices: AnkiquestDeckChoices
     private var copyInbox: CopyInbox = CopyInbox.Loading
     private var copyBusy = false
     private var copyStatus: String? = null
@@ -119,6 +120,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         AnkiquestTabBar.attach(this, findViewById(R.id.aq_home_root), R.id.ankiquest_nav_today)
         account = AnkiquestHomeData.account()
+        deckChoices = AnkiquestDeckChoices(this, ::selectDeck, ::copyChosen)
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
     }
@@ -544,53 +546,27 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             return
         }
         copyOwner?.close()
-        val owner = AnkiquestDialogOwner(this, current)
-        copyOwner = owner
-        val dialog =
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.aq_copies_choose_deck)
-                .setItems(decks.map { it.name }.toTypedArray()) { dialog, position ->
-                    if (owner.take(dialog)) {
-                        chooseFriendsForCopy(current, owner, decks[position], friends)
-                    }
-                }.setNegativeButton(android.R.string.cancel, null)
-                .create()
-        owner.show(dialog)
+        deckChoices.copy(current, decks, local?.focus?.id, friends)
     }
 
-    private fun chooseFriendsForCopy(
+    private fun copyChosen(
         current: HomeAccount,
-        owner: AnkiquestDialogOwner,
-        deck: HomeDeck,
-        friends: List<JSONObject>,
+        deck: SelectableDeck.Deck,
+        recipients: List<String>,
     ) {
-        val picked = BooleanArray(friends.size)
-        val dialog =
-            MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.aq_copies_choose_friends, deck.name))
-                .setMultiChoiceItems(friends.map { it.optString("display") }.toTypedArray(), picked) { _, which, selected ->
-                    picked[which] = selected
-                }.setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.aq_copies_share) { dialog, _ ->
-                    if (!owner.take(dialog)) {
-                        return@setPositiveButton
-                    }
-                    val selected = friends.indices.filter { picked[it] }.map { friends[it].getString("user") }
-                    if (selected.isEmpty()) {
-                        copyStatus = getString(R.string.aq_copies_choose_one)
-                        render()
-                        owner.close()
-                    } else {
-                        shareCopy(current, owner, deck, selected)
-                    }
-                }.create()
-        owner.show(dialog)
+        if (copyBusy || !ownsScope(current.scope)) {
+            return
+        }
+        copyOwner?.close()
+        val owner = AnkiquestDialogOwner(this, current)
+        copyOwner = owner
+        shareCopy(current, owner, deck, recipients)
     }
 
     private fun shareCopy(
         current: HomeAccount,
         owner: AnkiquestDialogOwner,
-        deck: HomeDeck,
+        deck: SelectableDeck.Deck,
         recipients: List<String>,
     ) {
         if (!owner.isCurrent()) {
@@ -607,7 +583,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
             val status =
                 try {
-                    AnkiquestDeckCopies.share(current, deck.id, deck.name, recipients, cacheDir)
+                    AnkiquestDeckCopies.share(current, deck.deckId, deck.name, recipients, cacheDir)
                     getString(R.string.aq_copies_sent)
                 } catch (error: CancellationException) {
                     finishCopy(current, owner, null)
@@ -698,16 +674,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     }
 
     private fun chooseDeck() {
-        val rows = local?.decks.orEmpty()
-        val owner = account?.scope
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.aq_home_change_deck)
-            .setItems(rows.map { "${it.name} · ${it.daily.label(this)}" }.toTypedArray()) { _, index ->
-                if (ownsScope(owner)) {
-                    selectDeck(rows[index].id, owner)
-                }
-            }.setNegativeButton(android.R.string.cancel, null)
-            .show()
+        deckChoices.focus(local?.decks.orEmpty())
     }
 
     private fun selectDeck(
