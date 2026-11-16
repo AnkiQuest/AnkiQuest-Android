@@ -9,7 +9,6 @@
     <string name="aq_copies_offer">%1$s partilhou %2$s</string>
     <string name="aq_copies_share">Partilhar um baralho</string>
     <string name="aq_copies_choose_deck">Escolhe um baralho</string>
-    <string name="aq_copies_choose_friends">Partilhar %1$s com</string>
     <string name="aq_copies_choose_one">Escolhe pelo menos um amigo.</string>
     <string name="aq_copies_sending">A preparar e enviar a cópia do baralho…</string>
     <string name="aq_copies_sent">Cópia do baralho enviada.</string>

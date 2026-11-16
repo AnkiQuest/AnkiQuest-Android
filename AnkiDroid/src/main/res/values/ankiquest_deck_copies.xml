@@ -9,7 +9,6 @@
     <string name="aq_copies_offer">%1$s shared %2$s</string>
     <string name="aq_copies_share">Share a deck</string>
     <string name="aq_copies_choose_deck">Choose a deck</string>
-    <string name="aq_copies_choose_friends">Share %1$s with</string>
     <string name="aq_copies_choose_one">Choose at least one friend.</string>
     <string name="aq_copies_sending">Preparing and sending the deck copy…</string>
     <string name="aq_copies_sent">Deck copy sent.</string>
