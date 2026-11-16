@@ -26,6 +26,7 @@ internal object AnkiquestSharing {
             "conquered" to ASK,
             "place" to ASK,
             "challenge" to ASK,
+            "companion_unlocked" to ASK,
         )
 
     /** A sharing policy, `private`, `ask` or `auto`, for each kind of win, and how many automatic wins each friend gets a day. */
@@ -205,7 +206,7 @@ internal object AnkiquestSharing {
     ): Sent {
         val body = JSONObject().put("moment", moment.json()).put("to", audience.json())
         note?.let {
-            require(it.length <= MAX_NOTE)
+            require(it.codePointCount(0, it.length) <= MAX_NOTE)
             body.put("note", it)
         }
         val answer = call(account, "POST", "api/share/${account.encodedUser}", body)

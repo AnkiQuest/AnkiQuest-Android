@@ -23,6 +23,7 @@
         "leaderboard",
         "mute",
         "notifications",
+        "notifications_companion",
         "password_change",
         "profile",
         "rank",
@@ -47,9 +48,12 @@
         "social_change",
         "streak_freezes",
         "study",
+        "unlocks",
         "upload"
     ],
-    "unused": [],
+    "unused": [
+        "unlocks_save"
+    ],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",

@@ -137,6 +137,28 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     }
 
     @Test
+    fun `the note accepts 140 Unicode characters including replacement and sends them intact`() {
+        coEvery { AnkiquestSharing.send(account, moment, any(), any()) } returns AnkiquestSharing.Sent(1, 17, null)
+        val (_, dialog) = open()
+        val note = dialog.findViewById<EditText>(R.id.aq_share_note)!!
+        val symbol = "\uD83C\uDF31"
+        val full = symbol.repeat(AnkiquestSharing.MAX_NOTE)
+        note.setText(full + symbol)
+        assertEquals(full, note.text.toString())
+
+        // Replacing a selected character frees one character, not two UTF-16 units.
+        note.text.replace(0, symbol.length, "z")
+        val expected = "z" + symbol.repeat(AnkiquestSharing.MAX_NOTE - 1)
+        assertEquals(expected, note.text.toString())
+        note.text.append(symbol)
+        assertEquals(expected, note.text.toString())
+        chip(dialog, "Cerro").performClick()
+        dialog.findViewById<View>(R.id.aq_share_send)!!.performClick()
+        idle()
+        coVerify { AnkiquestSharing.send(account, moment, Audience.Chosen(listOf("cerro"), emptyList()), expected) }
+    }
+
+    @Test
     fun `sending posts in the app and offers Undo, which takes it back`() {
         coEvery { AnkiquestSharing.send(account, moment, any(), any()) } returns AnkiquestSharing.Sent(2, 17, NOW + DAY)
         coEvery { AnkiquestSharing.retract(account, AnkiquestSharing.Sent(2, 17, NOW + DAY)) } returns 2
