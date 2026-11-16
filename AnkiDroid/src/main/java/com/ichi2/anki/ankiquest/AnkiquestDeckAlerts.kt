@@ -59,7 +59,11 @@ internal class AnkiquestDeckAlerts(
     /** A notification action is explicit consent, once, for its original account. */
     private fun openRequest() {
         val intent = host.intent
-        if (entry != Entry.PENDING || intent.action != ACTION || !host.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (entry != Entry.PENDING || intent.action != ACTION_STOP ||
+            !host.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        ) {
+            return
+        }
         entry = Entry.CONSUMED
         val account = AnkiquestHomeData.account()
         if (account == null || account.scope != intent.getStringExtra(EXTRA_SCOPE) ||
@@ -159,7 +163,7 @@ internal class AnkiquestDeckAlerts(
     }
 
     companion object {
-        private const val ACTION = "com.ichi2.anki.ankiquest.STOP_DECK_ALERTS"
+        private const val ACTION_STOP = "com.ichi2.anki.ankiquest.STOP_DECK_ALERTS"
         private const val EXTRA_SCOPE = "ankiquest.stop_deck_scope"
         private const val EXTRA_ACCOUNT = "ankiquest.stop_deck_account"
         private const val EXTRA_NOTICE = "ankiquest.stop_deck_notice"
@@ -173,7 +177,7 @@ internal class AnkiquestDeckAlerts(
         ): Intent =
             AnkiquestProfileActivity
                 .intent(context, sender)
-                .setAction(ACTION)
+                .setAction(ACTION_STOP)
                 .setData(
                     Uri
                         .Builder()
