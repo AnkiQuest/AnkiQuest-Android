@@ -17,8 +17,12 @@ These eight 1024 px WebPs are byte-identical to the canonical output of
 source commit `d7b7b96e7c7a50ddb7559f898ef2b16932f63367`.
 The matching desktop PNGs and export manifest are committed in that PR.
 
-`bluma_sleeping` supplies asleep; `bluma_celebrate` supplies happy. The
-remaining names match the core pose names. Existing art is preserved.
+The canonical names are now `bluma_asleep` and `bluma_happy`, from
+[run 43866857494](https://github.com/AnkiQuest/AnkiQuest-Desktop/actions/runs/43866857494),
+source `8c3bcf00e2964614ba668cf1ac2c816f9480a388`. They have identical bytes
+to the earlier `bluma_sleeping` and `bluma_celebrate` files, which remain
+unchanged. Active masters use fixture names under `static/cow/`.
+The remaining names match the core pose names. Existing art is preserved.
 The separate resource keep file retains these drawables through resource
 shrinking. Companion selection and unlock activation remain with the
 contributor maintaining those rules; this change supplies assets only.
@@ -30,7 +34,9 @@ and [Desktop #88](https://github.com/AnkiQuest/AnkiQuest-Desktop/issues/88).
 |---|---|
 | bluma_face.webp | 79ab824c187a5df93a9b0588ea6b553f0b3c7888d6135a3a8abb7e9a61820027 |
 | bluma_sleeping.webp | c12da35455cdeb36b1802f09fadf833807a5d30b81cabd969fa0d73461d8c7af |
+| bluma_asleep.webp | c12da35455cdeb36b1802f09fadf833807a5d30b81cabd969fa0d73461d8c7af |
 | bluma_celebrate.webp | 44dde7c166fe83abea67f59f8ba76796e1de3634dbd1d66ca87e200248c9e485 |
+| bluma_happy.webp | 44dde7c166fe83abea67f59f8ba76796e1de3634dbd1d66ca87e200248c9e485 |
 | bluma_streak.webp | 3b26426aa293b5eb0f950535eeee7be67103e3ec6652199047b9bc81685702f7 |
 | bluma_sad.webp | b84e998029b640e700b71d39fad1a11b36f48fa9f770133b2b61d81cc90a374d |
 | bluma_hopeful.webp | 78b6d6b7665674617587920db9f3de88bce9f71c81bbef3ee148aa8671fb5472 |

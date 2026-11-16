@@ -2,4 +2,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Preserve the complete core set for the companion mapping follow-up. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/bluma_face,@drawable/bluma_sleeping,@drawable/bluma_celebrate,@drawable/bluma_streak,@drawable/bluma_sad,@drawable/bluma_hopeful,@drawable/bluma_frozen,@drawable/bluma_neglected" />
+    tools:keep="@drawable/bluma_face,@drawable/bluma_asleep,@drawable/bluma_happy,@drawable/bluma_sleeping,@drawable/bluma_celebrate,@drawable/bluma_streak,@drawable/bluma_sad,@drawable/bluma_hopeful,@drawable/bluma_frozen,@drawable/bluma_neglected" />
