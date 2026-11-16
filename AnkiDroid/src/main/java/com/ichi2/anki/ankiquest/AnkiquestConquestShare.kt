@@ -35,7 +35,7 @@ internal object AnkiquestConquestShare {
             words(context, viewer, card),
             from(context, viewer, card, name),
             AnkiquestCommunity.conquestLink(viewer.server, card.user, card.at),
-        ).joinToString(" ")
+        ).joinToString("\n")
 
     /** Public counts accompany the saved label once; only the owner may add a local deck. */
     fun picture(
