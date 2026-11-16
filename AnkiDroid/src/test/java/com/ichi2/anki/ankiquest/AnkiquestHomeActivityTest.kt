@@ -614,7 +614,11 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         val latest = CompletableDeferred<JSONObject>()
         var uploads = 0
         coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } coAnswers {
-            if (uploads++ == 0) earlier.await() else latest.await()
+            if (uploads++ == 0) {
+                earlier.await()
+            } else {
+                latest.await()
+            }
         }
         val controller = launchController()
         val home = controller.get()
