@@ -448,13 +448,14 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
                 views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
                 sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
-                advanceRobolectricLooperUntil {
-                    !sheet.isShowing && card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action) != null
-                }
+                waitForUndo(card, sheet)
                 coVerify(exactly = 1) { AnkiquestSharing.send(identity, reference, AnkiquestSharing.Audience.Circle, null) }
                 assertFalse(sheet.isShowing)
                 assertTrue(card.isShowing)
-                assertNotNull(card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+                assertNotNull(
+                    card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action),
+                    moment.kind.name,
+                )
                 card.dismiss()
             }
             coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
@@ -463,6 +464,21 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             controller.close()
             unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
         }
+    }
+
+    /** Observe transient Undo before its timeout; draining all future tasks expires it. */
+    private fun waitForUndo(
+        card: AlertDialog,
+        sheet: BottomSheetDialog,
+    ) {
+        repeat(500) {
+            if (!sheet.isShowing && card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action) != null) {
+                return
+            }
+            Thread.sleep(10)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16))
+        }
+        error("The completed send did not show Undo on the moment card")
     }
 
     @Test
