@@ -164,7 +164,9 @@ class AnkiquestPollTest : RobolectricTest() {
                 assertEquals(Result.success(), worker().doWork())
                 assertEquals(0, shadowOf(manager).size(), "Quiet hours must hold the local warning")
                 assertFalse(AnkiDroidApp.sharedPrefs().contains(cacheKey(AnkiquestNotifier.PREF_STREAK_DAY)))
-                verify(exactly = 1) { AnkiquestIcon.update(any(), any(), any(), any()) }
+                // The upload and the later profile fetch both keep their icon refresh.
+                verify(exactly = 1) { AnkiquestIcon.update(any(), match { it.length() == 0 }, any(), any()) }
+                verify(exactly = 1) { AnkiquestIcon.update(any(), match { it.toString() == profileBody }, any(), any()) }
 
                 // Leaving quiet hours may deliver it once if the study day is still open.
                 reminderBody = "{\"quiet_start\":22,\"quiet_end\":22}"
