@@ -191,6 +191,18 @@ class AnkiquestMomentsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a companion moment shows the companion that joined`() {
+        assertEquals(AnkiquestCompanion.Choice.COW, AnkiquestMoments.joined(moment("companion:cow", Kind.COMPANION)))
+        assertEquals(AnkiquestCompanion.Choice.ANKILOPE, AnkiquestMoments.joined(moment("companion:ankilope", Kind.COMPANION)))
+        assertEquals(R.drawable.aki_celebrate, AnkiquestMomentCard.art(moment("companion:cow", Kind.COMPANION)))
+
+        // A companion this app does not know, or another kind of moment, shows the chosen one.
+        assertNull(AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
+        assertNull(AnkiquestMoments.joined(moment("companion:none", Kind.COMPANION)))
+        assertNull(AnkiquestMoments.joined(moment("level:4", Kind.LEVEL)))
+    }
+
+    @Test
     fun `waiting moments survive being stored`() {
         val conquered = moment("conquered:5", Kind.LEECH).copy(conquest = 5, lapses = 9, deck = "Español", win = 3)
         AnkiquestMoments.offer(prefs, account, listOf(conquered))

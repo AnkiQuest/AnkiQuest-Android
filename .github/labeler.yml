@@ -1,0 +1,42 @@
+# Area labels for pull requests, applied by actions/labeler in
+# .github/workflows/ankiquest_pr_labels.yml. A label is removed again when a
+# later push no longer touches its paths; labels not listed here are never
+# touched. Each AnkiQuest repository has its own paths; the labels come from
+# .github/labels.json.
+
+android:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*/src/main/**"
+          - "*/src/play/**"
+          - "*/src/quest/**"
+          - "*/*/src/main/**"
+          - "**/*.gradle.kts"
+          - gradle/**
+
+Strings:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "common/android/src/main/res/values/[0-9][0-9]-*.xml"
+          - "AnkiDroid/src/main/res/values/ankiquest*.xml"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/src/test/**"
+          - "**/src/androidTest/**"
+          - "**/src/testFixtures/**"
+          - .github/tests/**
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - "**/*.md"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - flake.nix
+          - flake.lock

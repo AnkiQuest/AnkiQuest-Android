@@ -143,6 +143,10 @@ internal data class HomeLocal(
 }
 
 internal object AnkiquestHomeData {
+    /** Sent with every companion save: `docs/mobile-api.md`, study companion, in float3/ankiquest. */
+    private const val COMPANIONS_HEADER = "X-AnkiQuest-Companions"
+    private const val SHOWS_LOCKS = "milestones"
+
     fun account(preferences: SharedPreferences = AnkiDroidApp.sharedPrefs()): HomeAccount? = HomeAccount.current(preferences)
 
     /** The profile of the captured [account], so changed settings never borrow its credentials. */
@@ -172,11 +176,24 @@ internal object AnkiquestHomeData {
             val request =
                 AnkiquestApi
                     .request(account, "api/companion/${account.encodedUser}")
-                    .apply { if (choice != null) post(AnkiquestApi.body(JSONObject().put("companion", choice))) }
-                    .build()
-            AnkiquestApi.call(request) {
+                    .apply {
+                        // The header says this app shows locked companions, so the server refuses one still locked.
+                        if (choice != null) {
+                            header(COMPANIONS_HEADER, SHOWS_LOCKS)
+                            post(AnkiquestApi.body(JSONObject().put("companion", choice)))
+                        }
+                    }.build()
+            // A request queued behind another, or answered, after the account changed must not touch the old account.
+            AnkiquestApi.call(account, request) {
                 AnkiquestCompanion.normalize(JSONObject(it.body.string()).getString("companion"))
             }
+        }
+
+    /** The companions [account] has unlocked and its progress toward the others (`GET /api/unlocks/{user}`). */
+    suspend fun unlocks(account: HomeAccount): JSONObject =
+        withContext(Dispatchers.IO) {
+            val request = AnkiquestApi.request(account, "api/unlocks/${account.encodedUser}").build()
+            AnkiquestApi.call(account, request) { AnkiquestApi.jsonObject(it) }
         }
 
     suspend fun local(): HomeLocal =

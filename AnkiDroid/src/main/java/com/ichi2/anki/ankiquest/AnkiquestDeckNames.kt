@@ -18,8 +18,10 @@ import java.text.Normalizer
 internal object AnkiquestDeckNames {
     private const val KEY = "ankiquestConquestDecks:"
     private const val SHORT_NAME = 3
-    private val PREFIX = Regex("""(?U)^(?:#?\d+[\s.)_-]+|\[[A-Za-z0-9]+\]\s*)""")
-    private val SPACE = Regex("""(?U)\s+""")
+
+    // Explicit Unicode classes, not the UNICODE_CHARACTER_CLASS flag: Android's ICU regex rejects it.
+    private val PREFIX = Regex("""^(?:#?\p{Nd}+[\s\p{Z}.)_-]+|\[[A-Za-z0-9]+\][\s\p{Z}]*)""")
+    private val SPACE = Regex("""[\s\p{Z}]+""")
     private val WORD = Regex("""\p{L}+""")
     private val FILING =
         setOf(
