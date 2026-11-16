@@ -170,11 +170,24 @@ internal object AnkiquestSharing {
             val rank: Int,
         ) : MomentRef()
 
+        /** An owned celebration or recap, including rows from before wins were saved. */
+        data class Notification(
+            val id: Long,
+        ) : MomentRef()
+
+        /** A completion explicitly shared with the deck name the player chose. */
+        data class Deck(
+            val id: String,
+            val name: String,
+        ) : MomentRef()
+
         fun json(): JSONObject =
             when (this) {
                 is Win -> JSONObject().put("win", id)
                 is Conquest -> JSONObject().put("conquest", at)
                 is Place -> JSONObject().put("place", rank)
+                is Notification -> JSONObject().put("notification", id)
+                is Deck -> JSONObject().put("deck", JSONObject().put("id", id).put("name", name))
             }
     }
 

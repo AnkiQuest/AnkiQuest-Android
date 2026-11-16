@@ -39,4 +39,7 @@ Ich lerne mit AnkiQuest.</string>
     <string name="ankiquest_deck_share_unsupported">Dein AnkiQuest-Server kann abgeschlossene Stapel noch nicht teilen.</string>
     <string name="ankiquest_deck_share_ask_title">Teilen fertiger Stapel anbieten</string>
     <string name="ankiquest_deck_share_ask_summary">Wenn du einen Stapel für heute abschließt, fragen, welchen Freunden du Bescheid sagen möchtest</string>
+    <string name="ankiquest_deck_moment_title">Stapel abgeschlossen</string>
+    <string name="ankiquest_deck_moment_name">Stapelname</string>
+    <string name="ankiquest_deck_moment_body">Ich habe heute mit %1$s fertig gelernt.</string>
 </resources>

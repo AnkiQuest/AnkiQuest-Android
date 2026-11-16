@@ -131,6 +131,7 @@ class AnkiquestShareActivity : AnkiActivity() {
             when {
                 share.win != null -> AnkiquestSharing.MomentRef.Win(share.win)
                 share.place != null -> AnkiquestSharing.MomentRef.Place(share.place)
+                share.notification != null -> AnkiquestSharing.MomentRef.Notification(share.notification)
                 else -> return false
             }
         if (!AnkiquestMomentShare.available(account, reference)) {

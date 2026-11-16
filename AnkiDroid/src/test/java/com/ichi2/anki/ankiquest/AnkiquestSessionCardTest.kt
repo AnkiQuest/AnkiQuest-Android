@@ -436,6 +436,15 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                         ) to AnkiquestSharing.MomentRef.Conquest(100),
                         AnkiquestMoments.Moment("rank:1", AnkiquestMoments.Kind.RANK, "First place", "", clock.intTimeMS(), place = 1) to
                             AnkiquestSharing.MomentRef.Place(1),
+                        AnkiquestMoments.Moment(
+                            "notice:42",
+                            AnkiquestMoments.Kind.STREAK,
+                            "Old streak",
+                            "",
+                            clock.intTimeMS(),
+                            notification = 42,
+                        ) to
+                            AnkiquestSharing.MomentRef.Notification(42),
                     )
             for ((moment, reference) in cases) {
                 AnkiquestMomentCard.show(host, identity, listOf(moment), prefs)

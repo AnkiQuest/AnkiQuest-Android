@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.widget.AppCompatEditText
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
@@ -22,6 +23,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.ChipGroup
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMomentShare.Choice
 import com.ichi2.anki.ankiquest.AnkiquestMomentShare.Target
@@ -49,13 +51,16 @@ import java.net.HttpURLConnection.HTTP_CONFLICT
 internal class AnkiquestShareSheet(
     private val host: FragmentActivity,
     private val account: HomeAccount,
-    private val moment: MomentRef,
-    private val card: AnkiquestShare.Card,
-    private val elsewhere: () -> Unit,
+    private var moment: MomentRef,
+    private var card: AnkiquestShare.Card,
+    private val elsewhere: (AnkiquestShare.Card) -> Unit,
     private val sent: (Sent) -> Unit = {},
     private val closed: (Exit) -> Unit = {},
     root: () -> View = { host.findViewById(android.R.id.content) },
+    private val slot: Slot = Slot.INDEPENDENT,
 ) {
+    enum class Slot { INDEPENDENT, POST_STUDY }
+
     /** How the sheet was left; [SENT] is reported once its Undo is gone. */
     enum class Exit { CANCELLED, ELSEWHERE, SENT }
 
@@ -90,6 +95,9 @@ internal class AnkiquestShareSheet(
     private val targets = LinearLayout(host).apply { orientation = LinearLayout.VERTICAL }
     private val search = field(R.id.aq_share_search, R.string.ankiquest_share_search)
     private val note = field(R.id.aq_share_note, R.string.ankiquest_share_note_hint)
+    private val deckName = if (moment is MomentRef.Deck) field(R.id.aq_share_deck_name, R.string.ankiquest_deck_moment_name) else null
+    private lateinit var caption: TextView
+    private var previewJob: Job? = null
     private lateinit var status: TextView
     private lateinit var send: MaterialButton
     private lateinit var more: MaterialButton
@@ -108,6 +116,9 @@ internal class AnkiquestShareSheet(
             }
         }
         dialog.show()
+        if (slot == Slot.POST_STUDY) {
+            AnkiquestPostStudyPrompts.track(dialog)
+        }
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         dialog.behavior.skipCollapsed = true
         render()
@@ -129,7 +140,21 @@ internal class AnkiquestShareSheet(
         row.addView(preview, LinearLayout.LayoutParams(side, side))
         val words = views.column(row)
         views.text(words, card.title, heading = true).apply { ViewCompat.setAccessibilityHeading(this, false) }
-        views.text(words, card.body, small = true).isVisible = card.body.isNotEmpty()
+        caption = views.text(words, card.body, small = true).apply { isVisible = card.body.isNotEmpty() }
+
+        deckName?.let { field ->
+            field.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
+            field.setText((moment as MomentRef.Deck).name)
+            content.addView(field, wide())
+            field.doAfterTextChanged { text ->
+                val name = text?.toString()?.trim().orEmpty()
+                moment = (moment as MomentRef.Deck).copy(name = name)
+                card = card.copy(body = language.getString(R.string.ankiquest_deck_moment_body, name))
+                caption.text = card.body
+                drawPreview()
+                render()
+            }
+        }
 
         // Friends and groups, then the note.
         views.section(content, language.getString(R.string.ankiquest_share_send_to))
@@ -149,6 +174,13 @@ internal class AnkiquestShareSheet(
         send.id = R.id.aq_share_send
         more = views.button(content, language.getString(R.string.ankiquest_share_more_apps)) { leave() }
         more.id = R.id.aq_share_more
+        if (slot == Slot.POST_STUDY && moment is MomentRef.Deck) {
+            views.button(content, language.getString(R.string.ankiquest_deck_share_never)) {
+                AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDeckShare.PREF_ASK, false) }
+                dialog.dismiss()
+                showThemedToast(host, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
+            }
+        }
     }
 
     /** A one-line text field with [hint] as its label. */
@@ -167,19 +199,22 @@ internal class AnkiquestShareSheet(
 
     /** Draws the picture on the phone; the server's picture only goes to other apps. */
     private fun drawPreview() {
-        scope.launch {
-            val picture: Bitmap? =
-                withContext(Dispatchers.Default) {
-                    try {
-                        AnkiquestShare.render(host, card)
-                    } catch (e: RuntimeException) {
-                        Timber.w(e, "AnkiQuest share sheet: no preview")
-                        null
+        previewJob?.cancel()
+        val chosen = card
+        previewJob =
+            scope.launch {
+                val picture: Bitmap? =
+                    withContext(Dispatchers.Default) {
+                        try {
+                            AnkiquestShare.render(host, chosen)
+                        } catch (e: RuntimeException) {
+                            Timber.w(e, "AnkiQuest share sheet: no preview")
+                            null
+                        }
                     }
-                }
-            preview.setImageBitmap(picture)
-            preview.isVisible = picture != null
-        }
+                preview.setImageBitmap(picture)
+                preview.isVisible = picture != null
+            }
     }
 
     /** Friends and groups from the server, those chosen lately first. */
@@ -224,8 +259,10 @@ internal class AnkiquestShareSheet(
         dialog.setCancelable(!sending)
         search.isEnabled = !sending
         note.isEnabled = !sending
-        more.isEnabled = !sending
-        send.isEnabled = picking != null && picking.choice != Choice.Nobody && !sending
+        val named = (moment as? MomentRef.Deck)?.name?.isNotBlank() != false
+        more.isEnabled = !sending && named
+        deckName?.isEnabled = !sending
+        send.isEnabled = picking != null && picking.choice != Choice.Nobody && !sending && named
         val message =
             when (picking?.step) {
                 Step.SENDING -> R.string.ankiquest_share_sending
@@ -283,7 +320,7 @@ internal class AnkiquestShareSheet(
     private fun leave() {
         exit = Exit.ELSEWHERE
         dialog.dismiss()
-        elsewhere()
+        elsewhere(card)
         closed(Exit.ELSEWHERE)
     }
 

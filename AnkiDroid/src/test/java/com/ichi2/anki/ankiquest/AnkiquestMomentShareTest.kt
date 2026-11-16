@@ -80,6 +80,28 @@ class AnkiquestMomentShareTest : RobolectricTest() {
         }
 
     @Test
+    fun `older notices and decks require their own capabilities`() {
+        mockkObject(AnkiquestCapabilities)
+        var features = emptySet<String>()
+        every { AnkiquestCapabilities.has(account, any()) } answers { secondArg<String>() in features }
+        try {
+            for ((reference, feature) in listOf(
+                MomentRef.Notification(42) to "share_notification",
+                MomentRef.Deck("7", "My Japanese") to "share_deck_moment",
+            )) {
+                features = setOf("share_moments")
+                assertFalse(AnkiquestMomentShare.available(account, reference))
+                features = setOf(feature)
+                assertFalse(AnkiquestMomentShare.available(account, reference))
+                features = setOf("share_moments", feature)
+                assertTrue(AnkiquestMomentShare.available(account, reference))
+            }
+        } finally {
+            unmockkObject(AnkiquestCapabilities)
+        }
+    }
+
+    @Test
     fun `people sent to lately come first, newest first`() =
         runBlocking {
             AnkiquestMomentShare.send(account, MomentRef.Win(1), Choice.Picked(setOf(club)), null)

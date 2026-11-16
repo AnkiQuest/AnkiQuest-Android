@@ -39,4 +39,7 @@ Je révise avec AnkiQuest.</string>
     <string name="ankiquest_deck_share_unsupported">Ton serveur AnkiQuest ne peut pas encore partager les paquets terminés.</string>
     <string name="ankiquest_deck_share_ask_title">Proposer de partager les paquets finis</string>
     <string name="ankiquest_deck_share_ask_summary">Quand tu termines un paquet pour aujourd’hui, demander quels amis prévenir</string>
+    <string name="ankiquest_deck_moment_title">Paquet terminé</string>
+    <string name="ankiquest_deck_moment_name">Nom du paquet</string>
+    <string name="ankiquest_deck_moment_body">J’ai terminé mes révisions de %1$s pour aujourd’hui.</string>
 </resources>

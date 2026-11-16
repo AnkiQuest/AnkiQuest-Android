@@ -296,10 +296,16 @@ class AnkiquestShareActivityTest : RobolectricTest() {
                 putExtra(AnkiquestShare.EXTRA_PLACE, 2)
             }
         val shortcut = intent().putExtra(AnkiquestShare.EXTRA_DESTINATION, AnkiquestShare.DESTINATION_FRIENDS)
+        val older =
+            intent().apply {
+                removeExtra(AnkiquestShare.EXTRA_WIN)
+                putExtra(AnkiquestShare.EXTRA_NOTIFICATION, 42L)
+            }
         val cases =
             listOf(
                 places to AnkiquestSharing.MomentRef.Place(2),
                 shortcut to AnkiquestSharing.MomentRef.Win(17),
+                older to AnkiquestSharing.MomentRef.Notification(42),
             )
         for ((launch, reference) in cases) {
             val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, launch).setup()

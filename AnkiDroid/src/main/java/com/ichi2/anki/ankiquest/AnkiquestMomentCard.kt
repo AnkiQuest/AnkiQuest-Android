@@ -745,6 +745,7 @@ internal object AnkiquestMomentCard {
                 moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
                 win != null -> AnkiquestSharing.MomentRef.Win(win)
                 moment.place != null -> AnkiquestSharing.MomentRef.Place(moment.place)
+                moment.notification != null -> AnkiquestSharing.MomentRef.Notification(moment.notification)
                 else -> null
             }
         }

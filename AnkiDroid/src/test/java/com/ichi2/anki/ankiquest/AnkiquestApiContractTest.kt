@@ -517,6 +517,32 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `older notices and deck names use the common sharing request`() =
+        runBlocking<Unit> {
+            val cases =
+                listOf(
+                    AnkiquestSharing.MomentRef.Notification(42) to """{"notification":42}""",
+                    AnkiquestSharing.MomentRef.Deck("7", "My Japanese") to """{"deck":{"id":"7","name":"My Japanese"}}""",
+                )
+            for ((reference, expected) in cases) {
+                val sent =
+                    AnkiquestSharing.send(
+                        account,
+                        reference,
+                        AnkiquestSharing.Audience.Chosen(listOf("cerro"), listOf(3)),
+                        "Proud of this",
+                    )
+                val request = shareBodies.last()
+                assertEquals(expected, request.getJSONObject("moment").toString())
+                assertEquals("cerro", request.getJSONObject("to").getJSONArray("friends").getString(0))
+                assertEquals(3, request.getJSONObject("to").getJSONArray("groups").getInt(0))
+                assertEquals("Proud of this", request.getString("note"))
+                assertEquals(1, sent.recipients)
+                assertNotNull(sent.undoUntil)
+            }
+        }
+
+    @Test
     fun `Undo keeps the send selector when cached capabilities predate the server upgrade`() =
         runBlocking {
             val captured = account
