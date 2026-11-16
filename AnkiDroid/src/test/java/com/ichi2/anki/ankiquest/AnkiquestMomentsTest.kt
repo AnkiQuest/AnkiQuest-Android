@@ -192,29 +192,44 @@ class AnkiquestMomentsTest : RobolectricTest() {
 
     @Test
     fun `a moment about a companion this app cannot draw is never shown`() {
-        // The server's Bluma moment: this app has no cow, and showed Ankilope's art for her.
-        val rows = JSONArray(example("notifications_companion"))
-        val bluma = (0 until rows.length()).map { rows.getJSONObject(it) }.first { it.optString("moment") == "companion:cow" }
-        val tan = celebration(2, "companion", moment = "companion:anki_tan")
-        for (row in listOf(bluma, tan)) {
+        // A planned companion has no art here; without this check it showed as the chosen one.
+        val tan = celebration(1, "companion", moment = "companion:anki_tan")
+        val unnamed = celebration(2, "companion", moment = "companion:none")
+        for (row in listOf(tan, unnamed)) {
             assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, row, foreground = true), row.toString())
             assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, row, foreground = false), row.toString())
         }
         assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
 
-        // A companion it draws still shows.
+        // Companions it draws still show, Bluma from the server's example among them.
+        val rows = JSONArray(example("notifications_companion"))
+        val bluma = (0 until rows.length()).map { rows.getJSONObject(it) }.first { it.optString("moment") == "companion:cow" }
         val ankilope = celebration(3, "companion", moment = "companion:ankilope")
-        assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, ankilope, foreground = true))
+        for (row in listOf(bluma, ankilope)) {
+            assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, row, foreground = true), row.toString())
+        }
     }
 
     @Test
     fun `every request names the companions this app draws`() {
         val request = AnkiquestApi.request(identity, "api/notifications/hill").build()
-        assertEquals("aki, ankilope", request.header("X-AnkiQuest-Companion-Art"))
+        assertEquals("aki, ankilope, cow", request.header("X-AnkiQuest-Companion-Art"))
     }
 
     private fun example(name: String): String =
         assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/$name.json"), name).readText(Charsets.UTF_8)
+
+    @Test
+    fun `a companion moment shows the companion that joined`() {
+        assertEquals(AnkiquestCompanion.Choice.COW, AnkiquestMoments.joined(moment("companion:cow", Kind.COMPANION)))
+        assertEquals(AnkiquestCompanion.Choice.ANKILOPE, AnkiquestMoments.joined(moment("companion:ankilope", Kind.COMPANION)))
+        assertEquals(R.drawable.aki_celebrate, AnkiquestMomentCard.art(moment("companion:cow", Kind.COMPANION)))
+
+        // A companion this app does not know, or another kind of moment, names none.
+        assertNull(AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
+        assertNull(AnkiquestMoments.joined(moment("companion:none", Kind.COMPANION)))
+        assertNull(AnkiquestMoments.joined(moment("level:4", Kind.LEVEL)))
+    }
 
     @Test
     fun `waiting moments survive being stored`() {

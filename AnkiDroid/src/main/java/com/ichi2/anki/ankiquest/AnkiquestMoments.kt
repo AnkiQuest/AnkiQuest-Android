@@ -40,11 +40,11 @@ internal object AnkiquestMoments {
     private const val EXTRA_OWNER = "ankiquest.moment_owner"
     private val milestoneDays = setOf(7, 30, 100, 365)
 
+    /** The start of a companion moment's key, followed by the companion's id. */
+    private const val COMPANION_KEY_PREFIX = "companion:"
+
     /** `streak`, the first day and the length. */
     private const val STREAK_KEY_PARTS = 3
-
-    /** The inbox topic of a companion joining, whose moment key is `companion:{companion}`. */
-    private const val COMPANION_TOPIC = "companion"
 
     /** Kept for continuity with the conquest pop-up this replaces: the review ids of conquests already seen. */
     private const val PREF_CONQUESTS_SEEN = "ankiquestConquestsShown"
@@ -68,6 +68,9 @@ internal object AnkiquestMoments {
         LEECH(55),
         CONQUERED(50),
         GOAL(40),
+
+        /** A companion earned at a milestone, `companion:{companion}`. */
+        COMPANION(30),
         UNLOCKS(30),
     }
 
@@ -374,6 +377,7 @@ internal object AnkiquestMoments {
                 "conquered" -> Kind.CONQUERED
                 "goal" -> Kind.GOAL
                 "secured" -> Kind.SECURED
+                "companion" -> Kind.COMPANION
                 else -> Kind.UNLOCKS
             }
         val key = if (entry.isNull("moment")) "" else entry.optString("moment")
@@ -391,10 +395,13 @@ internal object AnkiquestMoments {
         )
     }
 
-    /** Whether this app draws the companion a companion moment's [key] names; false when it names none. */
-    private fun drawable(key: String): Boolean {
-        val companion = key.substringAfter("$COMPANION_TOPIC:", missingDelimiterValue = "")
-        return companion in AnkiquestCompanion.drawn
+    /** The companion that joined in a [Kind.COMPANION] moment, from its key `companion:{companion}`; null otherwise. */
+    fun joined(moment: Moment): AnkiquestCompanion.Choice? {
+        if (moment.kind != Kind.COMPANION) {
+            return null
+        }
+        val id = moment.key.substringAfter(COMPANION_KEY_PREFIX, missingDelimiterValue = "")
+        return AnkiquestCompanion.Choice.entries.firstOrNull { it.id == id && it != AnkiquestCompanion.Choice.NONE }
     }
 
     /** The streak in a milestone's event key, `streak:{first day}:{days}`. */
@@ -444,7 +451,7 @@ internal object AnkiquestMoments {
         if (known(prefs, account, moment.key)) return Route.SEEN
 
         // A companion this app has no art for would be shown as another one: skip it.
-        if (entry.optString("topic") == COMPANION_TOPIC && !drawable(moment.key)) {
+        if (moment.kind == Kind.COMPANION && joined(moment) == null) {
             return Route.SEEN
         }
         if (moment.kind == Kind.SECURED) {
