@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.View
@@ -49,6 +50,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.util.ReflectionHelpers
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
@@ -215,6 +217,80 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertTrue(text.contains(card.getString(R.string.aq_conquest_share_deck, "Animales")))
         assertTrue(text.endsWith("https://anki.example.test/conquered/hill/$AT"))
     }
+
+    @Test
+    fun `conquest exports use the shared caption and picture cases`() {
+        val cases = shareFixture().getJSONArray("cases")
+        mockkObject(AnkiquestMomentShare)
+        try {
+            every { AnkiquestMomentShare.available(identity) } returns false
+            for (index in 0 until cases.length()) {
+                val case = cases.getJSONObject(index)
+                val found = case.getJSONObject("found")
+                val raw = found.getJSONObject("conquest")
+                val saved =
+                    recorded.copy(
+                        since = AT - (raw.getLong("at") - raw.getLong("since")),
+                        lapses = raw.getInt("lapses"),
+                        answers = raw.getInt("answers"),
+                        label = found.optString("label").takeUnless { found.isNull("label") || it.isBlank() },
+                        win = null,
+                    )
+                coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns saved
+                coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns case.getString("deck").takeIf(String::isNotBlank)
+                var caption: String? = null
+                var picture: AnkiquestShare.Card? = null
+                every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+                    caption = arg(1)
+                    picture = arg(4)
+                    Intent(Intent.ACTION_CHOOSER)
+                }
+                val screen = launch()
+                screen.click(screen.getString(R.string.ankiquest_share))
+                val page = AnkiquestCommunity.conquestLink(identity.server, identity.user, AT)
+                assertEquals(plain(case.getString("caption")), plain(assertNotNull(caption).removeSuffix(page)), case.getString("name"))
+                val rendered = assertNotNull(picture)
+                assertEquals(
+                    plain(case.getString("picture")),
+                    plain((listOf(rendered.body) + rendered.details).joinToString("\n")),
+                    case.getString("name"),
+                )
+                assertFalse(rendered.details.any { it.contains("https://") || it.contains("private") })
+            }
+        } finally {
+            unmockkObject(AnkiquestMomentShare)
+        }
+    }
+
+    @Test
+    fun `conquest days follow the shared rounding boundaries`() {
+        val cases = shareFixture().getJSONArray("days")
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            assertEquals(case.getLong("expected"), recorded.copy(since = AT - case.getLong("elapsed_ms")).days)
+        }
+    }
+
+    @Test
+    fun `shared deck wording has all desktop translations`() {
+        val expected =
+            mapOf(
+                "de" to "Aus meinem Stapel „German“.",
+                "es" to "De mi mazo «German».",
+                "fr" to "De mon paquet « German ».",
+                "pt" to "Do meu baralho «German».",
+            )
+        for ((tag, words) in expected) {
+            val config = Configuration(targetContext.resources.configuration).apply { setLocale(Locale.forLanguageTag(tag)) }
+            val context = targetContext.createConfigurationContext(config)
+            assertEquals(words, context.getString(R.string.aq_conquest_share_deck, "German"), tag)
+        }
+    }
+
+    private fun shareFixture() = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/conquest_share.json")).readText())
+
+    /** Decorations and layout whitespace are separate from the shared words. */
+    private fun plain(text: String) = text.replace("\uD83C\uDFC6", "").trim().replace(Regex("\\s+"), " ")
 
     @Test
     fun `a conquest without a server win shares a local picture`() {

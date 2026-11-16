@@ -51,9 +51,7 @@
         "unlocks",
         "upload"
     ],
-    "unused": [
-        "unlocks_save"
-    ],
+    "unused": ["activity_locked", "leaderboard_locked", "unlocks_save"],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",
