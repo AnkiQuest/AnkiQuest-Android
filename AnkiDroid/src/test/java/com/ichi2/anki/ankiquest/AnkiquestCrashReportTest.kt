@@ -8,15 +8,19 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.acraCoreConfigBuilder
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.exception.UserSubmittedException
 import com.sun.net.httpserver.HttpServer
 import okhttp3.Request
 import okhttp3.Response
 import org.acra.ReportField
 import org.acra.builder.ReportBuilder
+import org.acra.collector.CustomDataCollector
 import org.acra.collector.SharedPreferencesCollector
 import org.acra.config.HttpSenderConfiguration
+import org.acra.config.ReportingAdministrator
 import org.acra.data.CrashReportData
 import org.acra.data.StringFormat
+import org.acra.plugins.loadEnabled
 import org.acra.sender.HttpSender
 import org.json.JSONException
 import org.json.JSONObject
@@ -29,6 +33,7 @@ import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestCrashReportTest : RobolectricTest() {
@@ -46,6 +51,39 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         assertEquals("${AnkiquestAccount.DEFAULT_SERVER}/api/crash-reports", sender.uri)
         assertEquals(HttpSender.Method.POST, sender.httpMethod)
         assertEquals(StringFormat.JSON, config.reportFormat)
+    }
+
+    /** The same crash reaches the server at most twice per device, labelled with its signature. */
+    @Test
+    fun `the same crash is reported at most twice`() {
+        val crash = IllegalStateException("Card 12 missing")
+        val builders = List(3) { ReportBuilder().exception(crash) }
+
+        val verdicts = builders.map { administrator().shouldStartCollecting(targetContext, config(), it) }
+        assertEquals(listOf(true, true, false), verdicts)
+
+        // The signature goes into the report's custom data.
+        val report = CrashReportData()
+        CustomDataCollector().collect(ReportField.CUSTOM_DATA, targetContext, config(), builders[0], report)
+        val custom = report[ReportField.CUSTOM_DATA.name] as JSONObject
+        assertEquals(AnkiquestCrashSignature.of(crash), custom.getString(AnkiquestCrashAdministrator.SIGNATURE_FIELD))
+
+        // A different crash is still reported.
+        val other = ReportBuilder().exception(IllegalArgumentException("Card 12 missing"))
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), other))
+
+        // Clearing the limiter, as the developer test crash does, lets it through again.
+        CrashReportService.deleteLimiterData(targetContext)
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)))
+    }
+
+    @Test
+    fun `reports the player submits are always sent`() {
+        val submitted = UserSubmittedException("Sent by the player")
+
+        val verdicts = List(3) { administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(submitted)) }
+
+        assertEquals(listOf(true, true, true), verdicts)
     }
 
     @Test
@@ -131,6 +169,17 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         } finally {
             server.stop(0)
         }
+    }
+
+    private fun config() = CrashReportService.acraCoreConfigBuilder.build()
+
+    /** The administrator ACRA loads with the production configuration. */
+    private fun administrator(): AnkiquestCrashAdministrator {
+        val config = config()
+        return config.pluginLoader
+            .loadEnabled<ReportingAdministrator>(config)
+            .filterIsInstance<AnkiquestCrashAdministrator>()
+            .single()
     }
 
     private fun collect(): JSONObject {
