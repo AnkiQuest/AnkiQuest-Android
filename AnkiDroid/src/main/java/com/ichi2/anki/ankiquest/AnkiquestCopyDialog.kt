@@ -116,7 +116,9 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     override fun onResume() {
         super.onResume()
-        if (state == State.Closed || !owns()) {
+        // The fragment can resume before its host lifecycle reaches RESUMED.
+        // Restore the owned form now; sending still requires the resumed host.
+        if (state == State.Closed || !sameAccount()) {
             close()
         }
     }
@@ -185,9 +187,9 @@ internal class AnkiquestCopyDialog : DialogFragment() {
         dismiss()
     }
 
-    private fun owns(): Boolean =
-        isAdded && activity?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true &&
-            AnkiquestHomeData.account()?.scope == requireArguments().getString(AnkiquestDeckChoices.ARG_SCOPE)
+    private fun owns(): Boolean = isAdded && activity?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true && sameAccount()
+
+    private fun sameAccount(): Boolean = AnkiquestHomeData.account()?.scope == requireArguments().getString(AnkiquestDeckChoices.ARG_SCOPE)
 
     private fun close() {
         state = State.Closed
