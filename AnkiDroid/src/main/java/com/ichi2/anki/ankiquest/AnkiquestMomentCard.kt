@@ -637,10 +637,15 @@ internal object AnkiquestMomentCard {
         ) {
             val scope = scope ?: return
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            val win = moment.win ?: extras[moment.key]?.win
+            // Tell -> share sheet -> chosen send. Older servers keep their existing route.
+            if ((moment.conquest != null || win != null) && AnkiquestMomentShare.available(signedIn)) {
+                share(moment, position)
+                return
+            }
             scope.launch {
                 val message =
                     try {
-                        val win = moment.win ?: extras[moment.key]?.win
                         val friends =
                             when {
                                 moment.conquest != null -> AnkiquestCommunity.tell(signedIn, moment.conquest)

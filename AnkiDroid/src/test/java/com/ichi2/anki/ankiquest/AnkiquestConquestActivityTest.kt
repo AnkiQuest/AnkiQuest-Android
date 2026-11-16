@@ -366,6 +366,50 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `Tell friends waits for a recipient choice on a share_moments server`() {
+        mockkObject(AnkiquestMomentShare, AnkiquestSocial)
+        try {
+            every { AnkiquestMomentShare.available(identity) } returns true
+            every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+            coEvery { AnkiquestSocial.overview(identity) } returns
+                AnkiquestSocial.Overview(
+                    listOf(AnkiquestSocial.Person("cerro", "Cerro")),
+                    emptyList(),
+                    emptyList(),
+                    emptyList(),
+                    emptyList(),
+                    true,
+                )
+            val chosen = AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList())
+            coEvery { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) } returns
+                AnkiquestSharing.Sent(1, 6, null)
+            val card = launch()
+            card.click(card.getString(R.string.aq_conquest_tell))
+            val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
+            coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
+            assertNull(shadowOf(card).nextStartedActivity)
+
+            advanceRobolectricLooperUntil {
+                sheet.window!!
+                    .decorView.allViews
+                    .any { it is TextView && it.text.toString() == "Cerro" }
+            }
+            sheet.window!!
+                .decorView.allViews
+                .first { it is TextView && it.text.toString() == "Cerro" }
+                .performClick()
+            sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+            card.settle()
+            coVerify(exactly = 1) { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) }
+            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
+            assertFalse(sheet.isShowing)
+        } finally {
+            unmockkObject(AnkiquestMomentShare, AnkiquestSocial)
+        }
+    }
+
+    @Test
     fun `downloading the card's picture publishes nothing`() {
         mockkObject(AnkiquestApi)
         try {

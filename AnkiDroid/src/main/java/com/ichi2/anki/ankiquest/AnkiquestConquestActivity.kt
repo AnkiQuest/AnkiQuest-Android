@@ -353,8 +353,14 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             (card.friends ?: 0) > 0 ->
                 views
                     .button(content, getString(R.string.aq_conquest_tell)) {
-                        act(R.string.aq_conquest_telling) { current ->
-                            val told = AnkiquestCommunity.tell(current, card.at)
+                        // Tell and Share use the same recipient choice on capable servers.
+                        val current = account ?: return@button
+                        if (AnkiquestMomentShare.available(current)) {
+                            share(current, card)
+                            return@button
+                        }
+                        act(R.string.aq_conquest_telling) { signedIn ->
+                            val told = AnkiquestCommunity.tell(signedIn, card.at)
                             resources.getQuantityString(R.plurals.aq_conquest_told_count, told, told)
                         }
                     }.isEnabled = !busy

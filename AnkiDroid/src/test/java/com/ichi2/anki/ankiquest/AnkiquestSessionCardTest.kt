@@ -397,6 +397,60 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
+    fun `Tell on a kept moment asks for recipients before sending`() {
+        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        coEvery { AnkiquestSharing.win(any(), any()) } returns null
+        coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
+        every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(any(), any(), AnkiquestSharing.Audience.Circle, null) } returns
+            AnkiquestSharing.Sent(1, 17, clock.intTimeMS() + 60_000)
+        val controller = host()
+        try {
+            val host = controller.get()
+            val identity = assertNotNull(AnkiquestHomeData.account())
+            val cases =
+                listOf(
+                    AnkiquestMoments.Moment("level:4", AnkiquestMoments.Kind.LEVEL, "Level 4", "", clock.intTimeMS(), win = 17) to
+                        AnkiquestSharing.MomentRef.Win(17),
+                    AnkiquestMoments.Moment(
+                        "conquered:100",
+                        AnkiquestMoments.Kind.CONQUERED,
+                        "Card conquered",
+                        "",
+                        clock.intTimeMS(),
+                        conquest = 100,
+                    ) to AnkiquestSharing.MomentRef.Conquest(100),
+                )
+            for ((moment, reference) in cases) {
+                AnkiquestMomentCard.show(host, identity, listOf(moment), prefs)
+                val card = card()
+                advanceRobolectricLooper()
+                assertNotNull(card.findViewById<View>(R.id.aq_moment_tell)).performClick()
+                val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+                coVerify(exactly = 0) { AnkiquestSharing.send(identity, reference, any(), any()) }
+                val everyone = host.getString(R.string.ankiquest_share_all_friends)
+                advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
+                views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
+                sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+                coVerify(exactly = 1) { AnkiquestSharing.send(identity, reference, AnkiquestSharing.Audience.Circle, null) }
+                assertFalse(sheet.isShowing)
+                assertTrue(card.isShowing)
+                assertNotNull(card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+                card.dismiss()
+            }
+            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
+            coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
+        } finally {
+            controller.close()
+            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        }
+    }
+
+    @Test
     fun `a conquest picture can include the label the player already shared`() {
         val picture = conquestPicture("A public label")
         assertTrue((picture.body + picture.details.joinToString()).contains("A public label"))
