@@ -347,6 +347,37 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
     }
 
     @Test
+    fun `large widgets keep only the upload part of a counted day's status`() {
+        val profile = profile("pending")
+        profile.getJSONObject("today").put("time_ms", 360_000).put("minutes", 6)
+        remember(profile)
+        AnkiquestDay.rememberLocal(
+            assertNotNull(HomeAccount.current(prefs)).scope,
+            assertNotNull(AnkiquestDay.Server.profile(profile)),
+            listOf(AnkiquestDay.Review(now - 1, 240_000)),
+            prefs,
+        )
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            // The flame says today counts; the status says only that the server does not know yet.
+            val status = render(profile, size).findViewById<TextView>(R.id.ankiquest_streak_status)
+            assertEquals(View.VISIBLE, status.visibility, size.name)
+            assertEquals("Not uploaded yet", status.text.toString(), size.name)
+        }
+    }
+
+    @Test
+    fun `large widgets drop the status of your own counted day`() {
+        val profile = profile()
+        remember(profile)
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val widget = render(profile, size)
+            assertEquals(View.GONE, widget.findViewById<TextView>(R.id.ankiquest_streak_status).visibility, size.name)
+            val counted = AnkiquestLanguage.context(targetContext).getString(R.string.aq_goal_streak_safe)
+            assertContains(widget.contentDescription.toString(), counted)
+        }
+    }
+
+    @Test
     fun `the compact widget keeps its number and meters without a companion`() {
         val account = assertNotNull(HomeAccount.current(prefs))
         prefs.edit { putString("ankiquestCompanion:${account.scope}", "none") }

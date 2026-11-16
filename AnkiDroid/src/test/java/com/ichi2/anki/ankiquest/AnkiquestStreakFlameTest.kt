@@ -28,6 +28,7 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** The flame beside the streak number is lit only once today counts, as Aki's mood says. */
@@ -76,8 +77,8 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
     }
 
     /**
-     * Every size and style of the widget for [board] shows [flame] beside 64, and the big sizes
-     * show [line] under it.
+     * Every style of the widget for [board] shows [flame] beside 64 in the small sizes. The big
+     * sizes show [line] under it instead, so they show one flame.
      */
     private fun assertFlame(
         board: JSONArray,
@@ -96,12 +97,13 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
                 val message = "$style $size"
                 val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
                 assertEquals("64", number.text.toString(), message)
-                val shown = assertNotNull(number.compoundDrawablesRelative[2], message)
-                assertTrue(pixels(shown).sameAs(expected), "$message: not $name")
                 if (size == Size.SMALL || size == Size.MEDIUM) {
+                    val shown = assertNotNull(number.compoundDrawablesRelative[2], message)
+                    assertTrue(pixels(shown).sameAs(expected), "$message: not $name")
                     continue
                 }
 
+                assertNull(number.compoundDrawablesRelative[2], message)
                 val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
                 assertEquals(View.VISIBLE, milestone.visibility, message)
                 assertEquals(line, milestone.text.toString(), message)

@@ -52,9 +52,18 @@ class AnkiquestStreakLayoutTest : RobolectricTest() {
                 )
                 view.layout(0, 0, widthPx, heightPx)
                 val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
+                // The big sizes put the flame in the milestone line while there is a next milestone.
+                val beside = size == Size.SMALL || size == Size.MEDIUM || streak >= LAST_MILESTONE
                 val flame = number.compoundDrawablesRelative[2]
-                assertTrue(flame != null && flame.bounds.width() > 0 && flame.bounds.height() > 0, "$size at $streak has no visible flame")
-                assertTrue(number.compoundDrawables[2] != null, "$size at $streak has no resolved flame")
+                if (beside) {
+                    assertTrue(
+                        flame != null && flame.bounds.width() > 0 && flame.bounds.height() > 0,
+                        "$size at $streak has no visible flame",
+                    )
+                    assertTrue(number.compoundDrawables[2] != null, "$size at $streak has no resolved flame")
+                } else {
+                    assertTrue(flame == null, "$size at $streak shows a second flame")
+                }
                 val required = number.paint.measureText(number.text.toString()) + number.compoundPaddingLeft + number.compoundPaddingRight
                 assertTrue(required <= number.width + 1, "$size at $streak needs $required px but has ${number.width}")
                 assertTrue(
@@ -63,5 +72,9 @@ class AnkiquestStreakLayoutTest : RobolectricTest() {
                 )
             }
         }
+    }
+
+    companion object {
+        private const val LAST_MILESTONE = 365
     }
 }
