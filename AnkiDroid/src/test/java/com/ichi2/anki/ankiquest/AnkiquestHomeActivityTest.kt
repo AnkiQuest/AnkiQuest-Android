@@ -405,6 +405,56 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `copy choices survive switching apps`() {
+        mockCopies()
+        val controller = launchController()
+        val form = copyDialog(controller.get())
+        pickCopyFriend(form)
+        controller.pause().stop()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+        controller.start().resume()
+        advanceRobolectricLooper()
+        val fragment = assertNotNull(controller.get().supportFragmentManager.findFragmentByTag(AnkiquestCopyDialog.TAG))
+        val restored = assertNotNull((fragment as AnkiquestCopyDialog).dialog as? AlertDialog)
+        assertTrue(restored.isShowing)
+        assertTrue(restored.listView.isItemChecked(0))
+        restored.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+    }
+
+    @Test
+    fun `focus choices survive switching apps`() {
+        val controller = launchController()
+        val home = controller.get()
+        home.click(home.getString(R.string.aq_home_change_deck))
+        home.supportFragmentManager.executePendingTransactions()
+        controller.pause().stop()
+        advanceRobolectricLooper()
+        controller.start().resume()
+        advanceRobolectricLooper()
+        val picker = assertNotNull(home.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        assertTrue(assertNotNull(picker.dialog).isShowing)
+    }
+
+    @Test
+    fun `an empty copy form explains missing friends`() {
+        val home = launch()
+        AnkiquestCopyDialog
+            .newInstance(identity, listOf(HomeDeck(12, "Spanish", 1, 0, 0)), 12, emptyList())
+            .showNow(home.supportFragmentManager, AnkiquestCopyDialog.TAG)
+        val form = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(
+            form.findViewById<View>(android.R.id.content)!!.allViews.filterIsInstance<TextView>().any {
+                it.text.toString() == home.getString(R.string.aq_copies_no_friends)
+            },
+            "An empty recipient list must explain why Send is disabled",
+        )
+        assertFalse(form.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+    }
+
+    @Test
     fun `changing the copy deck uses native search and retains its recipients`() {
         mockCopies()
         val spanish = col.decks.id("Spanish")
