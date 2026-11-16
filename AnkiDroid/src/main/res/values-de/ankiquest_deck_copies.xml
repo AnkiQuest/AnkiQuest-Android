@@ -9,7 +9,6 @@
     <string name="aq_copies_offer">%1$s hat %2$s geteilt</string>
     <string name="aq_copies_share">Stapel teilen</string>
     <string name="aq_copies_choose_deck">Stapel auswählen</string>
-    <string name="aq_copies_choose_friends">%1$s teilen mit</string>
     <string name="aq_copies_choose_one">Wähle mindestens einen Freund aus.</string>
     <string name="aq_copies_sending">Stapelkopie wird vorbereitet und gesendet…</string>
     <string name="aq_copies_sent">Stapelkopie gesendet.</string>
