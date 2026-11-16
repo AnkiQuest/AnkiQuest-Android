@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -15,6 +16,7 @@ import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.CompletableDeferred
@@ -26,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.IOException
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -114,6 +117,42 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_reply_sent)))
         assertFalse(feed.hasText(feed.getString(R.string.aq_feed_mark_read)))
         assertFalse(feed.hasText(feed.getString(R.string.aq_feed_mark_all_read)), "nothing unread is left")
+    }
+
+    @Test
+    fun `a deck alert can stop its sender and Undo without opening settings`() {
+        val completion =
+            AnkiquestFeed.item(
+                JSONObject()
+                    .put("id", 31)
+                    .put("title", "Cerro finished Spanish")
+                    .put("body", "Spanish is done for today.")
+                    .put("created_at", 1793183400)
+                    .put("sender", "cerro")
+                    .put("kind", "completion"),
+            )!!
+        val repository = mockk<SubscriptionRepository>()
+        val settings = IncomingSubscriptions(true, setOf("other"), listOf(IncomingSender("cerro", "Cerro")))
+        mockkObject(AnkiquestSubscriptions)
+        try {
+            every { AnkiquestSubscriptions.repository } returns repository
+            coEvery { repository.load(identity) } returns settings
+            coEvery { repository.setSubscribed(identity, "cerro", false) } returns
+                settings.copy(unsubscribedSenders = setOf("other", "cerro"))
+            coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
+            coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
+                page.copy(items = listOf(completion), attention = emptyList())
+            val feed = launch()
+            feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_deck_alerts_stop) }.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+            assertEquals(null, shadowOf(feed).nextStartedActivity)
+            assertNotNull(feed.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+        } finally {
+            unmockkObject(AnkiquestSubscriptions)
+        }
     }
 
     @Test

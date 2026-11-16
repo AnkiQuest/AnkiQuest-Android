@@ -37,6 +37,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
     private lateinit var undo: AnkiquestUndo
+    private lateinit var deckAlertAction: AnkiquestDeckAlerts
     private lateinit var sections: AnkiquestMeSections
     private var account: HomeAccount? = null
     private var page: AnkiquestBoards.PlayerPage? = null
@@ -56,6 +57,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
         undo = AnkiquestUndo(this)
+        deckAlertAction = AnkiquestDeckAlerts(this, savedInstanceState)
         views = AnkiquestBoardViews(this)
         content = findViewById(R.id.aq_board_content)
         scroll = findViewById(R.id.aq_board_scroll)
@@ -86,6 +88,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (::sections.isInitialized) {
             sections.save(outState)
         }
+        if (::deckAlertAction.isInitialized) deckAlertAction.save(outState)
     }
 
     override fun onResume() {

@@ -241,6 +241,7 @@ private class FeedSection(
     private val busy = mutableSetOf<Long>()
     private var markingAll = false
     private val pictures = mutableMapOf<String, Bitmap?>()
+    private val deckAlerts = AnkiquestDeckAlerts(activity)
     private var generation = 0
     private var loadJob: Job? = null
 
@@ -553,6 +554,12 @@ private class FeedSection(
                 chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
             }
             chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
+        }
+        if (item.kind == "completion" && item.sender.isNotBlank() && item.sender != account?.user) {
+            chip(actions, getString(R.string.aq_deck_alerts_stop), enabled = !deckAlerts.busy()) {
+                account?.let { deckAlerts.stop(it, item.sender) { render() } }
+                render()
+            }
         }
         if (unread) chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
         if (actions.isEmpty()) panel.removeView(actions)

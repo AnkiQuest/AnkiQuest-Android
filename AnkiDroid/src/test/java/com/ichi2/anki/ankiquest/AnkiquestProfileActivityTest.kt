@@ -115,6 +115,21 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `the notification action stops deck alerts even when the profile cannot load`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } throws IOException("profile offline")
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.load(identity) } returns settings
+        coEvery { repository.setSubscribed(identity, "cerro", false) } returns settings.copy(unsubscribedSenders = setOf("cerro"))
+        coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
     fun `controls the server cannot tell about stay hidden, and the player's own profile pauses streak protection`() {
         coEvery { AnkiquestBoards.player(identity, "cerro") } returns
             AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())

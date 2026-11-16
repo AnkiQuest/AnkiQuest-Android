@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_deck_alerts_stop">Dejar de recibir avisos de mazos</string>
+    <string name="aq_deck_alerts_stopped">Avisos de mazos desactivados.</string>
+    <string name="aq_deck_alerts_restored">Avisos de mazos restaurados.</string>
+    <string name="aq_deck_alerts_already_stopped">Los avisos de mazos ya están desactivados.</string>
+    <string name="aq_deck_alerts_failed">No se pudieron cambiar los avisos de mazos. Inténtalo de nuevo.</string>
     <string name="ankiquest_group_account">Cuenta</string>
     <string name="ankiquest_group_notify">Avísame de</string>
     <string name="ankiquest_group_sharing">Compartir</string>
