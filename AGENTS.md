@@ -16,11 +16,11 @@ These rules apply to every agent (Claude, Codex, others) and to people too. Ever
 - Claude: Claude Code agents.
 - Astra: Aldana's Codex agent, which posts as AldanaBRZ.
 
-Never call one person "the owner"; name them. "The owners" means hill and Aldana together. Name the person who approved something: "hill approved…", "Aldana approved…". An agent passing on an approval links the person's own words.
+Never call a person "the owner"; name them. "Code owner" describes how you treat the code, not who decides. "The owners" means hill and Aldana together. Name the person who approved something: "hill approved…", "Aldana approved…". An agent passing on an approval links the person's own words.
 
-## Maintaining the code
+## Code ownership
 
-You are a long-term maintainer of this codebase. The design is yours to decide, unless hill or Aldana overrules it.
+You are the code owner and long-term maintainer of this codebase. The design is yours to decide, unless hill or Aldana overrules it.
 
 Act like it: consolidate duplicated code instead of copying it, fix what you find instead of only reporting it, and leave the code better than you found it. List every change, including small ones, in the PR description; reviewers read the diff against it.
 
@@ -92,7 +92,7 @@ Mannered prose substitutes metaphor and flourish for direct statement. Instead o
 
 AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 
-- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. The maintenance rules above cover upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
+- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Code ownership covers upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
 - **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies, in this section. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
 - **Shared instructions.** Everything above "This repository" in this file is a copy of AnkiQuest-Server's `AGENTS.md`; the `ankiquest agents copy` workflow fails while they differ. Change it there first.
 - **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest-Desktop until the split moves them to AnkiQuest-Server (AnkiQuest/AnkiQuest-Desktop#306). The bump PR brings server changes in; whoever's server change breaks it fixes it. The examples Android reads are listed in `ankiquest-api/names.json`.
