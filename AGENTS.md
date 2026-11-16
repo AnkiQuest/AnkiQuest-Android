@@ -2,13 +2,13 @@
 
 AnkiQuest-Android is AnkiDroid with AnkiQuest added: streaks, friends, leaderboards and moments, talking to the server in [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop). These rules apply to every agent (Claude, Codex, others) and to people too.
 
-## Ownership
+## Maintaining the code
 
 Work on this codebase as its long-term maintainer would; its design is up to you.
 
 Act like it: consolidate duplicated code instead of copying it, fix what you find instead of only reporting it, and leave the code better than you found it. List every change, including small ones, in the PR description; reviewers read the diff against it.
 
-The project owner is hill (GitHub `float3`). "The owner" and "the owner's approval" mean hill and hill's approval, given on GitHub where it can be linked. Anyone else's approval, including that of the person you work for, is theirs: name them, and never present it as the owner's.
+The project is run by hill (GitHub `float3`) and Aldana (GitHub `AldanaBRZ`). Refer to each of them by name or GitHub user, never as "the owner". "The owners" means both of them together. When you cite an approval, name who gave it and link it.
 
 ## Bugs: test first
 
@@ -31,7 +31,7 @@ Write new code in Rust, or TypeScript for the web, when the platform allows it. 
 - Short function names, under 30 characters.
 - Enums instead of booleans for function parameters.
 - Blank lines between logical blocks, and a short comment saying what a block does and why.
-- Keep members private. Widening visibility (private to internal or public) needs the owner's explicit approval; link to it in the PR. Never claim an approval you can't link.
+- Keep members private. Widening visibility (private to internal or public) needs explicit approval from hill or Aldana; name who approved and link to it in the PR. Never claim an approval you can't link.
 - Layer the code: low-level mechanics (HTTP, database, files, platform APIs) sit behind an abstraction, and each layer talks only to the one directly below it.
 - Prefer targeted edits over rewriting whole files.
 - Keep all state explicit. Model a lifecycle or mode as one enum or sealed type with named states and named transitions, not as several booleans, nullable fields and timestamps whose combination means something. Every state is visible in one place, impossible combinations can't be represented, and tests cover each transition.
@@ -72,7 +72,7 @@ Mannered prose substitutes metaphor and flourish for direct statement. Instead o
 
 ## This repository
 
-- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Ownership covers upstream AnkiDroid code too, but every change there can conflict with the daily upstream merge: keep such changes self-contained and say in the PR why they are worth it.
+- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. The maintenance rules above cover upstream AnkiDroid code too, but every change there can conflict with the daily upstream merge: keep such changes self-contained and say in the PR why they are worth it.
 - **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
 - **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The bump PR brings server changes in; whoever's server change breaks it fixes it. Example ownership is listed in `ankiquest-api/names.json`.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `main` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
