@@ -457,53 +457,11 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         )
     }
 
-    /** What sharing [card] says, in the first person for its owner. */
-    private fun words(
-        current: HomeAccount,
-        card: AnkiquestCommunity.Conquest,
-    ): String {
-        val mine = card.user == current.user
-        return when {
-            card.label != null && mine ->
-                resources.getQuantityString(
-                    R.plurals.aq_conquest_share_label_mine,
-                    card.lapses,
-                    card.label,
-                    card.lapses,
-                )
-            card.label != null ->
-                resources.getQuantityString(R.plurals.aq_conquest_share_label, card.lapses, card.display, card.label, card.lapses)
-            mine -> resources.getQuantityString(R.plurals.aq_conquest_share_mine, card.lapses, card.lapses)
-            else -> resources.getQuantityString(R.plurals.aq_conquest_share, card.lapses, card.display, card.lapses)
-        }
-    }
-
-    /** " from the deck …" for the card's owner; never for someone else's card. */
-    private fun from(
-        current: HomeAccount,
-        card: AnkiquestCommunity.Conquest,
-    ): String = deck?.takeIf { owns(current, card) }?.let { " " + getString(R.string.aq_conquest_share_deck, it) }.orEmpty()
-
     /** The public card as a picture; only its owner's picture names the private deck. */
     private fun picture(
         current: HomeAccount,
         card: AnkiquestCommunity.Conquest,
-    ): AnkiquestShare.Card =
-        AnkiquestShare.Card(
-            getString(if (card.leech) R.string.aq_profile_leech else R.string.aq_profile_conquest),
-            words(current, card),
-            if (card.leech) R.drawable.aki_winner else R.drawable.aki_deck_conquered,
-            listOfNotNull(
-                card.label,
-                from(current, card).trim().takeIf(String::isNotEmpty),
-                resources.getQuantityString(R.plurals.aq_conquest_answers, card.answers, views.number(card.answers.toLong())),
-                resources.getQuantityString(
-                    R.plurals.aq_conquest_days,
-                    card.days.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                    views.number(card.days),
-                ),
-            ),
-        )
+    ): AnkiquestShare.Card = AnkiquestConquestShare.picture(this, current, card, deck)
 
     /**
      * The owner's own conquest opens AnkiQuest's share sheet where the server takes chosen friends;
@@ -534,7 +492,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         card: AnkiquestCommunity.Conquest,
     ) {
         if (busy) return
-        val text = "${words(current, card)}${from(current, card)} ${AnkiquestCommunity.conquestLink(current.server, card.user, card.at)}"
+        val text = AnkiquestConquestShare.caption(this, current, card, deck)
         val picture = picture(current, card)
         busy = true
         render()
