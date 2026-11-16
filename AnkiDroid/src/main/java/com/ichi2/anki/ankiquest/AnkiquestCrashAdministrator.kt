@@ -42,16 +42,16 @@ class AnkiquestCrashAdministrator : ReportingAdministrator {
     ) : AnkiquestCrashRecord.Store {
         private val prefs: SharedPreferences = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-        override fun load(): String? = prefs.getString(KEY, null)
+        override fun load(): String? = prefs.getString(PREF_SENT, null)
 
         // Written synchronously: the crashing process may end right after.
-        override fun save(text: String) = prefs.edit(commit = true) { putString(KEY, text) }
+        override fun save(text: String) = prefs.edit(commit = true) { putString(PREF_SENT, text) }
     }
 
     companion object {
         internal const val SIGNATURE_FIELD = "ANKIQUEST_SIGNATURE"
         private const val FILE = "ankiquest_crash_signatures"
-        private const val KEY = "sent"
+        private const val PREF_SENT = "sent"
 
         /** Lets every crash be sent again, as ACRA's limiter data is cleared with it. */
         internal fun forget(context: Context) = AnkiquestCrashRecord(PreferencesStore(context)).forget()

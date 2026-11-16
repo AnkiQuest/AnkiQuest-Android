@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import java.security.MessageDigest
-import java.util.Locale
 
 /**
  * Identifies a crash independently of the player and the build, exactly as the server does
@@ -14,6 +13,7 @@ import java.util.Locale
 internal object AnkiquestCrashSignature {
     private const val FRAMES = 8
     private const val ALGORITHM = "SHA-256"
+    private const val HEX = "0123456789abcdef"
     private val digits = Regex("[0-9]")
 
     /** The signature of [error]. */
@@ -33,7 +33,13 @@ internal object AnkiquestCrashSignature {
     /** Lowercase hex SHA-256 of [canonical]. */
     fun hash(canonical: String): String {
         val digest = MessageDigest.getInstance(ALGORITHM).digest(canonical.toByteArray(Charsets.UTF_8))
-        // Locale.ROOT: some locales format digits in other scripts.
-        return digest.joinToString("") { "%02x".format(Locale.ROOT, it) }
+        // Not String.format: some locales format digits in other scripts.
+        return buildString {
+            for (byte in digest) {
+                val value = byte.toInt() and 0xff
+                append(HEX[value shr 4])
+                append(HEX[value and 0xf])
+            }
+        }
     }
 }
