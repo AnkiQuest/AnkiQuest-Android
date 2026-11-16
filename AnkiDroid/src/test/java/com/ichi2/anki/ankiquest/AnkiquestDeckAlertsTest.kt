@@ -156,6 +156,55 @@ class AnkiquestDeckAlertsTest : RobolectricTest() {
     }
 
     @Test
+    fun `an applied stop survives pause`() {
+        val controller = launch()
+        val screen = controller.get()
+        val action = AnkiquestDeckAlerts(screen)
+        val answer = CompletableDeferred<IncomingSubscriptions>()
+        var settled = false
+        var refreshed = 0
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers {
+            answer.await().also { settled = true }
+        }
+        action.stop(identity, "cerro") { refreshed++ }
+        idle()
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        controller.pause().stop()
+        answer.complete(enabled.copy(unsubscribedSenders = setOf("other", "cerro")))
+        idle()
+        assertTrue(settled, "A stop already sent to the server must finish")
+        assertEquals(0, refreshed)
+        assertNull(undo(screen))
+
+        controller.start().resume()
+        idle()
+        assertEquals(1, refreshed)
+        assertNotNull(undo(screen)).performClick()
+        idle()
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
+    fun `missing sender is not stopped`() {
+        val screen = launch().get()
+        coEvery { repository.load(identity) } returns enabled.copy(senders = emptyList())
+        AnkiquestDeckAlerts(screen).stop(identity, "cerro")
+        idle()
+        assertEquals("cerro no longer shares deck alerts.", ShadowToast.getTextOfLatestToast())
+        assertNull(undo(screen))
+        coVerify(exactly = 0) { repository.setSubscribed(any(), any(), any()) }
+    }
+
+    @Test
+    fun `notification names the sender`() {
+        val action =
+            assertNotNull(
+                AnkiquestDeckAlerts.action(targetContext, 31, 41, identity.notificationAccount, identity.scope, "cerro", "completion"),
+            )
+        assertEquals("Stop deck alerts from cerro", action.title.toString())
+    }
+
+    @Test
     fun `a notification request is bound to its account and consumed across recreation`() {
         val controller = launch()
         val screen = controller.get()
