@@ -36,7 +36,6 @@
     <string name="ankiquest_deck_menu_share_on">Los amigos elegidos se enterarán cuando termines %1$s.</string>
     <string name="ankiquest_deck_menu_share_off">Nadie se enterará cuando termines %1$s.</string>
     <string name="aq_goal_change">Cambiar meta</string>
-    <string name="aq_profile_deck_alerts_stop">Dejar de recibir avisos de mazos de %1$s</string>
     <string name="aq_profile_deck_alerts_start">Volver a recibir avisos de mazos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar la protección de racha</string>
     <string name="aq_profile_freezes_resume">Reanudar la protección de racha</string>

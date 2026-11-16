@@ -208,7 +208,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             return
         }
         deckAlerts?.let { on ->
-            val label = if (on) R.string.aq_profile_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
+            val label = if (on) R.string.aq_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
             views
                 .button(content, getString(label, p.display)) {
                     change { AnkiquestSubscriptions.repository.setSubscribed(it, p.user, !on) }

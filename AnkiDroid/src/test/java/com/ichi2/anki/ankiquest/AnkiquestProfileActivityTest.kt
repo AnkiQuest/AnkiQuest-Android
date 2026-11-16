@@ -88,7 +88,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         val screen = launch("cerro")
         advanceRobolectricLooper()
         assertTrue(screen.hasText(screen.getString(R.string.aq_friends_mute)))
-        val stop = screen.getString(R.string.aq_profile_deck_alerts_stop, "Cerro")
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
         assertTrue(screen.hasText(stop))
 
         coEvery { repository.load(identity) } returns IncomingSubscriptions(true, setOf("cerro"), listOf(IncomingSender("cerro", "Cerro")))

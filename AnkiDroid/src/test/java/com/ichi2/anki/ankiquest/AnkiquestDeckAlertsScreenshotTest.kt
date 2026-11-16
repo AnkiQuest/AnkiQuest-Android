@@ -25,6 +25,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import java.io.IOException
 import java.time.Duration
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -104,6 +105,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
         scroll.scrollTo(0, bounds.top)
         advanceRobolectricLooper()
         assertTrue(stop.getGlobalVisibleRect(Rect()), "Stop deck alerts must be reachable in the feed")
+        assertFullLabel(stop)
         if (stage == Stage.UNDO) {
             stop.performClick()
             // Show the snackbar without advancing through its timeout.
@@ -120,5 +122,19 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
             assertTrue(undoBounds.bottom <= navBounds.top, "Undo must not cover the tabs")
         }
         captureScreen("deck_alerts_${stage.name.lowercase()}_${size.name.lowercase()}")
+    }
+
+    private fun assertFullLabel(label: TextView) {
+        val layout = assertNotNull(label.layout)
+        val width = label.width - label.compoundPaddingLeft - label.compoundPaddingRight
+        for (line in 0 until layout.lineCount) {
+            assertEquals(0, layout.getEllipsisCount(line), "The sender name must not be ellipsized")
+            assertTrue(
+                layout.getLineWidth(line) <= width + 1,
+                "The complete Stop label must fit: line ${layout.getLineWidth(line)}, available $width",
+            )
+        }
+        assertEquals(label.text.length, layout.getLineEnd(layout.lineCount - 1))
+        assertTrue(layout.height <= label.height - label.compoundPaddingTop - label.compoundPaddingBottom)
     }
 }

@@ -36,7 +36,6 @@
     <string name="ankiquest_deck_menu_share_on">Os amigos escolhidos vão saber quando terminares %1$s.</string>
     <string name="ankiquest_deck_menu_share_off">Ninguém vai saber quando terminares %1$s.</string>
     <string name="aq_goal_change">Mudar meta</string>
-    <string name="aq_profile_deck_alerts_stop">Deixar de receber avisos de baralhos de %1$s</string>
     <string name="aq_profile_deck_alerts_start">Voltar a receber avisos de baralhos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar a proteção da sequência</string>
     <string name="aq_profile_freezes_resume">Retomar a proteção da sequência</string>
