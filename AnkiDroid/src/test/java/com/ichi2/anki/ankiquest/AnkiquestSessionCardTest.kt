@@ -404,6 +404,26 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
+    fun `session conquest exports match the shared wording and counts`() {
+        val fixture =
+            JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/conquest_share.json")).readText())
+        val cases = fixture.getJSONArray("cases")
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val found = case.getJSONObject("found")
+            val label = found.optString("label").takeUnless { found.isNull("label") || it.isBlank() }
+            val picture = conquestPicture(label, case = case)
+            assertEquals(
+                plain(case.getString("picture")),
+                plain((listOf(picture.body) + picture.details).joinToString("\n")),
+                case.getString("name"),
+            )
+        }
+    }
+
+    private fun plain(text: String) = text.replace("\uD83C\uDFC6", "").trim().replace(Regex("\\s+"), " ")
+
+    @Test
     fun `returning from the conquest forgets a label the player has removed there`() {
         val picture = conquestPicture("Previously shared label", LabelChange.REMOVE_ON_RESUME)
         assertFalse((picture.body + picture.details.joinToString()).contains("Previously shared label"))
@@ -523,22 +543,36 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     private fun conquestPicture(
         label: String?,
         change: LabelChange = LabelChange.KEEP,
+        case: JSONObject? = null,
     ): AnkiquestShare.Card {
         mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
         val prepared = AtomicReference<AnkiquestShare.Card?>()
+        val caption = AtomicReference<String?>()
         var sharedLabel = label
+        val raw = case?.getJSONObject("found")?.getJSONObject("conquest")
+        val chosenDeck = case?.getString("deck")?.takeIf(String::isNotBlank) ?: "Spanish".takeIf { case == null }
         val recorded =
             AnkiquestCommunity.parseConquest(
                 JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/conquest.json")).readText()),
             )
         coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } coAnswers {
-            if (label == null) {
+            if (label == null && case == null) {
                 throw IOException("offline")
             }
-            recorded.copy(label = sharedLabel, win = null)
+            recorded.copy(
+                user = "member",
+                at = 100,
+                since = raw?.let { 100 - (it.getLong("at") - it.getLong("since")) } ?: recorded.since,
+                lapses = raw?.getInt("lapses") ?: recorded.lapses,
+                answers = raw?.getInt("answers") ?: recorded.answers,
+                label = sharedLabel,
+                win = null,
+            )
         }
+        coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns chosenDeck
         coEvery { Ankiquest.shareWinLink(any(), any()) } throws IOException("offline")
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+            caption.set(arg(1))
             prepared.set(arg(4))
             Intent(Intent.ACTION_CHOOSER)
         }
@@ -553,8 +587,8 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                     "PRIVATE UNSHARED FIELD",
                     clock.intTimeMS(),
                     conquest = 100,
-                    lapses = 4,
-                    deck = "Spanish",
+                    lapses = raw?.getInt("lapses") ?: 4,
+                    deck = chosenDeck,
                 )
             AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
             finish(host)
@@ -571,6 +605,14 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             }
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
             advanceRobolectricLooperUntil { shadowOf(host).peekNextStartedActivity() != null }
+            if (case != null) {
+                val page = "https://anki.example.test/conquered/member/100"
+                assertEquals(
+                    plain(case.getString("caption")),
+                    plain(assertNotNull(caption.get()).removeSuffix(page)),
+                    case.getString("name"),
+                )
+            }
             return assertNotNull(prepared.get())
         } finally {
             controller.close()
