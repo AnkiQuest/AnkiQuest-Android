@@ -421,7 +421,12 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         }
     }
 
-    private fun plain(text: String) = text.removePrefix("\uD83C\uDFC6 ")
+    private fun plain(text: String): String {
+        // The shared picture prefixes its trophy; Android appends it to the first line.
+        val lines = text.split("\n", limit = 2)
+        val first = lines.first().removePrefix("\uD83C\uDFC6 ").removeSuffix(" \uD83C\uDFC6")
+        return (listOf(first) + lines.drop(1)).joinToString("\n")
+    }
 
     @Test
     fun `offline conquest captions keep the shared line breaks`() {

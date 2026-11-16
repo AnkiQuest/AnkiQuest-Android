@@ -294,7 +294,12 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     private fun shareFixture() = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/conquest_share.json")).readText())
 
     /** Remove the decorative trophy prefix; every line break belongs to the shared wording. */
-    private fun plain(text: String) = text.removePrefix("\uD83C\uDFC6 ")
+    private fun plain(text: String): String {
+        // The shared picture prefixes its trophy; Android appends it to the first line.
+        val lines = text.split("\n", limit = 2)
+        val first = lines.first().removePrefix("\uD83C\uDFC6 ").removeSuffix(" \uD83C\uDFC6")
+        return (listOf(first) + lines.drop(1)).joinToString("\n")
+    }
 
     @Test
     fun `a conquest without a server win shares a local picture`() {
@@ -396,7 +401,8 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertEquals("image/png", sent.type)
         assertTrue(sent.hasExtra(Intent.EXTRA_STREAM))
         assertEquals(
-            card.resources.getQuantityString(R.plurals.aq_conquest_share, 4, "Cerro", 4) + " https://anki.example.test/conquered/cerro/$AT",
+            card.resources.getQuantityString(R.plurals.aq_conquest_share, 4, "Cerro", 4) +
+                "\nhttps://anki.example.test/conquered/cerro/$AT",
             sent.getStringExtra(Intent.EXTRA_TEXT),
         )
         coVerify(exactly = 0) { AnkiquestShare.conqueredCardDeck(any()) }
