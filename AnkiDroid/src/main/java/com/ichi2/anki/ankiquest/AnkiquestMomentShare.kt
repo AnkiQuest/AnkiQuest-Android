@@ -120,7 +120,7 @@ internal object AnkiquestMomentShare {
             .split(Regex("""\s+"""))
             .filter { it.isNotEmpty() }
             .joinToString(" ")
-            .take(AnkiquestSharing.MAX_NOTE)
+            .let { AnkiquestTextLimit.take(it, AnkiquestSharing.MAX_NOTE) }
             .ifEmpty { null }
 
     /** Sends [moment] to [choice] with [note], and remembers the chosen people for next time. */
@@ -138,11 +138,11 @@ internal object AnkiquestMomentShare {
         return sent
     }
 
-    /** Takes a sent [win] back from those who have not seen it yet; answers how many. */
+    /** Takes [sent] back from those who have not seen it yet; answers how many. */
     suspend fun retract(
         account: HomeAccount,
-        win: Long,
-    ): Int = AnkiquestSharing.retract(account, win)
+        sent: Sent,
+    ): Int = AnkiquestSharing.retract(account, sent)
 
     /** The keys of the people [account] sent to lately, newest first. */
     private fun recent(account: HomeAccount): List<String> {

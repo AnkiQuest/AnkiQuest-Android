@@ -295,7 +295,7 @@ internal class AnkiquestRecordViews(
                 Timber.w(e, "AnkiQuest records unreachable")
                 offline
             } catch (e: JSONException) {
-                Timber.w(e, "AnkiQuest records unreadable")
+                Timber.w(AnkiquestApi.redacted(e), "AnkiQuest records unreadable")
                 unreadable
             }
     }

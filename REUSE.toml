@@ -7,8 +7,9 @@ path = "**.kt"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Contributors to the AnkiDroid project"
 
-# Anki-tan derivatives, generated from Shigeyuki's Anki-tan asset pack.
-# See AnkiDroid/src/main/assets/ankiquest/art/LICENSE-Anki-tan.txt.
+# Anki-tan launcher icons and generated poses, derived from Shigeyuki's
+# Anki-tan asset pack. See docs/branding/anki-tan.md and
+# AnkiDroid/src/main/assets/ankiquest/art/LICENSE-Anki-tan.txt.
 [[annotations]]
 path = "AnkiDroid/src/main/res/drawable-nodpi/anki_tan_*.webp"
 precedence = "override"

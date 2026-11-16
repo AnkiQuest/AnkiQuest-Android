@@ -4,4 +4,8 @@
     <string name="ankiquest_companion_title">Lernbegleiter</string>
     <string name="ankiquest_companion_summary">Wähle Aki, Ankilope oder keinen Begleiter. Auf allen Geräten synchronisiert.</string>
     <string name="ankiquest_companion_none">Kein Begleiter</string>
+    <string name="ankiquest_companion_level_goal">Erreiche Level %1$d</string>
+    <string name="ankiquest_companion_level_progress">Level %1$d von %2$d</string>
+    <string name="ankiquest_companion_hours_goal">Insgesamt %1$d Stunden lernen</string>
+    <string name="ankiquest_companion_hours_progress">%1$d von %2$d Stunden</string>
 </resources>

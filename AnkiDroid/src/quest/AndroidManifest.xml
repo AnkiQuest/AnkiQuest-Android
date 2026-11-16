@@ -11,7 +11,7 @@
         android:icon="@mipmap/ankiquest_launcher"
         android:roundIcon="@mipmap/ankiquest_launcher"
         tools:replace="android:icon,android:roundIcon">
-        <!-- The launcher entries are the AnkiquestIcon aliases below, so the icon can show Aki's mood. -->
+        <!-- The launcher entries are the AnkiquestIcon aliases below, so the icon can show the companion's mood. -->
         <activity android:name="com.ichi2.anki.IntentHandler">
             <intent-filter tools:node="remove">
                 <action android:name="android.intent.action.MAIN" />
@@ -83,6 +83,59 @@
             android:exported="true"
             android:icon="@mipmap/ankiquest_launcher_sleepy"
             android:roundIcon="@mipmap/ankiquest_launcher_sleepy"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Anki-tan by Shigeyuki, CC BY-SA 4.0: the icons for companion anki_tan. -->
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconAnkiTanDefault"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/anki_tan_launcher"
+            android:roundIcon="@mipmap/anki_tan_launcher"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconAnkiTanHappy"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/anki_tan_launcher_happy"
+            android:roundIcon="@mipmap/anki_tan_launcher_happy"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconAnkiTanWorried"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/anki_tan_launcher_worried"
+            android:roundIcon="@mipmap/anki_tan_launcher_worried"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconAnkiTanSleepy"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/anki_tan_launcher_sleepy"
+            android:roundIcon="@mipmap/anki_tan_launcher_sleepy"
             android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
