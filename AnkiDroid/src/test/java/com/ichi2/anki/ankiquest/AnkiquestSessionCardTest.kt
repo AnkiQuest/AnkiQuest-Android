@@ -412,7 +412,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             val case = cases.getJSONObject(index)
             val found = case.getJSONObject("found")
             val label = found.optString("label").takeUnless { found.isNull("label") || it.isBlank() }
-            val picture = conquestPicture(label, case = case)
+            val picture = conquestPicture(label, case = case, at = 100L + index)
             assertEquals(
                 plain(case.getString("picture")),
                 plain((listOf(picture.body) + picture.details).joinToString("\n")),
@@ -544,6 +544,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         label: String?,
         change: LabelChange = LabelChange.KEEP,
         case: JSONObject? = null,
+        at: Long = 100,
     ): AnkiquestShare.Card {
         mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
         val prepared = AtomicReference<AnkiquestShare.Card?>()
@@ -561,8 +562,8 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             }
             recorded.copy(
                 user = "member",
-                at = 100,
-                since = raw?.let { 100 - (it.getLong("at") - it.getLong("since")) } ?: recorded.since,
+                at = at,
+                since = raw?.let { at - (it.getLong("at") - it.getLong("since")) } ?: recorded.since,
                 lapses = raw?.getInt("lapses") ?: recorded.lapses,
                 answers = raw?.getInt("answers") ?: recorded.answers,
                 label = sharedLabel,
@@ -581,18 +582,20 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             val host = controller.get()
             val moment =
                 AnkiquestMoments.Moment(
-                    "conquered:100",
+                    "conquered:$at",
                     AnkiquestMoments.Kind.CONQUERED,
                     "Card conquered",
                     "PRIVATE UNSHARED FIELD",
                     clock.intTimeMS(),
-                    conquest = 100,
+                    conquest = at,
                     lapses = raw?.getInt("lapses") ?: 4,
                     deck = chosenDeck,
                 )
             AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
             finish(host)
             val card = card()
+            // Every fixture case is a distinct conquest, not an already-shown moment.
+            assertEquals(2, card.findViewById<ViewPager2>(R.id.aq_moment_pager)?.adapter?.itemCount)
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
             if (change == LabelChange.REMOVE_ON_RESUME) {
@@ -606,7 +609,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
             advanceRobolectricLooperUntil { shadowOf(host).peekNextStartedActivity() != null }
             if (case != null) {
-                val page = "https://anki.example.test/conquered/member/100"
+                val page = "https://anki.example.test/conquered/member/$at"
                 assertEquals(
                     plain(case.getString("caption")),
                     plain(assertNotNull(caption.get()).removeSuffix(page)),
