@@ -295,9 +295,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     /** Remove the decorative trophy prefix; every line break belongs to the shared wording. */
     private fun plain(text: String): String {
-        // The shared picture prefixes its trophy; Android appends it to the first line.
+        // Ignore only Android's decorative trophy, preserving all text and line breaks.
         val lines = text.split("\n", limit = 2)
-        val first = lines.first().removePrefix("\uD83C\uDFC6 ").removeSuffix(" \uD83C\uDFC6")
+        val first = lines.first().removeSuffix(" \uD83C\uDFC6")
         return (listOf(first) + lines.drop(1)).joinToString("\n")
     }
 
