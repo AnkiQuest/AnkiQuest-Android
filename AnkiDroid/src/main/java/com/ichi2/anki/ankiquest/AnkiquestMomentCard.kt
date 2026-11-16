@@ -418,8 +418,8 @@ internal object AnkiquestMomentCard {
         val win: Long?,
         /** Whether telling friends about a conquered card can still be taken back. */
         val undoable: Boolean = false,
-        /** Only a label already shared by the owner may appear in the exported picture. */
-        val label: String? = null,
+        /** Only the server's saved label and public counts belong in an export. */
+        val conquest: AnkiquestCommunity.Conquest? = null,
     )
 
     private class Pages(
@@ -606,18 +606,18 @@ internal object AnkiquestMomentCard {
             var told = false
             var win = moment.win
             var undo = false
-            var label: String? = null
+            var record: AnkiquestCommunity.Conquest? = null
             moment.conquest?.let { at ->
                 val conquest = AnkiquestCommunity.conquest(account, account.user, at)
                 told = conquest.told == true
                 win = win ?: conquest.win
                 undo = conquest.undoable(TimeManager.time.intTimeMS())
-                label = conquest.label
+                record = conquest
             }
             val listed = win?.let { AnkiquestSharing.win(account, it) }
             if (listed?.optBoolean("shared_with_friends") == true) told = true
             val image = listed?.optJSONObject("link")?.optString("image")?.ifEmpty { null }
-            return Extras(told, image, win, undo, label)
+            return Extras(told, image, win, undo, record)
         }
 
         private fun current(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.scope == account.scope && it.token.isNotEmpty() }
@@ -749,6 +749,8 @@ internal object AnkiquestMomentCard {
                 try {
                     val win = moment.win ?: extras[moment.key]?.win
                     val card = publicPicture(moment)
+                    // Capture the saved record before leaving the main thread for image work.
+                    val conquest = extras[moment.key]?.conquest
                     val link =
                         try {
                             win?.let { Ankiquest.shareWinLink(it, signedIn.scope) }
@@ -766,7 +768,7 @@ internal object AnkiquestMomentCard {
                                 withContext(Dispatchers.IO) {
                                     AnkiquestShare.cardChooser(
                                         host.applicationContext,
-                                        conquestText(host, signedIn, moment),
+                                        conquestText(host, signedIn, moment, conquest),
                                         link?.image,
                                         fallback = card,
                                     )
@@ -848,14 +850,16 @@ internal object AnkiquestMomentCard {
                     companion = AnkiquestMoments.joined(moment),
                 )
             }
+            extras[moment.key]?.conquest?.let { conquest ->
+                return AnkiquestConquestShare.picture(host, account, conquest, moment.deck).copy(title = title, art = art(moment))
+            }
+
+            // Offline moments have no saved label or verified answer/day counts to add.
             return AnkiquestShare.Card(
                 title,
-                host.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses),
+                AnkiquestConquestShare.mine(host, moment.lapses),
                 art(moment),
-                listOfNotNull(
-                    extras[moment.key]?.label,
-                    moment.deck?.let { host.getString(R.string.aq_conquest_share_deck, it) },
-                ),
+                listOfNotNull(AnkiquestConquestShare.deck(host, moment.deck)),
             )
         }
 
@@ -887,10 +891,16 @@ internal object AnkiquestMomentCard {
         context: Context,
         account: HomeAccount,
         moment: Moment,
+        conquest: AnkiquestCommunity.Conquest? = null,
     ): String {
+        if (conquest != null) {
+            return AnkiquestConquestShare.caption(context, account, conquest, moment.deck)
+        }
         val at = requireNotNull(moment.conquest)
-        val words = context.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses)
-        val from = moment.deck?.let { " " + context.getString(R.string.aq_conquest_share_deck, it) }.orEmpty()
-        return "$words$from ${AnkiquestCommunity.conquestLink(account.server, account.user, at)}"
+        return listOfNotNull(
+            AnkiquestConquestShare.mine(context, moment.lapses),
+            AnkiquestConquestShare.deck(context, moment.deck),
+            AnkiquestCommunity.conquestLink(account.server, account.user, at),
+        ).joinToString(" ")
     }
 }
