@@ -2,7 +2,9 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.app.NotificationManager
 import androidx.core.content.edit
+import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.ListenableWorker.Result
 import androidx.work.testing.TestListenableWorkerBuilder
@@ -11,6 +13,7 @@ import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
@@ -23,11 +26,13 @@ import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONException
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
@@ -66,6 +71,12 @@ class AnkiquestPollTest : RobolectricTest() {
 
     @Volatile
     private var inboxBody = "[]"
+
+    @Volatile
+    private var profileBody = "{}"
+
+    @Volatile
+    private var reminderBody = "{\"quiet_start\":0,\"quiet_end\":0}"
 
     @Volatile
     private var switchAccountDuringInbox = false
@@ -109,6 +120,8 @@ class AnkiquestPollTest : RobolectricTest() {
                 when {
                     inbox -> inboxBody
                     path == "/api/leaderboard" -> "[]"
+                    path == "/api/profile/cerro" -> profileBody
+                    path == "/api/reminders/cerro" -> reminderBody
                     else -> "{}"
                 }
             val bytes = response.toByteArray(Charsets.UTF_8)
@@ -126,6 +139,40 @@ class AnkiquestPollTest : RobolectricTest() {
     }
 
     private fun cacheKey(base: String) = scopedKey(base, AnkiquestHomeData.account()?.scope)
+
+    @Test
+    @Config(sdk = [32])
+    fun `quiet hours hold streak alert`() =
+        runBlocking {
+            val manager = assertNotNull(targetContext.getSystemService<NotificationManager>())
+            reminderBody = "{\"quiet_start\":22,\"quiet_end\":9}"
+            profileBody =
+                JSONObject()
+                    .put("local_hour", 2)
+                    .put("at_risk", true)
+                    .put("day_ends_at", TimeManager.time.intTimeMS() + 90 * 60_000L)
+                    .put("streak_warning", JSONObject().put("title", "Streak ending").put("body", "Study soon"))
+                    .toString()
+            every { AnkiquestNotifier.onProfile(any(), any()) } answers { callOriginal() }
+            mockkObject(AnkiquestIcon)
+            every { AnkiquestIcon.update(any(), any(), any(), any()) } just Runs
+            try {
+                assertEquals(Result.success(), worker().doWork())
+                assertEquals(0, shadowOf(manager).size(), "Quiet hours must hold the local warning")
+                assertFalse(AnkiDroidApp.sharedPrefs().contains(cacheKey(AnkiquestNotifier.PREF_STREAK_DAY)))
+                verify(exactly = 1) { AnkiquestIcon.update(any(), any(), any(), any()) }
+
+                // Leaving quiet hours may deliver it once if the study day is still open.
+                reminderBody = "{\"quiet_start\":22,\"quiet_end\":22}"
+                assertEquals(Result.success(), worker().doWork())
+                assertEquals(1, shadowOf(manager).size())
+                manager.cancelAll()
+                assertEquals(Result.success(), worker().doWork())
+                assertEquals(0, shadowOf(manager).size())
+            } finally {
+                unmockkObject(AnkiquestIcon)
+            }
+        }
 
     @After
     fun stopPollingServer() {
