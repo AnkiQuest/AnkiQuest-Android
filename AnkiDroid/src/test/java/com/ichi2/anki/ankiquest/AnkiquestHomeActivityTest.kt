@@ -17,6 +17,7 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.dialogs.DeckSelectionDialog
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -334,6 +335,50 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     private fun launch(): AnkiquestHomeActivity = launchController().get()
+
+    @Test
+    fun `focus deck choices use the searchable native picker`() {
+        val home = launch()
+        home.click(home.getString(R.string.aq_home_change_deck))
+        home.supportFragmentManager.executePendingTransactions()
+        assertNotNull(home.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+    }
+
+    @Test
+    fun `deck copy starts with the focus deck and requires recipients`() {
+        mockCopies()
+        val home = launch()
+        home.click(home.getString(R.string.aq_copies_share))
+        home.supportFragmentManager.executePendingTransactions()
+        val form = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        val save = assertNotNull(form.getButton(AlertDialog.BUTTON_POSITIVE), "One form must show the deck and recipients")
+        assertTrue(
+            form.findViewById<View>(android.R.id.content)!!.allViews.filterIsInstance<TextView>().any {
+                it.text.toString() ==
+                    "Spanish"
+            },
+        )
+        assertFalse(save.isEnabled)
+        pickCopyFriend(form)
+        assertTrue(save.isEnabled)
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+    }
+
+    @Test
+    fun `copy recipients survive recreation without sending`() {
+        mockCopies()
+        val controller = launchController()
+        val form = copyDialog(controller.get())
+        pickCopyFriend(form)
+        controller.recreate()
+        advanceRobolectricLooper()
+        val restored = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(restored.isShowing, "The selected copy and its recipients must survive recreation")
+        assertTrue(restored.listView.isItemChecked(0))
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
 
     @Test
     fun `copy recipients are dismissed when the account changes`() {
