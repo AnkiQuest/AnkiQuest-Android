@@ -16,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -68,6 +69,35 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
             val case = cases.getJSONObject(index)
             assertEquals(case.getString("expected"), AnkiquestDeckNames.clean(case.getString("path")), case.getString("path"))
         }
+    }
+
+    /** Android's ICU regex engine rejects Java's (?U) and (?u) flags; the JVM tests run on accepts them. */
+    @Test
+    fun `AnkiQuest patterns avoid regex flags Android rejects`() {
+        val unsupported = Regex("""\(\?[a-zA-Z]*[Uu][a-zA-Z]*\)""")
+        val sources =
+            File("src/main/java/com/ichi2/anki/ankiquest")
+                .walk()
+                .filter { it.extension == "kt" }
+                .toList()
+        assertTrue(sources.isNotEmpty(), "AnkiQuest sources not found")
+        assertEquals(emptyList(), sources.flatMap { lines(it, unsupported) })
+    }
+
+    /** "File.kt:line" for each line of [file] that matches [pattern]. */
+    private fun lines(
+        file: File,
+        pattern: Regex,
+    ) = file
+        .readLines()
+        .withIndex()
+        .filter { pattern.containsMatchIn(it.value) }
+        .map { "${file.name}:${it.index + 1}" }
+
+    @Test
+    fun `Unicode digits and spaces clean like ASCII ones`() {
+        assertEquals(AnkiquestDeckNames.clean("12. Spanish"), AnkiquestDeckNames.clean("１２. Spanish"))
+        assertEquals(AnkiquestDeckNames.clean("Spanish Core"), AnkiquestDeckNames.clean("Spanish\u00A0Core"))
     }
 
     @Test
