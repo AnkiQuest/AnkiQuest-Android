@@ -307,7 +307,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         )
         val posted = (1..3).map { shadowOf(manager).getNotification(5_140_000 + it) }
         assertEquals(3, shadowOf(manager).size())
-        assertEquals(listOf("Reply", "Stop deck alerts"), posted[0].actions.map { it.title.toString() })
+        assertEquals(listOf("Reply", "Stop deck alerts from cerro"), posted[0].actions.map { it.title.toString() })
         assertEquals(listOf("Good job!", "Nice one \uD83D\uDD25", "Keep it up!"), choices(posted[0]), "the cheer is the first suggestion")
         assertTrue(
             posted[0]
@@ -318,7 +318,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
             "an unanswered completion also takes free text",
         )
         assertEquals(
-            listOf("Stop deck alerts"),
+            listOf("Stop deck alerts from cerro"),
             posted[1].actions.map {
                 it.title.toString()
             },
@@ -336,9 +336,17 @@ class AnkiquestNotifierTest : RobolectricTest() {
         assertEquals("cerro", data.getString(AnkiquestReply.EXTRA_SENDER))
 
         AnkiquestNotifier.onReplySent(targetContext, data, "Cerro")
-        assertEquals(listOf("Stop deck alerts"), shadowOf(manager).getNotification(5_140_001).actions.map { it.title.toString() })
+        assertEquals(
+            listOf("Stop deck alerts from cerro"),
+            shadowOf(manager).getNotification(5_140_001).actions.map { it.title.toString() },
+        )
         AnkiquestNotifier.onReplyFailed(targetContext, data)
-        assertEquals(listOf("Reply", "Stop deck alerts"), shadowOf(manager).getNotification(5_140_001).actions.map { it.title.toString() })
+        assertEquals(
+            listOf("Reply", "Stop deck alerts from cerro"),
+            shadowOf(manager).getNotification(5_140_001).actions.map {
+                it.title.toString()
+            },
+        )
 
         val typed =
             chose(posted[0], "  proud of you  ")
