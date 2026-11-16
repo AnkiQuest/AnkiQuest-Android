@@ -95,7 +95,7 @@ internal class AnkiquestShareSheet(
     private val targets = LinearLayout(host).apply { orientation = LinearLayout.VERTICAL }
     private val search = field(R.id.aq_share_search, R.string.ankiquest_share_search)
     private val note = field(R.id.aq_share_note, R.string.ankiquest_share_note_hint)
-    private val deckName = if (moment is MomentRef.Deck) field(R.id.aq_share_deck_name, R.string.ankiquest_deck_moment_name) else null
+    private val deckName = if (moment is MomentRef.Deck) field(R.id.aq_share_deck_name, R.string.aq_share_deck_title) else null
     private lateinit var caption: TextView
     private var previewJob: Job? = null
     private lateinit var status: TextView

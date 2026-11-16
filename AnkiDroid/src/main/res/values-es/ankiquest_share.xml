@@ -40,6 +40,5 @@ Estudio con AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_title">Ofrecer compartir mazos terminados</string>
     <string name="ankiquest_deck_share_ask_summary">Al terminar un mazo por hoy, preguntar a qué amigos avisar</string>
     <string name="ankiquest_deck_moment_title">Mazo completado</string>
-    <string name="ankiquest_deck_moment_name">Nombre del mazo</string>
     <string name="ankiquest_deck_moment_body">He terminado de estudiar %1$s por hoy.</string>
 </resources>
