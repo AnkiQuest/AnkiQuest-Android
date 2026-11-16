@@ -12,6 +12,7 @@ import androidx.core.content.pm.PackageInfoCompat
 import androidx.webkit.WebViewCompat
 import com.ichi2.anki.analytics.AnkiDroidCrashReportDialog
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.ankiquest.AnkiquestCrashAdministrator
 import com.ichi2.anki.ankiquest.AnkiquestCrashReports
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.common.analytics.Analytics
@@ -328,6 +329,7 @@ private object AcraCrashReporter : CrashReporter {
         } catch (e: Exception) {
             Timber.w(e, "Unable to clear ACRA limiter data")
         }
+        AnkiquestCrashAdministrator.forget(context)
     }
 
     override fun onPreferenceChanged(
