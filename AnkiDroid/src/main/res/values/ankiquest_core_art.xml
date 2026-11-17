@@ -2,4 +2,4 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Preserve the core poses while the companion mapping is reviewed separately. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/aki_sad,@drawable/aki_hopeful,@drawable/aki_frozen,@drawable/aki_neglected,@drawable/anki_tan_frozen,@drawable/anki_tan_chibi_frozen" />
+    tools:keep="@drawable/aki_sad,@drawable/aki_hopeful,@drawable/aki_frozen,@drawable/aki_neglected,@drawable/anki_tan_frozen,@drawable/anki_tan_chibi_frozen,@drawable/ankilope_sad,@drawable/ankilope_hopeful,@drawable/ankilope_frozen,@drawable/ankilope_sleeping,@drawable/ankilope_neglected" />
