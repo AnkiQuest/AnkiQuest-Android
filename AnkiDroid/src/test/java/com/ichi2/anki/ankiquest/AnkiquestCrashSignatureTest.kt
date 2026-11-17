@@ -44,6 +44,21 @@ class AnkiquestCrashSignatureTest {
         assertEquals(signature("example_report"), AnkiquestCrashSignature.of(error))
     }
 
+    /**
+     * The server trims with Rust's `trim_end`: Unicode `White_Space`. Kotlin's `trimEnd` keeps U+0085
+     * and removes U+001C to U+001F. Belongs in the server's fixture once AnkiQuest-Server#13 has it.
+     */
+    @Test
+    fun `the message loses the whitespace the server trims`() {
+        val frames = listOf(StackTraceElement("a.B", "c", null, -1))
+
+        val trimmed = AnkiquestCrashSignature.canonical("T", "missing \u0085　", frames)
+        assertEquals("T\nmissing\na.B.c", trimmed)
+
+        val kept = AnkiquestCrashSignature.canonical("T", "missing\u001F", frames)
+        assertEquals("T\nmissing\u001F\na.B.c", kept)
+    }
+
     private fun signature(name: String): String {
         val cases = fixture().getJSONArray("cases")
         val case = (0 until cases.length()).map(cases::getJSONObject).single { it.getString("name") == name }
