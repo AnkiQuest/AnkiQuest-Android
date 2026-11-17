@@ -320,7 +320,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 }
             views.setTextViewText(R.id.ankiquest_streak_status, status)
             fitLegacyStatus(views, language, size, status)
-            setBigStatus(views, language, size, day)
+            // The flame and the milestone line come from today, so the status follows it too.
+            setBigStatus(views, language, size, today)
             val progress = setMinimumProgress(views, language, day, status, size)
             val goal = setGoalProgress(views, language, day, me.takeIf { player == Ankiquest.player() }, now)
             if (style == Style.TRANSPARENT && progress != null) {
@@ -463,7 +464,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
         /**
          * The big layouts' status line. Their lit flame already says that today counts, so a counted
-         * day keeps only what the flame cannot say: that the server does not have it yet.
+         * day keeps only what the flame cannot say: that the server does not have it yet. [day] is
+         * the one the flame shows, carried from yesterday until the server answers.
          */
         private fun setBigStatus(
             views: RemoteViews,
