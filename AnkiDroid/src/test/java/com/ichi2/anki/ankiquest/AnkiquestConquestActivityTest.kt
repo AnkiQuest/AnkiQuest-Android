@@ -252,11 +252,11 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
                 val screen = launch()
                 screen.click(screen.getString(R.string.ankiquest_share))
                 val page = AnkiquestCommunity.conquestLink(identity.server, identity.user, AT)
-                assertEquals("${case.getString("caption")}\n$page", plain(assertNotNull(caption)), case.getString("name"))
+                assertEquals("${case.getString("caption")}\n$page", withoutTrophy(assertNotNull(caption)), case.getString("name"))
                 val rendered = assertNotNull(picture)
                 assertEquals(
-                    plain(case.getString("picture")),
-                    plain((listOf(rendered.body) + rendered.details).joinToString("\n")),
+                    withoutTrophy(case.getString("picture")),
+                    withoutTrophy((listOf(rendered.body) + rendered.details).joinToString("\n")),
                     case.getString("name"),
                 )
                 assertFalse(rendered.details.any { it.contains("https://") || it.contains("private") })
@@ -292,14 +292,6 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     private fun shareFixture() = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/conquest_share.json")).readText())
-
-    /** Remove the decorative trophy prefix; every line break belongs to the shared wording. */
-    private fun plain(text: String): String {
-        // Ignore only Android's decorative trophy, preserving all text and line breaks.
-        val lines = text.split("\n", limit = 2)
-        val first = lines.first().removeSuffix(" \uD83C\uDFC6")
-        return (listOf(first) + lines.drop(1)).joinToString("\n")
-    }
 
     @Test
     fun `a conquest without a server win shares a local picture`() {
