@@ -51,7 +51,7 @@ internal object AnkiquestPicture {
         val ink = context.getColor(R.color.aq_home_text)
         val pieces =
             buildList {
-                add(Piece.Words(text("AnkiQuest", BRAND_SIZE * scale, ink, Typeface.DEFAULT_BOLD)))
+                add(Piece.Words(text(AnkiquestShare.BRAND, BRAND_SIZE * scale, ink, Typeface.DEFAULT_BOLD)))
                 art(context, card, HERO)?.let { add(Piece.Art(it, HERO)) }
                 add(Piece.Words(text(card.title, TITLE_SIZE * scale, ink, Typeface.DEFAULT_BOLD)))
                 if (card.body.isNotBlank()) {
@@ -81,7 +81,7 @@ internal object AnkiquestPicture {
         val days = context.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak)
         val pieces =
             buildList {
-                add(Piece.Words(text("AnkiQuest", BRAND_SIZE * scale, ink, Typeface.DEFAULT_BOLD)))
+                add(Piece.Words(text(AnkiquestShare.BRAND, BRAND_SIZE * scale, ink, Typeface.DEFAULT_BOLD)))
                 art(context, card, STREAK_HERO)?.let { add(Piece.Art(it, STREAK_HERO)) }
                 // The number already fills the width, so it does not grow with the font scale.
                 add(Piece.Words(text(number, numberSize(number), gold, numberFont)))
