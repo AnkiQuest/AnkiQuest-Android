@@ -68,7 +68,7 @@ internal class AnkiquestCompanionPicker(
         onTap = listener
     }
 
-    /** Shows [choice]'s picture growing, unless animations are off. */
+    /** Shows [choice]'s current picture growing, unless animations are off. There is no chibi art to swap to yet. */
     fun grow(choice: Choice) {
         growing = choice
         notifyChanged()

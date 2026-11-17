@@ -48,14 +48,16 @@ internal object AnkiquestUnlocks {
     )
 
     /**
-     * The server's answer: the companions the player has unlocked, and progress toward each locked
-     * one that shows. [ids] also lists unlocks that are not choices here, such as a chibi or its base.
+     * The server's answer: the [ids] of everything the player has unlocked, including unlocks that
+     * are not choices here (a chibi or its base), and progress toward each locked companion that shows.
      */
     data class Found(
-        val unlocks: Set<Choice>,
+        val ids: Set<String>,
         val progress: Map<Choice, Progress>,
-        val ids: Set<String> = unlocks.mapTo(mutableSetOf()) { it.id },
     ) {
+        /** The unlocked companions this app can show, read from [ids]. */
+        val unlocks: Set<Choice> get() = ids.mapNotNullTo(mutableSetOf()) { known(it) }
+
         companion object {
             /** A server without [FEATURE]: nothing unlocked, no progress. */
             val NONE = Found(emptySet(), emptyMap())
@@ -64,15 +66,14 @@ internal object AnkiquestUnlocks {
             fun parse(answer: JSONObject): Found {
                 val listedIds = answer.optJSONArray("unlocks")
                 val ids = (0 until (listedIds?.length() ?: 0)).mapNotNull { listedIds?.opt(it) as? String }.toSet()
-                val unlocks = ids.mapNotNull { known(it) }.toSet()
-                val listed = answer.optJSONObject("progress") ?: return Found(unlocks, emptyMap(), ids)
+                val listed = answer.optJSONObject("progress") ?: return Found(ids, emptyMap())
                 val progress =
                     listed
                         .keys()
                         .asSequence()
                         .mapNotNull { id -> known(id)?.let { choice -> progress(listed.optJSONObject(id))?.let { choice to it } } }
                         .toMap()
-                return Found(unlocks, progress, ids)
+                return Found(ids, progress)
             }
 
             private fun known(id: String?): Choice? = Choice.entries.firstOrNull { it.id == id }

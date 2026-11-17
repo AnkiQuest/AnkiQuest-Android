@@ -108,17 +108,11 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         AnkiquestCapabilities.forgetMemory()
     }
 
-    /** The shared fixture `tests/fixtures/companion_unlock.json` from the pinned server commit. */
-    private val fixture =
-        JSONObject(
-            checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_unlock.json")) { "missing companion unlock" }.readText(),
-        )
+    private val fixture = UnlockFixture.json
 
     /** The fixture's companions that can be earned now; planned ones are ignored, as the server does. */
     private val live: List<JSONObject> =
-        fixture.getJSONArray("companions").let { all ->
-            (0 until all.length()).map { all.getJSONObject(it) }.filter { it.getString("status") == "live" }
-        }
+        UnlockFixture.objects(fixture.getJSONArray("companions")).filter { it.getString("status") == "live" }
 
     /** A live companion's entry in the fixture. */
     private fun live(choice: Choice): JSONObject = live.first { it.getString("companion") == choice.id }
@@ -186,14 +180,13 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         }
 
         // Planned companions have no art yet, so the app has no choice for them.
-        val all = fixture.getJSONArray("companions")
-        val planned = (0 until all.length()).map { all.getJSONObject(it) }.filter { it.getString("status") == "planned" }
+        val planned = UnlockFixture.objects(fixture.getJSONArray("companions")).filter { it.getString("status") == "planned" }
         assertTrue(planned.none { entry -> Choice.entries.any { it.id == entry.getString("companion") } })
     }
 
     @Test
     fun `Aki and no companion are always free`() {
-        for (found in listOf(null, Found.NONE, Found(setOf(Choice.COW), mapOf(Choice.ANKILOPE to progress(Choice.ANKILOPE, 2))))) {
+        for (found in listOf(null, Found.NONE, Found(setOf(Choice.COW.id), mapOf(Choice.ANKILOPE to progress(Choice.ANKILOPE, 2))))) {
             assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.AKI, found, Choice.NONE))
             assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.NONE, found, Choice.AKI))
         }
@@ -213,7 +206,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     @Test
     fun `an unlocked companion can be chosen`() {
-        val found = Found(setOf(Choice.ANKILOPE, Choice.COW), emptyMap())
+        val found = Found(setOf(Choice.ANKILOPE.id, Choice.COW.id), emptyMap())
         assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.AKI))
         assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, found, Choice.AKI))
     }
@@ -229,7 +222,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     fun `a server without progress keeps Ankilope free and the cow hidden until unlocked`() {
         assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.ANKILOPE, Found.NONE, Choice.AKI))
         assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, Found.NONE, Choice.AKI))
-        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, Found(setOf(Choice.COW), emptyMap()), Choice.AKI))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, Found(setOf(Choice.COW.id), emptyMap()), Choice.AKI))
     }
 
     @Test
@@ -373,7 +366,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     fun `the chibi hint is worded as the fixture says`() {
         for (left in 1..AnkiquestChibi.TAPS - AnkiquestChibi.HINT_FROM) {
             val shown = targetContext.resources.getQuantityString(R.plurals.ankiquest_companion_chibi_hint, left, left)
-            assertEquals(ChibiFixture.hint(left), shown)
+            assertEquals(UnlockFixture.hint(left), shown)
         }
     }
 

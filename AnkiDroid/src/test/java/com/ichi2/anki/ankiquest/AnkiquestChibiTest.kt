@@ -13,12 +13,9 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The chibi Easter egg against the shared fixture `tests/fixtures/companion_unlock.json`, with the
- * cases still pending in the server bump ([ChibiFixture]).
- */
+/** The chibi Easter egg against the shared fixture `tests/fixtures/companion_unlock.json` ([UnlockFixture]). */
 class AnkiquestChibiTest {
-    private val fixture = ChibiFixture.json
+    private val fixture = UnlockFixture.json
 
     /** Every chibi as live, as flipping the fixture's `status` makes it. */
     private val live = AnkiquestChibi.ALL.map { it.copy(status = Status.LIVE) }
@@ -27,7 +24,7 @@ class AnkiquestChibiTest {
 
     @Test
     fun `the chibis are the fixture's tap companions`() {
-        val tapped = ChibiFixture.objects(fixture.getJSONArray("companions")).filter { it.getString("kind") == "taps" }
+        val tapped = UnlockFixture.objects(fixture.getJSONArray("companions")).filter { it.getString("kind") == "taps" }
         val chibis = tapped.map { Chibi(it.getString("companion"), it.getString("requires"), status(it.getString("status"))) }
         assertEquals(chibis, AnkiquestChibi.ALL)
 
@@ -46,7 +43,7 @@ class AnkiquestChibiTest {
 
     @Test
     fun `the fixture cases decide each tap run`() {
-        val cases = ChibiFixture.objects(fixture.getJSONArray("cases"))
+        val cases = UnlockFixture.objects(fixture.getJSONArray("cases"))
         assertTrue(cases.isNotEmpty())
         for (case in cases) {
             val steps = run(case.getJSONArray("sequence"), setOf(chibi.base))
@@ -57,7 +54,7 @@ class AnkiquestChibiTest {
     @Test
     fun `the fixture gives the hint after each tap count`() {
         val taps = Taps(live)
-        for (entry in ChibiFixture.objects(fixture.getJSONArray("hints"))) {
+        for (entry in UnlockFixture.objects(fixture.getJSONArray("hints"))) {
             val count = entry.getInt("taps")
             val step = taps.tap(chibi.base, count * QUICK_MS, setOf(chibi.base))
             assertEquals(entry.opt("hint").takeIf { it != JSONObject.NULL }, hint(step), "after $count taps")
@@ -66,7 +63,7 @@ class AnkiquestChibiTest {
 
     @Test
     fun `the fixture chibi cases decide hints and unlocks`() {
-        val cases = ChibiFixture.objects(fixture.getJSONArray("chibi_taps"))
+        val cases = UnlockFixture.objects(fixture.getJSONArray("chibi_taps"))
         assertTrue(cases.isNotEmpty())
         for (case in cases) {
             val name = case.getString("name")
@@ -151,7 +148,7 @@ class AnkiquestChibiTest {
     }
 
     /** The fixture's text for [step]'s hint, or null when it shows none. */
-    private fun hint(step: Step): String? = (step as? Step.Hint)?.let { ChibiFixture.hint(it.left) }
+    private fun hint(step: Step): String? = (step as? Step.Hint)?.let { UnlockFixture.hint(it.left) }
 
     private fun status(id: String) = Status.entries.single { it.id == id }
 
