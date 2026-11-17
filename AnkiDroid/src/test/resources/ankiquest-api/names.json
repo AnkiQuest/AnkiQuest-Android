@@ -2,6 +2,7 @@
     "consumed": [
         "account",
         "activity",
+        "activity_locked",
         "activity_older",
         "capabilities",
         "challenge_action",
@@ -57,10 +58,11 @@
         "leaderboard_global",
         "leaderboard_global_hidden",
         "leaderboard_hide",
+        "leaderboard_locked",
         "player_profile",
         "week",
         "wins"
     ],
     "challenges": [],
-    "not_yet": ["activity_locked", "leaderboard_locked"]
+    "not_yet": []
 }

@@ -81,6 +81,15 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a locked feed asks to study and sync instead of saying all caught up`() {
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
+            page.copy(items = emptyList(), attention = emptyList(), lock = AnkiquestLock.UPLOAD_FIRST)
+        val feed = launch()
+        assertTrue(feed.hasText(feed.getString(R.string.aq_upload_first)))
+        assertFalse(feed.hasText(feed.getString(R.string.aq_feed_empty)))
+    }
+
+    @Test
     fun `cheering a friend's deck completion sends a cheer and shows it`() {
         val completion =
             AnkiquestFeed.item(
