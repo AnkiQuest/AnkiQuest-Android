@@ -378,6 +378,34 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
     }
 
     @Test
+    fun `large widgets judge the status by the day that lights the flame`() {
+        // Yesterday counted and has ended; the server has not answered for today yet.
+        val profile = profile()
+        profile.put("day_ends_at", now - HOUR).getJSONObject("today").put("starts_at", now - 25 * HOUR)
+        profile.put("last_review_id", now - 2 * HOUR)
+        remember(profile)
+
+        // Today's unsent reviews reach the minimum, so the carried day counts and the flame is lit.
+        val carried = assertNotNull(AnkiquestDay.carried(AnkiquestDay.Server.profile(profile), now))
+        AnkiquestDay.rememberLocal(
+            assertNotNull(HomeAccount.current(prefs)).scope,
+            carried,
+            listOf(AnkiquestDay.Review(now - 1, 600_000)),
+            prefs,
+        )
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val widget = render(profile, size)
+            val milestone = widget.findViewById<TextView>(R.id.ankiquest_streak_milestone)
+            assertEquals(View.VISIBLE, milestone.visibility, size.name)
+
+            // The status follows the same counted day: only that the server does not have it yet.
+            val status = widget.findViewById<TextView>(R.id.ankiquest_streak_status)
+            assertEquals(View.VISIBLE, status.visibility, size.name)
+            assertEquals("Not uploaded yet", status.text.toString(), size.name)
+        }
+    }
+
+    @Test
     fun `the compact widget keeps its number and meters without a companion`() {
         val account = assertNotNull(HomeAccount.current(prefs))
         prefs.edit { putString("ankiquestCompanion:${account.scope}", "none") }
