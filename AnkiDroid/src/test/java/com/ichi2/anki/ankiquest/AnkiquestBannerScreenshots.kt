@@ -177,7 +177,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         ).forEach { rows.put(it.row()) }
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns
-            AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK)
+            AnkiquestBoards.Leaderboard(AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK))
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * DAY
         val board =
             startRegularActivity<AnkiquestFriendsActivity>(

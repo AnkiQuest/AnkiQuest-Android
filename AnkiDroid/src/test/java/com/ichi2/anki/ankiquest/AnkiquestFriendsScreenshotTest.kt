@@ -45,11 +45,9 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestSocial.overview(any()) } returns overview
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
+        val rows = JSONArray().put(AnkiquestBoardsTest.row("cerro", 90, 5)).put(AnkiquestBoardsTest.row("hill", 40, 2))
         coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns
-            AnkiquestBoards.parseLeaderboard(
-                JSONArray().put(AnkiquestBoardsTest.row("cerro", 90, 5)).put(AnkiquestBoardsTest.row("hill", 40, 2)),
-                AnkiquestBoards.Period.WEEK,
-            )
+            AnkiquestBoards.Leaderboard(AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK))
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
         every { AnkiquestShare.picture(any()) } returns null
