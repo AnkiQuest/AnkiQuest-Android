@@ -10,6 +10,6 @@
     <string name="ankiquest_changelog">Novidades do AnkiQuest</string>
     <string name="ankiquest_ankidroid_changelog">Novidades do AnkiDroid</string>
     <string name="ankiquest_about_report_bug">Comunicar um erro</string>
-    <string name="ankiquest_link_copied">Nenhum app consegue abrir o link. Link copiado.</string>
+    <string name="ankiquest_link_copied">Nenhuma aplicação consegue abrir a ligação. Ligação copiada.</string>
     <string name="ankiquest_debug_info_title">Copiar informações de depuração</string>
 </resources>
