@@ -191,17 +191,20 @@ class AnkiquestMomentsTest : RobolectricTest() {
     }
 
     @Test
-    fun `a moment about a companion this app cannot draw is never shown`() {
-        // A planned companion has no art here; without this check it showed as the chosen one.
+    fun `a moment about a companion this app cannot draw waits for its art`() {
+        // A planned companion has no art here; shown now, it would show as the chosen one.
         val tan = celebration(1, "companion", moment = "companion:anki_tan")
-        val unnamed = celebration(2, "companion", moment = "companion:none")
-        for (row in listOf(tan, unnamed)) {
-            assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, row, foreground = true), row.toString())
-            assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, row, foreground = false), row.toString())
-        }
-        assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
+        AnkiquestMoments.route(prefs, account, tan, foreground = false)
 
-        // Companions it draws still show, Bluma from the server's example among them.
+        // It is kept unseen, so an update that adds the art can still show it.
+        assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.pending(prefs, account).map { it.key })
+        assertEquals(emptyList(), AnkiquestMoments.take(prefs, account))
+        assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.pending(prefs, account).map { it.key })
+    }
+
+    @Test
+    fun `a moment about a companion this app draws is queued`() {
+        // Bluma from the server's example, and Ankilope.
         val rows = JSONArray(example("notifications_companion"))
         val bluma = (0 until rows.length()).map { rows.getJSONObject(it) }.first { it.optString("moment") == "companion:cow" }
         val ankilope = celebration(3, "companion", moment = "companion:ankilope")
