@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.ListenableWorker.Result
@@ -29,29 +30,30 @@ class AnkiquestDeviceTest : InstrumentedTest() {
     @get:Rule
     val runtimePermissionRule = GrantStoragePermission.instance
 
-    /** The AnkiQuest preferences before the test, restored after it: null for an absent one. */
-    private lateinit var saved: Map<String, String?>
+    /**
+     * Every default preference before the test, restored after it. The poll worker writes more than
+     * the account (poll markers, caches), and AnkiQuest keeps all of it in the default preferences.
+     */
+    private lateinit var saved: Map<String, *>
 
     @Before
-    fun saveAccount() {
-        val prefs = AnkiDroidApp.sharedPrefs()
-        saved = ACCOUNT_KEYS.associateWith { prefs.getString(it, null) }
+    fun savePrefs() {
+        saved = AnkiDroidApp.sharedPrefs().all.toMap()
     }
 
     @After
-    fun restoreAccount() {
-        AnkiDroidApp.sharedPrefs().edit {
-            saved.forEach { (key, value) ->
-                if (value == null) {
-                    remove(key)
-                } else {
-                    putString(key, value)
-                }
-            }
+    fun restorePrefs() {
+        AnkiDroidApp.sharedPrefs().edit(commit = true) {
+            clear()
+            saved.forEach { (key, value) -> put(key, value) }
         }
     }
 
-    /** Every class in the package, as the APK under test holds it, initialises without throwing. */
+    /**
+     * Every class in the package, as the APK under test holds it, initialises without throwing.
+     * This runs every AnkiQuest static initialiser in the test process: an object that schedules
+     * work or opens a client on init does so here too.
+     */
     @Test
     fun everyClassInitialises() {
         val loader = testContext.classLoader
@@ -91,6 +93,22 @@ class AnkiquestDeviceTest : InstrumentedTest() {
         assertTrue(result == Result.retry() || result == Result.success(), "Unexpected poll result: $result")
     }
 
+    /** Writes [value] under [key] with the setter for its type, as [SharedPreferences.getAll] returned it. */
+    private fun SharedPreferences.Editor.put(
+        key: String,
+        value: Any?,
+    ) {
+        when (value) {
+            is String -> putString(key, value)
+            is Int -> putInt(key, value)
+            is Long -> putLong(key, value)
+            is Float -> putFloat(key, value)
+            is Boolean -> putBoolean(key, value)
+            is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+            else -> remove(key)
+        }
+    }
+
     /** The names of the AnkiQuest classes in the installed APK's dex files. */
     private fun ankiquestClasses(): List<String> {
         val apk = testContext.applicationInfo.sourceDir
@@ -112,8 +130,6 @@ class AnkiquestDeviceTest : InstrumentedTest() {
                 "com.ichi2.anki.ankiquest.AnkiquestDeckNames",
                 "com.ichi2.anki.ankiquest.AnkiquestPollWorker",
             )
-
-        val ACCOUNT_KEYS = listOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)
 
         /** Port 9 (discard) on this device: nothing listens, so connections fail at once. */
         const val UNREACHABLE_SERVER = "http://127.0.0.1:9"
