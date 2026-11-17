@@ -5,5 +5,5 @@
     <string name="ankiquest_feedback_auto_toast_text">In AnkiQuest ist ein Problem aufgetreten; ein Bericht wird an die AnkiQuest-Entwickler gesendet…</string>
     <string name="ankiquest_feedback_manual_toast_text">Ein Fehlerbericht für die AnkiQuest-Entwickler wird vorbereitet…</string>
     <string name="ankiquest_error_reporting_choice">Fehlerberichte an AnkiQuest</string>
-    <string name="ankiquest_feedback_disclaimer">Berichte gehen an den AnkiQuest-Server und werden nach 30 Tagen gelöscht. Ein Bericht enthält den Fehler, die letzten Protokollzeilen der App, deine Einstellungen ohne Kontodaten, deinen Kommentar, eine zufällige Installations-ID sowie Gerätemodell und Android-Version.</string>
+    <string name="ankiquest_feedback_disclaimer">Berichte gehen an den AnkiQuest-Server und werden nach 30 Tagen gelöscht. Ein Bericht enthält den Fehler und wo in der App er auftrat, die letzten Protokollzeilen der App, deine Einstellungen ohne Kontodaten, deinen Kommentar, wann die App gestartet wurde und wann der Fehler auftrat, sowie technische Angaben zur App und zu deinem Gerät: App-Version, Gerätemodell, Android-Version und -Build, Bildschirm- und Spracheinstellungen, Arbeitsspeicher, Speicherpfade und WebView-Version.</string>
 </resources>

@@ -72,9 +72,38 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         val other = ReportBuilder().exception(IllegalArgumentException("Card 12 missing"))
         assertTrue(administrator().shouldStartCollecting(targetContext, config(), other))
 
-        // Clearing the limiter, as the developer test crash does, lets it through again.
-        CrashReportService.deleteLimiterData(targetContext)
+        // Forgetting the record, as the developer test crash does, lets it through again.
+        AnkiquestCrashAdministrator.forget(targetContext)
         assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)))
+    }
+
+    /** Cancelling the "Ask me" dialog takes back that report's send, and no other crash's. */
+    @Test
+    fun `a cancelled report may be sent again`() {
+        val cancelled = IllegalStateException("Card 12 missing")
+        val other = IllegalArgumentException("Card 12 missing")
+        val builders = List(2) { ReportBuilder().exception(cancelled) }
+        builders.forEach { assertTrue(administrator().shouldStartCollecting(targetContext, config(), it)) }
+        repeat(2) { assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(other))) }
+
+        // The dialog reads the report ACRA saved, with the signature in its custom data.
+        val report = CrashReportData()
+        CustomDataCollector().collect(ReportField.CUSTOM_DATA, targetContext, config(), builders[1], report)
+        AnkiquestCrashAdministrator.cancelled(targetContext, CrashReportData(report.toJSON()))
+
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(cancelled)))
+        assertFalse(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(other)))
+    }
+
+    /** ACRA's limiter is cleared on its own; AnkiQuest's record stays. */
+    @Test
+    fun `clearing ACRA's limiter keeps the record`() {
+        val crash = IllegalStateException("Card 12 missing")
+        repeat(2) { administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)) }
+
+        CrashReportService.deleteLimiterData(targetContext)
+
+        assertFalse(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)))
     }
 
     @Test

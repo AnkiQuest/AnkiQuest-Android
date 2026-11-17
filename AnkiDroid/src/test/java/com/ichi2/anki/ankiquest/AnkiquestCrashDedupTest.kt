@@ -63,6 +63,27 @@ class AnkiquestCrashDedupTest {
     }
 
     @Test
+    fun `a cancelled report is taken back for its crash only`() {
+        repeat(2) { record.admit("cancelled") }
+        repeat(2) { record.admit("other") }
+
+        record.retract("cancelled")
+
+        assertEquals(Verdict.SEND, record.admit("cancelled"))
+        assertEquals(Verdict.SKIP, record.admit("cancelled"))
+        assertEquals(Verdict.SKIP, record.admit("other"))
+    }
+
+    @Test
+    fun `retracting an unknown crash changes nothing`() {
+        repeat(2) { record.admit("signature") }
+
+        record.retract("unknown")
+
+        assertEquals(Verdict.SKIP, record.admit("signature"))
+    }
+
+    @Test
     fun `a damaged record starts over`() {
         store.text = "not a record\nsignature many"
 

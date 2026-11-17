@@ -7,5 +7,5 @@
     <string name="ankiquest_feedback_auto_toast_text">AnkiQuest has encountered a problem; a report is being sent to the AnkiQuest developers…</string>
     <string name="ankiquest_feedback_manual_toast_text">An error report is being prepared for the AnkiQuest developers…</string>
     <string name="ankiquest_error_reporting_choice" maxLength="41">Error reports to AnkiQuest</string>
-    <string name="ankiquest_feedback_disclaimer">Reports go to the AnkiQuest server and are deleted after 30 days. A report contains the error, recent app log lines, your settings without account details, your comment, a random installation ID, and your device model and Android version.</string>
+    <string name="ankiquest_feedback_disclaimer">Reports go to the AnkiQuest server and are deleted after 30 days. A report contains the error and where in the app it happened, recent app log lines, your settings without account details, your comment, when the app started and when the error happened, and technical details about the app and your device: app version, device model, Android version and build, screen and language settings, memory, storage paths and WebView version.</string>
 </resources>

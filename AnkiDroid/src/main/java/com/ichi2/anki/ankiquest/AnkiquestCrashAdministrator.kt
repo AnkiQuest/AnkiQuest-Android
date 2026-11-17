@@ -7,9 +7,12 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.ichi2.anki.ankiquest.AnkiquestCrashRecord.Verdict
 import com.ichi2.anki.exception.UserSubmittedException
+import org.acra.ReportField
 import org.acra.builder.ReportBuilder
 import org.acra.config.CoreConfiguration
 import org.acra.config.ReportingAdministrator
+import org.acra.data.CrashReportData
+import org.json.JSONObject
 
 /**
  * Sends each distinct crash at most twice per device and adds its signature to the report as
@@ -55,5 +58,15 @@ class AnkiquestCrashAdministrator : ReportingAdministrator {
 
         /** Lets every crash be sent again, as ACRA's limiter data is cleared with it. */
         internal fun forget(context: Context) = AnkiquestCrashRecord(PreferencesStore(context)).forget()
+
+        /** Takes back the send of [report], which the player cancelled, so its crash may be sent again. */
+        internal fun cancelled(
+            context: Context,
+            report: CrashReportData,
+        ) {
+            val custom = report[ReportField.CUSTOM_DATA.name] as? JSONObject ?: return
+            val signature = custom.optString(SIGNATURE_FIELD).ifEmpty { return }
+            AnkiquestCrashRecord(PreferencesStore(context)).retract(signature)
+        }
     }
 }

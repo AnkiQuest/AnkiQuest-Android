@@ -31,12 +31,26 @@ internal class AnkiquestCrashRecord(
             counts.remove(counts.keys.first())
         }
 
-        store.save(counts.entries.joinToString(LINE) { "${it.key}$FIELD${it.value}" })
+        write(counts)
         return verdict
+    }
+
+    /** Takes back one send of [signature], whose report the player cancelled; other crashes keep their counts. */
+    fun retract(signature: String) {
+        val counts = read()
+        val sent = counts[signature] ?: return
+        if (sent <= 1) {
+            counts.remove(signature)
+        } else {
+            counts[signature] = sent - 1
+        }
+        write(counts)
     }
 
     /** Forgets every signature, so each crash may be sent again. */
     fun forget() = store.save("")
+
+    private fun write(counts: Map<String, Int>) = store.save(counts.entries.joinToString(LINE) { "${it.key}$FIELD${it.value}" })
 
     /** One `signature count` line per signature, oldest first. A damaged record starts over. */
     private fun read(): LinkedHashMap<String, Int> {

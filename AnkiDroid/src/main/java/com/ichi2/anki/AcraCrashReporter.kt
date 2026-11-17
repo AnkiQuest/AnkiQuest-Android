@@ -92,6 +92,8 @@ private object AcraCrashReporter : CrashReporter {
                     AnkiquestPreferences.NAMESPACE,
                 ).withSharedPreferencesName("acra")
                 .withReportFormat(StringFormat.JSON)
+                // No INSTALLATION_ID: the AnkiQuest server drops it, and deduplication needs no identity.
+                // ankiquest_feedback_disclaimer lists what these contain; keep it in step.
                 .withReportContent(
                     ReportField.REPORT_ID,
                     ReportField.APP_VERSION_CODE,
@@ -114,7 +116,6 @@ private object AcraCrashReporter : CrashReporter {
                     ReportField.USER_APP_START_DATE,
                     ReportField.USER_CRASH_DATE,
                     ReportField.LOGCAT,
-                    ReportField.INSTALLATION_ID,
                     ReportField.ENVIRONMENT,
                     ReportField.SHARED_PREFERENCES,
                     // ReportField.MEDIA_CODEC_LIST,
@@ -329,7 +330,6 @@ private object AcraCrashReporter : CrashReporter {
         } catch (e: Exception) {
             Timber.w(e, "Unable to clear ACRA limiter data")
         }
-        AnkiquestCrashAdministrator.forget(context)
     }
 
     override fun onPreferenceChanged(
@@ -339,6 +339,7 @@ private object AcraCrashReporter : CrashReporter {
         setReportingMode(newValue)
         // If the user changed error reporting, make sure future reports have a chance to post
         deleteLimiterData(ctx)
+        AnkiquestCrashAdministrator.forget(ctx)
         // We also need to re-chain our UncaughtExceptionHandlers
         AnkiDroidUsageAnalytics.reinitialize(ctx.applicationContext)
         ThrowableFilterService.reInitialize()
