@@ -11,9 +11,12 @@ class AnkiquestCrashDedupTest {
     private val store = MemoryStore()
     private val record = AnkiquestCrashRecord(store)
 
+    /** These messages hold no host or credential. */
+    private val noRedaction = AnkiquestRedaction(emptyList(), emptyList())
+
     @Test
     fun `the same crash is sent twice, then skipped`() {
-        val signature = AnkiquestCrashSignature.of(crash("Card 12 missing"))
+        val signature = AnkiquestCrashSignature.of(crash("Card 12 missing"), noRedaction)
 
         val verdicts = List(3) { record.admit(signature) }
 
@@ -22,10 +25,10 @@ class AnkiquestCrashDedupTest {
 
     @Test
     fun `a different crash is still sent`() {
-        val first = AnkiquestCrashSignature.of(crash("Card 12 missing"))
+        val first = AnkiquestCrashSignature.of(crash("Card 12 missing"), noRedaction)
         repeat(3) { record.admit(first) }
 
-        val other = AnkiquestCrashSignature.of(IllegalStateException("Card 12 missing"))
+        val other = AnkiquestCrashSignature.of(IllegalStateException("Card 12 missing"), noRedaction)
 
         assertEquals(Verdict.SEND, record.admit(other))
     }

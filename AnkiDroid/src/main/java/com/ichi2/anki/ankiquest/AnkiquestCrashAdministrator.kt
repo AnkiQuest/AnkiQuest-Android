@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.ichi2.anki.ankiquest.AnkiquestCrashRecord.Verdict
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.exception.UserSubmittedException
 import org.acra.ReportField
 import org.acra.builder.ReportBuilder
@@ -16,7 +17,8 @@ import org.json.JSONObject
 
 /**
  * Sends each distinct crash at most twice per device and adds its signature to the report as
- * [SIGNATURE_FIELD], so the server can group reports without knowing who sent them.
+ * [SIGNATURE_FIELD], so the server can group reports without knowing who sent them. Removes server
+ * hosts and credentials from the report before it is saved ([AnkiquestRedaction]).
  * ACRA loads it through `META-INF/services/org.acra.config.ReportingAdministrator`.
  */
 class AnkiquestCrashAdministrator : ReportingAdministrator {
@@ -26,7 +28,7 @@ class AnkiquestCrashAdministrator : ReportingAdministrator {
         reportBuilder: ReportBuilder,
     ): Boolean {
         val error = reportBuilder.exception ?: return true
-        val signature = AnkiquestCrashSignature.of(error)
+        val signature = AnkiquestCrashSignature.of(error, AnkiquestRedaction.of(context.sharedPrefs()))
         reportBuilder.customData(SIGNATURE_FIELD, signature)
 
         // The player asked to send this report.
@@ -37,6 +39,32 @@ class AnkiquestCrashAdministrator : ReportingAdministrator {
         // Counted before collection, so a skipped report reads no logs.
         val record = AnkiquestCrashRecord(PreferencesStore(context))
         return record.admit(signature) == Verdict.SEND
+    }
+
+    /**
+     * Redacts server hosts and credentials in the collected report (#216). ACRA asks this after every
+     * collector has run, LOGCAT's size cap included, and before it saves or shows the report.
+     */
+    override fun shouldSendReport(
+        context: Context,
+        config: CoreConfiguration,
+        crashReportData: CrashReportData,
+    ): Boolean {
+        val redaction = AnkiquestRedaction.of(context.sharedPrefs())
+
+        // Logs and the trace; the trace's frames stay, as the signature hashes them.
+        crashReportData.getString(ReportField.LOGCAT)?.let { crashReportData.put(ReportField.LOGCAT, redaction.text(it)) }
+        crashReportData.getString(ReportField.STACK_TRACE)?.let { crashReportData.put(ReportField.STACK_TRACE, redaction.trace(it)) }
+
+        // Custom data holds exception messages ("additionalInfo"); the signature is a hash, not a token.
+        val custom = crashReportData[ReportField.CUSTOM_DATA.name] as? JSONObject ?: return true
+        for (key in custom.keys().asSequence().toList()) {
+            val value = custom.opt(key) as? String ?: continue
+            if (key != SIGNATURE_FIELD) {
+                custom.put(key, redaction.text(value))
+            }
+        }
+        return true
     }
 
     /** A preference file of its own, outside the default preferences that reports include. */

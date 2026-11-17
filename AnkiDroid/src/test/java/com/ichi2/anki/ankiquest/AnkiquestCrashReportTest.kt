@@ -68,7 +68,10 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         val report = CrashReportData()
         CustomDataCollector().collect(ReportField.CUSTOM_DATA, targetContext, config(), builders[0], report)
         val custom = report[ReportField.CUSTOM_DATA.name] as JSONObject
-        assertEquals(AnkiquestCrashSignature.of(crash), custom.getString(AnkiquestCrashAdministrator.SIGNATURE_FIELD))
+        assertEquals(
+            AnkiquestCrashSignature.of(crash, AnkiquestRedaction.of(AnkiDroidApp.sharedPrefs())),
+            custom.getString(AnkiquestCrashAdministrator.SIGNATURE_FIELD),
+        )
 
         // A different crash is still reported.
         val other = ReportBuilder().exception(IllegalArgumentException("Card 12 missing"))

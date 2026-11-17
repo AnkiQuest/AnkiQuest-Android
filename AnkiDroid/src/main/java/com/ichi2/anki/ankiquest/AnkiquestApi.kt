@@ -16,13 +16,22 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/** The server answered with a status other than success; [explanation] is its own `{"error": ...}` text, when it gave one. */
+/**
+ * The server answered with a status other than success; [explanation] is its own `{"error": ...}` text,
+ * when it gave one. The message carries it for the screens that show it.
+ */
 internal class AnkiquestHttpException(
     val code: Int,
     val explanation: String? = null,
     /** The server wants the player to sign in with their provider again first (`"reauth": true`). */
     val reauth: Boolean = false,
-) : IOException(explanation ?: "HTTP $code")
+) : IOException(explanation ?: "HTTP $code") {
+    /**
+     * The status only. Logged exceptions print this and reach crash reports through logcat; the
+     * server's text can quote what the player sent (#216).
+     */
+    override fun toString(): String = "${javaClass.name}: HTTP $code"
+}
 
 /** The signed-in account is no longer the one a request was prepared for. */
 internal class HomeAccountChanged : IOException("The AnkiQuest account changed")

@@ -41,7 +41,7 @@ class AnkiquestCrashSignatureTest {
                     )
             }
 
-        assertEquals(signature("example_report"), AnkiquestCrashSignature.of(error))
+        assertEquals(signature("example_report"), AnkiquestCrashSignature.of(error, AnkiquestRedaction(emptyList(), emptyList())))
     }
 
     /**

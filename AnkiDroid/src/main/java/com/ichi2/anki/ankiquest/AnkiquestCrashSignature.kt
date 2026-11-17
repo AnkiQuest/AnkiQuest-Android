@@ -24,8 +24,24 @@ internal object AnkiquestCrashSignature {
         "\u0009\u000A\u000B\u000C\u000D\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006" +
             "\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000"
 
-    /** The signature of [error]. */
-    fun of(error: Throwable): String = hash(canonical(error.javaClass.name, error.localizedMessage, error.stackTrace.toList()))
+    /** What separates the exception class from its message in [Throwable.toString]. */
+    private const val SEPARATOR = ": "
+
+    /**
+     * The signature of [error] as the server computes it from the report's `STACK_TRACE`: its first
+     * lines are [Throwable.toString], redacted by [redaction] as the report is, so an exception that
+     * overrides [Throwable.toString] or quotes a server host still gets the server's signature.
+     */
+    fun of(
+        error: Throwable,
+        redaction: AnkiquestRedaction,
+    ): String {
+        // The server drops a carriage return at the end of each line.
+        val header = redaction.trace(error.toString()).split('\n').joinToString("\n") { it.removeSuffix("\r") }
+        val type = header.substringBefore(SEPARATOR).trim()
+        val message = if (SEPARATOR in header) header.substringAfter(SEPARATOR) else null
+        return hash(canonical(type, message, error.stackTrace.toList()))
+    }
 
     /** The text the signature hashes. */
     fun canonical(
