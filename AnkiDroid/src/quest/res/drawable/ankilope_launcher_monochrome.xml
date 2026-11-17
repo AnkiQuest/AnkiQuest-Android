@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
-<!-- Ankilope's line art; Bluma (cow) has the same shape and uses it too. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/ankilope_icon_mono" android:inset="23%" />
