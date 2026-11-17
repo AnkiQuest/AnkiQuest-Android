@@ -30,10 +30,11 @@ internal object AnkiquestAki {
         @get:DrawableRes
         val image: Int get() = AnkiquestMood.pose(mood, streak)
 
-        fun text(context: Context): String =
+        /** The line beside the pose, or null for none: cards due need none, the next-step card says what to do. */
+        fun text(context: Context): String? =
             when (message) {
                 Message.WELCOME -> context.getString(R.string.aki_welcome)
-                Message.REVIEW -> context.getString(R.string.aki_review)
+                Message.REVIEW -> null
                 Message.COMPLETE -> context.getString(R.string.aki_complete)
                 Message.STREAK -> context.getString(R.string.aki_streak)
                 Message.PROTECTED -> context.getString(R.string.aki_protected)
@@ -113,9 +114,12 @@ internal object AnkiquestAki {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(context, 8), 0, dp(context, 8))
             addView(image(context, card.image))
+
+            // A mood without a line shows the pose alone.
+            val line = card.text(context) ?: return@apply
             addView(
                 TextView(context).apply {
-                    text = card.text(context)
+                    text = line
                     textSize = 16f
                     setTextColor(context.getColor(R.color.aq_home_text))
                     setPadding(dp(context, 12), 0, 0, 0)
