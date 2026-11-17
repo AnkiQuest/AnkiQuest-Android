@@ -18,6 +18,7 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.ankiActivity
+import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.analytics.AnalyticsEvent.LinkClicked
 import com.ichi2.anki.common.analytics.LinkAction
@@ -141,7 +142,7 @@ class HelpDialog : AnalyticsDialogFragment() {
         }
 
         /**
-         * @param canRateApp a boolean that indicates if the system has an app to open to rate AnkiDroid
+         * @param canRateApp a boolean that indicates if the system has an app to open to rate AnkiQuest
          */
         fun newSupportInstance(canRateApp: Boolean): HelpDialog {
             Analytics.send(LinkClicked(LinkAction.OPENED_SUPPORT_ANKIDROID))
@@ -267,7 +268,7 @@ internal val supportMenuItems =
             action = OpenUrlResource(R.string.link_ankidroid_development_guide),
         ),
         HelpItem(
-            titleResId = CommonString.help_item_support_rate_ankidroid,
+            titleResId = R.string.ankiquest_rate,
             iconResId = R.drawable.ic_star_black_24,
             analyticsId = LinkAction.OPENED_RATE,
             id = 8,
@@ -331,7 +332,7 @@ internal val childHelpMenuItems =
             analyticsId = LinkAction.OPENED_REPORT_BUG,
             id = 201,
             parentId = 2,
-            action = OpenUrl(AnkiDroidApp.feedbackUrl),
+            action = OpenUrl(AnkiquestLinks.BUG_FORM),
         ),
         HelpItem(
             titleResId = CommonString.help_title_send_exception,

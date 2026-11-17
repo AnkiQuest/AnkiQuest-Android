@@ -48,7 +48,6 @@ import com.ichi2.anki.common.utils.android.SdCard
 import com.ichi2.anki.common.utils.android.isRobolectric
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
-import com.ichi2.anki.compat.CompatHelper
 import com.ichi2.anki.contextmenu.AnkiCardContextMenu
 import com.ichi2.anki.contextmenu.CardBrowserContextMenu
 import com.ichi2.anki.exception.CollectionLockedException
@@ -808,13 +807,6 @@ open class AnkiDroidApp :
 
         val appResources: Resources
             get() = resourcesTestingOverride ?: instance.resources
-
-        fun getMarketIntent(context: Context): Intent {
-            val uri =
-                context.getString(if (CompatHelper.isKindle) R.string.link_market_kindle else R.string.link_market)
-            val parsed = uri.toUri()
-            return Intent(Intent.ACTION_VIEW, parsed)
-        } // TODO actually this can be done by translating "link_help" string for each language when the App is
 
         @VisibleForTesting
         fun clearFatalError() {

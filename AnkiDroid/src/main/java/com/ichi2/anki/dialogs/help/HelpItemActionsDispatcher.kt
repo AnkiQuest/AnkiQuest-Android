@@ -4,12 +4,12 @@ package com.ichi2.anki.dialogs.help
 
 import androidx.annotation.StringRes
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
+import com.ichi2.anki.ankiquest.AnkiquestLinks
+import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.android.AdaptionUtil
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.snackbar.showSnackbar
-import com.ichi2.utils.IntentUtil
 
 /**
  * An abstraction for the actions that can be done when the user selects a menu item in the
@@ -40,11 +40,9 @@ class AnkiActivityHelpActionsDispatcher(
         ankiActivity.openUrl(url)
     }
 
+    // Rates AnkiQuest, not AnkiDroid: see AnkiquestLinks.RateTarget
     override fun onRate() {
-        IntentUtil.tryOpenIntent(
-            ankiActivity,
-            AnkiDroidApp.getMarketIntent(ankiActivity),
-        )
+        ankiActivity.openAnkiquestLink(AnkiquestLinks.rateUrl(ankiActivity))
     }
 
     override fun onSendReport() {

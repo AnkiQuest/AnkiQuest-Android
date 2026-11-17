@@ -7,11 +7,13 @@ import android.content.Intent
 import android.os.Looper
 import android.text.Spanned
 import android.text.style.URLSpan
+import android.view.View
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.databinding.FragmentAboutBinding
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -69,6 +71,23 @@ class AboutFragmentTest : RobolectricTest() {
                 ?.text
                 ?.toString(),
         )
+    }
+
+    @Test
+    fun `Rate AnkiQuest opens the repository while there is no store listing`() {
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android", clicked { rateAnkiquest })
+    }
+
+    @Test
+    fun `AnkiQuest changelog opens the release notes`() {
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases", clicked { ankiquestChangelog })
+    }
+
+    /** The link the About button [button] opens. */
+    private fun clicked(button: FragmentAboutBinding.() -> View): String? {
+        val about = about()
+        about.binding.button().performClick()
+        return shadowOf(about.requireActivity()).nextStartedActivity?.dataString
     }
 
     /** The About screen's licence text. */
