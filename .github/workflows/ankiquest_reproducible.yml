@@ -92,11 +92,15 @@ jobs:
           pattern: apk-*
           merge-multiple: true
 
-      # The full package, with the recommended tools diffoscope uses to unpack dex and resources.
+      # apt brings the tools diffoscope uses to unpack dex and resources. Ubuntu's diffoscope
+      # cannot read APK signatures with its androguard 4, so run diffoscope from PyPI instead.
       - name: Install diffoscope
         run: |
           sudo apt-get update
-          sudo apt-get install -y diffoscope
+          sudo apt-get install -y diffoscope apksigner apktool
+          python3 -m venv "$RUNNER_TEMP/diffoscope"
+          "$RUNNER_TEMP/diffoscope/bin/pip" install --quiet diffoscope==339 androguard==4.1.4 apksigcopier==1.1.1 python-magic libarchive-c
+          echo "$RUNNER_TEMP/diffoscope/bin" >> "$GITHUB_PATH"
 
       - name: Compare
         run: |
