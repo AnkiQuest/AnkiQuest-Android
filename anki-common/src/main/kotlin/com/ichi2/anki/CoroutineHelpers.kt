@@ -61,9 +61,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -94,27 +95,26 @@ var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 var throwOnShowError = false
 
 interface OnErrorListener {
-    val onError: MutableSharedFlow<String>
+    val onError: Channel<Exception>
 }
 
 fun <T, U> T.launchCatchingIO(block: suspend T.() -> U): Job where T : ViewModel, T : OnErrorListener =
-    viewModelScope.launchCatching(
-        ioDispatcher,
-        {
-            onError.emit(it)
-            if (throwOnShowError) throw IllegalStateException("throwOnShowError: $it")
-        },
-        { block() },
-    )
+    viewModelScope.launch(ioDispatcher) {
+        try {
+            block()
+        } catch (e: Exception) {
+            // propagate our own cancellation; others are errors
+            if (e is CancellationException) ensureActive()
+            Timber.w(e)
+            onError.send(e)
+            if (throwOnShowError) throw IllegalStateException("throwOnShowError: $e", e)
+        }
+    }
 
-fun <T> T.launchCatchingIO(
+fun <T> ViewModel.launchCatchingIO(
     errorMessageHandler: suspend (String) -> Unit,
-    block: suspend CoroutineScope.() -> Unit,
-): Job where T : ViewModel =
-    viewModelScope.launchCatching(
-        ioDispatcher,
-        errorMessageHandler,
-    ) { block() }
+    block: suspend CoroutineScope.() -> T,
+): Job = viewModelScope.launchCatching(ioDispatcher, errorMessageHandler, block)
 
 fun <T> CoroutineScope.asyncIO(block: suspend CoroutineScope.() -> T): Deferred<T> = async(ioDispatcher, block = block)
 
