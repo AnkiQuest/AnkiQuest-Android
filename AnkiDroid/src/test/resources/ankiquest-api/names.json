@@ -63,5 +63,5 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": []
+    "not_yet": ["activity_locked", "leaderboard_locked"]
 }
