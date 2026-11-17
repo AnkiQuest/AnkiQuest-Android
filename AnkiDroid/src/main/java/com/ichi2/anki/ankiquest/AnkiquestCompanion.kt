@@ -25,11 +25,11 @@ import kotlin.math.sin
 internal object AnkiquestCompanion {
     private const val KEY_PREFIX = "ankiquestCompanion:"
 
-    /** The companions this app has art for, as the server names them. */
-    val drawn: List<String> = Choice.entries.filter { it != Choice.NONE }.map { it.id }
-
     /** The cache name of silhouettes ([AnkiquestArt.filtered]). */
     private const val SILHOUETTE = "silhouette"
+
+    /** The companions this app has art for, as the server names them. */
+    val drawn: List<String> = Choice.entries.filter { it != Choice.NONE }.map { it.id }
 
     /** The companions, in the order the picker shows them; [id] is the value the server stores. */
     enum class Choice(

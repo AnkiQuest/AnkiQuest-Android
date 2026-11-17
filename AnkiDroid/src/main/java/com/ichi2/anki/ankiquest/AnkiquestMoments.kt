@@ -152,6 +152,9 @@ internal object AnkiquestMoments {
         /** Seen already, in the app or as a notification. */
         SEEN,
 
+        /** About a companion this app has no art for: waits unseen in the queue until an update adds it. */
+        WAITING,
+
         /** Routine: only the quiet badge. */
         QUIET,
     }
@@ -435,9 +438,9 @@ internal object AnkiquestMoments {
 
     /**
      * Decides what becomes of an inbox [entry] for [account]: its moment is queued when the app is in
-     * [foreground], counted quietly when routine, or skipped when already seen or about a companion
-     * this app cannot draw. Anything else is left to a system notification; call [markShown] once
-     * that is posted.
+     * [foreground], counted quietly when routine, or skipped when already seen. A moment about a
+     * companion this app cannot draw waits in the queue, unseen, until an update adds its art.
+     * Anything else is left to a system notification; call [markShown] once that is posted.
      * SECURED notices use the daily claim before the quiet flag so a routine minimum still gets its once-daily moment.
      */
     @Synchronized
@@ -450,9 +453,10 @@ internal object AnkiquestMoments {
         val moment = fromNotice(entry) ?: return Route.NOTIFY
         if (known(prefs, account, moment.key)) return Route.SEEN
 
-        // A companion this app has no art for would be shown as another one: skip it.
-        if (moment.kind == Kind.COMPANION && joined(moment) == null) {
-            return Route.SEEN
+        // A companion this app has no art for would be shown as another one: keep it for later.
+        if (!drawable(moment, AnkiquestCompanion.drawn)) {
+            offer(prefs, account, listOf(moment))
+            return Route.WAITING
         }
         if (moment.kind == Kind.SECURED) {
             return routeMinimum(prefs, account, moment, foreground)
@@ -506,20 +510,35 @@ internal object AnkiquestMoments {
     }
 
     /**
-     * Takes everything waiting for [account], most important first and newest first within a kind,
-     * and remembers it as shown. Empty when nothing waits.
+     * Takes everything waiting for [account] that this app can draw with the companions in [drawn],
+     * most important first and newest first within a kind, and remembers it as shown. Moments about
+     * other companions stay in the queue. Empty when nothing can be shown.
      */
     @Synchronized
     fun take(
         prefs: SharedPreferences,
         account: String,
+        drawn: Collection<String> = AnkiquestCompanion.drawn,
     ): List<Moment> {
-        val pending = pending(prefs, account)
-        if (pending.isEmpty()) return emptyList()
-        val ordered = pending.sortedWith(compareByDescending<Moment> { it.kind.priority }.thenByDescending { it.at })
-        save(prefs, account, emptyList())
+        val (ready, waiting) = pending(prefs, account).partition { drawable(it, drawn) }
+        if (ready.isEmpty()) {
+            return emptyList()
+        }
+        val ordered = ready.sortedWith(compareByDescending<Moment> { it.kind.priority }.thenByDescending { it.at })
+        save(prefs, account, waiting)
         markShown(prefs, account, ordered.map { it.key })
         return ordered
+    }
+
+    /** Whether [moment] needs no companion art, or names one of the companions in [drawn]. */
+    private fun drawable(
+        moment: Moment,
+        drawn: Collection<String>,
+    ): Boolean {
+        if (moment.kind != Kind.COMPANION) {
+            return true
+        }
+        return moment.key.substringAfter(COMPANION_KEY_PREFIX, missingDelimiterValue = "") in drawn
     }
 
     fun pending(

@@ -194,12 +194,22 @@ class AnkiquestMomentsTest : RobolectricTest() {
     fun `a moment about a companion this app cannot draw waits for its art`() {
         // A planned companion has no art here; shown now, it would show as the chosen one.
         val tan = celebration(1, "companion", moment = "companion:anki_tan")
-        AnkiquestMoments.route(prefs, account, tan, foreground = false)
+        assertEquals(Route.WAITING, AnkiquestMoments.route(prefs, account, tan, foreground = false))
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, tan, foreground = true))
 
         // It is kept unseen, so an update that adds the art can still show it.
         assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.pending(prefs, account).map { it.key })
         assertEquals(emptyList(), AnkiquestMoments.take(prefs, account))
         assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.pending(prefs, account).map { it.key })
+
+        // Other moments are taken while it waits; an app that draws the companion shows it once.
+        val level = celebration(2, "level", moment = "level:4")
+        assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, level, foreground = true))
+        assertEquals(listOf("level:4"), AnkiquestMoments.take(prefs, account).map { it.key })
+        val updated = AnkiquestCompanion.drawn + "anki_tan"
+        assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.take(prefs, account, updated).map { it.key })
+        assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, tan, foreground = true))
     }
 
     @Test
