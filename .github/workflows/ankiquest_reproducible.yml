@@ -85,7 +85,7 @@ jobs:
     name: Compare with diffoscope
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -102,10 +102,13 @@ jobs:
           "$RUNNER_TEMP/diffoscope/bin/pip" install --quiet diffoscope==339 androguard==4.1.4 apksigcopier==1.1.1 python-magic libarchive-c
           echo "$RUNNER_TEMP/diffoscope/bin" >> "$GITHUB_PATH"
 
+      # Decompiling every class to Java took over 25 minutes; the smali from apktool shows the
+      # same differences. --timeout stops descending and reports what it found so far.
       - name: Compare
         run: |
           sha256sum AnkiQuest-*.apk
-          diffoscope --html report.html --text report.txt AnkiQuest-first.apk AnkiQuest-second.apk
+          diffoscope --exclude-command '^procyon' --exclude-command '^javap' --timeout 1500 \
+            --html report.html --text report.txt AnkiQuest-first.apk AnkiQuest-second.apk
 
       # The job summary holds at most 1 MiB; the full report is in the artifact.
       - name: Show the differences
