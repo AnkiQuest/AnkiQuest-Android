@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestAki.Message
@@ -11,7 +12,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -109,6 +112,20 @@ class AnkiquestAkiTest : RobolectricTest() {
         assertEquals(AnkiquestMood.Mood.FIRE, studied.mood)
         assertEquals(AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 13), studied.image)
         assertEquals(Message.REVIEW, studied.message)
+    }
+
+    @Test
+    fun `cards due keep the pose but bring no greeting`() {
+        // The next-step card already says to study (#349), as on the desktop add-on.
+        val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
+        val card = AnkiquestAki.mood(due, profile("studied", 20).put("streak", 13))
+        assertEquals(Message.REVIEW, card.message)
+        assertNull(card.text(targetContext))
+
+        // The Home card shows only the pose.
+        val view = AnkiquestAki.encouragement(targetContext, card)
+        assertEquals(1, view.childCount)
+        assertIs<ImageView>(view.getChildAt(0))
     }
 
     @Test
