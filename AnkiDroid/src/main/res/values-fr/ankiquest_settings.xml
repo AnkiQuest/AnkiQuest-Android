@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_deck_alerts_stop">Arrêter les alertes de paquets de %1$s</string>
+    <string name="aq_deck_alerts_stopped">Tu ne recevras plus d’alertes de paquets de %1$s.</string>
+    <string name="aq_deck_alerts_restored">Tu recevras à nouveau les alertes de paquets de %1$s.</string>
+    <string name="aq_deck_alerts_already_stopped">Tu ne reçois déjà plus d’alertes de paquets de %1$s.</string>
+    <string name="aq_deck_alerts_unavailable">%1$s ne partage plus d’alertes de paquets.</string>
+    <string name="aq_deck_alerts_failed">Impossible de modifier les alertes de paquets. Réessaie.</string>
     <string name="ankiquest_group_account">Compte</string>
     <string name="ankiquest_group_notify">Me prévenir pour</string>
     <string name="ankiquest_group_sharing">Partage</string>
@@ -30,7 +36,6 @@
     <string name="ankiquest_deck_menu_share_on">Les amis choisis seront prévenus quand tu termineras %1$s.</string>
     <string name="ankiquest_deck_menu_share_off">Personne ne sera prévenu quand tu termineras %1$s.</string>
     <string name="aq_goal_change">Changer l’objectif</string>
-    <string name="aq_profile_deck_alerts_stop">Ne plus recevoir les alertes de paquets de %1$s</string>
     <string name="aq_profile_deck_alerts_start">Recevoir à nouveau les alertes de paquets de %1$s</string>
     <string name="aq_profile_freezes_pause">Suspendre la protection de série</string>
     <string name="aq_profile_freezes_resume">Reprendre la protection de série</string>
