@@ -110,7 +110,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
     companion object {
         /**
-         * Largest companion bitmap edge, the size the streak poses are exported at (float3/ankiquest#253).
+         * Largest companion bitmap edge, the size the streak poses are exported at (AnkiQuest/AnkiQuest-Desktop#253).
          * One such ARGB bitmap is 4 MiB, under the RemoteViews bitmap limit (screen width x height x 4 x 1.5)
          * of a 720 x 1280 screen.
          */
