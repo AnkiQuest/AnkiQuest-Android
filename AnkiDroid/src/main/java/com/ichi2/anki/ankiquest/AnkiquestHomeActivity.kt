@@ -322,7 +322,9 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             lifecycleScope.launch {
                 val offered =
                     try {
-                        AnkiquestPasswordPrompt.offered(AnkiquestAccountSettings.methods(current), snoozedAt, now)
+                        val methods = AnkiquestAccountSettings.methods(current)
+                        // Not now may have been chosen while the server was answering.
+                        AnkiquestPasswordPrompt.offered(methods, AnkiquestPasswordPrompt.snoozedAt(prefs, current), now)
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
@@ -477,8 +479,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
     }
 
+    /** Hides the card after Not now or a saved password; an answer still on its way is dropped. */
     private fun hidePasswordPrompt(offered: PasswordPrompt.Offered) {
         if (passwordPrompt != offered) return
+        passwordJob?.cancel()
         passwordPrompt = PasswordPrompt.Hidden
         render()
     }

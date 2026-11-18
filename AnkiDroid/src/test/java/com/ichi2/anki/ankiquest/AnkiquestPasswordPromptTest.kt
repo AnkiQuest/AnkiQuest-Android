@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Methods
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.SignIn
@@ -55,5 +56,23 @@ class AnkiquestPasswordPromptTest : RobolectricTest() {
         AnkiquestPasswordPrompt.snooze(prefs, ana, 1234L)
         assertEquals(1234L, AnkiquestPasswordPrompt.snoozedAt(prefs, ana))
         assertNull(AnkiquestPasswordPrompt.snoozedAt(prefs, bo))
+    }
+
+    @Test
+    fun `passwords are counted in characters, as the server does`() {
+        // One character, two UTF-16 units: the server's chars().count() and the add-on's len() count one.
+        val emoji = "\uD83D\uDE00"
+        val length = R.string.ankiquest_password_length
+        assertEquals(length, AnkiquestPasswordPrompt.problem(emoji.repeat(9), null))
+        assertNull(AnkiquestPasswordPrompt.problem(emoji.repeat(10), null))
+        assertNull(AnkiquestPasswordPrompt.problem(emoji.repeat(256), null))
+        assertEquals(length, AnkiquestPasswordPrompt.problem(emoji.repeat(257), null))
+    }
+
+    @Test
+    fun `a second entry must match the first`() {
+        val mismatch = R.string.ankiquest_password_mismatch
+        assertEquals(mismatch, AnkiquestPasswordPrompt.problem("a new long password", "a different password"))
+        assertNull(AnkiquestPasswordPrompt.problem("a new long password", "a new long password"))
     }
 }

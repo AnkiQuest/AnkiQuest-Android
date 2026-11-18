@@ -7,6 +7,7 @@ import android.text.InputType
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
@@ -54,6 +55,25 @@ internal object AnkiquestPasswordPrompt {
     private fun key(account: HomeAccount) = scopedKey(SNOOZED_KEY, account.scope)
 
     /**
+     * Why the server would refuse [typed], as a message; null when it would take it. [repeat] is the
+     * second entry, null in a form without one. Counts characters, as the server and the add-on do,
+     * not UTF-16 units. Both Android password forms check with it before sending.
+     */
+    @StringRes
+    fun problem(
+        typed: String,
+        repeat: String?,
+    ): Int? {
+        if (typed.codePointCount(0, typed.length) !in PASSWORD_LENGTH) {
+            return R.string.ankiquest_password_length
+        }
+        if (repeat != null && repeat != typed) {
+            return R.string.ankiquest_password_mismatch
+        }
+        return null
+    }
+
+    /**
      * The form: the new password twice, since there is no other to fall back on when it was mistyped.
      * [saved] runs after the server took it.
      */
@@ -89,12 +109,9 @@ internal object AnkiquestPasswordPrompt {
         submit.setOnClickListener {
             // Checked here first, as the server would, so a typo costs no request.
             val typed = password.text.toString()
-            if (typed.length !in PASSWORD_LENGTH) {
-                message.setText(R.string.ankiquest_password_length)
-                return@setOnClickListener
-            }
-            if (repeat.text.toString() != typed) {
-                message.setText(R.string.ankiquest_password_mismatch)
+            val problem = problem(typed, repeat.text.toString())
+            if (problem != null) {
+                message.setText(problem)
                 return@setOnClickListener
             }
 

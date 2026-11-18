@@ -36,6 +36,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHosts
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
+import com.ichi2.anki.ankiquest.AnkiquestPasswordPrompt
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
@@ -529,12 +530,9 @@ class AnkiquestSignInFragment : SettingsFragment() {
         val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
         submit.setOnClickListener {
             val typed = password.text.toString()
-            if (typed.length !in PASSWORD_LENGTH) {
-                message.setText(R.string.ankiquest_password_length)
-                return@setOnClickListener
-            }
-            if (!methods.password && repeat.text.toString() != typed) {
-                message.setText(R.string.ankiquest_password_mismatch)
+            val problem = AnkiquestPasswordPrompt.problem(typed, repeat.text.toString().takeIf { !methods.password })
+            if (problem != null) {
+                message.setText(problem)
                 return@setOnClickListener
             }
             val account = signedIn() ?: return@setOnClickListener
@@ -702,6 +700,5 @@ class AnkiquestSignInFragment : SettingsFragment() {
     companion object {
         @VisibleForTesting
         internal const val DYNAMIC_PREFIX = "ankiquestSignIn:"
-        private val PASSWORD_LENGTH = 10..256
     }
 }
