@@ -21,6 +21,7 @@ internal object AnkiquestDiagnostics {
             appendLine("AnkiQuest Release = ${BuildConfig.ANKIQUEST_RELEASE}")
             appendLine("AnkiQuest Nightly = ${BuildConfig.ANKIQUEST_NIGHTLY}")
             appendLine("AnkiQuest Commit = ${BuildConfig.GIT_COMMIT_HASH}")
+            appendLine("AnkiDroid Upstream Commit = ${BuildConfig.UPSTREAM_COMMIT_HASH}")
 
             // Android can request the crash report before application startup during backup recovery.
             val prefs = AnkiDroidApp.sharedPrefsOrNull()
