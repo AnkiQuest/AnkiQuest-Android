@@ -32,6 +32,16 @@ class AnkiquestCompanionTest : RobolectricTest() {
     }
 
     @Test
+    fun `every companion's asleep art uses the pose name`() {
+        // AnkiQuest-Server#32: every companion exports its asleep pose as `<companion>_asleep`.
+        for (choice in Choice.entries) {
+            val art = AnkiquestCompanion.art(AnkiquestPose.ASLEEP, choice)
+            val name = targetContext.resources.getResourceEntryName(art)
+            assertTrue(name.endsWith("_asleep"), "$choice shows $name")
+        }
+    }
+
+    @Test
     fun `choice follows only the current account and maps all mascot poses`() {
         val alice = account("alice")
         assertEquals("aki", AnkiquestCompanion.selected())
