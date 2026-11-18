@@ -37,6 +37,7 @@ internal object AnkiquestAccountSettings {
         val password: Boolean,
         val providers: List<Provider>,
         val linkedUnavailable: Boolean? = null,
+        val signIn: SignIn? = null,
     ) {
         /** The offered providers the player can sign in again with. */
         val linked: List<Provider> get() = providers.filter { it.linked }
@@ -92,6 +93,12 @@ internal object AnkiquestAccountSettings {
                     if (json.isNull("confirmed_until")) null else json.optLong("confirmed_until"),
                 )
         }
+    }
+
+    enum class SignIn {
+        PASSWORD,
+        PROVIDER,
+        TOKEN_ONLY,
     }
 
     enum class Purpose(
