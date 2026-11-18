@@ -5,4 +5,8 @@
     <string name="aki_complete">Fürs Erste sind deine Karten geschafft. Gut gemacht!</string>
     <string name="aki_streak">Du hast heute gelernt. Diesen Fortschritt lohnt es sich zu bewahren.</string>
     <string name="aki_protected">Deine Lernserie ist geschützt. Ein neuer Anfang wartet auf dich.</string>
+    <plurals name="aki_streak_waiting">
+        <item quantity="one">Du hast heute noch nicht gelernt. Deine Lernserie von %d Tag wartet noch.</item>
+        <item quantity="other">Du hast heute noch nicht gelernt. Deine Lernserie von %d Tagen wartet noch.</item>
+    </plurals>
 </resources>
