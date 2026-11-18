@@ -77,6 +77,8 @@ internal object AnkiquestFeed {
         val legacy: Boolean = false,
         /** The server ignored the filters asked for and answered the whole feed. */
         val unfiltered: Boolean = false,
+        /** Why the server left other players' study out, when it did. */
+        val lock: AnkiquestLock? = null,
     )
 
     data class Sent(
@@ -228,6 +230,7 @@ internal object AnkiquestFeed {
             actionCount = json.optInt("action_count"),
             latestId = json.positive("latest_id"),
             nextBefore = json.positive("next_before"),
+            lock = AnkiquestLock.of(json),
         )
 
     /** The older oldest-first notification array, newest first like the feed. */

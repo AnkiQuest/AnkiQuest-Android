@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@string/about_contributors_description,@string/about_contributors_description_no_donate,@string/license_description,@string/link_source">
+    tools:keep="@string/about_contributors_description,@string/about_contributors_description_no_donate,@string/license_description,@string/link_source,@string/info_rate,@string/open_changelog">
     <!-- Preserve upstream About resources for future upstream merges. -->
-    <string name="ankiquest_link_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Android</string>
     <string name="ankiquest_link_server_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Desktop</string>
     <string name="ankiquest_link_anki_tan" translatable="false">https://shigeyukey.github.io/shige-addons-wiki/Anki-tan.html</string>
     <string name="ankiquest_link_shigeyuki" translatable="false">https://www.patreon.com/Shigeyuki</string>
@@ -16,6 +15,11 @@
     <string name="ankiquest_about_license"><![CDATA[AnkiDroid is licensed under <a href=\"%1$s\">GPL-3.0</a>. AnkiQuest additions are under <a href=\"%2$s\">AGPL-3.0</a>. The combined app is distributed under the AGPL-3.0. <a href=\"%3$s\">Source code for this build</a>.]]></string>
     <!-- Anki-tan art credit, required by its CC BY-SA 4.0 licence. -->
     <string name="ankiquest_about_anki_tan"><![CDATA[<a href=\"%1$s\">Anki-tan</a> by <a href=\"%2$s\">Shigeyuki</a>, <a href=\"%3$s\">CC BY-SA 4.0</a>.]]></string>
+    <string name="ankiquest_rate">Rate AnkiQuest</string>
+    <string name="ankiquest_changelog">AnkiQuest changelog</string>
+    <string name="ankiquest_all_releases">All releases</string>
+    <string name="ankiquest_ankidroid_changelog">AnkiDroid changelog</string>
     <string name="ankiquest_about_report_bug">Report a bug</string>
+    <string name="ankiquest_link_copied">No app can open the link. Link copied.</string>
     <string name="ankiquest_debug_info_title" maxLength="41">Copy debug info</string>
 </resources>

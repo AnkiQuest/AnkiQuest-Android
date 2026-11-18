@@ -35,6 +35,17 @@
             android:hint="@string/password"
             android:inputType="textPassword" />
 
+        <!-- Shown once the server asks for a second factor. -->
+        <EditText
+            android:id="@+id/ankiquest_sign_in_code"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="2faAppOTPCode"
+            android:hint="@string/ankiquest_two_factor_code"
+            android:inputType="textNoSuggestions|textVisiblePassword"
+            android:maxLength="64"
+            android:visibility="gone" />
+
         <CheckBox
             android:id="@+id/ankiquest_sign_in_create"
             android:layout_width="match_parent"

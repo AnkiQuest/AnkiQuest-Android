@@ -42,6 +42,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
     private lateinit var undo: AnkiquestUndo
+    private lateinit var deckAlertAction: AnkiquestDeckAlerts
     private lateinit var sections: AnkiquestMeSections
     private var account: HomeAccount? = null
     private var page: AnkiquestBoards.PlayerPage? = null
@@ -64,6 +65,14 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
         undo = AnkiquestUndo(this)
+        deckAlertAction =
+            AnkiquestDeckAlerts(this, savedInstanceState, undo) {
+                if (deckAlertAction.busy()) {
+                    render()
+                } else {
+                    load()
+                }
+            }
         views = AnkiquestBoardViews(this)
         content = findViewById(R.id.aq_board_content)
         scroll = findViewById(R.id.aq_board_scroll)
@@ -94,6 +103,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (::sections.isInitialized) {
             sections.save(outState)
         }
+        if (::deckAlertAction.isInitialized) deckAlertAction.save(outState)
     }
 
     override fun onResume() {
@@ -237,11 +247,14 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         }
         social?.let { friendship(it, p) }
         deckAlerts?.let { on ->
-            val label = if (on) R.string.aq_profile_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
+            val label = if (on) R.string.aq_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
             views
                 .button(content, getString(label, p.display)) {
+                    if (deckAlertAction.busy()) {
+                        return@button
+                    }
                     change { AnkiquestSubscriptions.repository.setSubscribed(it, p.user, !on) }
-                }.isEnabled = !changing
+                }.isEnabled = !changing && !deckAlertAction.busy()
         }
         social?.isMuted(p.user)?.let { isMuted ->
             views

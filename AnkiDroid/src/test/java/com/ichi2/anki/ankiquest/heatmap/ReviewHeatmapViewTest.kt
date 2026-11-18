@@ -31,7 +31,7 @@ import com.ichi2.anki.common.android.R as CommonR
 @Category(EmptyApplicationCategory::class)
 class ReviewHeatmapViewTest {
     private val context: Context
-        get() = ContextThemeWrapper(ApplicationProvider.getApplicationContext(), CommonR.style.Theme_Light)
+        get() = ContextThemeWrapper(ApplicationProvider.getApplicationContext(), CommonR.style.Theme_AnkiDroid)
 
     @Test
     fun `each day has a distinct 48dp touch target including the gap around its square`() {

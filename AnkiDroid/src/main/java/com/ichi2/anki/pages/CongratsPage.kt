@@ -32,6 +32,7 @@ import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.observability.undoableOp
+import com.ichi2.anki.showException
 import com.ichi2.anki.study.StudyAvailability
 import com.ichi2.anki.study.currentDeckStudyState
 import com.ichi2.anki.ui.internationalization.sentenceCase
@@ -39,9 +40,11 @@ import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.utils.listItems
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.show
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -76,14 +79,10 @@ class CongratsPage :
         super.onViewCreated(view, savedInstanceState)
 
         viewModel.onError
+            .receiveAsFlow()
             .flowWithLifecycle(lifecycle)
-            .onEach { errorMessage ->
-                AlertDialog
-                    .Builder(requireContext())
-                    .setTitle(CommonString.vague_error)
-                    .setMessage(errorMessage)
-                    .show()
-            }.launchIn(lifecycleScope)
+            .onEach { requireActivity().showException(it) }
+            .launchIn(lifecycleScope)
 
         viewModel.unburyState
             .onEach { state ->
@@ -191,7 +190,7 @@ class CongratsPage :
 class CongratsViewModel :
     ViewModel(),
     OnErrorListener {
-    override val onError = MutableSharedFlow<String>()
+    override val onError = Channel<Exception>(Channel.BUFFERED)
     val unburyState = MutableSharedFlow<UnburyState>()
     val deckOptionsDestination = MutableSharedFlow<DeckOptionsDestination>()
 

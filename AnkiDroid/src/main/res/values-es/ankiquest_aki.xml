@@ -2,8 +2,12 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="aki_welcome">Aki está aquí para ayudarte. Una tarjeta, un pequeño paso.</string>
-    <string name="aki_review">Un pequeño paso empieza con una tarjeta.</string>
     <string name="aki_complete">Ya terminaste tus tarjetas por ahora. ¡Buen trabajo!</string>
     <string name="aki_streak">Hoy estuviste presente. Ese progreso vale la pena.</string>
     <string name="aki_protected">Un protector mantiene tu racha. Te espera un nuevo comienzo.</string>
+    <plurals name="aki_streak_waiting">
+        <item quantity="one">Hoy no has estudiado. Tu racha de %d día sigue esperando.</item>
+        <item quantity="many">Hoy no has estudiado. Tu racha de %d días sigue esperando.</item>
+        <item quantity="other">Hoy no has estudiado. Tu racha de %d días sigue esperando.</item>
+    </plurals>
 </resources>

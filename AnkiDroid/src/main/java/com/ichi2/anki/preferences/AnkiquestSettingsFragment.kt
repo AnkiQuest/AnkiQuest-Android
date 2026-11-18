@@ -242,6 +242,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val server = view.findViewById<EditText>(R.id.ankiquest_sign_in_server)
         val user = view.findViewById<EditText>(R.id.ankiquest_sign_in_user)
         val password = view.findViewById<EditText>(R.id.ankiquest_sign_in_password)
+        val code = view.findViewById<EditText>(R.id.ankiquest_sign_in_code)
         val create = view.findViewById<CheckBox>(R.id.ankiquest_sign_in_create)
         val display = view.findViewById<EditText>(R.id.ankiquest_sign_in_display)
         val hint = view.findViewById<TextView>(R.id.ankiquest_sign_in_hint)
@@ -289,6 +290,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     password = password.text.toString(),
                     display = display.text.toString().trim(),
                     create = create.isChecked,
+                    code = if (code.isShown) code.text.toString().trim() else "",
                 )
             if (credentials.url.isEmpty() || credentials.user.isEmpty() || credentials.password.isEmpty()) {
                 status.setText(R.string.ankiquest_sign_in_missing)
@@ -314,6 +316,12 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     if (!isAdded) return@launch
                     submit.isEnabled = true
                     status.text = AnkiquestAccount.message(requireContext(), e, credentials.url)
+                    // A right password for an account with two-factor: ask for the code next.
+                    if (e is AnkiquestAccount.SecondFactorNeeded) {
+                        code.visibility = View.VISIBLE
+                        code.text.clear()
+                        code.requestFocus()
+                    }
                 }
             }
         }

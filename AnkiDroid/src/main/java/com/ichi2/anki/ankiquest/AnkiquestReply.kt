@@ -32,6 +32,7 @@ object AnkiquestReply {
     const val EXTRA_MESSAGE = "message"
     const val EXTRA_REPLY_ACCOUNT = "ankiquest.reply_account"
     const val EXTRA_REPLY_SCOPE = "ankiquest.reply_scope"
+    const val EXTRA_SENDER = "ankiquest.reply_sender"
 
     /** The notification is a friend's win kept by the server, which is cheered with 🎉 rather than suggested words. */
     const val EXTRA_WIN = "ankiquest.win"
@@ -63,6 +64,7 @@ object AnkiquestReply {
         win: Boolean = false,
         cheer: Boolean = win,
         reply: Boolean = true,
+        sender: String? = null,
     ): List<NotificationCompat.Action> {
         val current = AnkiquestHomeData.account() ?: return emptyList()
         if (scope.isNullOrEmpty() || current.scope != scope || current.notificationAccount != account) return emptyList()
@@ -95,6 +97,7 @@ object AnkiquestReply {
                 .putExtra(EXTRA_REPLY_ACCOUNT, account)
                 .putExtra(EXTRA_REPLY_SCOPE, scope)
                 .putExtra(EXTRA_WIN, win)
+                .putExtra(EXTRA_SENDER, sender)
         val cheerAction =
             if (cheer) {
                 NotificationCompat.Action
@@ -113,7 +116,8 @@ object AnkiquestReply {
             } else {
                 null
             }
-        if (!reply) return listOfNotNull(cheerAction)
+        val stop = AnkiquestDeckAlerts.action(context, notification, tag, account, scope, sender, kind)
+        if (!reply) return listOfNotNull(cheerAction, stop)
         val input =
             RemoteInput
                 .Builder(EXTRA_MESSAGE)
@@ -135,6 +139,7 @@ object AnkiquestReply {
                 ).addRemoteInput(input)
                 .setAllowGeneratedReplies(false)
                 .build(),
+            stop,
         )
     }
 
@@ -209,6 +214,7 @@ object AnkiquestReply {
             .putString(EXTRA_MESSAGE, message)
             .putString(EXTRA_REPLY_ACCOUNT, intent.getStringExtra(EXTRA_REPLY_ACCOUNT))
             .putString(EXTRA_REPLY_SCOPE, intent.getStringExtra(EXTRA_REPLY_SCOPE))
+            .putString(EXTRA_SENDER, intent.getStringExtra(EXTRA_SENDER))
             .putBoolean(EXTRA_WIN, intent.getBooleanExtra(EXTRA_WIN, false))
             .putBoolean(EXTRA_REACT, intent.action == ACTION_CHEER)
             .build()

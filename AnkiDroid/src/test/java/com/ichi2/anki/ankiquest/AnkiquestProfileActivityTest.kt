@@ -21,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -60,7 +61,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         every { AnkiquestSubscriptions.repository } returns repository
         coEvery { repository.load(any()) } throws IOException("offline")
-        coEvery { AnkiquestRecords.records(any(), any()) } returns emptyList()
+        coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(emptyList())
         coEvery { AnkiquestRecords.scopes(any()) } returns emptyList()
         coEvery { AnkiquestRecords.study(any(), any()) } throws IOException("offline")
     }
@@ -284,7 +285,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         val screen = launch("cerro")
         advanceRobolectricLooper()
         assertTrue(screen.hasText(screen.getString(R.string.aq_friends_mute)))
-        val stop = screen.getString(R.string.aq_profile_deck_alerts_stop, "Cerro")
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
         assertTrue(screen.hasText(stop))
 
         coEvery { repository.load(identity) } returns IncomingSubscriptions(true, setOf("cerro"), listOf(IncomingSender("cerro", "Cerro")))
@@ -309,6 +310,80 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
         shadowOf(Looper.getMainLooper()).idle()
         coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("cerro")) }
+    }
+
+    @Test
+    fun `the notification action stops deck alerts even when the profile cannot load`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } throws IOException("profile offline")
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.load(identity) } returns settings
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await() }
+        coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        // Startup drains the looper through snackbar timeouts. Finish the request after startup
+        // so the test inspects Undo while it is visible, just as the player would.
+        stopped.complete(settings.copy(unsubscribedSenders = setOf("cerro")))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
+    fun `notification Stop and Undo refresh the profile subscription control`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        val initial = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        var settings = initial
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        val restored = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.load(identity) } coAnswers { settings }
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await().also { settings = it } }
+        coEvery { repository.setSubscribed(identity, "cerro", true) } coAnswers { restored.await().also { settings = it } }
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        val start = screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")
+        assertTrue(screen.hasText(stop))
+
+        // Complete each write after startup so Undo is inspected before its timeout.
+        stopped.complete(initial.copy(unsubscribedSenders = setOf("cerro")))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertTrue(screen.hasText(start), "Stop must reload the profile's subscription")
+        assertFalse(screen.hasText(stop))
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertFalse(screen.views<TextView>().first { it.text.toString() == start }.isEnabled, "Undo must block a competing write")
+
+        restored.complete(initial)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertFalse(screen.hasText(start))
+        assertTrue(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled)
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
+    fun `the profile subscription waits for notification Stop and recovers after failure`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.load(identity) } returns settings
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await() }
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        assertFalse(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled, "Stop is already being sent")
+
+        stopped.completeExceptionally(IOException("offline"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertTrue(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled, "A failed request must allow retry")
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
     }
 
     @Test
