@@ -163,8 +163,6 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         lifecycleScope.launch {
             var overview: AnkiquestSocial.Overview? = null
             var alerts: Boolean? = null
-            var known: Set<String> = emptySet()
-            boardAttempt { known = AnkiquestCapabilities.current(current) }
             boardAttempt { overview = AnkiquestSocial.overview(current) }
             boardAttempt {
                 val subscriptions = AnkiquestSubscriptions.repository.load(current)
@@ -173,6 +171,26 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             if (turn != generation || account?.scope != current.scope) return@launch
             social = overview
             deckAlerts = alerts
+            features = AnkiquestCapabilities.features(current)
+            render()
+            refreshFeatures(current, turn)
+        }
+    }
+
+    /**
+     * Asks the server for its features again when they are stale, without holding up the controls,
+     * which use the ones it last reported meanwhile.
+     */
+    private fun refreshFeatures(
+        current: HomeAccount,
+        turn: Int,
+    ) {
+        lifecycleScope.launch {
+            var known = features
+            boardAttempt { known = AnkiquestCapabilities.current(current) }
+            if (turn != generation || account?.scope != current.scope || known == features) {
+                return@launch
+            }
             features = known
             render()
         }

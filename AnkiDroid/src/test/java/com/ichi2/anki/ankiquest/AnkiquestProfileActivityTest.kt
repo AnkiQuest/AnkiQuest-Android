@@ -53,6 +53,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     fun prepareProfile() {
         mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, AnkiquestCapabilities)
         // An older server: invitations go by link and there is no Message.
+        every { AnkiquestCapabilities.features(any()) } returns emptySet()
         coEvery { AnkiquestCapabilities.current(any()) } returns emptySet()
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
