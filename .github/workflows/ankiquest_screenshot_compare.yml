@@ -136,22 +136,28 @@ jobs:
             done
           done
 
-      - name: Diag isolated record
+      - name: Diag paired records
         if: ${{ always() }}
         run: |
-          ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.record=true --rerun-tasks --tests '*AnkiquestStreakScreenshotTest' --tests '*AnkiquestDeckUndoScreenshotTest'
-          for class in AnkiquestStreakScreenshotTest AnkiquestDeckUndoScreenshotTest; do
-            echo "== isolated $class vs baseline"
-            for file in AnkiDroid/build/outputs/roborazzi/$class/*.png; do
+          check() {
+            echo "== after $1"
+            for file in AnkiDroid/build/outputs/roborazzi/AnkiquestStreakScreenshotTest/*.png; do
               stem=$(basename "$file" .png)
-              sha256sum "$file" "/tmp/diag/baseline/$class/$stem.png" | cut -c1-16
-              java .github/diag364/PixelDiff.java "/tmp/diag/baseline/$class/$stem.png" "$file" 2>/dev/null | head -3
-              if [ -f "/tmp/diag/run1/$class/$stem.png" ]; then
-                echo "-- vs full-suite run"
-                java .github/diag364/PixelDiff.java "/tmp/diag/run1/$class/$stem.png" "$file" 2>/dev/null | head -3
-              fi
+              java .github/diag364/PixelDiff.java "/tmp/diag/baseline/AnkiquestStreakScreenshotTest/$stem.png" "$file" 2>/dev/null | head -2
             done
-          done
+          }
+          record() {
+            ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.record=true -PtestMaxParallelForks=1 --rerun-tasks -q "$@" > /tmp/diag/gradle.log 2>&1 || tail -30 /tmp/diag/gradle.log
+            grep -h -o 'testcase name="[^"]*" classname="[^"]*"' AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml | cut -c1-160 | head -20
+          }
+          record --tests '*AnkiquestStreakScreenshotTest'
+          check alone
+          record --tests '*AnkiquestClearStreakScreenshotTest' --tests '*AnkiquestStreakScreenshotTest'
+          check ClearStreak
+          record --tests '*AnkiquestStreakDetailsScreenshotTest' --tests '*AnkiquestStreakScreenshotTest'
+          check StreakDetails
+          record --tests 'com.ichi2.anki.ankiquest.*'
+          check all-ankiquest-one-fork
 
       - name: Stage screenshot diffs
         if: ${{ always() }}
