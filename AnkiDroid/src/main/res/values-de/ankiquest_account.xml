@@ -53,4 +53,5 @@
     <string name="ankiquest_delete_button">Endgültig löschen</string>
     <string name="ankiquest_delete_type_username">Gib zur Bestätigung %s ein.</string>
     <string name="ankiquest_delete_done">Dein Konto wurde gelöscht und dieses Gerät ist abgemeldet.</string>
+    <string name="ankiquest_password_prompt_body">Du meldest dich nur mit einem Token an. Lege ein Passwort fest, damit du dich auch auf einem neuen Gerät anmelden kannst oder wenn das Token nicht mehr funktioniert.</string>
 </resources>

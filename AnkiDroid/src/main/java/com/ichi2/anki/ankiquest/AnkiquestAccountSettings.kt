@@ -30,7 +30,8 @@ internal object AnkiquestAccountSettings {
     /**
      * [account] is false for a player from the server configuration, who has no password to change.
      * [providers] are those the server offers; [linkedUnavailable] is true when the account also
-     * linked one it no longer offers, and null from servers that do not say.
+     * linked one it no longer offers, and null from servers that do not say. [signIn] is null from
+     * servers that do not say, and for a value this app does not know.
      */
     data class Methods(
         val account: Boolean,
@@ -51,6 +52,7 @@ internal object AnkiquestAccountSettings {
                         Provider(it.getString("provider"), it.getString("name"), it.getBoolean("linked"))
                     },
                     if (json.isNull("linked_unavailable")) null else json.getBoolean("linked_unavailable"),
+                    SignIn.parse(json.optString("sign_in")),
                 )
         }
     }
@@ -95,10 +97,23 @@ internal object AnkiquestAccountSettings {
         }
     }
 
-    enum class SignIn {
-        PASSWORD,
-        PROVIDER,
-        TOKEN_ONLY,
+    /** How the player can sign in on a new device (`sign_in`, the server's `accounts::SignIn`). */
+    enum class SignIn(
+        val value: String,
+    ) {
+        /** With their password, and maybe a provider too. */
+        PASSWORD("password"),
+
+        /** With a linked provider the server offers; no password. */
+        PROVIDER("provider"),
+
+        /** Only with a device token, which a player from the server configuration loses when it drops them. */
+        TOKEN_ONLY("token_only"),
+        ;
+
+        companion object {
+            fun parse(value: String): SignIn? = entries.firstOrNull { it.value == value }
+        }
     }
 
     enum class Purpose(
