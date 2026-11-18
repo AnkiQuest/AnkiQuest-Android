@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="aki_welcome">Aki est là pour t’aider. Une carte, un petit pas.</string>
-    <string name="aki_review">Un petit pas commence par une carte.</string>
     <string name="aki_complete">Tu as terminé tes cartes pour le moment. Bravo !</string>
     <string name="aki_streak">Tu as étudié aujourd’hui. Ce progrès mérite d’être préservé.</string>
     <string name="aki_protected">Ta série est protégée par un gel. Un nouveau départ t’attend.</string>
