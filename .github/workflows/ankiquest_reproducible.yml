@@ -4,6 +4,9 @@ name: ankiquest reproducible build
 # Builds the release APK we ship twice from the same commit, on two runners, in
 # two checkout directories and two time zones, and compares the APKs with
 # diffoscope. F-Droid and IzzyOnDroid rebuild our APK and expect the same bytes (#352).
+# This checks that two CI builds match. Rebuilding a shipped release also needs its
+# -PankiquestRelease and -PankiquestNightly values and the signature copied from the
+# release APK; #352 tracks that.
 on:
   workflow_dispatch:
   pull_request:
@@ -48,9 +51,11 @@ jobs:
     env:
       TZ: ${{ matrix.tz }}
     steps:
+      # Full history, for the merge base with upstream below.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: ${{ matrix.path }}
+          fetch-depth: 0
 
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
@@ -63,16 +68,27 @@ jobs:
         with:
           cache-provider: basic
 
-      # Same task and properties as ankiquest_apk.yml, signed with the public fallback key.
-      # The build time comes from the commit, and the build cache stays off so both
-      # runners compile everything themselves.
+      # The upstream commit ankiquest_apk.yml passes as -PupstreamCommit, so BuildConfig
+      # matches the shipped APK's.
+      - name: Upstream commit
+        id: upstream
+        working-directory: ${{ matrix.path }}
+        run: |
+          git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
+          sha=$(git merge-base HEAD FETCH_HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      # Same task as ankiquest_apk.yml, signed with the public fallback key. The build
+      # time comes from the commit, and the build cache stays off so both runners
+      # compile everything themselves.
       - name: Assemble
         working-directory: ${{ matrix.path }}
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache \
-            -PcustomSuffix=quest -PcustomName="AnkiQuest"
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
+            -PupstreamCommit=${{ steps.upstream.outputs.sha }}
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-${{ matrix.build }}.apk"
           cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-${{ matrix.build }}.txt"
 
