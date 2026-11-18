@@ -9,7 +9,6 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.settings.enums.DayTheme
 import com.ichi2.anki.settings.enums.NightTheme
@@ -60,10 +59,9 @@ abstract class ComposeScreenshotTest {
         beforeCapture()
         composeRule.waitForIdle()
         val classDir = "build/outputs/roborazzi/${javaClass.simpleName}"
-        val options = provideRoborazziContext().options
         composeRule.onNode(node).assertIsDisplayed().captureRoboImage(
             filePath = "$classDir/${name}_${theme.toString().lowercase()}.png",
-            roborazziOptions = options.copy(compareOptions = options.compareOptions.copy(outputDirectoryPath = "$classDir/diffs")),
+            roborazziOptions = screenshotOptions("$classDir/diffs"),
         )
     }
 

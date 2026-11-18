@@ -18,7 +18,6 @@ import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.github.takahirom.roborazzi.checkRoboAccessibility
-import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.settings.PrefsRepository
@@ -209,7 +208,7 @@ abstract class ScreenshotTest : RobolectricTest() {
         restartTextCursorBlink()
         captureImage(
             baseline.path,
-            provideRoborazziContext().options.withCompareOutputDir(diffDir.path),
+            screenshotOptions(diffDir.path),
         )
 
         // copy the baseline into /diffs (if it exists)
@@ -285,8 +284,3 @@ fun EditText.displayFocusedCursors() {
     isCursorVisible = false
     isCursorVisible = true
 }
-
-/** Sets the directory for _actual.png and _compare.png */
-@OptIn(ExperimentalRoborazziApi::class)
-private fun RoborazziOptions.withCompareOutputDir(dir: String): RoborazziOptions =
-    copy(compareOptions = compareOptions.copy(outputDirectoryPath = dir))

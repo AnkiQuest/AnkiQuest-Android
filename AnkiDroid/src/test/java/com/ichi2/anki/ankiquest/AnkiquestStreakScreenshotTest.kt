@@ -8,9 +8,9 @@ import android.widget.LinearLayout
 import androidx.core.view.drawToBitmap
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
+import com.ichi2.anki.screenshotOptions
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
@@ -67,10 +67,9 @@ class AnkiquestStreakScreenshotTest : ScreenshotTest() {
             )
             grid.layout(0, 0, widthPx * 2, heightPx * 3)
             val directory = "build/outputs/roborazzi/${javaClass.simpleName}"
-            val options = provideRoborazziContext().options
             grid.drawToBitmap().captureRoboImage(
                 filePath = "$directory/${fileNamePrefix}${size.name.lowercase()}.png",
-                roborazziOptions = options.copy(compareOptions = options.compareOptions.copy(outputDirectoryPath = "$directory/diffs")),
+                roborazziOptions = screenshotOptions("$directory/diffs"),
             )
         }
     }
