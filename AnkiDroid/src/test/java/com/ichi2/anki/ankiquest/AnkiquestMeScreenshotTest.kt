@@ -43,7 +43,8 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestBoards.player(identity, identity.user) } returns
             AnkiquestBoards.PlayerPage(profile, own = true, wins = emptyList())
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
-        coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.parseRecords(JSONArray(example("records")))
+        val records = AnkiquestRecords.parseRecords(JSONArray(example("records")))
+        coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(records)
         coEvery { AnkiquestRecords.scopes(any()) } returns listOf(AnkiquestRecords.Scope.CIRCLE, AnkiquestRecords.Scope.GLOBAL)
         coEvery { AnkiquestRecords.study(any(), any()) } returns AnkiquestRecords.parseStudy(JSONObject(example("study")))
     }

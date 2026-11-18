@@ -178,7 +178,7 @@ private class RecordsSection(
         initial,
     ) {
     private var account: HomeAccount? = AnkiquestHomeData.account()
-    private var boards: List<AnkiquestRecords.Board>? = null
+    private var boards: AnkiquestRecords.Records? = null
 
     /** What the player can pick between; null until asked, empty when there is no choice. */
     private var scopes: List<AnkiquestRecords.Scope>? = null
@@ -306,11 +306,16 @@ private class RecordsSection(
         val held = boards
         when {
             held == null -> if (loading) views.text(content, getString(R.string.aq_records_loading), small = true)
-            held.all { it.holders.isEmpty() } -> {
+            held.lock != null -> {
+                // Others' records wait for the player's first upload; only their own can show.
+                held.boards.filter { it.holders.isNotEmpty() }.forEach { renderBoard(content, it, current.user) }
+                views.text(content, getString(R.string.aq_upload_first), heading = true).setPadding(0, views.dp(16), 0, 0)
+            }
+            held.boards.all { it.holders.isEmpty() } -> {
                 views.text(content, getString(R.string.aq_records_empty), heading = true).setPadding(0, views.dp(16), 0, 0)
                 views.text(content, getString(R.string.aq_records_empty_hint), small = true)
             }
-            else -> held.filter { it.holders.isNotEmpty() }.forEach { renderBoard(content, it, current.user) }
+            else -> held.boards.filter { it.holders.isNotEmpty() }.forEach { renderBoard(content, it, current.user) }
         }
         failure?.let { problem ->
             views.text(content, getString(problem), small = true)

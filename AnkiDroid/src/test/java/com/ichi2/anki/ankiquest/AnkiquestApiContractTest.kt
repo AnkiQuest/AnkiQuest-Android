@@ -58,6 +58,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private enum class UndoServer { LEGACY, SCOPED }
 
     private var undoServer = UndoServer.SCOPED
+
+    /** Whether the server already holds one of the player's reviews (docs/mobile-api.md, "seeing other players: upload first"). */
+    private enum class Uploaded { YES, NOT_YET }
+
+    private var uploaded = Uploaded.YES
     private val manager get() = targetContext.getSystemService<NotificationManager>()!!
 
     @Before
@@ -80,6 +85,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
             }
             val body = route(exchange.requestMethod, path, sent, exchange.requestURI.query)?.let(::example)?.toByteArray(Charsets.UTF_8)
             exchange.responseHeaders.set("Content-Type", "application/json")
+            if (uploaded == Uploaded.NOT_YET) {
+                exchange.responseHeaders.set(AnkiquestLock.HEADER, "upload_first")
+            }
             if (body == null) {
                 exchange.sendResponseHeaders(404, -1)
             } else {
@@ -147,6 +155,29 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertTrue(older.items.all { it.id < assertNotNull(first.nextBefore) })
             assertTrue("GET /api/activity/hill" in requests)
             assertFalse("GET /api/notifications/hill" in requests)
+        }
+
+    @Test
+    fun `before the first upload, the board and the activity say others are locked`() =
+        runBlocking {
+            uploaded = Uploaded.NOT_YET
+            val board = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK)
+            assertEquals(AnkiquestLock.UPLOAD_FIRST, board.lock)
+            assertTrue(board.standings.isEmpty())
+
+            val page = AnkiquestFeed.page(account)
+            assertEquals(AnkiquestLock.UPLOAD_FIRST, page.lock)
+            assertTrue(page.items.isEmpty())
+            assertEquals(0, page.unread)
+        }
+
+    @Test
+    fun `after an upload, nothing is locked`() =
+        runBlocking {
+            assertNull(AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK).lock)
+            assertNull(AnkiquestFeed.page(account).lock)
+            assertNull(AnkiquestRecords.records(account).lock)
+            assertNull(AnkiquestChallenges.overview(account).lock)
         }
 
     @Test
@@ -265,13 +296,13 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `the native leaderboard reads each period, the week and both kinds of profile`() =
         runBlocking {
-            val week = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK)
+            val week = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK).standings
             assertEquals(listOf("hill", "cerro"), week.map { it.user })
             assertEquals(listOf("Hill", "Cerro"), week.map { it.display })
             assertEquals(listOf(101L, 31L), week.map { it.xp })
             assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.STUDIED), week.map { it.state })
             assertEquals(listOf(5L, 3L), week.map { it.todayReviews })
-            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY)
+            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY).standings
             assertEquals(listOf(101L, 31L), day.map { it.xp })
             assertEquals(1_793_592_000_000L, AnkiquestBoards.weekEnds(account))
 
@@ -299,7 +330,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `the Global board reads ranks, the player's listing and strangers' summaries`() =
         runBlocking {
             // The player is listed: their full row, then a stranger's summary without today's counts.
-            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY, AnkiquestBoards.Source.Global)
+            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY, AnkiquestBoards.Source.Global).standings
             assertEquals(listOf("hill", "ana"), day.map { it.user })
             assertEquals(listOf("Hill", "Ana"), day.map { it.display })
             assertEquals(listOf(1, 2), day.map { it.rank })
@@ -310,7 +341,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.UNKNOWN), day.map { it.state })
 
             // A private profile not yet listed: others' summaries, then the player's own row last with its rank.
-            val hidden = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global)
+            val hidden = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global).standings
             assertEquals(listOf("hill", "cerro", "ana"), hidden.map { it.user })
             assertEquals(listOf(1, 2, 3), hidden.map { it.rank })
             assertEquals(listOf(246L, 31L, 20L), hidden.map { it.xp })
@@ -813,7 +844,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `the record boards and the study calendar are read as the native screens show them`() =
         runBlocking {
-            val boards = AnkiquestRecords.records(account)
+            val boards = AnkiquestRecords.records(account).boards
             assertEquals(AnkiquestRecords.Kind.entries, boards.map { it.kind }, "every board, in the website's order")
             assertTrue(boards.all { board -> board.holders.isNotEmpty() && board.holders.all { it.display.isNotEmpty() && it.at > 0 } })
             assertEquals(listOf("hill", "cerro"), boards.first { it.kind == AnkiquestRecords.Kind.DAY }.holders.map { it.user })
@@ -862,6 +893,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
         val params = query.orEmpty().split('&')
         return when {
             path == "/api/capabilities" -> "capabilities"
+            uploaded == Uploaded.NOT_YET && path == "/api/leaderboard" -> "leaderboard_locked"
+            uploaded == Uploaded.NOT_YET && path == "/api/activity/hill" && method == "GET" -> "activity_locked"
             path == "/api/leaderboard/hidden/hill" -> "leaderboard_hide"
             path == "/api/activity/hill" && method == "GET" ->
                 when (params.firstOrNull { it.startsWith("before=") }) {

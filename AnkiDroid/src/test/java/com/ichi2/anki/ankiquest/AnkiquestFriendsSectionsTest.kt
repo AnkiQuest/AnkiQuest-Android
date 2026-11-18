@@ -53,7 +53,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("friends unavailable")
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns page
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
-        coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns board
+        coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns AnkiquestBoards.Leaderboard(board)
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
         every { AnkiquestShare.picture(any()) } returns null
@@ -110,7 +110,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `switching accounts clears an expanded board and ignores its late old response`() {
-        val pending = CompletableDeferred<List<AnkiquestBoards.Standing>>()
+        val pending = CompletableDeferred<AnkiquestBoards.Leaderboard>()
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } coAnswers { withContext(NonCancellable) { pending.await() } }
         val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
         try {
@@ -118,14 +118,14 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
             assertTrue(assertNotNull(screen.findViewById<View>(R.id.aq_friends_board_loading)).isVisible)
             val next = identity.copy(user = "other", token = "other-token")
             account = next
-            coEvery { AnkiquestBoards.leaderboard(next, any()) } returns emptyList()
+            coEvery { AnkiquestBoards.leaderboard(next, any()) } returns AnkiquestBoards.Leaderboard(emptyList())
             controller
                 .pause()
                 .stop()
                 .start()
                 .resume()
             awaitSections(screen)
-            pending.complete(board)
+            pending.complete(AnkiquestBoards.Leaderboard(board))
             advanceRobolectricLooper()
             val labels =
                 screen
@@ -137,7 +137,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
             assertFalse(labels.any { it.contains("Cerro") })
             coVerify { AnkiquestBoards.leaderboard(next, AnkiquestBoards.Period.WEEK) }
         } finally {
-            pending.complete(board)
+            pending.complete(AnkiquestBoards.Leaderboard(board))
         }
     }
 
