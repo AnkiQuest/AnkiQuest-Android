@@ -47,7 +47,7 @@ class AnkiquestAkiTest : RobolectricTest() {
     @Test
     fun `celebration needs a real study day and no remaining local cards`() {
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1)
-        assertEquals(Message.COMPLETE, AnkiquestAki.mood(local, profile("studied", 20)).message)
+        assertEquals(Message.CELEBRATE, AnkiquestAki.mood(local, profile("studied", 20)).message)
         assertEquals(Message.WELCOME, AnkiquestAki.mood(local, profile("pending", 0)).message)
     }
 
@@ -69,13 +69,13 @@ class AnkiquestAkiTest : RobolectricTest() {
                 unsent = listOf(AnkiquestDay.Review(dayStarts + 1, 600_000)),
             )
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1, goal = goal)
-        assertEquals(Message.COMPLETE, AnkiquestAki.mood(local, profile, now = dayStarts + 2).message)
+        assertEquals(Message.CELEBRATE, AnkiquestAki.mood(local, profile, now = dayStarts + 2).message)
     }
 
     @Test
     fun `only an actually protected streak gets the freeze pose`() {
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
-        assertEquals(Message.PROTECTED, AnkiquestAki.mood(local, profile("protected", 0)).message)
+        assertEquals(Message.FREEZE, AnkiquestAki.mood(local, profile("protected", 0)).message)
         assertEquals(Message.REVIEW, AnkiquestAki.mood(local, profile("pending", 0).put("freezes", 3)).message)
     }
 
