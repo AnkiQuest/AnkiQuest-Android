@@ -14,6 +14,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.ankiquest.AnkiquestMood.Heat
 import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
+import com.ichi2.anki.ankiquest.AnkiquestMood.Stage
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapView
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
@@ -46,7 +47,7 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `every shared mood and pose matches`() {
-        for (case in cases("moods")) {
+        for (case in stagedMoodCases(fixtures)) {
             val name = case.getString("name")
             val today = case.getJSONObject("today")
             val expected = case.getJSONObject("expected")
@@ -55,7 +56,8 @@ class AnkiquestMoodTest : RobolectricTest() {
 
             // The mood from today's verdict, then the pose for that mood by drawable name.
             val state = named<State>(today.getString("state"))
-            val mood = AnkiquestMood.of(state, today.getInt("reviews"), streak, today.getInt("frozen_days"), goal)
+            val stage = Stage.of(today.optLong("time_ms"), today.optInt("streak_minutes", PINNED_MINIMUM))
+            val mood = AnkiquestMood.of(state, today.getInt("reviews"), stage, streak, today.getInt("frozen_days"), goal)
             assertEquals(named<Mood>(expected.getString("mood")), mood, name)
             val shown = targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak))
             assertEquals(akiMoodArt(targetContext, expected), shown, name)
@@ -63,8 +65,27 @@ class AnkiquestMoodTest : RobolectricTest() {
     }
 
     @Test
+    fun `every shared stage matches`() {
+        // The stage starts are the shared ones, in order, and each boundary case lands in its stage.
+        val stages = stagedStages
+        val starts = stages.getJSONArray("starts").objects().map { named<Stage>(it.getString("stage")) to it.getInt("from_percent") }
+        assertEquals(Stage.entries.map { it to it.percent }, starts)
+        for (case in stages.getJSONArray("cases").objects()) {
+            val stage = Stage.of(case.getLong("time_ms"), case.getInt("streak_minutes"))
+            assertEquals(named<Stage>(case.getString("expected")), stage, case.toString())
+        }
+    }
+
+    @Test
+    fun `a review after a freeze keeps Aki frozen`() {
+        // hill's report: one review after a freeze made Aki hopeful at once.
+        val day = Stage.of(30_000, 20)
+        assertEquals(Mood.FROZEN_1, AnkiquestMood.of(State.PROTECTED, 1, day, 10, 1, Goal.OPEN))
+    }
+
+    @Test
     fun `the shared moods cover every mood`() {
-        val covered = cases("moods").map { named<Mood>(it.getJSONObject("expected").getString("mood")) }.toSet()
+        val covered = stagedMoodCases(fixtures).map { named<Mood>(it.getJSONObject("expected").getString("mood")) }.toSet()
         assertEquals(Mood.entries.toSet(), covered)
     }
 
@@ -107,7 +128,8 @@ class AnkiquestMoodTest : RobolectricTest() {
         assertEquals(AnkiquestMood.Flame.LIT, flames[Mood.FIRE])
         assertEquals(AnkiquestMood.Flame.UNLIT, flames[Mood.SAD])
         assertEquals(AnkiquestMood.Flame.UNLIT, flames[Mood.HOPEFUL])
-        for (frozen in listOf(Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3)) {
+        assertEquals(AnkiquestMood.Flame.UNLIT, flames[Mood.ALMOST])
+        for (frozen in listOf(Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3, Mood.THAWING)) {
             assertEquals(AnkiquestMood.Flame.ICY, flames[frozen], frozen.name)
         }
         assertEquals(AnkiquestMood.Flame.NONE, flames[Mood.ASLEEP])

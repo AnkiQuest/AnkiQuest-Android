@@ -26,7 +26,7 @@ class AnkiquestPoseTest {
 
         // Each extension falls back to the fixture's pose.
         val extensions = fixture.getJSONObject("extensions")
-        val expected = extensions.keys().asSequence().associateWith { extensions.getString(it) }
+        val expected = extensions.keys().asSequence().associateWith { extensions.getString(it) } + stagedExtensions
         val actual =
             AnkiquestPose.entries
                 .mapNotNull { pose ->
@@ -86,5 +86,10 @@ class AnkiquestPoseTest {
         // Aki has no art for the frozen levels: all three show her frozen pose.
         assertEquals(R.drawable.aki_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_2, Choice.AKI))
         assertEquals(R.drawable.aki_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.AKI))
+        // Nobody has thawing or almost art yet: they show frozen and hopeful.
+        for (choice in Choice.entries) {
+            assertEquals(AnkiquestCompanion.art(AnkiquestPose.FROZEN, choice), AnkiquestCompanion.art(AnkiquestPose.THAWING, choice))
+            assertEquals(AnkiquestCompanion.art(AnkiquestPose.HOPEFUL, choice), AnkiquestCompanion.art(AnkiquestPose.ALMOST, choice))
+        }
     }
 }

@@ -25,6 +25,8 @@ internal enum class AnkiquestPose(
     STREAK_MILESTONE("streak_milestone", STREAK_LEGEND),
     FROZEN_2("frozen_2", FROZEN),
     FROZEN_3("frozen_3", FROZEN_2),
+    THAWING("thawing", FROZEN),
+    ALMOST("almost", HOPEFUL),
     WELCOME("welcome", HAPPY),
     REVIEW("review", HAPPY),
     HURT("hurt", SAD),
