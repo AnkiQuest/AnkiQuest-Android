@@ -313,7 +313,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         idle()
         assertTrue(dialog.isShowing)
         val failed = assertIs<State.Picking>(sheet.state)
-        assertEquals(Step.FAILED, failed.step)
+        assertEquals(Step.Failed, failed.step)
         assertEquals(listOf("Ana"), chips(dialog).filter { it.isChecked }.map { it.text.toString() })
         val status = dialog.findViewById<TextView>(R.id.aq_share_status)!!
         assertEquals(targetContext.getString(R.string.ankiquest_share_failed), status.text.toString())
@@ -331,8 +331,8 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         assertTrue(dialog.isShowing)
         val status = dialog.findViewById<TextView>(R.id.aq_share_status)!!
         assertTrue(status.isVisible)
-        assertEquals("Couldn’t share it: Cerro is not your friend.", status.text.toString())
-        assertIs<State.Picking>(sheet.state)
+        assertEquals("Couldn’t share it (Cerro is not your friend.).", status.text.toString())
+        assertEquals(Step.Refused("Cerro is not your friend."), assertIs<State.Picking>(sheet.state).step)
         assertTrue(dialog.findViewById<View>(R.id.aq_share_send)!!.isEnabled)
     }
 
