@@ -10,6 +10,7 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing.Audience
 import com.ichi2.anki.ankiquest.AnkiquestSharing.MomentRef
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
@@ -56,10 +57,49 @@ class AnkiquestMomentShareTest : RobolectricTest() {
     }
 
     @Test
+    fun `current weekly places require their own server capability`() {
+        mockkObject(AnkiquestCapabilities)
+        var features = setOf("share_moments")
+        every { AnkiquestCapabilities.has(account, any()) } answers { secondArg<String>() in features }
+        try {
+            assertTrue(AnkiquestMomentShare.available(account, MomentRef.Win(17)))
+            assertFalse(AnkiquestMomentShare.available(account, MomentRef.Place(1)))
+            features = setOf("share_moments", "share_place")
+            assertTrue(AnkiquestMomentShare.available(account, MomentRef.Place(1)))
+            features = setOf("share_place")
+            assertFalse(AnkiquestMomentShare.available(account, MomentRef.Place(1)))
+        } finally {
+            unmockkObject(AnkiquestCapabilities)
+        }
+    }
+
+    @Test
     fun `friends come before groups by name, and a group of only the player is left out`() =
         runBlocking {
             assertEquals(listOf(ana, cerro, club), AnkiquestMomentShare.targets(account))
         }
+
+    @Test
+    fun `older notices and decks require their own capabilities`() {
+        mockkObject(AnkiquestCapabilities)
+        var features = emptySet<String>()
+        every { AnkiquestCapabilities.has(account, any()) } answers { secondArg<String>() in features }
+        try {
+            for ((reference, feature) in listOf(
+                MomentRef.Notification(42) to "share_notification",
+                MomentRef.Deck("7", "My Japanese") to "share_deck_moment",
+            )) {
+                features = setOf("share_moments")
+                assertFalse(AnkiquestMomentShare.available(account, reference))
+                features = setOf(feature)
+                assertFalse(AnkiquestMomentShare.available(account, reference))
+                features = setOf("share_moments", feature)
+                assertTrue(AnkiquestMomentShare.available(account, reference))
+            }
+        } finally {
+            unmockkObject(AnkiquestCapabilities)
+        }
+    }
 
     @Test
     fun `people sent to lately come first, newest first`() =

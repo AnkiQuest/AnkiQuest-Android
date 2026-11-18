@@ -351,6 +351,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
         every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
@@ -394,6 +395,99 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         val picture = conquestPicture(null)
         assertFalse((picture.body + picture.details.joinToString()).contains("PRIVATE UNSHARED FIELD"))
         assertTrue((picture.body + picture.details.joinToString()).contains("4"), "the public lapse count still appears")
+    }
+
+    @Test
+    fun `Tell on a kept moment asks for recipients before sending`() {
+        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        coEvery { AnkiquestSharing.win(any(), any()) } returns null
+        coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
+        every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(any(), any(), AnkiquestSharing.Audience.Circle, null) } answers {
+            val reference = secondArg<AnkiquestSharing.MomentRef>()
+            AnkiquestSharing.Sent(1, (reference as? AnkiquestSharing.MomentRef.Win)?.id ?: 17, clock.intTimeMS() + 60_000)
+        }
+        val controller = host()
+        try {
+            val host = controller.get()
+            val identity = assertNotNull(AnkiquestHomeData.account())
+            // Every kept kind, including a companion unlock, uses the same chosen-recipient flow.
+            val kept =
+                AnkiquestMoments.Kind.entries.mapIndexed { index, kind ->
+                    val win = 1000L + index
+                    val key = if (kind == AnkiquestMoments.Kind.COMPANION) "companion:aki" else "kept:$index"
+                    AnkiquestMoments.Moment(key, kind, kind.name, "", clock.intTimeMS(), win = win) to
+                        AnkiquestSharing.MomentRef.Win(win)
+                }
+            val cases =
+                kept +
+                    listOf(
+                        AnkiquestMoments.Moment(
+                            "conquered:100",
+                            AnkiquestMoments.Kind.CONQUERED,
+                            "Card conquered",
+                            "",
+                            clock.intTimeMS(),
+                            conquest = 100,
+                        ) to AnkiquestSharing.MomentRef.Conquest(100),
+                        AnkiquestMoments.Moment("rank:1", AnkiquestMoments.Kind.RANK, "First place", "", clock.intTimeMS(), place = 1) to
+                            AnkiquestSharing.MomentRef.Place(1),
+                        AnkiquestMoments.Moment(
+                            "notice:42",
+                            AnkiquestMoments.Kind.STREAK,
+                            "Old streak",
+                            "",
+                            clock.intTimeMS(),
+                            notification = 42,
+                        ) to
+                            AnkiquestSharing.MomentRef.Notification(42),
+                    )
+            for ((moment, reference) in cases) {
+                AnkiquestMomentCard.show(host, identity, listOf(moment), prefs)
+                val card = card()
+                advanceRobolectricLooper()
+                assertNotNull(card.findViewById<View>(R.id.aq_moment_tell)).performClick()
+                val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+                coVerify(exactly = 0) { AnkiquestSharing.send(identity, reference, any(), any()) }
+                val everyone = host.getString(R.string.ankiquest_share_all_friends)
+                advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
+                views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
+                sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+                waitForUndo(card, sheet)
+                coVerify(exactly = 1) { AnkiquestSharing.send(identity, reference, AnkiquestSharing.Audience.Circle, null) }
+                assertFalse(sheet.isShowing)
+                assertTrue(card.isShowing)
+                assertNotNull(
+                    card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action),
+                    moment.kind.name,
+                )
+                card.dismiss()
+            }
+            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
+            coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
+        } finally {
+            controller.close()
+            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        }
+    }
+
+    /** Observe transient Undo before its timeout; draining all future tasks expires it. */
+    private fun waitForUndo(
+        card: AlertDialog,
+        sheet: BottomSheetDialog,
+    ) {
+        repeat(500) {
+            if (!sheet.isShowing && card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action) != null) {
+                return
+            }
+            Thread.sleep(10)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16))
+        }
+        error("The completed send did not show Undo on the moment card")
     }
 
     @Test

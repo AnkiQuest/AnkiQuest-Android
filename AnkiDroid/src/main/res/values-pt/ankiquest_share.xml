@@ -39,4 +39,6 @@ Estudo com o AnkiQuest.</string>
     <string name="ankiquest_deck_share_unsupported">O teu servidor AnkiQuest ainda não consegue partilhar baralhos terminados.</string>
     <string name="ankiquest_deck_share_ask_title">Propor partilhar baralhos terminados</string>
     <string name="ankiquest_deck_share_ask_summary">Quando terminas um baralho por hoje, perguntar que amigos avisar</string>
+    <string name="ankiquest_deck_moment_title">Baralho concluído</string>
+    <string name="ankiquest_deck_moment_body">Terminei de estudar %1$s por hoje.</string>
 </resources>
