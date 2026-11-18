@@ -210,6 +210,53 @@ class AnkiquestCrashReportTest : RobolectricTest() {
     }
 
     /**
+     * Preference names can hold a server: AnkiQuest keeps records per server under keys like
+     * `ankiquestUploadedThrough:https://host/user`. A name that is not excluded from collection
+     * loses its server and credentials as text does, and so does a preference's text.
+     */
+    @Test
+    fun `preference names and values leave out server addresses and credentials`() {
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://$CUSTOM_HOST/")
+            putString(Ankiquest.PREF_TOKEN, TOKEN)
+        }
+        val report = CrashReportData()
+        report.put(
+            ReportField.SHARED_PREFERENCES,
+            JSONObject(
+                mapOf(
+                    "default" to
+                        JSONObject(
+                            mapOf(
+                                "uploadedThrough:https://$CUSTOM_HOST/hill" to 7L,
+                                "capabilities:http://$CUSTOM_HOST:8080" to "x",
+                                "unlocks:https://$DEFAULT_HOST/hill" to true,
+                                "scope:$TOKEN" to "1",
+                                "lastServer" to "https://$CUSTOM_HOST/api",
+                                "theme" to "light",
+                            ),
+                        ),
+                ),
+            ),
+        )
+
+        assertTrue(administrator().shouldSendReport(targetContext, config(), report))
+
+        // No address or credential is left; names, values and their types otherwise stay.
+        val sent = report.toJSON()
+        for (secret in listOf(CUSTOM_HOST, DEFAULT_HOST, TOKEN)) {
+            assertFalse(secret in sent, secret)
+        }
+        val prefs = (report[ReportField.SHARED_PREFERENCES.name] as JSONObject).getJSONObject("default")
+        assertEquals(7L, prefs.getLong("uploadedThrough:https://[server]/hill"))
+        assertEquals("x", prefs.getString("capabilities:http://[server]:8080"))
+        assertEquals(true, prefs.getBoolean("unlocks:https://[server]/hill"))
+        assertEquals("1", prefs.getString("scope:[removed]"))
+        assertEquals("https://[server]/api", prefs.getString("lastServer"))
+        assertEquals("light", prefs.getString("theme"))
+    }
+
+    /**
      * The server signs the trace it receives, which is redacted, so the device signs the redacted
      * message too; otherwise the same crash gets two signatures.
      */

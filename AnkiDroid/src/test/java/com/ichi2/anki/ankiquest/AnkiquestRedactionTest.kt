@@ -29,6 +29,18 @@ class AnkiquestRedactionTest {
         assertEquals("[server]/api", redaction.text("quest.example.net/api"))
     }
 
+    /** The `preference_key` cases of AnkiQuest-Server#13's `crash_redaction.json`, until the snapshot has them (#360). */
+    @Test
+    fun `a host in a preference name is replaced`() {
+        val account = "ankiquestUploadedThrough:https://quest.example.net/hill"
+        assertEquals("ankiquestUploadedThrough:https://[server]/hill", redaction.text(account))
+        assertEquals("ankiquestCapabilities:http://[server]:8080", redaction.text("ankiquestCapabilities:http://quest.example.net:8080"))
+        assertEquals("lastSync:[removed]", redaction.text("lastSync:0123456789abcdef0123456789abcdef"))
+
+        val longer = "ankiquestUploadedThrough:https://quest.example.network/hill"
+        assertEquals(longer, redaction.text(longer))
+    }
+
     @Test
     fun `credentials are replaced as the server replaces them`() {
         val hex = "0123456789abcdef".repeat(4)
