@@ -96,9 +96,20 @@ jobs:
           pattern: apk-*
           merge-multiple: true
 
+      - name: Check
+        id: check
+        run: |
+          sha256sum AnkiQuest-*.apk
+          if cmp -s AnkiQuest-first.apk AnkiQuest-second.apk; then
+            echo "The APKs are identical."
+            exit 0
+          fi
+          echo "differ=true" >> "$GITHUB_OUTPUT"
+
       # apt brings the tools diffoscope uses to unpack dex and resources. Ubuntu's diffoscope
       # cannot read APK signatures with its androguard 4, so run diffoscope from PyPI instead.
       - name: Install diffoscope
+        if: steps.check.outputs.differ == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y diffoscope apksigner apktool
@@ -109,13 +120,8 @@ jobs:
       # diffoscope on the whole APK ran past 40 minutes on the dex files. So list the entries
       # that differ first, then run diffoscope on each of those, with a time limit per entry.
       - name: Compare
+        if: steps.check.outputs.differ == 'true'
         run: |
-          sha256sum AnkiQuest-*.apk
-          if cmp -s AnkiQuest-first.apk AnkiQuest-second.apk; then
-            echo "The APKs are identical."
-            exit 0
-          fi
-
           # Entry order, sizes and timestamps, then the entries whose CRC differs.
           mkdir -p report first second
           zipinfo AnkiQuest-first.apk | tail -n +2 > report/first.zipinfo
