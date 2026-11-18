@@ -13,8 +13,7 @@ import org.json.JSONArray
  * How Aki feels about today's streak: the one rule for every place the companion shows today, from
  * the streak widget and the Home card to the launcher icon, the heatmap and streak reminders. Sad
  * before any study, hopeful after some, on fire once today counts, and frozen after days a freeze
- * kept. New poses for sad, hopeful and the frozen levels are requested in
- * float3/ankiquest#88; until then the closest existing poses stand in.
+ * kept. Each mood is an [AnkiquestPose]; [AnkiquestCompanion.art] draws it as the chosen companion.
  */
 internal object AnkiquestMood {
     private const val DAY_MS = 86_400_000L
@@ -70,14 +69,14 @@ internal object AnkiquestMood {
      */
     enum class Heat(
         val days: Int,
-        @DrawableRes val pose: Int,
+        val pose: AnkiquestPose,
         @ColorRes val top: Int,
         @ColorRes val bottom: Int,
     ) {
-        WARM(1, R.drawable.aki_streak, R.color.aq_heat_warm_top, R.color.aq_heat_warm_bottom),
-        HOT(7, R.drawable.aki_streak_hot, R.color.aq_heat_hot_top, R.color.aq_heat_hot_bottom),
-        BLAZING(30, R.drawable.aki_streak_blazing, R.color.aq_heat_blazing_top, R.color.aq_heat_blazing_bottom),
-        LEGEND(100, R.drawable.aki_streak_legend, R.color.aq_heat_legend_top, R.color.aq_heat_legend_bottom),
+        WARM(1, AnkiquestPose.STREAK, R.color.aq_heat_warm_top, R.color.aq_heat_warm_bottom),
+        HOT(7, AnkiquestPose.STREAK_HOT, R.color.aq_heat_hot_top, R.color.aq_heat_hot_bottom),
+        BLAZING(30, AnkiquestPose.STREAK_BLAZING, R.color.aq_heat_blazing_top, R.color.aq_heat_blazing_bottom),
+        LEGEND(100, AnkiquestPose.STREAK_LEGEND, R.color.aq_heat_legend_top, R.color.aq_heat_legend_bottom),
         ;
 
         companion object {
@@ -136,8 +135,8 @@ internal object AnkiquestMood {
     }
 
     /**
-     * Aki's pose today for the signed-in player, from what the server and the collection last said:
-     * the same mood the streak widget shows.
+     * The companion's pose today for the signed-in player, from what the server and the collection
+     * last said: the same mood the streak widget shows.
      */
     @DrawableRes
     fun ownPose(now: Long): Int {
@@ -158,34 +157,42 @@ internal object AnkiquestMood {
             Mood.FIRE -> Flame.LIT
         }
 
-    /** Aki's pose for [mood] with a [streak] of that many days. */
+    /** The pose for [mood] with a [streak] of that many days. */
+    private fun named(
+        mood: Mood,
+        streak: Int,
+    ): AnkiquestPose =
+        when (mood) {
+            Mood.UNKNOWN -> AnkiquestPose.FACE
+            Mood.ASLEEP -> AnkiquestPose.ASLEEP
+            Mood.SAD -> AnkiquestPose.SAD
+            Mood.FROZEN_1 -> AnkiquestPose.FROZEN
+            Mood.FROZEN_2 -> AnkiquestPose.FROZEN_2
+            Mood.FROZEN_3 -> AnkiquestPose.FROZEN_3
+            Mood.HOPEFUL -> AnkiquestPose.HOPEFUL
+            Mood.FIRE -> Heat.of(streak).pose
+        }
+
+    /**
+     * [choice]'s art for [mood] with a [streak] of that many days. It is resolved from the pose, not
+     * from Aki's picture, because one of Aki's pictures stands for two poses (welcome for hopeful).
+     */
     @DrawableRes
     fun pose(
         mood: Mood,
         streak: Int,
-    ): Int =
-        when (mood) {
-            Mood.UNKNOWN -> R.drawable.aki_face
-            Mood.ASLEEP -> R.drawable.aki_sleeping
-            // Interim: at_risk is the most worried full-body pose until "sad" exists.
-            Mood.SAD -> R.drawable.aki_at_risk
-            Mood.FROZEN_1 -> R.drawable.aki_freeze_used
-            Mood.FROZEN_2 -> R.drawable.aki_freeze
-            // Interim: freeze_used has the snow and cold breath; no pose shows ice yet.
-            Mood.FROZEN_3 -> R.drawable.aki_freeze_used
-            // Interim: welcome steps forward with a card, smiling, until "hopeful" exists.
-            Mood.HOPEFUL -> R.drawable.aki_welcome
-            Mood.FIRE -> Heat.of(streak).pose
-        }
+        choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
+    ): Int = AnkiquestCompanion.art(named(mood, streak), choice)
 
-    /** The poses the big widget rotates through for [mood], all of the same mood. */
+    /** The poses the big widget rotates through for [mood], all of the same mood, each once. */
     fun poses(
         mood: Mood,
         streak: Int,
+        choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
     ): List<Int> {
-        val pose = pose(mood, streak)
+        val pose = pose(mood, streak, choice)
         if (mood == Mood.FIRE && Heat.of(streak) == Heat.LEGEND) {
-            return listOf(pose, R.drawable.aki_streak_milestone)
+            return listOf(pose, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, choice)).distinct()
         }
         return listOf(pose)
     }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- The leaderboard widget's last list item while the server leaves other players out. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ankiquest_widget_lock"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="4dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="6dp"
+    android:textColor="@color/ankiquest_widget_text"
+    android:textSize="13sp" />

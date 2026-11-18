@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.modifiers.TextAutoSizeLayoutScope
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.MaterialTheme
@@ -33,17 +35,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.content.res.use
 import com.ichi2.anki.CommonString
 import com.ichi2.compose.ui.preview.AnkiDroidPreview
 import com.ichi2.compose.ui.preview.DialogPreviews
+import com.ichi2.compose.utils.toAnnotatedString
 
 /**
  * Dialog asking the user for a single line of text. Compose counterpart of
@@ -52,11 +62,10 @@ import com.ichi2.compose.ui.preview.DialogPreviews
  * @param onConfirm called with the text, but only while it is valid
  * @param initialText initial value shown in the field
  * @param initialSelection initial cursor position or selected range; defaults to the end of [initialText]
- * @param errorMessageFor error to show for the current input, null when valid
+ * @param validation validation rules and when to run them; defaults to accepting any input
  * @param helperText shown when no error is displayed; an empty string reserves feedback space
  * @param description optional context below the title
  * @param transformInput applied to text edits, not cursor-only changes
- * @param validateOnInput when false, validate on confirmation instead of while editing
  * @param enabled whether confirmation is allowed from the button or keyboard
  */
 @Composable
@@ -72,30 +81,51 @@ fun TextInputDialog(
     maxLengthCounter: Int? = null,
     lengthOf: (String) -> Int = { it.length },
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
-    errorMessageFor: (String) -> String? = { null },
+    validation: InputValidation = InputValidation.None,
     helperText: String? = null,
     description: String? = null,
     transformInput: (TextFieldValue) -> TextFieldValue = { it },
-    validateOnInput: Boolean = true,
     enabled: Boolean = true,
 ) {
     var input by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(initialText, selection = initialSelection))
     }
-    var hasUserEdited by rememberSaveable { mutableStateOf(false) }
-    var submissionAttempted by rememberSaveable { mutableStateOf(false) }
-    val errorMessage = if (validateOnInput || submissionAttempted) errorMessageFor(input.text) else null
-    val displayedError = errorMessage?.takeIf { hasUserEdited || submissionAttempted }
-    val supportingMessage = displayedError ?: helperText
+    val validationState =
+        rememberTextInputValidation(
+            text = { input.text },
+            enabled = enabled,
+            validation = validation,
+            onConfirm = onConfirm,
+        )
+    val validateOnInput = validation.validateOnInput
+    val displayedError = validationState.errorMessage
+    val supportingMessage = (displayedError ?: helperText)?.toAnnotatedString()
     val hasSupportingText = maxLengthCounter != null || supportingMessage != null || !validateOnInput
     val focusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val titleFontSize = MaterialTheme.typography.headlineSmall.fontSize
+    val titleAutoSize =
+        remember(context, density, titleFontSize) {
+            val multilineFontSize =
+                context
+                    .obtainStyledAttributes(
+                        null,
+                        intArrayOf(android.R.attr.textSize),
+                        android.R.attr.textAppearanceMedium,
+                        android.R.style.TextAppearance_Medium,
+                    ).use { attributes ->
+                        with(density) { attributes.getDimensionPixelSize(0, titleFontSize.roundToPx()).toSp() }
+                    }
+            DialogTitleAutoSize(titleFontSize, multilineFontSize)
+        }
 
-    fun confirmIfValid() {
-        if (!enabled) return
-        submissionAttempted = true
-        if (errorMessageFor(input.text) == null) onConfirm(input.text)
+    val dismiss = {
+        validationState.onDismiss()
+        onDismissRequest()
     }
-    AnkiDroidDialog(onDismissRequest = onDismissRequest) {
+
+    AnkiDroidDialog(onDismissRequest = dismiss) {
         Surface(
             modifier = Modifier.widthIn(min = 280.dp, max = 560.dp),
             shape = AlertDialogDefaults.shape,
@@ -106,9 +136,17 @@ fun TextInputDialog(
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(
                         title,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style =
+                            MaterialTheme.typography.headlineSmall.copy(
+                                // Match the XML TextView's font metrics, including after shrinking.
+                                lineHeight = TextUnit.Unspecified,
+                                platformStyle = PlatformTextStyle(includeFontPadding = true),
+                            ),
                         color = AlertDialogDefaults.titleContentColor,
                         modifier = Modifier.padding(bottom = if (description == null) 16.dp else 8.dp),
+                        autoSize = titleAutoSize,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     if (description != null) {
                         Text(
@@ -125,8 +163,7 @@ fun TextInputDialog(
                         onValueChange = { proposed ->
                             if (input.text != proposed.text) {
                                 input = transformInput(proposed)
-                                hasUserEdited = true
-                                submissionAttempted = false
+                                validationState.onTextChanged()
                             } else {
                                 input = proposed
                             }
@@ -141,7 +178,7 @@ fun TextInputDialog(
                                 {
                                     Row(Modifier.fillMaxWidth()) {
                                         if (supportingMessage != null || !validateOnInput) {
-                                            Text(supportingMessage.orEmpty(), Modifier.weight(1f))
+                                            Text(supportingMessage ?: AnnotatedString(""), Modifier.weight(1f))
                                         } else {
                                             Spacer(Modifier.weight(1f))
                                         }
@@ -151,7 +188,7 @@ fun TextInputDialog(
                             },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(capitalization = capitalization, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { confirmIfValid() }),
+                        keyboardActions = KeyboardActions(onDone = { validationState.onConfirm() }),
                     )
                 }
                 FlowRow(
@@ -159,10 +196,10 @@ fun TextInputDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    TextButton(onClick = onDismissRequest) { Text(dismissText) }
+                    TextButton(onClick = dismiss) { Text(dismissText) }
                     TextButton(
-                        onClick = ::confirmIfValid,
-                        enabled = enabled && (!validateOnInput || errorMessage == null),
+                        onClick = validationState.onConfirm,
+                        enabled = validationState.canConfirm,
                     ) { Text(confirmText) }
                 }
             }) { children, constraints ->
@@ -178,6 +215,20 @@ fun TextInputDialog(
             }
             LaunchedEffect(focusRequester) { focusRequester.requestFocus() }
         }
+    }
+}
+
+/** Matches AppCompat's DialogTitle: use medium text when the headline does not fit on one line. */
+private data class DialogTitleAutoSize(
+    val singleLineFontSize: TextUnit,
+    val multilineFontSize: TextUnit,
+) : TextAutoSize {
+    override fun TextAutoSizeLayoutScope.getFontSize(
+        constraints: Constraints,
+        text: AnnotatedString,
+    ): TextUnit {
+        val layout = performLayout(constraints, text, singleLineFontSize)
+        return if (layout.lineCount > 1 || layout.isLineEllipsized(0)) multilineFontSize else singleLineFontSize
     }
 }
 

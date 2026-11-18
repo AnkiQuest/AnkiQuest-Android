@@ -47,7 +47,8 @@ internal object AnkiquestShare {
     /** The server keeps labels of conquered cards to one line of this many characters. */
     const val MAX_LABEL = 120
 
-    private const val BRAND = "AnkiQuest"
+    /** The app's name as share pictures, captions and the gallery folder show it. */
+    const val BRAND = "AnkiQuest"
 
     /** Cards are 1080×1080 PNGs; anything far larger is not a card. */
     private const val MAX_IMAGE_BYTES = 4L * 1024 * 1024

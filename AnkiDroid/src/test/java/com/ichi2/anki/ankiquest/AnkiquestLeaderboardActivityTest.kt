@@ -53,7 +53,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
-        coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns week
+        coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(week)
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * 24 * 60 * 60 * 1000L
     }
 
@@ -98,7 +98,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
                     .put(AnkiquestBoardsTest.row("bo", week = 5, hour = 0).put("closing_xp", 9).put("day_ends_at", NOW - 1)),
                 AnkiquestBoards.Period.WEEK,
             )
-        coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK) } returns closing
+        coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK) } returns AnkiquestBoards.Leaderboard(closing)
         val board = launch()
         assertTrue(board.hasText(board.getString(R.string.aq_board_closing_xp, "1,234")))
         assertFalse(board.hasText(board.getString(R.string.aq_board_closing_xp, "9")), "a day that has ended no longer counts")
@@ -113,7 +113,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
                 JSONArray().put(AnkiquestBoardsTest.row("cy", week = 7, hour = 0)),
                 AnkiquestBoards.Period.DAY,
             )
-        coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.DAY) } returns day
+        coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.DAY) } returns AnkiquestBoards.Leaderboard(day)
         val board = launch()
         board.click(board.getString(R.string.ankiquest_nav_today))
         coVerify { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.DAY) }
@@ -140,11 +140,11 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
 
     @Test
     fun `an empty board and a board without XP say so`() {
-        coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns emptyList()
+        coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(emptyList())
         val empty = launch()
         assertTrue(empty.hasText(empty.getString(R.string.aq_board_empty)))
 
-        coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns week.map { it.copy(xp = 0) }
+        coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(week.map { it.copy(xp = 0) })
         val quiet = launch()
         assertTrue(quiet.hasText(quiet.getString(R.string.aq_board_no_xp)))
         assertFalse(quiet.hasText("Ana"))
@@ -202,7 +202,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         val board = controller.get()
         assertTrue(board.hasText("Ana"))
         val other = HomeAccount("https://anki.example.test", "other", "other-token")
-        val waiting = CompletableDeferred<List<AnkiquestBoards.Standing>>()
+        val waiting = CompletableDeferred<AnkiquestBoards.Leaderboard>()
         every { AnkiquestHomeData.account(any()) } returns other
         coEvery { AnkiquestBoards.leaderboard(other, any()) } coAnswers { waiting.await() }
         coEvery { AnkiquestBoards.weekEnds(other) } returns null
@@ -214,7 +214,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
             assertFalse(board.hasText("Ana"), "the previous account's circle must disappear immediately")
             assertFalse(board.hasText(board.getString(R.string.aq_board_xp, "90")))
             assertFalse(board.hasTextContaining(board.getString(R.string.aq_board_resets, "").trim()))
-            waiting.complete(emptyList())
+            waiting.complete(AnkiquestBoards.Leaderboard(emptyList()))
             advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             assertTrue(board.hasText(board.getString(R.string.aq_board_empty)))
         } finally {

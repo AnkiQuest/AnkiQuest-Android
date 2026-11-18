@@ -229,7 +229,7 @@ class AnkiquestWidgetTest : RobolectricTest() {
     fun `empty leaderboard produces a valid empty collection`() {
         val items = AnkiquestWidget.collection(targetContext, JSONArray())
         assertEquals(0, items.itemCount)
-        assertEquals(1, items.viewTypeCount)
+        assertEquals(AnkiquestWidget.VIEW_TYPES, items.viewTypeCount)
     }
 
     @Test
@@ -373,7 +373,7 @@ class AnkiquestWidgetTest : RobolectricTest() {
         val manager = AppWidgetManager.getInstance(targetContext)
         val id = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
         manager.updateAppWidgetOptions(id, options(250, 110))
-        AnkiquestWidget.render(targetContext, leaderboard(), TimeManager.time.intTimeMS(), offline = false)
+        AnkiquestWidget.render(targetContext, leaderboard(), TimeManager.time.intTimeMS(), offline = false, lock = null)
         val title = { shadowOf(manager).getViewFor(id).findViewById<TextView>(R.id.ankiquest_widget_title).textSize }
         val regular = title()
 
