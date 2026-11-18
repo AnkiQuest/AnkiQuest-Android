@@ -1,3 +1,11 @@
+> Anki is hard, free and effective.
+>
+> Duolingo is easy, commercial and ineffective.
+>
+> If you ask a random successful language learner what software to use they'll probably suggest Anki.
+>
+> —lsusr, [Invisible Choices, Made by Default](https://www.lesswrong.com/s/3xKXGh9RXaYTYZYgZ/p/k6nncsXAZD3bK6fe3)
+
 <p align="center">
 <img alt="" src="docs/graphics/logos/banner_readme.png"/>
 </p>
@@ -11,6 +19,8 @@
 # AnkiQuest-Android
 
 [AnkiDroid](https://github.com/ankidroid/Anki-Android), the Android port of the open source [Anki](https://apps.ankiweb.net/index.html) spaced repetition flashcard system, with AnkiQuest built in.
+
+AnkiQuest leaves Anki's scheduling unchanged and adds streaks, friends and leaderboards to keep you studying.
 
 AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clients send review history without card content; sharing a conquered card label or a deck copy is an explicit choice. AnkiQuest has three repositories:
 
