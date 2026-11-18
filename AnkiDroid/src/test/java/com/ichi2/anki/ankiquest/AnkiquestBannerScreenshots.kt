@@ -23,6 +23,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.ReviewerTest
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ThemeConfig
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmap
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime

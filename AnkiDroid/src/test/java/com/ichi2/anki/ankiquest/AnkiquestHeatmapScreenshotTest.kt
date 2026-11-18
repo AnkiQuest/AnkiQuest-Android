@@ -35,7 +35,8 @@ class AnkiquestHeatmapScreenshotTest : ScreenshotTest() {
     }
 
     private fun captureCalendar(name: String) {
-        val context = ContextThemeWrapper(targetContext, if (theme.isNight) CommonR.style.Theme_Dark else CommonR.style.Theme_Light)
+        // One DayNight theme: the device qualifiers already select night values for night themes.
+        val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid)
         val today = LocalDate.of(2024, 9, 22)
         val reviews = (0L..600L).filter { it % 9 != 0L }.associate { today.minusDays(it) to (it % 140 + 1).toInt() }
         val scheduled = (1L..90L).associate { today.plusDays(it) to (it % 80 + 1).toInt() }

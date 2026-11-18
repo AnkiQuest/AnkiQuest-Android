@@ -17,6 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.res.use
 import androidx.core.content.withStyledAttributes
 import com.ichi2.anki.common.android.R
 
@@ -38,8 +40,10 @@ fun AnkiDroidTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val colorScheme = remember(context) { context.toMaterial3ColorScheme() }
     val ankiColors = remember(context, colorScheme) { context.toAnkiDroidColors(colorScheme) }
+    val ankiDimensions = remember(context) { context.toAnkiDroidDimensions() }
     CompositionLocalProvider(
         LocalDimensions provides Dimensions(),
+        LocalAnkiDroidDimensions provides ankiDimensions,
         LocalAnkiDroidColors provides ankiColors,
     ) {
         MaterialTheme(colorScheme = colorScheme, content = content)
@@ -53,15 +57,34 @@ fun AnkiDroidTheme(content: @Composable () -> Unit) {
  */
 @VisibleForTesting
 internal fun Context.toAnkiDroidColors(scheme: ColorScheme): AnkiDroidColors {
-    var colors = AnkiDroidColors(fabContainer = scheme.primaryContainer, onFab = scheme.onPrimaryContainer)
+    val defaults = scheme.toDefaultAnkiDroidColors()
+    var colors = defaults
     withStyledAttributes(attrs = R.styleable.ComposeTheme) {
         colors =
             AnkiDroidColors(
-                fabContainer = color(R.styleable.ComposeTheme_fabNormalColor, scheme.primaryContainer),
+                fabContainer = color(R.styleable.ComposeTheme_fabNormalColor, defaults.fabContainer),
                 onFab = scheme.onPrimary,
+                showAnswerButton = color(R.styleable.ComposeTheme_showAnswerButtonBackground, defaults.showAnswerButton),
+                againButton = color(R.styleable.ComposeTheme_againBackgroundColor, defaults.againButton),
+                onAgainButton = color(R.styleable.ComposeTheme_againTextColor, defaults.onAgainButton),
+                hardButton = color(R.styleable.ComposeTheme_hardBackgroundColor, defaults.hardButton),
+                onHardButton = color(R.styleable.ComposeTheme_hardTextColor, defaults.onHardButton),
+                goodButton = color(R.styleable.ComposeTheme_goodBackgroundColor, defaults.goodButton),
+                onGoodButton = color(R.styleable.ComposeTheme_goodTextColor, defaults.onGoodButton),
+                easyButton = color(R.styleable.ComposeTheme_easyBackgroundColor, defaults.easyButton),
+                onEasyButton = color(R.styleable.ComposeTheme_easyTextColor, defaults.onEasyButton),
             )
     }
     return colors
+}
+
+@VisibleForTesting
+internal fun Context.toAnkiDroidDimensions(): AnkiDroidDimensions {
+    val elevationPx =
+        obtainStyledAttributes(R.styleable.ComposeTheme).use {
+            it.getDimension(R.styleable.ComposeTheme_studyScreenElevation, 0f)
+        }
+    return AnkiDroidDimensions(studyScreenElevation = (elevationPx / resources.displayMetrics.density).dp)
 }
 
 @VisibleForTesting

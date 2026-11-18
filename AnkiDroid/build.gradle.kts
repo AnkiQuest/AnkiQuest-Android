@@ -364,7 +364,7 @@ android {
                                 )
                             }
                         }
-                        validateInput(theme, listOf("light", "plain", "dark", "black", "eink", "all"))
+                        validateInput(theme, listOf("light", "plain", "dark", "black", "eink", "eink_night", "all"))
                         validateInput(device, listOf("phone", "tablet", "foldable", "desktop", "all"))
 
                         test.systemProperty("screenshot.theme", theme)
@@ -792,6 +792,7 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":common:android"))
     implementation(project(":compat"))
+    implementation(project(":feature:browse"))
     implementation(project(":libanki"))
     implementation(project(":note-editor"))
     implementation(project(":vbpd"))
