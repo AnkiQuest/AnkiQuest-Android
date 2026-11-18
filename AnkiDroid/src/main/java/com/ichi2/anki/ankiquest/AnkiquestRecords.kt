@@ -54,6 +54,12 @@ internal object AnkiquestRecords {
         val holders: List<Holder>,
     )
 
+    /** The boards, and why the server left other players out of them, when it did. */
+    data class Records(
+        val boards: List<Board>,
+        val lock: AnkiquestLock? = null,
+    )
+
     /** Who a board shows, as the website's board picker offers it; [value] is the `scope` query. */
     data class Scope(
         val value: String,
@@ -70,7 +76,7 @@ internal object AnkiquestRecords {
     suspend fun records(
         account: HomeAccount,
         scope: Scope? = null,
-    ): List<Board> =
+    ): Records =
         withContext(Dispatchers.IO) {
             val url =
                 account
@@ -79,7 +85,7 @@ internal object AnkiquestRecords {
                     .apply { scope?.let { addQueryParameter("scope", it.value) } }
                     .build()
             val request = AnkiquestApi.request(url, account.token, account.language).build()
-            parseRecords(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) })
+            AnkiquestApi.call(account, request) { Records(parseRecords(AnkiquestApi.jsonArray(it)), AnkiquestLock.of(it)) }
         }
 
     /**

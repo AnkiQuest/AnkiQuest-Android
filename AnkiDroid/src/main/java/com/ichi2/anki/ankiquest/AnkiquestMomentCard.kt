@@ -418,8 +418,8 @@ internal object AnkiquestMomentCard {
         val win: Long?,
         /** Whether telling friends about a conquered card can still be taken back. */
         val undoable: Boolean = false,
-        /** Only a label already shared by the owner may appear in the exported picture. */
-        val label: String? = null,
+        /** Only the server's saved label and public counts belong in an export. */
+        val conquest: AnkiquestCommunity.Conquest? = null,
     )
 
     private class Pages(
@@ -606,18 +606,18 @@ internal object AnkiquestMomentCard {
             var told = false
             var win = moment.win
             var undo = false
-            var label: String? = null
+            var record: AnkiquestCommunity.Conquest? = null
             moment.conquest?.let { at ->
                 val conquest = AnkiquestCommunity.conquest(account, account.user, at)
                 told = conquest.told == true
                 win = win ?: conquest.win
                 undo = conquest.undoable(TimeManager.time.intTimeMS())
-                label = conquest.label
+                record = conquest
             }
             val listed = win?.let { AnkiquestSharing.win(account, it) }
             if (listed?.optBoolean("shared_with_friends") == true) told = true
             val image = listed?.optJSONObject("link")?.optString("image")?.ifEmpty { null }
-            return Extras(told, image, win, undo, label)
+            return Extras(told, image, win, undo, record)
         }
 
         private fun current(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.scope == account.scope && it.token.isNotEmpty() }
@@ -637,10 +637,16 @@ internal object AnkiquestMomentCard {
         ) {
             val scope = scope ?: return
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            val win = moment.win ?: extras[moment.key]?.win
+            val reference = reference(moment)
+            // Tell -> share sheet -> chosen send. Older servers keep their existing route.
+            if (reference != null && AnkiquestMomentShare.available(signedIn, reference)) {
+                share(moment, position)
+                return
+            }
             scope.launch {
                 val message =
                     try {
-                        val win = moment.win ?: extras[moment.key]?.win
                         val friends =
                             when {
                                 moment.conquest != null -> AnkiquestCommunity.tell(signedIn, moment.conquest)
@@ -713,14 +719,8 @@ internal object AnkiquestMomentCard {
             position: Int,
         ) {
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
-            val win = moment.win ?: extras[moment.key]?.win
-            val ref =
-                when {
-                    moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
-                    win != null -> AnkiquestSharing.MomentRef.Win(win)
-                    else -> null
-                }
-            if (ref == null || !AnkiquestMomentShare.available(signedIn)) {
+            val ref = reference(moment)
+            if (ref == null || !AnkiquestMomentShare.available(signedIn, ref)) {
                 elsewhere(moment)
                 return
             }
@@ -738,6 +738,18 @@ internal object AnkiquestMomentCard {
             ).show()
         }
 
+        /** Tell and Share resolve the same server-backed moment. */
+        private fun reference(moment: Moment): AnkiquestSharing.MomentRef? {
+            val win = moment.win ?: extras[moment.key]?.win
+            return when {
+                moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
+                win != null -> AnkiquestSharing.MomentRef.Win(win)
+                moment.place != null -> AnkiquestSharing.MomentRef.Place(moment.place)
+                moment.notification != null -> AnkiquestSharing.MomentRef.Notification(moment.notification)
+                else -> null
+            }
+        }
+
         /**
          * Android's share sheet: the server's picture and first-person invitation with its link for a win,
          * the card's own words and page for a conquered card, or one line of text otherwise.
@@ -749,6 +761,8 @@ internal object AnkiquestMomentCard {
                 try {
                     val win = moment.win ?: extras[moment.key]?.win
                     val card = publicPicture(moment)
+                    // Capture the saved record before leaving the main thread for image work.
+                    val conquest = extras[moment.key]?.conquest
                     val link =
                         try {
                             win?.let { Ankiquest.shareWinLink(it, signedIn.scope) }
@@ -766,7 +780,7 @@ internal object AnkiquestMomentCard {
                                 withContext(Dispatchers.IO) {
                                     AnkiquestShare.cardChooser(
                                         host.applicationContext,
-                                        conquestText(host, signedIn, moment),
+                                        conquestText(host, signedIn, moment, conquest),
                                         link?.image,
                                         fallback = card,
                                     )
@@ -848,14 +862,16 @@ internal object AnkiquestMomentCard {
                     companion = AnkiquestMoments.joined(moment),
                 )
             }
+            extras[moment.key]?.conquest?.let { conquest ->
+                return AnkiquestConquestShare.picture(host, account, conquest, moment.deck).copy(title = title, art = art(moment))
+            }
+
+            // Offline moments have no saved label or verified answer/day counts to add.
             return AnkiquestShare.Card(
                 title,
-                host.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses),
+                AnkiquestConquestShare.mine(host, moment.lapses),
                 art(moment),
-                listOfNotNull(
-                    extras[moment.key]?.label,
-                    moment.deck?.let { host.getString(R.string.aq_conquest_share_deck, it) },
-                ),
+                listOfNotNull(AnkiquestConquestShare.deck(host, moment.deck)),
             )
         }
 
@@ -887,10 +903,16 @@ internal object AnkiquestMomentCard {
         context: Context,
         account: HomeAccount,
         moment: Moment,
+        conquest: AnkiquestCommunity.Conquest? = null,
     ): String {
+        if (conquest != null) {
+            return AnkiquestConquestShare.caption(context, account, conquest, moment.deck)
+        }
         val at = requireNotNull(moment.conquest)
-        val words = context.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses)
-        val from = moment.deck?.let { " " + context.getString(R.string.aq_conquest_share_deck, it) }.orEmpty()
-        return "$words$from ${AnkiquestCommunity.conquestLink(account.server, account.user, at)}"
+        return listOfNotNull(
+            AnkiquestConquestShare.mine(context, moment.lapses),
+            AnkiquestConquestShare.deck(context, moment.deck),
+            AnkiquestCommunity.conquestLink(account.server, account.user, at),
+        ).joinToString("\n")
     }
 }

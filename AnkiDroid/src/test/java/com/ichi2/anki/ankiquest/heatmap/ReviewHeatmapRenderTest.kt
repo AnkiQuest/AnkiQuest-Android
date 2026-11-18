@@ -68,10 +68,8 @@ class ReviewHeatmapRenderTest {
                     if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
             }
         val context =
-            ContextThemeWrapper(
-                app.createConfigurationContext(config),
-                if (dark) CommonR.style.Theme_Dark else CommonR.style.Theme_Light,
-            )
+            // One DayNight theme: the night mode set in config above selects Dark's values.
+            ContextThemeWrapper(app.createConfigurationContext(config), CommonR.style.Theme_AnkiDroid)
         val view = ReviewHeatmapView(context).apply(configure)
         view.measure(
             View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),

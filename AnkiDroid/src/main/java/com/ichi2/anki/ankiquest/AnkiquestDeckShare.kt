@@ -286,7 +286,7 @@ internal object AnkiquestDeckShare {
                     return@withContext
                 }
                 if (firstAsk(prefs, account.scope, deck, day)) {
-                    AnkiquestPostStudyPrompts.track(show(context, account, prompt))
+                    show(context, account, prompt)
                 }
             }
         } catch (e: CancellationException) {
@@ -297,25 +297,55 @@ internal object AnkiquestDeckShare {
     }
 
     private fun show(
-        context: Context,
+        context: FragmentActivity,
         account: HomeAccount,
         prompt: Prompt,
-    ): AlertDialog {
+    ) {
         val language = AnkiquestLanguage.context(context)
+        val reference = AnkiquestSharing.MomentRef.Deck(prompt.deck.toString(), AnkiquestDeckNames.clean(prompt.name))
+        if (AnkiquestMomentShare.available(account, reference)) {
+            val card =
+                AnkiquestShare.Card(
+                    language.getString(R.string.ankiquest_deck_moment_title),
+                    language.getString(R.string.ankiquest_deck_moment_body, reference.name),
+                )
+            AnkiquestShareSheet(
+                context,
+                account,
+                reference,
+                card,
+                elsewhere = { chosen ->
+                    context.lifecycleScope.launch {
+                        if (AnkiquestHomeData.account() != account) {
+                            return@launch
+                        }
+                        val intent =
+                            withContext(Dispatchers.IO) { AnkiquestShare.textChooser(context, chosen.title, chosen.body, art = chosen.art) }
+                        if (AnkiquestHomeData.account() == account && AnkiquestPostStudyPrompts.resumed(context)) {
+                            context.startActivity(intent)
+                        }
+                    }
+                },
+                slot = AnkiquestShareSheet.Slot.POST_STUDY,
+            ).show()
+            return
+        }
         val picked = BooleanArray(prompt.recipients.size)
-        return AlertDialog
-            .Builder(context)
-            .setTitle(language.getString(R.string.ankiquest_deck_share_title, prompt.name))
-            .setMultiChoiceItems(prompt.recipients.map { it.display }.toTypedArray(), picked) { _, which, checked ->
-                picked[which] = checked
-            }.setPositiveButton(language.getString(R.string.ankiquest_deck_share_send)) { _, _ ->
-                val recipients = prompt.recipients.filterIndexed { index, _ -> picked[index] }.map { it.user }
-                if (recipients.isNotEmpty()) send(context.applicationContext, account, prompt, recipients)
-            }.setNegativeButton(language.getString(R.string.ankiquest_deck_share_not_now), null)
-            .setNeutralButton(language.getString(R.string.ankiquest_deck_share_never)) { _, _ ->
-                AnkiDroidApp.sharedPrefs().edit { putBoolean(PREF_ASK, false) }
-                showThemedToast(context, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
-            }.show()
+        val dialog =
+            AlertDialog
+                .Builder(context)
+                .setTitle(language.getString(R.string.ankiquest_deck_share_title, prompt.name))
+                .setMultiChoiceItems(prompt.recipients.map { it.display }.toTypedArray(), picked) { _, which, checked ->
+                    picked[which] = checked
+                }.setPositiveButton(language.getString(R.string.ankiquest_deck_share_send)) { _, _ ->
+                    val recipients = prompt.recipients.filterIndexed { index, _ -> picked[index] }.map { it.user }
+                    if (recipients.isNotEmpty()) send(context.applicationContext, account, prompt, recipients)
+                }.setNegativeButton(language.getString(R.string.ankiquest_deck_share_not_now), null)
+                .setNeutralButton(language.getString(R.string.ankiquest_deck_share_never)) { _, _ ->
+                    AnkiDroidApp.sharedPrefs().edit { putBoolean(PREF_ASK, false) }
+                    showThemedToast(context, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
+                }.show()
+        AnkiquestPostStudyPrompts.track(dialog)
     }
 
     private fun send(

@@ -1,0 +1,186 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: ankiquest reproducible build
+
+# Builds the release APK we ship twice from the same commit, on two runners, in
+# two checkout directories and two time zones, and compares the APKs with
+# diffoscope. F-Droid and IzzyOnDroid rebuild our APK and expect the same bytes (#352).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'gradle/**'
+      - 'gradle.properties'
+      - '**/*.gradle.kts'
+      - 'buildSrc/**'
+      - '.github/workflows/ankiquest_reproducible.yml'
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
+
+jobs:
+  build:
+    name: Build ${{ matrix.build }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      matrix:
+        include:
+          - build: first
+            path: first
+            tz: UTC
+          - build: second
+            path: rebuild/second
+            tz: Pacific/Auckland
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: ${{ matrix.path }}
+
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: "jetbrains"
+          java-version: "21"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+
+      # Same task and properties as ankiquest_apk.yml, signed with the public fallback key.
+      # The build time comes from the commit, and the build cache stays off so both
+      # runners compile everything themselves.
+      - name: Assemble
+        working-directory: ${{ matrix.path }}
+        run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          echo "fatal_warnings=false" >> local.properties
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache \
+            -PcustomSuffix=quest -PcustomName="AnkiQuest"
+          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-${{ matrix.build }}.apk"
+          cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-${{ matrix.build }}.txt"
+
+      # The R8 mapping shows which classes and members R8 named or kept differently.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: apk-${{ matrix.build }}
+          path: |
+            AnkiQuest-${{ matrix.build }}.apk
+            mapping-${{ matrix.build }}.txt
+          if-no-files-found: error
+
+  compare:
+    name: Compare with diffoscope
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: apk-*
+          merge-multiple: true
+
+      - name: Check
+        id: check
+        run: |
+          sha256sum AnkiQuest-*.apk
+          if cmp -s AnkiQuest-first.apk AnkiQuest-second.apk; then
+            echo "The APKs are identical."
+            exit 0
+          fi
+          echo "differ=true" >> "$GITHUB_OUTPUT"
+
+      # apt brings the tools diffoscope uses to unpack dex and resources. Ubuntu's diffoscope
+      # cannot read APK signatures with its androguard 4, so run diffoscope from PyPI instead.
+      - name: Install diffoscope
+        if: steps.check.outputs.differ == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y diffoscope apksigner apktool
+          python3 -m venv "$RUNNER_TEMP/diffoscope"
+          "$RUNNER_TEMP/diffoscope/bin/pip" install --quiet diffoscope==339 androguard==4.1.4 apksigcopier==1.1.1 python-magic libarchive-c
+          echo "$RUNNER_TEMP/diffoscope/bin" >> "$GITHUB_PATH"
+
+      # diffoscope on the whole APK ran past 40 minutes on the dex files. So list the entries
+      # that differ first, then run diffoscope on each of those, with a time limit per entry.
+      - name: Compare
+        if: steps.check.outputs.differ == 'true'
+        run: |
+          # Entry order, sizes and timestamps, then the entries whose CRC differs.
+          mkdir -p report first second
+          zipinfo AnkiQuest-first.apk | tail -n +2 > report/first.zipinfo
+          zipinfo AnkiQuest-second.apk | tail -n +2 > report/second.zipinfo
+          diff report/first.zipinfo report/second.zipinfo > report/zipinfo.diff || true
+          unzip -v AnkiQuest-first.apk | awk 'NF == 8 { print $7, $8 }' | sort -k2 > report/first.crc
+          unzip -v AnkiQuest-second.apk | awk 'NF == 8 { print $7, $8 }' | sort -k2 > report/second.crc
+          join -1 2 -2 2 -a 1 -a 2 -e missing -o 0,1.1,2.1 report/first.crc report/second.crc \
+            | awk '$2 != $3 { print $1 }' > report/entries.txt
+          echo "Entries that differ:"
+          cat report/entries.txt
+          echo "zipinfo differences:"
+          head -n 200 report/zipinfo.diff
+
+          # R8 mapping differences, without the header that holds the mapping's own hash.
+          diff <(grep -v '^#' mapping-first.txt) <(grep -v '^#' mapping-second.txt) > report/mapping.diff || true
+          echo "R8 mapping differences ($(wc -l < report/mapping.diff) lines):"
+          head -n 300 report/mapping.diff
+
+          # The APK itself without the dex files: the signing block and zip structure.
+          timeout 600 diffoscope --exclude-command '^apktool' --exclude-command '^procyon' \
+            --exclude-command '^javap' --exclude 'classes*.dex' \
+            --text report/apk.txt AnkiQuest-first.apk AnkiQuest-second.apk > /dev/null 2>&1 || true
+
+          # One diffoscope report per differing entry.
+          unzip -q AnkiQuest-first.apk -d first
+          unzip -q AnkiQuest-second.apk -d second
+          while read -r entry; do
+            name=$(echo "$entry" | tr '/' '_')
+            timeout 300 diffoscope --exclude-command '^procyon' --exclude-command '^javap' \
+              --text "report/$name.txt" "first/$entry" "second/$entry" > /dev/null 2>&1 || true
+          done < report/entries.txt
+          exit 1
+
+      # The job summary holds at most 1 MiB; the full reports are in the artifact.
+      - name: Show the differences
+        if: failure()
+        run: |
+          [ -d report ] || exit 0
+          for file in report/*.txt; do
+            [ -f "$file" ] || continue
+            echo "::group::$file"
+            head -c 100000 "$file"
+            echo "::endgroup::"
+          done
+          {
+            echo 'Entries that differ:'
+            echo '```'
+            cat report/entries.txt
+            echo '```'
+            echo 'zipinfo differences:'
+            echo '```'
+            head -n 100 report/zipinfo.diff
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: diffoscope-report
+          path: report
+          if-no-files-found: ignore

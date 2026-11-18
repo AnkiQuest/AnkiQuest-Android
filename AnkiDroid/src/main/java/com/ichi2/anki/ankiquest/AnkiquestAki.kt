@@ -18,7 +18,7 @@ import org.json.JSONObject
 /** Aki encourages real progress without changing study, scoring or notification rules. */
 internal object AnkiquestAki {
     /** What the Home card says, chosen to fit Aki's mood. */
-    enum class Message { WELCOME, REVIEW, COMPLETE, STREAK, PROTECTED, WAITING }
+    enum class Message { WELCOME, REVIEW, CELEBRATE, STREAK, FREEZE, WAITING }
 
     /** The Home card: Aki's [mood] for a [streak] of that many days, and a [message] that fits it. */
     data class Card(
@@ -30,13 +30,14 @@ internal object AnkiquestAki {
         @get:DrawableRes
         val image: Int get() = AnkiquestMood.pose(mood, streak)
 
-        fun text(context: Context): String =
+        /** The line beside the pose, or null for none: cards due need none, the next-step card says what to do. */
+        fun text(context: Context): String? =
             when (message) {
                 Message.WELCOME -> context.getString(R.string.aki_welcome)
-                Message.REVIEW -> context.getString(R.string.aki_review)
-                Message.COMPLETE -> context.getString(R.string.aki_complete)
+                Message.REVIEW -> null
+                Message.CELEBRATE -> context.getString(R.string.aki_complete)
                 Message.STREAK -> context.getString(R.string.aki_streak)
-                Message.PROTECTED -> context.getString(R.string.aki_protected)
+                Message.FREEZE -> context.getString(R.string.aki_protected)
                 Message.WAITING -> context.resources.getQuantityString(R.plurals.aki_streak_waiting, streak, streak)
             }
     }
@@ -72,13 +73,13 @@ internal object AnkiquestAki {
             return Message.WAITING
         }
         if (mood in frozen) {
-            return Message.PROTECTED
+            return Message.FREEZE
         }
 
         // Otherwise the decks decide: all done after real study, or cards still due.
         val reviewed = (day?.reviews ?: 0) > 0
         if (reviewed && local?.decks?.isNotEmpty() == true && local.decks.all { it.due == 0 }) {
-            return Message.COMPLETE
+            return Message.CELEBRATE
         }
         if ((local?.focus?.due ?: 0) > 0) {
             return Message.REVIEW
@@ -113,9 +114,12 @@ internal object AnkiquestAki {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(context, 8), 0, dp(context, 8))
             addView(image(context, card.image))
+
+            // A mood without a line shows the pose alone.
+            val line = card.text(context) ?: return@apply
             addView(
                 TextView(context).apply {
-                    text = card.text(context)
+                    text = line
                     textSize = 16f
                     setTextColor(context.getColor(R.color.aq_home_text))
                     setPadding(dp(context, 12), 0, 0, 0)

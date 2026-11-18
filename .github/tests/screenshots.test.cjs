@@ -53,6 +53,13 @@ test('a missing baseline cannot produce a successful comparison', () => {
   assert.ok(compare.indexOf('Download base branch screenshots') < compare.indexOf('Compare screenshots'));
 });
 
+test('the comparison names the baseline CPU and its own', () => {
+  const report = step('Report renderer CPUs');
+  assert.match(report, /build\/outputs\/roborazzi\/cpu\.txt/);
+  assert.ok(compare.indexOf('Download base branch screenshots') < compare.indexOf('Report renderer CPUs'));
+  assert.ok(compare.indexOf('Report renderer CPUs') < compare.indexOf('Compare screenshots'));
+});
+
 test('the workflow passes its matching run to the artifact download', async () => {
   const source = step('Wait for matching base screenshots');
   const script = source.slice(source.indexOf('script: |\n') + 'script: |\n'.length);
