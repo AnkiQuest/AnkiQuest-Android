@@ -20,6 +20,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
@@ -128,6 +129,43 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         user.setText("another")
         assertEquals("another", user.text.toString())
         assertNull(AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+    }
+
+    @Test
+    fun `a sign-in that needs a second factor shows the code field and sends the code`() {
+        AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
+        val sent = mutableListOf<AnkiquestAccount.Credentials>()
+        mockkObject(AnkiquestAccount)
+        try {
+            coEvery { AnkiquestAccount.submit(any(), any()) } answers {
+                val credentials = firstArg<AnkiquestAccount.Credentials>()
+                sent += credentials
+                if (credentials.code.isEmpty()) throw AnkiquestAccount.SecondFactorNeeded(AnkiquestAccount.SecondFactor.ASKED)
+                AnkiquestAccount.Signed(credentials.url, credentials.user, "device-token")
+            }
+            val fragment = open()
+            fragment.preference<Preference>(R.string.ankiquest_sign_in_key).performClick()
+            val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+            val code = dialog.findViewById<EditText>(R.id.ankiquest_sign_in_code)!!
+            assertFalse(code.isShown, "hidden until the server asks")
+            dialog.findViewById<EditText>(R.id.ankiquest_sign_in_password)!!.setText("right password")
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertTrue(code.isShown)
+            assertEquals(
+                targetContext.getString(R.string.ankiquest_two_factor_asked),
+                dialog.findViewById<TextView>(R.id.ankiquest_sign_in_status)!!.text.toString(),
+            )
+            code.setText(" 123456 ")
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(listOf("", "123456"), sent.map { it.code })
+            assertEquals("device-token", AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+        } finally {
+            unmockkObject(AnkiquestAccount)
+        }
     }
 
     @Test

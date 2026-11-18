@@ -60,7 +60,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
         mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords)
         every { AnkiquestHomeData.account(any()) } answers { account }
         coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
-        coEvery { AnkiquestRecords.records(any(), any()) } returns boards
+        coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(boards)
         coEvery { AnkiquestRecords.scopes(any()) } returns listOf(AnkiquestRecords.Scope.CIRCLE, club)
         coEvery { AnkiquestRecords.study(any(), any()) } returns study.copy(years = listOf(2026, 2025))
         coEvery { AnkiquestRecords.study(any(), 2025) } returns earlier
@@ -104,7 +104,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Test
     fun `switching accounts resets history and ignores a late old record response`() {
-        val oldRecords = CompletableDeferred<List<AnkiquestRecords.Board>>()
+        val oldRecords = CompletableDeferred<AnkiquestRecords.Records>()
         coEvery { AnkiquestRecords.records(identity, any()) } coAnswers { withContext(NonCancellable) { oldRecords.await() } }
         val controller = launch(AnkiquestRecordsActivity.intent(targetContext))
         try {
@@ -113,7 +113,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
             me.click(me.getString(R.string.aq_history_title), R.id.aq_me_history_loading)
             me.click("2025", R.id.aq_me_history_loading)
             val next = identity.copy(user = "other", token = "other-token")
-            coEvery { AnkiquestRecords.records(next, any()) } returns emptyList()
+            coEvery { AnkiquestRecords.records(next, any()) } returns AnkiquestRecords.Records(emptyList())
             account = next
             controller
                 .pause()
@@ -121,7 +121,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
                 .start()
                 .resume()
             awaitSections(me)
-            oldRecords.complete(boards)
+            oldRecords.complete(AnkiquestRecords.Records(boards))
             advanceRobolectricLooper()
             assertFalse(me.views<TextView>().any { it.text == "Cerro" })
             assertTrue(me.views<TextView>().any { it.text == me.getString(R.string.aq_records_empty) })
@@ -129,7 +129,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
             coVerify { AnkiquestRecords.study(next, null) }
             coVerify { AnkiquestRecords.records(next, null) }
         } finally {
-            oldRecords.complete(boards)
+            oldRecords.complete(AnkiquestRecords.Records(boards))
         }
     }
 

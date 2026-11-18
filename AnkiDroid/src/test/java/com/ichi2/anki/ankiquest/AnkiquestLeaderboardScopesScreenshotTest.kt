@@ -55,9 +55,9 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
                 ),
                 AnkiquestBoards.Period.WEEK,
             )
-        coEvery { AnkiquestBoards.leaderboard(any(), any(), any()) } returns board
+        coEvery { AnkiquestBoards.leaderboard(any(), any(), any()) } returns AnkiquestBoards.Leaderboard(board)
         coEvery { AnkiquestBoards.leaderboard(any(), any(), AnkiquestBoards.Source.Group(7)) } returns
-            board.map { it.copy(rank = null, shown = null) }
+            AnkiquestBoards.Leaderboard(board.map { it.copy(rank = null, shown = null) })
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
     }

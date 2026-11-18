@@ -55,7 +55,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         every { AnkiquestSubscriptions.repository } returns repository
         coEvery { repository.load(any()) } throws IOException("offline")
-        coEvery { AnkiquestRecords.records(any(), any()) } returns emptyList()
+        coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(emptyList())
         coEvery { AnkiquestRecords.scopes(any()) } returns emptyList()
         coEvery { AnkiquestRecords.study(any(), any()) } throws IOException("offline")
     }

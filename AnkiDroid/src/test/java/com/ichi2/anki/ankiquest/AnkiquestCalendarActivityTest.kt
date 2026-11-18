@@ -132,7 +132,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
         try {
             coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
             coEvery { AnkiquestBoards.hasScopes(any()) } returns false
-            coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns emptyList()
+            coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(emptyList())
             coEvery { AnkiquestBoards.weekEnds(identity) } returns null
             val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
             advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }

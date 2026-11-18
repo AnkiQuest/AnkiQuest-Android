@@ -26,6 +26,7 @@ import androidx.preference.PreferenceCategory
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Device
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Methods
@@ -65,6 +66,9 @@ class AnkiquestSignInFragment : SettingsFragment() {
 
     private var methods: Methods? = null
     private var devices: List<Device>? = null
+
+    /** Whether the server offers two-factor authentication; false until known. */
+    private var twoFactor = false
     private var status: String? = null
     private var generation = 0
     private var busy = false
@@ -88,6 +92,10 @@ class AnkiquestSignInFragment : SettingsFragment() {
         }
         requirePreference<Preference>(R.string.ankiquest_password_key).setOnPreferenceClickListener {
             methods?.let(::startPassword)
+            true
+        }
+        requirePreference<Preference>(R.string.ankiquest_two_factor_key).setOnPreferenceClickListener {
+            current()?.let(::openTwoFactor)
             true
         }
         requirePreference<Preference>(R.string.ankiquest_sign_out_others_key).setOnPreferenceClickListener {
@@ -239,6 +247,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
         val account = current()
         methods = null
         devices = null
+        twoFactor = false
         if (account == null) {
             status = getString(R.string.ankiquest_account_configure)
             render()
@@ -254,9 +263,11 @@ class AnkiquestSignInFragment : SettingsFragment() {
                         val devices = async { AnkiquestAccountSettings.devices(account) }
                         methods.await() to devices.await()
                     }
+                val offered = AnkiquestAccount.TWO_FACTOR in AnkiquestCapabilities.current(account)
                 if (request != generation || !isAdded) return@launch
                 methods = loaded
                 devices = signedIn
+                twoFactor = offered
                 status = null
             } catch (e: CancellationException) {
                 throw e
@@ -314,6 +325,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
                 summary = passwordSummary(methods)
             }
         }
+        requirePreference<Preference>(R.string.ankiquest_two_factor_key).isVisible = twoFactor && methods?.account == true
         requirePreference<PreferenceCategory>(R.string.ankiquest_providers_key).apply {
             removeAll()
             methods?.providers.orEmpty().forEach { provider ->
@@ -455,6 +467,16 @@ class AnkiquestSignInFragment : SettingsFragment() {
                 }
             }.setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /** Two-factor authentication is set up on the website, in its own Settings card. */
+    private fun openTwoFactor(account: HomeAccount) {
+        val url = (account.server.trimEnd('/') + AnkiquestAccount.TWO_FACTOR_PAGE).toUri()
+        try {
+            CustomTabsIntent.Builder().build().launchUrl(requireContext(), url)
+        } catch (_: ActivityNotFoundException) {
+            startActivity(Intent(Intent.ACTION_VIEW, url))
+        }
     }
 
     /** Opens the server's sign-in with [provider] in the browser; false when the server cannot do that for an app. */

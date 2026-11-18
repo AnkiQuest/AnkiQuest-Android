@@ -19,6 +19,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Device
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Methods
@@ -173,6 +174,27 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         val opened = assertNotNull(shadowOf(controller.get()).nextStartedActivity)
         assertEquals(Intent.ACTION_VIEW, opened.action)
         assertEquals(ticket.toUri(), opened.data)
+    }
+
+    @Test
+    fun `two-factor opens the website's settings on a server that has it`() {
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestAccount.TWO_FACTOR)
+        val (controller, fragment) = open()
+        assertTrue(fragment.twoFactor().isVisible)
+        assertEquals(targetContext.getString(R.string.ankiquest_two_factor_summary), fragment.twoFactor().summary)
+        fragment.twoFactor().performClick()
+        idle()
+        val opened = assertNotNull(shadowOf(controller.get()).nextStartedActivity)
+        assertEquals(Intent.ACTION_VIEW, opened.action)
+        assertEquals("https://quest.example/settings#two-factor".toUri(), opened.data)
+    }
+
+    @Test
+    fun `two-factor is hidden on a server without it and for players without an account`() {
+        assertFalse(open().second.twoFactor().isVisible, "the default capabilities lack two_factor")
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestAccount.TWO_FACTOR)
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns Methods(account = false, password = false, providers = emptyList())
+        assertFalse(open().second.twoFactor().isVisible)
     }
 
     @Test
@@ -575,6 +597,8 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
     private fun AnkiquestSignInFragment.status() = findPreference<Preference>(getString(R.string.ankiquest_account_status_key))!!
 
     private fun AnkiquestSignInFragment.password() = findPreference<Preference>(getString(R.string.ankiquest_password_key))!!
+
+    private fun AnkiquestSignInFragment.twoFactor() = findPreference<Preference>(getString(R.string.ankiquest_two_factor_key))!!
 
     private fun AnkiquestSignInFragment.providers() = findPreference<PreferenceCategory>(getString(R.string.ankiquest_providers_key))!!
 

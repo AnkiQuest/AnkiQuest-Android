@@ -106,6 +106,11 @@
           "-Dorg.gradle.project.android.aapt2FromMavenOverride=${sdkRoot}/build-tools/${buildTools}/aapt2");
         # The Rust backend's test library expects libstdc++ and libgcc_s.
         LD_LIBRARY_PATH = lib.optionalString pkgs.stdenv.hostPlatform.isLinux (lib.makeLibraryPath [pkgs.stdenv.cc.cc.lib]);
+        # stdenv sets SOURCE_DATE_EPOCH to 1980 when unset, and Gradle reads it
+        # as the build time. Reproducible builds set it to the commit time.
+        shellHook = ''
+          unset SOURCE_DATE_EPOCH
+        '';
       };
     });
   };

@@ -132,11 +132,19 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     private fun configured(): HomeAccount = HomeAccount.current() ?: throw IllegalStateException("ankiquest is not configured")
 
+    /** A `/api/leaderboard` answer as the widgets read it: its rows, and why others are left out, when they are. */
+    internal class Standings(
+        val rows: JSONArray,
+        val lock: AnkiquestLock?,
+    )
+
     /** This week's standings, as served by `/api/leaderboard`. */
-    suspend fun leaderboard(): JSONArray =
+    internal suspend fun leaderboard(): Standings =
         withContext(Dispatchers.IO) {
             val account = configured()
-            AnkiquestApi.call(account, AnkiquestApi.request(account, "api/leaderboard").build()) { AnkiquestApi.jsonArray(it) }
+            AnkiquestApi.call(account, AnkiquestApi.request(account, "api/leaderboard").build()) {
+                Standings(AnkiquestApi.jsonArray(it), AnkiquestLock.of(it))
+            }
         }
 
     /** The weekly order and how this player moved since [previous], as judged by `/api/rank/<user>`. */

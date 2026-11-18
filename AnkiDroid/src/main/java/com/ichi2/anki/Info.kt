@@ -28,13 +28,10 @@ import com.ichi2.anki.snackbar.BaseSnackbarBuilderProvider
 import com.ichi2.anki.snackbar.SnackbarBuilder
 import com.ichi2.anki.workarounds.OnWebViewRecreatedListener
 import com.ichi2.anki.workarounds.SafeWebViewClient
-import com.ichi2.utils.IntentUtil.canOpenIntent
-import com.ichi2.utils.IntentUtil.tryOpenIntent
 import com.ichi2.utils.VersionUtils.pkgVersionName
 import com.ichi2.utils.ViewGroupUtils.setRenderWorkaround
 import com.ichi2.utils.toRGBHex
 import dev.androidbroadcast.vbpd.viewBinding
-import timber.log.Timber
 
 private const val CHANGE_LOG_URL = "https://docs.ankidroid.org/changelog.html"
 
@@ -72,19 +69,8 @@ class Info :
             binding.donate.isVisible = false
         }
         title = "$appName v$pkgVersionName"
-        binding.leftButton.run {
-            if (canOpenMarketUri()) {
-                setText(CommonString.info_rate)
-                setOnClickListener {
-                    tryOpenIntent(
-                        this@Info,
-                        AnkiDroidApp.getMarketIntent(this@Info),
-                    )
-                }
-            } else {
-                visibility = View.GONE
-            }
-        }
+        // AnkiQuest: AnkiDroid's changelog has no Rate button
+        binding.leftButton.visibility = View.GONE
         onBackPressedCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
@@ -223,12 +209,4 @@ class Info :
         setResult(RESULT_OK)
         finish()
     }
-
-    private fun canOpenMarketUri(): Boolean =
-        try {
-            canOpenIntent(this, AnkiDroidApp.getMarketIntent(this))
-        } catch (e: Exception) {
-            Timber.w(e)
-            false
-        }
 }
