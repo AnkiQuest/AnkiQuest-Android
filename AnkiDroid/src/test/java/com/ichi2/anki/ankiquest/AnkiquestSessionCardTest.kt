@@ -351,6 +351,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
         every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
@@ -397,10 +398,141 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
+    fun `Tell on a kept moment asks for recipients before sending`() {
+        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        coEvery { AnkiquestSharing.win(any(), any()) } returns null
+        coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
+        every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(any(), any(), AnkiquestSharing.Audience.Circle, null) } answers {
+            val reference = secondArg<AnkiquestSharing.MomentRef>()
+            AnkiquestSharing.Sent(1, (reference as? AnkiquestSharing.MomentRef.Win)?.id ?: 17, clock.intTimeMS() + 60_000)
+        }
+        val controller = host()
+        try {
+            val host = controller.get()
+            val identity = assertNotNull(AnkiquestHomeData.account())
+            // Every kept kind, including a companion unlock, uses the same chosen-recipient flow.
+            val kept =
+                AnkiquestMoments.Kind.entries.mapIndexed { index, kind ->
+                    val win = 1000L + index
+                    val key = if (kind == AnkiquestMoments.Kind.COMPANION) "companion:aki" else "kept:$index"
+                    AnkiquestMoments.Moment(key, kind, kind.name, "", clock.intTimeMS(), win = win) to
+                        AnkiquestSharing.MomentRef.Win(win)
+                }
+            val cases =
+                kept +
+                    listOf(
+                        AnkiquestMoments.Moment(
+                            "conquered:100",
+                            AnkiquestMoments.Kind.CONQUERED,
+                            "Card conquered",
+                            "",
+                            clock.intTimeMS(),
+                            conquest = 100,
+                        ) to AnkiquestSharing.MomentRef.Conquest(100),
+                        AnkiquestMoments.Moment("rank:1", AnkiquestMoments.Kind.RANK, "First place", "", clock.intTimeMS(), place = 1) to
+                            AnkiquestSharing.MomentRef.Place(1),
+                        AnkiquestMoments.Moment(
+                            "notice:42",
+                            AnkiquestMoments.Kind.STREAK,
+                            "Old streak",
+                            "",
+                            clock.intTimeMS(),
+                            notification = 42,
+                        ) to
+                            AnkiquestSharing.MomentRef.Notification(42),
+                    )
+            for ((moment, reference) in cases) {
+                AnkiquestMomentCard.show(host, identity, listOf(moment), prefs)
+                val card = card()
+                advanceRobolectricLooper()
+                assertNotNull(card.findViewById<View>(R.id.aq_moment_tell)).performClick()
+                val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+                coVerify(exactly = 0) { AnkiquestSharing.send(identity, reference, any(), any()) }
+                val everyone = host.getString(R.string.ankiquest_share_all_friends)
+                advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
+                views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
+                sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+                waitForUndo(card, sheet)
+                coVerify(exactly = 1) { AnkiquestSharing.send(identity, reference, AnkiquestSharing.Audience.Circle, null) }
+                assertFalse(sheet.isShowing)
+                assertTrue(card.isShowing)
+                assertNotNull(
+                    card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action),
+                    moment.kind.name,
+                )
+                card.dismiss()
+            }
+            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
+            coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
+        } finally {
+            controller.close()
+            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        }
+    }
+
+    /** Observe transient Undo before its timeout; draining all future tasks expires it. */
+    private fun waitForUndo(
+        card: AlertDialog,
+        sheet: BottomSheetDialog,
+    ) {
+        repeat(500) {
+            if (!sheet.isShowing && card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action) != null) {
+                return
+            }
+            Thread.sleep(10)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16))
+        }
+        error("The completed send did not show Undo on the moment card")
+    }
+
+    @Test
     fun `a conquest picture can include the label the player already shared`() {
         val picture = conquestPicture("A public label")
         assertTrue((picture.body + picture.details.joinToString()).contains("A public label"))
         assertFalse((picture.body + picture.details.joinToString()).contains("PRIVATE UNSHARED FIELD"))
+    }
+
+    @Test
+    fun `session conquest exports match the shared wording and counts`() {
+        val fixture =
+            JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/conquest_share.json")).readText())
+        val cases = fixture.getJSONArray("cases")
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val found = case.getJSONObject("found")
+            val label = found.optString("label").takeUnless { found.isNull("label") || it.isBlank() }
+            val picture = conquestPicture(label, case = case, at = 100L + index)
+            assertEquals(
+                withoutTrophy(case.getString("picture")),
+                withoutTrophy((listOf(picture.body) + picture.details).joinToString("\n")),
+                case.getString("name"),
+            )
+        }
+    }
+
+    @Test
+    fun `offline conquest captions keep the shared line breaks`() {
+        val account = HomeAccount("https://anki.example.test", "member", "secret")
+        val moment =
+            AnkiquestMoments.Moment(
+                "conquered:100",
+                AnkiquestMoments.Kind.CONQUERED,
+                "Card conquered",
+                "Private unsaved text",
+                clock.intTimeMS(),
+                conquest = 100,
+                lapses = 2,
+                deck = "Spanish",
+            )
+        assertEquals(
+            "I finally learned a card I had forgotten 2 times.\nFrom my deck “Spanish”.\nhttps://anki.example.test/conquered/member/100",
+            withoutTrophy(AnkiquestMomentCard.conquestText(targetContext, account, moment, null)),
+        )
     }
 
     @Test
@@ -523,22 +655,37 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     private fun conquestPicture(
         label: String?,
         change: LabelChange = LabelChange.KEEP,
+        case: JSONObject? = null,
+        at: Long = 100,
     ): AnkiquestShare.Card {
         mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
         val prepared = AtomicReference<AnkiquestShare.Card?>()
+        val caption = AtomicReference<String?>()
         var sharedLabel = label
+        val raw = case?.getJSONObject("found")?.getJSONObject("conquest")
+        val chosenDeck = case?.getString("deck")?.takeIf(String::isNotBlank) ?: "Spanish".takeIf { case == null }
         val recorded =
             AnkiquestCommunity.parseConquest(
                 JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/conquest.json")).readText()),
             )
         coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } coAnswers {
-            if (label == null) {
+            if (label == null && case == null) {
                 throw IOException("offline")
             }
-            recorded.copy(label = sharedLabel, win = null)
+            recorded.copy(
+                user = "member",
+                at = at,
+                since = raw?.let { at - (it.getLong("at") - it.getLong("since")) } ?: recorded.since,
+                lapses = raw?.getInt("lapses") ?: recorded.lapses,
+                answers = raw?.getInt("answers") ?: recorded.answers,
+                label = sharedLabel,
+                win = null,
+            )
         }
+        coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns chosenDeck
         coEvery { Ankiquest.shareWinLink(any(), any()) } throws IOException("offline")
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+            caption.set(arg(1))
             prepared.set(arg(4))
             Intent(Intent.ACTION_CHOOSER)
         }
@@ -547,18 +694,22 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             val host = controller.get()
             val moment =
                 AnkiquestMoments.Moment(
-                    "conquered:100",
+                    "conquered:$at",
                     AnkiquestMoments.Kind.CONQUERED,
                     "Card conquered",
-                    "PRIVATE UNSHARED FIELD",
+                    case?.getJSONObject("found")?.let {
+                        listOfNotNull(it.optString("suggestion"), it.optJSONObject("fields")?.optString("Front")).joinToString("\n")
+                    } ?: "PRIVATE UNSHARED FIELD",
                     clock.intTimeMS(),
-                    conquest = 100,
-                    lapses = 4,
-                    deck = "Spanish",
+                    conquest = at,
+                    lapses = raw?.getInt("lapses") ?: 4,
+                    deck = chosenDeck,
                 )
             AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
             finish(host)
             val card = card()
+            // Every fixture case is a distinct conquest, not an already-shown moment.
+            assertEquals(2, card.findViewById<ViewPager2>(R.id.aq_moment_pager)?.adapter?.itemCount)
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
             if (change == LabelChange.REMOVE_ON_RESUME) {
@@ -570,7 +721,19 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 advanceRobolectricLooper()
             }
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
-            advanceRobolectricLooperUntil { shadowOf(host).peekNextStartedActivity() != null }
+            // Wait for this export, then consume its chooser before the next fixture case.
+            advanceRobolectricLooperUntil {
+                caption.get() != null && prepared.get() != null && shadowOf(host).peekNextStartedActivity() != null
+            }
+            assertEquals(Intent.ACTION_CHOOSER, assertNotNull(shadowOf(host).nextStartedActivity).action)
+            if (case != null) {
+                val page = "https://anki.example.test/conquered/member/$at"
+                assertEquals(
+                    "${case.getString("caption")}\n$page",
+                    withoutTrophy(assertNotNull(caption.get())),
+                    case.getString("name"),
+                )
+            }
             return assertNotNull(prepared.get())
         } finally {
             controller.close()

@@ -533,9 +533,9 @@ class AnkiquestMomentsTest : RobolectricTest() {
     fun `sharing a conquered card speaks in the first person with its deck and page`() {
         val conquered = moment("conquered:5", Kind.CONQUERED).copy(conquest = 5, lapses = 9, deck = "Español")
         assertEquals(
-            targetContext.resources.getQuantityString(R.plurals.aq_conquest_share_mine, 9, 9) + " " +
+            targetContext.resources.getQuantityString(R.plurals.aq_conquest_share_mine, 9, 9) + "\n" +
                 targetContext.getString(R.string.aq_conquest_share_deck, "Español") +
-                " https://anki.example.test/conquered/hill/5",
+                "\nhttps://anki.example.test/conquered/hill/5",
             AnkiquestMomentCard.conquestText(targetContext, identity, conquered),
         )
     }
