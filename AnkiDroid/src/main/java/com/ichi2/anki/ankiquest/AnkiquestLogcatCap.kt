@@ -16,8 +16,9 @@ import org.acra.data.CrashReportData
  * ACRA loads it through `META-INF/services/org.acra.collector.Collector`.
  */
 class AnkiquestLogcatCap : Collector {
-    // LogCatCollector runs first; this trims what it collected.
-    override val order = Collector.Order.LAST
+    // After LogCatCollector (FIRST) and before SanitizedReportCollector (LAST). ACRA runs one group's
+    // collectors concurrently, so sharing LAST could write back a log the sanitizer just replaced.
+    override val order = Collector.Order.LATE
 
     override fun collect(
         context: Context,
