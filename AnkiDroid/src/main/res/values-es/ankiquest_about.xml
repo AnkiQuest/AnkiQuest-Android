@@ -6,6 +6,11 @@
     <string name="ankiquest_about_credits"><![CDATA[Basado en <a href=\"%1$s\">AnkiDroid y el trabajo de sus colaboradores</a>. Mantenido por float3 y los colaboradores de <a href=\"%2$s\">AnkiQuest para Android</a> y del <a href=\"%3$s\">servidor y complemento de escritorio de AnkiQuest</a>.]]></string>
     <string name="ankiquest_about_license"><![CDATA[AnkiDroid se distribuye bajo la licencia <a href=\"%1$s\">GPL-3.0</a>. Las incorporaciones de AnkiQuest se rigen por la <a href=\"%2$s\">AGPL-3.0</a>. La aplicación combinada se distribuye bajo la AGPL-3.0. <a href=\"%3$s\">Código fuente de esta compilación</a>.]]></string>
     <string name="ankiquest_about_anki_tan"><![CDATA[<a href=\"%1$s\">Anki-tan</a> por <a href=\"%2$s\">Shigeyuki</a>, <a href=\"%3$s\">CC BY-SA 4.0</a>.]]></string>
+    <string name="ankiquest_rate">Valorar AnkiQuest</string>
+    <string name="ankiquest_changelog">Novedades de AnkiQuest</string>
+    <string name="ankiquest_all_releases">Todas las versiones</string>
+    <string name="ankiquest_ankidroid_changelog">Novedades de AnkiDroid</string>
     <string name="ankiquest_about_report_bug">Informar de un error</string>
+    <string name="ankiquest_link_copied">Ninguna app puede abrir el enlace. Enlace copiado.</string>
     <string name="ankiquest_debug_info_title">Copiar información de depuración</string>
 </resources>

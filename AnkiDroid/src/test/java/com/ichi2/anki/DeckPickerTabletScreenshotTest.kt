@@ -2,7 +2,6 @@
 
 package com.ichi2.anki
 
-import com.ichi2.anki.ankiquest.heatmap.DeckHeatmapScreenshotTest
 import com.ichi2.testutils.BackupManagerTestUtilities
 import com.ichi2.testutils.simulateKeyboard
 import org.junit.After
@@ -15,7 +14,7 @@ import org.robolectric.RuntimeEnvironment
  *
  * `./gradlew :AnkiDroid:verifyRoborazziPlayDebug -Pscreenshot --tests "com.ichi2.anki.DeckPickerTabletScreenshotTest"`
  */
-class DeckPickerTabletScreenshotTest : DeckHeatmapScreenshotTest() {
+class DeckPickerTabletScreenshotTest : ScreenshotTest() {
     @Before
     override fun setUp() {
         super.setUp()

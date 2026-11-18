@@ -191,8 +191,8 @@ class AnkiquestRecordsTest : RobolectricTest() {
                     else -> 404 to ""
                 }
             }
-            assertEquals(7, AnkiquestRecords.records(account).size)
-            assertEquals(7, AnkiquestRecords.records(account, AnkiquestRecords.Scope("group:2")).size)
+            assertEquals(7, AnkiquestRecords.records(account).boards.size)
+            assertEquals(7, AnkiquestRecords.records(account, AnkiquestRecords.Scope("group:2")).boards.size)
             assertEquals(2026, AnkiquestRecords.study(account, 2026).year)
             assertEquals(listOf(AnkiquestRecords.Scope.CIRCLE, AnkiquestRecords.Scope.GLOBAL), AnkiquestRecords.scopes(account))
             assertEquals(listOf(null, "scope=group%3A2"), requests.filter { it.path == "/api/records" }.map { it.query })

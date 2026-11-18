@@ -117,14 +117,25 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     }
 
     @Test
-    fun `studied and protected days fill the meter below the minimum`() {
-        for (state in listOf("studied", "protected")) {
-            val widget = render(JSONArray().put(me(9, state, 5, 3, 10)))
+    fun `studied and unstudied protected days fill the meter below the minimum`() {
+        for ((state, reviews) in listOf("studied" to 5, "protected" to 0)) {
+            val widget = render(JSONArray().put(me(9, state, reviews, 3, 10)))
             val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
             assertEquals(View.VISIBLE, meter.visibility, state)
             assertEquals(10, meter.progress, state)
             assertFalse(widget.contentDescription.toString().contains("3 of 10 minutes"), state)
         }
+    }
+
+    @Test
+    fun `a protected day with reviews shows its minutes`() {
+        val widget = render(JSONArray().put(me(9, "protected", 1, 3, 10)))
+        val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+        assertEquals(View.VISIBLE, meter.visibility)
+        assertEquals(3, meter.progress)
+        val description = widget.contentDescription.toString()
+        assertTrue(description.contains("3 of 10 minutes"), description)
+        assertFalse(description.contains("Not studied yet"), description)
     }
 
     @Test

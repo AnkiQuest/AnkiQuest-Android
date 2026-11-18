@@ -55,6 +55,9 @@ I study with AnkiQuest.</string>
     <item name="aq_share_status" type="id" />
     <item name="aq_share_send" type="id" />
     <item name="aq_share_more" type="id" />
+    <item name="aq_share_deck_name" type="id" />
+    <string name="ankiquest_deck_moment_title">Deck complete</string>
+    <string name="ankiquest_deck_moment_body">I finished my %1$s studies for today.</string>
     <string name="ankiquest_share_send_to">Send to</string>
     <string name="ankiquest_share_all_friends">All friends</string>
     <string name="ankiquest_share_search">Search friends and groups</string>

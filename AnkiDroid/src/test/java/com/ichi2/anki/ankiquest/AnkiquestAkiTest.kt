@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestAki.Message
@@ -11,7 +12,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -47,7 +50,7 @@ class AnkiquestAkiTest : RobolectricTest() {
     @Test
     fun `celebration needs a real study day and no remaining local cards`() {
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1)
-        assertEquals(Message.COMPLETE, AnkiquestAki.mood(local, profile("studied", 20)).message)
+        assertEquals(Message.CELEBRATE, AnkiquestAki.mood(local, profile("studied", 20)).message)
         assertEquals(Message.WELCOME, AnkiquestAki.mood(local, profile("pending", 0)).message)
     }
 
@@ -69,13 +72,13 @@ class AnkiquestAkiTest : RobolectricTest() {
                 unsent = listOf(AnkiquestDay.Review(dayStarts + 1, 600_000)),
             )
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1, goal = goal)
-        assertEquals(Message.COMPLETE, AnkiquestAki.mood(local, profile, now = dayStarts + 2).message)
+        assertEquals(Message.CELEBRATE, AnkiquestAki.mood(local, profile, now = dayStarts + 2).message)
     }
 
     @Test
     fun `only an actually protected streak gets the freeze pose`() {
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
-        assertEquals(Message.PROTECTED, AnkiquestAki.mood(local, profile("protected", 0)).message)
+        assertEquals(Message.FREEZE, AnkiquestAki.mood(local, profile("protected", 0)).message)
         assertEquals(Message.REVIEW, AnkiquestAki.mood(local, profile("pending", 0).put("freezes", 3)).message)
     }
 
@@ -114,12 +117,66 @@ class AnkiquestAkiTest : RobolectricTest() {
     }
 
     @Test
+    fun `the waiting line reads as on the desktop add-on`() {
+        // Wording and plural forms from the add-on's language.py (#356).
+        val expected =
+            mapOf(
+                "de" to
+                    listOf(
+                        "Du hast heute noch nicht gelernt. Deine Lernserie von 1 Tag wartet noch.",
+                        "Du hast heute noch nicht gelernt. Deine Lernserie von 12 Tagen wartet noch.",
+                    ),
+                "es" to
+                    listOf(
+                        "Hoy no has estudiado. Tu racha de 1 día sigue esperando.",
+                        "Hoy no has estudiado. Tu racha de 12 días sigue esperando.",
+                    ),
+                "fr" to
+                    listOf(
+                        "Tu n’as pas encore étudié aujourd’hui. Ta série de 1 jour t’attend toujours.",
+                        "Tu n’as pas encore étudié aujourd’hui. Ta série de 12 jours t’attend toujours.",
+                    ),
+                "pt" to
+                    listOf(
+                        "Ainda não estudaste hoje. A tua sequência de 1 dia continua à espera.",
+                        "Ainda não estudaste hoje. A tua sequência de 12 dias continua à espera.",
+                    ),
+            )
+
+        // Each language gets its own "one" and "other" line.
+        val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
+        for ((language, lines) in expected) {
+            val config = android.content.res.Configuration(targetContext.resources.configuration)
+            config.setLocale(java.util.Locale.forLanguageTag(language))
+            val context = targetContext.createConfigurationContext(config)
+            for ((streak, line) in listOf(1, 12).zip(lines)) {
+                val card = AnkiquestAki.mood(due, profile("pending", 0).put("streak", streak))
+                assertEquals(line, card.text(context), "$language, $streak days")
+            }
+        }
+    }
+
+    @Test
     fun `studying keeps the deck messages`() {
         val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
         val studied = AnkiquestAki.mood(due, profile("studied", 20).put("streak", 13))
         assertEquals(AnkiquestMood.Mood.FIRE, studied.mood)
         assertEquals(AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 13), studied.image)
         assertEquals(Message.REVIEW, studied.message)
+    }
+
+    @Test
+    fun `cards due keep the pose but bring no greeting`() {
+        // The next-step card already says to study (#349), as on the desktop add-on.
+        val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
+        val card = AnkiquestAki.mood(due, profile("studied", 20).put("streak", 13))
+        assertEquals(Message.REVIEW, card.message)
+        assertNull(card.text(targetContext))
+
+        // The Home card shows only the pose.
+        val view = AnkiquestAki.encouragement(targetContext, card)
+        assertEquals(1, view.childCount)
+        assertIs<ImageView>(view.getChildAt(0))
     }
 
     @Test

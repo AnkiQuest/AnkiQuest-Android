@@ -45,6 +45,7 @@ class AcraBuildConfigTest {
                 "FLAVOR",
                 "GIT_COMMIT_HASH",
                 "SHOW_DONATE_LINKS",
+                "UPSTREAM_COMMIT_HASH",
                 "VERSION_CODE",
                 "VERSION_NAME",
             ),

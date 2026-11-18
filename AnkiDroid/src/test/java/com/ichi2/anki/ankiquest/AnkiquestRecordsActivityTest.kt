@@ -41,7 +41,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
-        coEvery { AnkiquestRecords.records(identity, any()) } returns boards
+        coEvery { AnkiquestRecords.records(identity, any()) } returns AnkiquestRecords.Records(boards)
         coEvery { AnkiquestRecords.scopes(identity) } returns emptyList()
     }
 
@@ -86,10 +86,20 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
 
     @Test
     fun `boards nobody has a record on yet say so`() {
-        coEvery { AnkiquestRecords.records(identity, any()) } returns boards.map { it.copy(holders = emptyList()) }
+        val empty = boards.map { it.copy(holders = emptyList()) }
+        coEvery { AnkiquestRecords.records(identity, any()) } returns AnkiquestRecords.Records(empty)
         val records = launch()
         assertTrue(records.hasText(records.getString(R.string.aq_records_empty)))
         assertFalse(records.hasText(records.getString(R.string.aq_profile_best_hour)))
+    }
+
+    @Test
+    fun `locked records ask to study and sync instead of saying nobody has XP`() {
+        val empty = boards.map { it.copy(holders = emptyList()) }
+        coEvery { AnkiquestRecords.records(identity, any()) } returns AnkiquestRecords.Records(empty, AnkiquestLock.UPLOAD_FIRST)
+        val records = launch()
+        assertTrue(records.hasText(records.getString(R.string.aq_upload_first)))
+        assertFalse(records.hasText(records.getString(R.string.aq_records_empty)))
     }
 
     @Test

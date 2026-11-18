@@ -91,10 +91,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             openUrl(AnkiDroidApp.feedbackUrl)
         }
 
-        // Hide rate if Play Store not available
-        if (!IntentUtil.canOpenIntent(requireContext(), marketIntent)) {
-            binding.moreSupportRate.visibility = View.GONE
-        }
+        // AnkiQuest: no Rate entry here. Rate AnkiQuest is on About and the AnkiQuest changelog.
+        binding.moreSupportRate.visibility = View.GONE
 
         if (!BuildConfig.SHOW_DONATE_LINKS) {
             binding.moreSupportDonate.isVisible = false
