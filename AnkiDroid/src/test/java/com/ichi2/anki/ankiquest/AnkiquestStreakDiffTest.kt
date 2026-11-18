@@ -1,41 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-package com.ichi2.anki
+package com.ichi2.anki.ankiquest
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Typeface
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziTaskType
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.ichi2.testutils.EmptyApplication
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.screenshotOptions
 import org.junit.Rule
 import org.junit.Test
-import org.junit.experimental.categories.Category
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import kotlin.test.assertTrue
 
-/** A changed screenshot must not change the screenshots taken after it in the same test JVM (#364). */
-@RunWith(RobolectricTestRunner::class)
-@Config(application = EmptyApplication::class, sdk = [33])
-@Category(EmptyApplicationCategory::class)
+/**
+ * A changed screenshot must not change the screenshots taken after it in the same test JVM:
+ * the streak widget screenshots changed after any other screenshot changed (#364).
+ */
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [33], qualifiers = "w411dp-h914dp-normal-long-notround-any-420dpi-keyshidden-nonav")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class ScreenshotOptionsTest {
+class AnkiquestStreakDiffTest : RobolectricTest() {
     @get:Rule
     val folder = TemporaryFolder()
 
     @Test
     @OptIn(ExperimentalRoborazziApi::class)
-    fun `a comparison image leaves later text unchanged`() {
-        val before = text()
+    fun `a changed screenshot leaves the widget unchanged`() {
+        val before = grids()
 
         // A changed screenshot: Roborazzi draws a comparison image for it.
         val reference = File(folder.root, "reference.png")
@@ -44,30 +44,20 @@ class ScreenshotOptionsTest {
         solid(Color.BLACK).captureRoboImage(reference, compare)
         assertTrue(folder.root.walk().any { it.name.endsWith("_compare.png") }, "no comparison image was drawn")
 
-        assertTrue(before.sameAs(text()), "text drawn after a comparison image differs")
+        val after = grids()
+        for ((size, drawn) in before) {
+            assertTrue(drawn.sameAs(after.getValue(size)), "$size widgets differ after a comparison image")
+        }
     }
 
-    /** Digits and words in the streak widget's number font, where #364's differences showed. */
-    private fun text(): Bitmap =
-        createBitmap(TEXT_WIDTH, TEXT_HEIGHT).applyCanvas {
-            drawColor(Color.WHITE)
-            val paint =
-                Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
-                    textSize = TEXT_SIZE
-                    color = Color.DKGRAY
-                }
-            drawText("365 1,000 days", 8f, TEXT_SIZE, paint)
-            paint.typeface = Typeface.DEFAULT
-            drawText("Streak safe today", 8f, TEXT_SIZE * 2, paint)
+    private fun grids(): Map<AnkiquestStreakWidget.Size, Bitmap> =
+        AnkiquestStreakTiers.sizes.associate { (size, width, height) ->
+            size to AnkiquestStreakTiers.grid(targetContext, size, width, height)
         }
 
     private fun solid(color: Int): Bitmap = createBitmap(SOLID_EDGE, SOLID_EDGE).applyCanvas { drawColor(color) }
 
     private companion object {
-        const val TEXT_WIDTH = 600
-        const val TEXT_HEIGHT = 160
-        const val TEXT_SIZE = 56f
         const val SOLID_EDGE = 32
     }
 }
