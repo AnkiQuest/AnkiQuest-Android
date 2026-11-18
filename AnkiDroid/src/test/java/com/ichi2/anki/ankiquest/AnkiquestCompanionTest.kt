@@ -127,7 +127,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
 
     @Test
     fun `previews show face, fire and sad without repeating a picture`() {
-        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk), AnkiquestCompanion.preview(Choice.AKI))
+        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_sad), AnkiquestCompanion.preview(Choice.AKI))
         for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
             val pictures = AnkiquestCompanion.preview(choice).map { AnkiquestCompanion.resource(it, choice) }
             assertEquals(listOf(R.drawable.ankilope_face, R.drawable.ankilope_study, R.drawable.ankilope_sad), pictures)

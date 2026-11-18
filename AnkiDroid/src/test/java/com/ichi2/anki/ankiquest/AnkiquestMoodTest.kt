@@ -57,7 +57,8 @@ class AnkiquestMoodTest : RobolectricTest() {
             val state = named<State>(today.getString("state"))
             val mood = AnkiquestMood.of(state, today.getInt("reviews"), streak, today.getInt("frozen_days"), goal)
             assertEquals(named<Mood>(expected.getString("mood")), mood, name)
-            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak)), name)
+            val shown = targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak))
+            assertEquals(akiMoodArt(targetContext, expected), shown, name)
         }
     }
 
