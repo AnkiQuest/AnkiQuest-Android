@@ -251,6 +251,29 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         assertTrue(shown.sameAs(frozen))
     }
 
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a freeze used yesterday shows Ankilope frozen on every widget`() {
+        // hill's report: the transparent widget showed her study pose with "Streak protected".
+        chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
+        val board = JSONArray().put(me(10, "protected", 0))
+        for (style in AnkiquestStreakWidget.Style.entries) {
+            for (size in AnkiquestStreakWidget.Size.entries) {
+                val widget =
+                    AnkiquestStreakWidget
+                        .views(targetContext, board, "hill", size, style = style)
+                        .apply(targetContext, FrameLayout(targetContext))
+                val name = "$style $size"
+                if (size == AnkiquestStreakWidget.Size.LARGE || size == AnkiquestStreakWidget.Size.HUGE) {
+                    assertPose(widget, R.drawable.ankilope_frozen, name)
+                    continue
+                }
+                val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+                assertEquals(R.drawable.ankilope_frozen, shadowOf(drawable).createdFromResId, name)
+            }
+        }
+    }
+
     /** The companion [widget] shows is [pose]. */
     private fun assertPose(
         widget: View,
@@ -401,13 +424,13 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `every streak pose covers the huge layout on a dense screen`() {
         val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
-        // Every pose the big layouts rotate through, and Ankilope's stand-ins for them.
+        // Every pose the big layouts rotate through, and Ankilope's for each mood.
         val aki =
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
         assertEquals(11, aki.size)
-        val poses = aki + setOf(R.drawable.ankilope_face, R.drawable.ankilope_welcome, R.drawable.ankilope_study)
+        val poses = aki + ankilopeMoodPoses.values
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeResource(targetContext.resources, pose, bounds)
