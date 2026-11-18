@@ -2,6 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
+import com.ichi2.anki.exception.SanitizedReportCollector
+import org.acra.collector.LogCatCollector
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -26,5 +28,17 @@ class AnkiquestLogcatCapTest {
         assertTrue(logcat.endsWith(tail))
         assertTrue(tail.startsWith("11-17 08:00:00.000"), tail.take(40))
         assertEquals(logcat.lines().last(), tail.lines().last())
+    }
+
+    @Test
+    fun `the cap runs after logcat is read and before it is sanitized`() {
+        // ACRA runs collectors of one order group concurrently: sharing the sanitizer's group would let
+        // the cap write back the unfiltered log the sanitizer just replaced.
+        val read = LogCatCollector().order
+        val cap = AnkiquestLogcatCap().order
+        val sanitized = SanitizedReportCollector().order
+
+        assertTrue(read < cap, "cap ($cap) must run after LogCatCollector ($read)")
+        assertTrue(cap < sanitized, "cap ($cap) must run before SanitizedReportCollector ($sanitized)")
     }
 }
