@@ -18,7 +18,8 @@ import org.json.JSONObject
 /**
  * Sends each distinct crash at most twice per device and adds its signature to the report as
  * [SIGNATURE_FIELD], so the server can group reports without knowing who sent them. Removes server
- * hosts and credentials from the report before it is saved ([AnkiquestRedaction]).
+ * hosts and credentials from the report before it is saved ([AnkiquestRedaction]), preference names
+ * included.
  * ACRA loads it through `META-INF/services/org.acra.config.ReportingAdministrator`.
  */
 class AnkiquestCrashAdministrator : ReportingAdministrator {
@@ -56,6 +57,9 @@ class AnkiquestCrashAdministrator : ReportingAdministrator {
         crashReportData.getString(ReportField.LOGCAT)?.let { crashReportData.put(ReportField.LOGCAT, redaction.text(it)) }
         crashReportData.getString(ReportField.STACK_TRACE)?.let { crashReportData.put(ReportField.STACK_TRACE, redaction.trace(it)) }
 
+        // Preference names can hold a server (keys scoped by server); values can hold either.
+        (crashReportData[ReportField.SHARED_PREFERENCES.name] as? JSONObject)?.let { redactFiles(it, redaction) }
+
         // Custom data holds exception messages ("additionalInfo"); the signature is a hash, not a token.
         val custom = crashReportData[ReportField.CUSTOM_DATA.name] as? JSONObject ?: return true
         for (key in custom.keys().asSequence().toList()) {
@@ -65,6 +69,22 @@ class AnkiquestCrashAdministrator : ReportingAdministrator {
             }
         }
         return true
+    }
+
+    /** Each preference file in [files] (`SHARED_PREFERENCES`) with its names and text redacted. */
+    private fun redactFiles(
+        files: JSONObject,
+        redaction: AnkiquestRedaction,
+    ) {
+        for (file in files.keys().asSequence().toList()) {
+            val prefs = files.opt(file) as? JSONObject ?: continue
+            val clean = JSONObject()
+            for (key in prefs.keys()) {
+                val value = prefs.opt(key)
+                clean.put(redaction.text(key), if (value is String) redaction.text(value) else value)
+            }
+            files.put(file, clean)
+        }
     }
 
     /** A preference file of its own, outside the default preferences that reports include. */
