@@ -141,7 +141,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                 }
                 answer?.let { conquest = it }
                 if (problem == R.string.aq_conquest_missing) conquest = null
-                if (answer?.let { owns(current, it) } == true) {
+                if (answer?.let { AnkiquestConquestShare.owns(current, it) } == true) {
                     if (deck == null) deck = AnkiquestShare.conqueredCardDeck(at)
                     if (labels == null) labels = AnkiquestShare.conqueredCardLabels(at)
                 }
@@ -236,7 +236,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             gravity = Gravity.CENTER
         }
         views.text(hero, "${card.display} · ${DateUtils.formatDateTime(this, card.at, DATE)}", small = true).gravity = Gravity.CENTER
-        deck?.takeIf { owns(current, card) }?.let { name ->
+        deck?.takeIf { AnkiquestConquestShare.owns(current, card) }?.let { name ->
             views.text(hero, getString(R.string.aq_conquest_deck, name), small = true).gravity = Gravity.CENTER
         }
         card.label?.let { label ->
@@ -260,7 +260,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         status?.let { line ->
             views.text(content, line, small = true).accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
-        if (owns(current, card)) {
+        if (AnkiquestConquestShare.owns(current, card)) {
             val title = deck?.let { getString(R.string.aq_share_deck_edit, it) } ?: getString(R.string.aq_share_deck_title)
             views
                 .button(content, title) {
@@ -405,7 +405,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
     /** Shows the card's front from this phone's collection; asks only when the card is not here. */
     private fun showLabel(card: AnkiquestCommunity.Conquest) {
         val current = account ?: return
-        if (busy || !owns(current, card)) return
+        if (busy || !AnkiquestConquestShare.owns(current, card)) return
         labelOwner?.close()
         val owner = AnkiquestDialogOwner(this, current).also { labelOwner = it }
         lifecycleScope.launch {
@@ -478,7 +478,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         card: AnkiquestCommunity.Conquest,
     ) {
         if (busy) return
-        if (!owns(current, card) || !AnkiquestMomentShare.available(current)) {
+        if (!AnkiquestConquestShare.owns(current, card) || !AnkiquestMomentShare.available(current)) {
             shareElsewhere(current, card)
             return
         }
@@ -504,7 +504,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         render()
         lifecycleScope.launch {
             try {
-                val image = if (owns(current, card)) winImage(current, card) else null
+                val image = if (AnkiquestConquestShare.owns(current, card)) winImage(current, card) else null
                 val chooser =
                     withContext(ioDispatcher) { AnkiquestShare.cardChooser(applicationContext, text, image, fallback = picture) }
                 AnkiquestApi.requireCurrent(current)
@@ -567,12 +567,6 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             Timber.w(e, "AnkiQuest conquest: nothing to share with")
         }
     }
-
-    /** Whether [card] is the signed-in player's own, so its deck and win may be used. */
-    private fun owns(
-        current: HomeAccount,
-        card: AnkiquestCommunity.Conquest,
-    ) = card.mine && card.user == current.user
 
     /** [boardAttempt], with a card that cannot be found said as such. */
     private suspend fun attempt(work: suspend () -> Unit): Int? =

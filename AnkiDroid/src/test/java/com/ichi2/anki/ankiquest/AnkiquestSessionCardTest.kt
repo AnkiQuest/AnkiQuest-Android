@@ -508,18 +508,11 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             val label = found.optString("label").takeUnless { found.isNull("label") || it.isBlank() }
             val picture = conquestPicture(label, case = case, at = 100L + index)
             assertEquals(
-                plain(case.getString("picture")),
-                plain((listOf(picture.body) + picture.details).joinToString("\n")),
+                withoutTrophy(case.getString("picture")),
+                withoutTrophy((listOf(picture.body) + picture.details).joinToString("\n")),
                 case.getString("name"),
             )
         }
-    }
-
-    private fun plain(text: String): String {
-        // Ignore only Android's decorative trophy, preserving all text and line breaks.
-        val lines = text.split("\n", limit = 2)
-        val first = lines.first().removeSuffix(" \uD83C\uDFC6")
-        return (listOf(first) + lines.drop(1)).joinToString("\n")
     }
 
     @Test
@@ -538,7 +531,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             )
         assertEquals(
             "I finally learned a card I had forgotten 2 times.\nFrom my deck “Spanish”.\nhttps://anki.example.test/conquered/member/100",
-            plain(AnkiquestMomentCard.conquestText(targetContext, account, moment, null)),
+            withoutTrophy(AnkiquestMomentCard.conquestText(targetContext, account, moment, null)),
         )
     }
 
@@ -737,7 +730,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 val page = "https://anki.example.test/conquered/member/$at"
                 assertEquals(
                     "${case.getString("caption")}\n$page",
-                    plain(assertNotNull(caption.get())),
+                    withoutTrophy(assertNotNull(caption.get())),
                     case.getString("name"),
                 )
             }
