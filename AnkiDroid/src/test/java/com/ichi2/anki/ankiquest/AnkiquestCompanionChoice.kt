@@ -29,7 +29,9 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.ankilope_frozen,
+        AnkiquestMood.Mood.THAWING to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
+        AnkiquestMood.Mood.ALMOST to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
     )
 
@@ -46,7 +48,9 @@ internal val akiMoodPoses =
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.aki_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.aki_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.aki_frozen,
+        AnkiquestMood.Mood.THAWING to R.drawable.aki_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.aki_hopeful,
+        AnkiquestMood.Mood.ALMOST to R.drawable.aki_hopeful,
     )
 
 /** The drawable name Aki shows for a `streak_moods.json` case's [expected] mood and pose. */
