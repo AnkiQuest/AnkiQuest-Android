@@ -17,6 +17,7 @@
     <string name="ankiquest_about_anki_tan"><![CDATA[<a href=\"%1$s\">Anki-tan</a> by <a href=\"%2$s\">Shigeyuki</a>, <a href=\"%3$s\">CC BY-SA 4.0</a>.]]></string>
     <string name="ankiquest_rate">Rate AnkiQuest</string>
     <string name="ankiquest_changelog">AnkiQuest changelog</string>
+    <string name="ankiquest_all_releases">All releases</string>
     <string name="ankiquest_ankidroid_changelog">AnkiDroid changelog</string>
     <string name="ankiquest_about_report_bug">Report a bug</string>
     <string name="ankiquest_link_copied">No app can open the link. Link copied.</string>

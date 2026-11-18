@@ -19,7 +19,7 @@ internal object AnkiquestLinks {
     const val REPOSITORY = "https://github.com/AnkiQuest/AnkiQuest-Android"
     const val BUG_FORM = "$REPOSITORY/issues/new?template=bug_report_form.yml"
 
-    // ankiquest_apk.yml publishes each quest-<n> release here, with .github/ankiquest-release.md as notes.
+    // ankiquest_apk.yml publishes each quest-<n> release here, with AnkiquestReleaseNotes as notes.
     const val RELEASES = "$REPOSITORY/releases"
     private const val PLAY_DETAILS = "https://play.google.com/store/apps/details?id="
 

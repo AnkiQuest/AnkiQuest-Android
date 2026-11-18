@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.databinding.FragmentAboutBinding
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,8 +80,12 @@ class AboutFragmentTest : RobolectricTest() {
     }
 
     @Test
-    fun `AnkiQuest changelog opens the release notes`() {
-        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases", clicked { ankiquestChangelog })
+    fun `AnkiQuest changelog opens the in-app changelog`() {
+        val about = about()
+        about.binding.ankiquestChangelog.performClick()
+
+        val started = assertNotNull(shadowOf(about.requireActivity()).nextStartedActivity)
+        assertEquals(AnkiquestChangelogActivity::class.java.name, started.component?.className)
     }
 
     /** The link the About button [button] opens. */

@@ -415,6 +415,11 @@
             android:label="@string/aq_profile_conquest"
             android:exported="false"
             />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestChangelogActivity"
+            android:label="@string/ankiquest_changelog"
+            android:exported="false"
+            />
 
         <activity-alias
             android:name="com.ichi2.anki.AnkiCardContextMenuAction"

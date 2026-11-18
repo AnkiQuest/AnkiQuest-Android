@@ -125,7 +125,7 @@ jobs:
           cp AnkiQuest.apk AnkiDroid-Quest.apk
           gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
             --title "AnkiQuest ${{ steps.release.outputs.number }}" \
-            --notes-file .github/ankiquest-release.md
+            --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
       - name: Publish nightly
         if: github.ref == 'refs/heads/main' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'

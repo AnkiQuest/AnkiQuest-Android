@@ -8,6 +8,7 @@
     <string name="ankiquest_about_anki_tan"><![CDATA[<a href=\"%1$s\">Anki-tan</a> por <a href=\"%2$s\">Shigeyuki</a>, <a href=\"%3$s\">CC BY-SA 4.0</a>.]]></string>
     <string name="ankiquest_rate">Avaliar o AnkiQuest</string>
     <string name="ankiquest_changelog">Novidades do AnkiQuest</string>
+    <string name="ankiquest_all_releases">Todas as versões</string>
     <string name="ankiquest_ankidroid_changelog">Novidades do AnkiDroid</string>
     <string name="ankiquest_about_report_bug">Comunicar um erro</string>
     <string name="ankiquest_link_copied">Nenhuma aplicação consegue abrir a ligação. Ligação copiada.</string>

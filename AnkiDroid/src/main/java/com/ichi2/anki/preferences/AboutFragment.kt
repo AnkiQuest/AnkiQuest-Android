@@ -17,6 +17,7 @@ import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
@@ -115,12 +116,12 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             binding.donateDescription.isVisible = false
         }
 
-        // AnkiQuest's links open in a browser; AnkiDroid's changelog stays in the app
+        // Rate AnkiQuest and the bug form open in a browser; both changelogs are in the app
         binding.rateAnkiquest.setOnClickListener {
             requireActivity().openAnkiquestLink(AnkiquestLinks.rateUrl(requireContext()))
         }
         binding.ankiquestChangelog.setOnClickListener {
-            requireActivity().openAnkiquestLink(AnkiquestLinks.RELEASES)
+            startActivity(AnkiquestChangelogActivity.intent(requireContext()))
         }
         binding.openChangelog.setOnClickListener {
             navigate(ChangelogDestination)
