@@ -42,6 +42,9 @@ object AnkiquestPoll {
 
     internal const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
 
+    /** Why the cached leaderboard leaves others out ([AnkiquestLock.name]), absent when it does not. */
+    private const val PREF_CACHE_LOCK = "ankiquestWidgetLeaderboardLock"
+
     internal fun lastSuccessfulPoll(
         prefs: SharedPreferences,
         scope: String,
@@ -94,6 +97,12 @@ object AnkiquestPoll {
         }
     }
 
+    /** Why the leaderboard cached for account [scope] leaves others out, or null when it does not. */
+    internal fun cachedLock(scope: String?): AnkiquestLock? {
+        val stored = AnkiDroidApp.sharedPrefs().getString(scopedKey(PREF_CACHE_LOCK, scope), null)
+        return AnkiquestLock.named(stored)
+    }
+
     fun refreshNow(context: Context) {
         try {
             WorkManager
@@ -116,14 +125,16 @@ object AnkiquestPoll {
         val cacheScope = AnkiquestHomeData.account(prefs)?.scope
         val cacheKey = scopedKey(PREF_CACHE, cacheScope)
         val cacheAtKey = scopedKey(PREF_CACHE_AT, cacheScope)
+        val cacheLockKey = scopedKey(PREF_CACHE_LOCK, cacheScope)
         val photoAccount = runCatching { AnkiquestAvatars.account() }.getOrNull()
         val photoScope = photoAccount?.scope
         var photoBoard: JSONArray? = null
         var photoFetchedAt = 0L
         var photoOffline = false
+        var photoLock: AnkiquestLock? = null
         try {
             if (!configured) {
-                AnkiquestWidget.render(context, null, 0, offline = false)
+                AnkiquestWidget.render(context, null, 0, offline = false, lock = null)
             } else {
                 val board =
                     try {
@@ -137,16 +148,24 @@ object AnkiquestPoll {
                 if (board != null) {
                     val now = TimeManager.time.intTimeMS()
                     prefs.edit {
-                        putString(cacheKey, board.toString())
+                        putString(cacheKey, board.rows.toString())
                         putLong(cacheAtKey, now)
+                        if (board.lock == null) {
+                            remove(cacheLockKey)
+                        } else {
+                            putString(cacheLockKey, board.lock.name)
+                        }
                     }
-                    AnkiquestWidget.render(context, board, now, offline = false)
-                    photoBoard = board
+                    AnkiquestWidget.render(context, board.rows, now, offline = false, board.lock)
+                    photoBoard = board.rows
                     photoFetchedAt = now
+                    photoLock = board.lock
                     AnkiquestNotifier.onLeaderboard(context)
                 } else {
+                    // The cached board keeps its lock, so an offline widget still says why others are missing.
                     val cached = prefs.getString(cacheKey, null)?.let { JSONArray(it) } ?: JSONArray()
-                    AnkiquestWidget.render(context, cached, prefs.getLong(cacheAtKey, 0), offline = true)
+                    photoLock = cachedLock(cacheScope)
+                    AnkiquestWidget.render(context, cached, prefs.getLong(cacheAtKey, 0), offline = true, photoLock)
                     photoBoard = cached
                     photoFetchedAt = prefs.getLong(cacheAtKey, 0)
                     photoOffline = true
@@ -159,7 +178,7 @@ object AnkiquestPoll {
         }
         if (!configured) return Result.success()
         try {
-            AnkiquestWidget.refreshOwnBoards(context, photoBoard)
+            AnkiquestWidget.refreshOwnBoards(context, photoBoard, photoLock)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -209,7 +228,7 @@ object AnkiquestPoll {
                     board.objects().map { it.getString("user") },
                     photoAccount,
                 )
-                if (stillCurrent()) AnkiquestWidget.render(context, board, photoFetchedAt, photoOffline)
+                if (stillCurrent()) AnkiquestWidget.render(context, board, photoFetchedAt, photoOffline, photoLock)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

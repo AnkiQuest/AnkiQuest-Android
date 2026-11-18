@@ -285,7 +285,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `the leaderboard orders the widget rows`() =
         runBlocking {
-            val board = Ankiquest.leaderboard()
+            val board = Ankiquest.leaderboard().rows
             val week = AnkiquestWidget.forPeriod(board, "week")
             assertEquals(listOf("hill", "cerro"), week.objects().map { it.getString("user") })
             val hour = AnkiquestWidget.forPeriod(board, "hour").objects()

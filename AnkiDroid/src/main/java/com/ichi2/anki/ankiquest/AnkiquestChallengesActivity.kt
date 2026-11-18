@@ -281,9 +281,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
         }
 
         // Other members' progress reads 0 until the player's first upload.
-        if (shown.lock != null) {
-            text(content, getString(R.string.aq_upload_first), small = true)
-        }
+        shown.lock?.let { text(content, getString(it.text), small = true) }
         val goal = selected
         if (goal != null) renderDetail(shown, goal, current.user) else renderList(shown, current.user)
         scroll.post { scroll.scrollTo(0, position) }

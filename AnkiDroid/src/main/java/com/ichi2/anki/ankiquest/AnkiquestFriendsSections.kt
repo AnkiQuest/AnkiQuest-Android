@@ -481,9 +481,7 @@ private class FeedSection(
         val shown = current.items.filter { item -> attention.none { it.id == item.id } }
 
         // Friends' study waits for the player's first upload; "all caught up" would be wrong then.
-        if (current.lock != null) {
-            text(content, getString(R.string.aq_upload_first), heading = true).setPadding(0, dp(16), 0, 0)
-        }
+        current.lock?.let { text(content, getString(it.text), heading = true).setPadding(0, dp(16), 0, 0) }
         if (shown.isEmpty()) {
             if (!loading && current.lock == null) {
                 content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
@@ -1435,12 +1433,13 @@ private class LeaderboardSection(
             }
         }
         val board = rows?.standings
+        val lock = rows?.lock
         when {
             board == null -> if (loading) views.text(content, getString(R.string.aq_board_loading), small = true)
-            rows?.lock != null -> {
+            lock != null -> {
                 // Others stay hidden until the player's first upload; only their own row can show.
                 board.forEachIndexed { index, row -> row(row.rank ?: (index + 1), row, row.user == current.user, board.first().xp) }
-                if (!loading) empty(R.string.aq_upload_first)
+                if (!loading) empty(lock.text)
             }
             board.isEmpty() -> if (!loading) empty(R.string.aq_board_empty)
             board.all { it.xp == 0L } && scope != Scope.GLOBAL -> if (!loading) empty(R.string.aq_board_no_xp)

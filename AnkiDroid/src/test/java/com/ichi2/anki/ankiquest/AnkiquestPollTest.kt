@@ -74,7 +74,7 @@ class AnkiquestPollTest : RobolectricTest() {
     fun startPollingServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         mockkObject(AnkiquestWidget, AnkiquestNotifier)
-        every { AnkiquestWidget.render(any(), any(), any(), any()) } just Runs
+        every { AnkiquestWidget.render(any(), any(), any(), any(), any()) } just Runs
         coEvery { AnkiquestNotifier.onLeaderboard(any()) } just Runs
         every { AnkiquestNotifier.onProfile(any(), any()) } just Runs
         every { AnkiquestNotifier.onDeckCompletions(any(), any(), any(), any()) } just Runs
@@ -137,7 +137,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `widget rendering failure does not prevent inbox delivery`() =
         runBlocking {
-            every { AnkiquestWidget.render(any(), any(), any(), any()) } throws IllegalStateException("Widget unavailable")
+            every { AnkiquestWidget.render(any(), any(), any(), any(), any()) } throws IllegalStateException("Widget unavailable")
 
             assertEquals(Result.success(), worker().doWork())
 
@@ -339,7 +339,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
             assertEquals(Result.success(), worker().doWork())
 
-            verify(exactly = 1) { AnkiquestWidget.render(any(), any(), any(), any()) }
+            verify(exactly = 1) { AnkiquestWidget.render(any(), any(), any(), any(), any()) }
         }
 
     @Test
@@ -349,7 +349,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
             assertEquals(Result.success(), worker().doWork())
 
-            verify(exactly = 1) { AnkiquestWidget.render(any(), any(), any(), any()) }
+            verify(exactly = 1) { AnkiquestWidget.render(any(), any(), any(), any(), any()) }
         }
 
     private fun worker(): AnkiquestPollWorker = TestListenableWorkerBuilder<AnkiquestPollWorker>(targetContext).build()
