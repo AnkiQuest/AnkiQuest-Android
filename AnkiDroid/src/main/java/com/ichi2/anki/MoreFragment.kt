@@ -9,8 +9,6 @@ import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import com.ichi2.anki.ankiquest.AnkiquestLinks
-import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.analytics.AnalyticsEvent.LinkClicked
 import com.ichi2.anki.common.analytics.LinkAction
@@ -22,6 +20,7 @@ import com.ichi2.anki.dialogs.help.HelpDialog
 import com.ichi2.anki.dialogs.help.childHelpMenuItems
 import com.ichi2.anki.dialogs.help.mainHelpMenuItems
 import com.ichi2.anki.utils.ext.showDialogFragment
+import com.ichi2.utils.IntentUtil
 import dev.androidbroadcast.vbpd.viewBinding
 
 /**
@@ -39,6 +38,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
+
+        val marketIntent = AnkiDroidApp.getMarketIntent(requireContext())
 
         binding.moreSettings.setOnClickListener {
             navigate(PreferencesDestination.Root)
@@ -77,7 +78,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
         binding.moreSupportRate.setOnClickListener {
             Analytics.send(LinkClicked(LinkAction.OPENED_RATE))
-            requireActivity().openAnkiquestLink(AnkiquestLinks.rateUrl(requireContext()))
+            if (IntentUtil.canOpenIntent(requireContext(), marketIntent)) {
+                startActivity(marketIntent)
+            }
         }
         binding.moreSupportOther.setOnClickListener {
             Analytics.send(LinkClicked(LinkAction.OPENED_OTHER))
@@ -87,6 +90,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             Analytics.send(LinkClicked(LinkAction.OPENED_SEND_FEEDBACK))
             openUrl(AnkiDroidApp.feedbackUrl)
         }
+
+        // AnkiQuest: no Rate entry here. Rate AnkiQuest is on About and the AnkiQuest changelog.
+        binding.moreSupportRate.visibility = View.GONE
 
         if (!BuildConfig.SHOW_DONATE_LINKS) {
             binding.moreSupportDonate.isVisible = false

@@ -142,7 +142,7 @@ class HelpDialog : AnalyticsDialogFragment() {
         }
 
         /**
-         * @param canRateApp a boolean that indicates if the system has an app to open to rate AnkiQuest
+         * @param canRateApp a boolean that indicates if the system has an app to open to rate AnkiDroid
          */
         fun newSupportInstance(canRateApp: Boolean): HelpDialog {
             Analytics.send(LinkClicked(LinkAction.OPENED_SUPPORT_ANKIDROID))
@@ -268,7 +268,7 @@ internal val supportMenuItems =
             action = OpenUrlResource(R.string.link_ankidroid_development_guide),
         ),
         HelpItem(
-            titleResId = R.string.ankiquest_rate,
+            titleResId = CommonString.help_item_support_rate_ankidroid,
             iconResId = R.drawable.ic_star_black_24,
             analyticsId = LinkAction.OPENED_RATE,
             id = 8,

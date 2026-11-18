@@ -62,7 +62,7 @@ class HelpDialogTest {
                 CommonString.help_item_support_opencollective_donate.takeIf { BuildConfig.SHOW_DONATE_LINKS },
                 CommonString.multimedia_editor_trans_translate,
                 CommonString.help_item_support_develop_ankidroid,
-                R.string.ankiquest_rate,
+                CommonString.help_item_support_rate_ankidroid,
                 CommonString.help_item_support_other_ankidroid,
                 CommonString.send_feedback,
             )

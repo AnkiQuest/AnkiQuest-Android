@@ -405,8 +405,8 @@ abstract class NavigationDrawerActivity(
 
                     R.id.support_ankidroid -> {
                         Timber.i("Navigating to support AnkiDroid")
-                        // Rate AnkiQuest opens an https link, which needs no store app
-                        showDialogFragment(HelpDialog.newSupportInstance(canRateApp = true))
+                        // AnkiQuest: no Rate entry here. Rate AnkiQuest is on About and the AnkiQuest changelog.
+                        showDialogFragment(HelpDialog.newSupportInstance(canRateApp = false))
                     }
                 }
             }

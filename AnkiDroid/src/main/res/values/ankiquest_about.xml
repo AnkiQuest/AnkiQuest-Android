@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@string/about_contributors_description,@string/about_contributors_description_no_donate,@string/license_description,@string/link_source,@string/info_rate,@string/help_item_support_rate_ankidroid,@string/open_changelog,@string/link_market,@string/link_market_kindle">
+    tools:keep="@string/about_contributors_description,@string/about_contributors_description_no_donate,@string/license_description,@string/link_source,@string/info_rate,@string/open_changelog">
     <!-- Preserve upstream About resources for future upstream merges. -->
     <string name="ankiquest_link_server_source" translatable="false">https://github.com/AnkiQuest/AnkiQuest-Desktop</string>
     <string name="ankiquest_link_anki_tan" translatable="false">https://shigeyukey.github.io/shige-addons-wiki/Anki-tan.html</string>

@@ -20,8 +20,6 @@ import androidx.core.view.WindowInsetsCompat.Type.displayCutout
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
-import com.ichi2.anki.ankiquest.AnkiquestLinks
-import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.appName
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.android.getColorFromAttr
@@ -71,10 +69,8 @@ class Info :
             binding.donate.isVisible = false
         }
         title = "$appName v$pkgVersionName"
-        binding.leftButton.run {
-            setText(R.string.ankiquest_rate)
-            setOnClickListener { openAnkiquestLink(AnkiquestLinks.rateUrl(this@Info)) }
-        }
+        // AnkiQuest: AnkiDroid's changelog has no Rate button
+        binding.leftButton.visibility = View.GONE
         onBackPressedCallback =
             object : OnBackPressedCallback(false) {
                 override fun handleOnBackPressed() {
