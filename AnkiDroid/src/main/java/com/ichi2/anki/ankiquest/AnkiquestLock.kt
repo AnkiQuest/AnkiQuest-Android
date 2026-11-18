@@ -2,6 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
+import androidx.annotation.StringRes
+import com.ichi2.anki.R
 import okhttp3.Response
 import org.json.JSONObject
 
@@ -11,9 +13,11 @@ import org.json.JSONObject
  */
 internal enum class AnkiquestLock(
     private val wire: String,
+    /** What the app says in place of the others it cannot show. */
+    @StringRes val text: Int,
 ) {
     /** Until the server holds one of the player's reviews. */
-    UPLOAD_FIRST("upload_first"),
+    UPLOAD_FIRST("upload_first", R.string.aq_upload_first),
     ;
 
     companion object {
@@ -28,5 +32,8 @@ internal enum class AnkiquestLock(
 
         /** The lock an object answer names in its `locked` field. */
         fun of(answer: JSONObject): AnkiquestLock? = of(answer.optString("locked"))
+
+        /** The lock stored under its [name], or null for none or one this app no longer knows. */
+        fun named(name: String?): AnkiquestLock? = entries.firstOrNull { it.name == name }
     }
 }

@@ -148,6 +148,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             @LayoutRes val layout: Int,
             @LayoutRes val rowLayout: Int,
             @DrawableRes val ownRow: Int,
+            @LayoutRes val lockLayout: Int,
         )
 
         internal val styles =
@@ -157,12 +158,14 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     R.layout.widget_ankiquest,
                     R.layout.widget_ankiquest_row,
                     R.drawable.ankiquest_widget_row_self,
+                    R.layout.widget_ankiquest_lock,
                 ),
                 Style(
                     AnkiquestTransparentWidget::class.java,
                     R.layout.widget_ankiquest_transparent,
                     R.layout.widget_ankiquest_row_transparent,
                     R.drawable.ankiquest_widget_row_self_clear,
+                    R.layout.widget_ankiquest_lock_transparent,
                 ),
             )
 
@@ -176,6 +179,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val offline: Boolean,
             @StringRes val note: Int? = null,
             val scope: String?,
+            val lock: AnkiquestLock? = null,
         )
 
         @Volatile
@@ -234,14 +238,16 @@ open class AnkiquestWidget : AppWidgetProvider() {
          * @param board this week's standings, or null when ankiquest is not configured
          * @param fetchedAt when [board] was fetched from the server
          * @param offline whether the last fetch failed and [board] is a cached copy
+         * @param lock why the server left other players out of [board], when it did
          */
-        fun render(
+        internal fun render(
             context: Context,
             board: JSONArray?,
             fetchedAt: Long,
             offline: Boolean,
+            lock: AnkiquestLock?,
         ) {
-            val shown = Drawn(board, fetchedAt, offline, scope = AnkiquestHomeData.account()?.scope)
+            val shown = Drawn(board, fetchedAt, offline, scope = AnkiquestHomeData.account()?.scope, lock = lock)
             drawn = shown
             renderStreaks(context, shown)
             renderBoards(context, shown)
@@ -354,6 +360,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 prefs.getLong(scopedKey(AnkiquestPoll.PREF_CACHE_AT, account.scope), 0),
                 offline = false,
                 scope = account.scope,
+                lock = AnkiquestPoll.cachedLock(account.scope),
             )
         }
 
@@ -437,8 +444,8 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     shown
                 }
             val ranked = source.board?.let { forPeriod(withFreshRow(it, source.fetchedAt), settings.period) }
-            val items = collection(context, ranked ?: JSONArray(), style, scale)
-            val views = layout(context, ranked, source.fetchedAt, source.offline, style, settings, scale, id, source.note)
+            val items = collection(context, ranked ?: JSONArray(), style, scale, source.lock)
+            val views = layout(context, ranked, source.fetchedAt, source.offline, style, settings, scale, id, source.note, source.lock)
             RemoteViewsCompat.setRemoteAdapter(context, views, id, R.id.ankiquest_widget_list, items)
             manager.updateAppWidget(id, views)
         }
@@ -451,7 +458,8 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 val scope = json.optString("account")
                 if (scope != AnkiquestHomeData.account()?.scope) return null
                 val note = OwnNote.entries.firstOrNull { it.name == json.optString("note") }?.text
-                Drawn(json.optJSONArray("board") ?: JSONArray(), json.optLong("at"), json.optBoolean("offline"), note, scope)
+                val lock = AnkiquestLock.named(json.optString("lock"))
+                Drawn(json.optJSONArray("board") ?: JSONArray(), json.optLong("at"), json.optBoolean("offline"), note, scope, lock)
             } catch (_: JSONException) {
                 null
             }
@@ -471,6 +479,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             at: Long,
             offline: Boolean,
             note: OwnNote? = null,
+            lock: AnkiquestLock? = null,
         ) {
             val value =
                 JSONObject()
@@ -479,6 +488,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     .put("at", at)
                     .put("offline", offline)
                     .put("note", note?.name ?: "")
+                    .put("lock", lock?.name ?: "")
             AnkiDroidApp.sharedPrefs().edit { putString("$BOARD_KEY:$id", value.toString()) }
         }
 
@@ -488,11 +498,13 @@ open class AnkiquestWidget : AppWidgetProvider() {
          * scopes ([AnkiquestBoards.hasScopes]) gets a group's standings from [circle], the
          * standings every widget shares, by keeping the group's members; it has no global board.
          * A group the player is no longer in (`403`) shows nobody. When a fetch fails otherwise, the
-         * widget keeps what it showed, marked offline.
+         * widget keeps what it showed, marked offline. A group's standings taken from [circle] keep
+         * [circleLock], why the server left others out of it.
          */
         internal suspend fun refreshOwnBoards(
             context: Context,
             circle: JSONArray?,
+            circleLock: AnkiquestLock?,
         ) {
             val manager = getAppWidgetManager(context) ?: return
             val placed =
@@ -502,12 +514,12 @@ open class AnkiquestWidget : AppWidgetProvider() {
             if (placed.isEmpty() || circle == null) return
             val account = AnkiquestHomeData.account() ?: return
             val scoped = fetch { AnkiquestBoards.hasScopes(account, AnkiquestApi.Timeout.STANDARD) }
-            val fetched = mutableMapOf<String, Result<JSONArray>>()
+            val fetched = mutableMapOf<String, Result<Ankiquest.Standings>>()
             var overview: Result<AnkiquestSocial.Overview>? = null
             for ((style, id) in placed) {
                 val settings = settingsOf(id)
                 val now = TimeManager.time.intTimeMS()
-                val answer: Result<JSONArray>? =
+                val answer: Result<Ankiquest.Standings>? =
                     when {
                         scoped.getOrNull() == true -> {
                             val url = settings.leaderboardUrl(account)
@@ -517,21 +529,24 @@ open class AnkiquestWidget : AppWidgetProvider() {
                         scoped.isFailure && settings.who == AnkiquestWidgetSettings.Who.GLOBAL -> Result.failure(scoped.exceptionOrNull()!!)
                         settings.who == AnkiquestWidgetSettings.Who.GROUP -> {
                             val social = overview ?: fetch { AnkiquestSocial.overview(account) }.also { overview = it }
-                            social.map { groupBoard(circle, it, settings.group, account.user) }
+                            social.map { Ankiquest.Standings(groupBoard(circle, it, settings.group, account.user), circleLock) }
                         }
                         else -> null
                     }
                 when {
                     answer == null -> storeOwnBoard(id, account, JSONArray(), now, offline = false, note = OwnNote.GLOBAL_UNAVAILABLE)
-                    answer.isSuccess -> storeOwnBoard(id, account, answer.getOrThrow(), now, offline = false)
+                    answer.isSuccess -> {
+                        val standings = answer.getOrThrow()
+                        storeOwnBoard(id, account, standings.rows, now, offline = false, lock = standings.lock)
+                    }
                     (answer.exceptionOrNull() as? AnkiquestHttpException)?.code == 403 ->
                         storeOwnBoard(id, account, JSONArray(), now, offline = false)
                     else -> {
                         val last = ownBoard(id)
-                        storeOwnBoard(id, account, last?.board ?: JSONArray(), last?.fetchedAt ?: 0, offline = true)
+                        storeOwnBoard(id, account, last?.board ?: JSONArray(), last?.fetchedAt ?: 0, offline = true, lock = last?.lock)
                     }
                 }
-                draw(context, manager, style, id, drawn ?: Drawn(circle, now, false, scope = account.scope))
+                draw(context, manager, style, id, drawn ?: Drawn(circle, now, false, scope = account.scope, lock = circleLock))
             }
         }
 
@@ -548,10 +563,10 @@ open class AnkiquestWidget : AppWidgetProvider() {
         private suspend fun leaderboard(
             account: HomeAccount,
             url: HttpUrl,
-        ): JSONArray =
+        ): Ankiquest.Standings =
             withContext(Dispatchers.IO) {
                 val request = AnkiquestApi.request(url, account.token, account.language).build()
-                AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) }
+                AnkiquestApi.call(account, request) { Ankiquest.Standings(AnkiquestApi.jsonArray(it), AnkiquestLock.of(it)) }
             }
 
         /** The rows of [circle] for [group]'s members and [me], for servers that cannot answer one group. */
@@ -618,6 +633,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
         /**
          * @param widgetId the placed widget, whose header then opens its settings
          * @param note shown instead of the standings, like while a widget's own ones are on their way
+         * @param lock why the server left other players out of [board]; the list then ends with it
          */
         internal fun layout(
             context: Context,
@@ -629,6 +645,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             scale: Float = 1f,
             widgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
             @StringRes note: Int? = null,
+            lock: AnkiquestLock? = null,
         ): RemoteViews {
             val language = AnkiquestLanguage.context(context)
             val period = settings.period
@@ -691,14 +708,18 @@ open class AnkiquestWidget : AppWidgetProvider() {
             when {
                 note != null -> status(views, language.getString(note))
                 board == null -> status(views, language.getString(R.string.ankiquest_widget_unconfigured))
+                // The list shows the player's own row, if the server sent it, and then why nobody else is there.
+                lock != null -> list(views)
                 board.length() == 0 && offline -> status(views, language.getString(R.string.ankiquest_widget_offline))
                 board.length() == 0 -> status(views, language.getString(R.string.ankiquest_widget_empty))
-                else -> {
-                    views.setViewVisibility(R.id.ankiquest_widget_status, View.GONE)
-                    views.setViewVisibility(R.id.ankiquest_widget_list, View.VISIBLE)
-                }
+                else -> list(views)
             }
             return views
+        }
+
+        private fun list(views: RemoteViews) {
+            views.setViewVisibility(R.id.ankiquest_widget_status, View.GONE)
+            views.setViewVisibility(R.id.ankiquest_widget_list, View.VISIBLE)
         }
 
         private fun status(
@@ -710,13 +731,19 @@ open class AnkiquestWidget : AppWidgetProvider() {
             views.setViewVisibility(R.id.ankiquest_widget_list, View.GONE)
         }
 
+        /** The list's layouts: a player's row and the line saying why others are missing. */
+        internal const val VIEW_TYPES = 2
+
+        /** The list items for [board], followed by a line saying why others are missing when [lock] says so. */
         internal fun collection(
             context: Context,
             board: JSONArray,
             style: Style = styles.first(),
             scale: Float = 1f,
+            lock: AnkiquestLock? = null,
         ): RemoteCollectionItems {
-            val items = RemoteCollectionItems.Builder().setViewTypeCount(1)
+            // The count stays the same with or without the line, so the launcher can keep its adapter.
+            val items = RemoteCollectionItems.Builder().setViewTypeCount(VIEW_TYPES)
             val me = Ankiquest.player()
             val ownDay = AnkiquestDay.own(TimeManager.time.intTimeMS())
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
@@ -799,8 +826,20 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 views.setOnClickFillInIntent(R.id.ankiquest_widget_row, Intent())
                 items.addItem(i.toLong(), views)
             }
+
+            // After the player's own row, as on the in-app board; a tap opens what a row opens.
+            if (lock != null) {
+                val line = RemoteViews(context.packageName, style.lockLayout)
+                line.scaleText(R.id.ankiquest_widget_lock, 13f, scale)
+                line.setTextViewText(R.id.ankiquest_widget_lock, languageContext.getString(lock.text))
+                line.setOnClickFillInIntent(R.id.ankiquest_widget_lock, Intent())
+                items.addItem(LOCK_ITEM_ID, line)
+            }
             return items.build()
         }
+
+        /** The list item id of the line saying why others are missing; rows use their position. */
+        private const val LOCK_ITEM_ID = -1L
 
         /** How today stands for [entry]'s streak, in words, for a [state] from [streakState]. */
         internal fun streakLabel(
