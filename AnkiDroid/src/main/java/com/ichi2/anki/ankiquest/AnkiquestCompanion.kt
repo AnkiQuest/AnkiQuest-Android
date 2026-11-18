@@ -47,7 +47,7 @@ internal object AnkiquestCompanion {
     }
 
     /** The poses a preview card shows, as Aki's: face, fire and sad. */
-    private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk)
+    private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_sad)
 
     /** [choice]'s preview poses as Aki's, without two that look the same. */
     fun preview(choice: Choice): List<Int> = previewPoses.distinctBy { resource(it, choice) }
@@ -189,10 +189,7 @@ internal object AnkiquestCompanion {
         }
     }
 
-    /**
-     * Aki's art for each pose. The streak moods keep the pictures they had before her core art
-     * (#294); showing that art is separate work.
-     */
+    /** Aki's art for each pose she has. She has no frozen 2 or 3 art: those show her frozen pose. */
     private val akiPoses =
         mapOf(
             AnkiquestPose.FACE to R.drawable.aki_face,
@@ -203,12 +200,9 @@ internal object AnkiquestCompanion {
             AnkiquestPose.STREAK_BLAZING to R.drawable.aki_streak_blazing,
             AnkiquestPose.STREAK_LEGEND to R.drawable.aki_streak_legend,
             AnkiquestPose.STREAK_MILESTONE to R.drawable.aki_streak_milestone,
-            // Interim: at_risk is the most worried, welcome smiles with a card, freeze_used has snow.
-            AnkiquestPose.SAD to R.drawable.aki_at_risk,
-            AnkiquestPose.HOPEFUL to R.drawable.aki_welcome,
-            AnkiquestPose.FROZEN to R.drawable.aki_freeze_used,
-            AnkiquestPose.FROZEN_2 to R.drawable.aki_freeze,
-            AnkiquestPose.FROZEN_3 to R.drawable.aki_freeze_used,
+            AnkiquestPose.SAD to R.drawable.aki_sad,
+            AnkiquestPose.HOPEFUL to R.drawable.aki_hopeful,
+            AnkiquestPose.FROZEN to R.drawable.aki_frozen,
             AnkiquestPose.NEGLECTED to R.drawable.aki_neglected,
         )
 
