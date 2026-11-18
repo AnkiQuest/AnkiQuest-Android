@@ -193,7 +193,7 @@ internal object AnkiquestCompanion {
     private val akiPoses =
         mapOf(
             AnkiquestPose.FACE to R.drawable.aki_face,
-            AnkiquestPose.ASLEEP to R.drawable.aki_sleeping,
+            AnkiquestPose.ASLEEP to R.drawable.aki_asleep,
             AnkiquestPose.HAPPY to R.drawable.aki_celebrate,
             AnkiquestPose.STREAK to R.drawable.aki_streak,
             AnkiquestPose.STREAK_HOT to R.drawable.aki_streak_hot,
@@ -210,7 +210,7 @@ internal object AnkiquestCompanion {
     private val ankilopePoses =
         mapOf(
             AnkiquestPose.FACE to R.drawable.ankilope_face,
-            AnkiquestPose.ASLEEP to R.drawable.ankilope_sleeping,
+            AnkiquestPose.ASLEEP to R.drawable.ankilope_asleep,
             AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
             // Interim: Ankilope has no on-fire art yet, so she studies (hill, 2026-11-18).
             AnkiquestPose.STREAK to R.drawable.ankilope_study,
@@ -230,7 +230,7 @@ internal object AnkiquestCompanion {
             R.drawable.aki_icon_worried to AnkiquestPose.FACE,
             R.drawable.aki_icon_frozen to AnkiquestPose.FACE,
             R.drawable.aki_icon_sleepy to AnkiquestPose.FACE,
-            R.drawable.aki_sleeping to AnkiquestPose.ASLEEP,
+            R.drawable.aki_asleep to AnkiquestPose.ASLEEP,
             R.drawable.aki_celebrate to AnkiquestPose.HAPPY,
             R.drawable.aki_achievement to AnkiquestPose.HAPPY,
             R.drawable.aki_goal to AnkiquestPose.HAPPY,

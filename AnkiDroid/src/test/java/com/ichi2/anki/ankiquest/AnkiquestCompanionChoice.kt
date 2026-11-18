@@ -24,7 +24,7 @@ internal fun chooseCompanion(choice: Choice) {
 internal val ankilopeMoodPoses =
     mapOf(
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
-        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_sleeping,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.ankilope_sad,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
@@ -41,7 +41,7 @@ internal val ankilopeMoodPoses =
 internal val akiMoodPoses =
     mapOf(
         AnkiquestMood.Mood.UNKNOWN to R.drawable.aki_face,
-        AnkiquestMood.Mood.ASLEEP to R.drawable.aki_sleeping,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.aki_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.aki_sad,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.aki_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.aki_frozen,
