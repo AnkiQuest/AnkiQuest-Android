@@ -102,23 +102,59 @@ jobs:
           "$RUNNER_TEMP/diffoscope/bin/pip" install --quiet diffoscope==339 androguard==4.1.4 apksigcopier==1.1.1 python-magic libarchive-c
           echo "$RUNNER_TEMP/diffoscope/bin" >> "$GITHUB_PATH"
 
-      # Decompiling every class to Java took over 25 minutes; the smali from apktool shows the
-      # same differences. --timeout stops descending and reports what it found so far.
+      # diffoscope on the whole APK ran past 40 minutes on the dex files. So list the entries
+      # that differ first, then run diffoscope on each of those, with a time limit per entry.
       - name: Compare
         run: |
           sha256sum AnkiQuest-*.apk
-          diffoscope --exclude-command '^procyon' --exclude-command '^javap' --timeout 1500 \
-            --html report.html --text report.txt AnkiQuest-first.apk AnkiQuest-second.apk
+          if cmp -s AnkiQuest-first.apk AnkiQuest-second.apk; then
+            echo "The APKs are identical."
+            exit 0
+          fi
 
-      # The job summary holds at most 1 MiB; the full report is in the artifact.
+          # Entry order, sizes and timestamps, then the entries whose CRC differs.
+          mkdir -p report first second
+          zipinfo AnkiQuest-first.apk | tail -n +2 > report/first.zipinfo
+          zipinfo AnkiQuest-second.apk | tail -n +2 > report/second.zipinfo
+          diff report/first.zipinfo report/second.zipinfo > report/zipinfo.diff || true
+          unzip -v AnkiQuest-first.apk | awk 'NF == 8 { print $7, $8 }' | sort -k2 > report/first.crc
+          unzip -v AnkiQuest-second.apk | awk 'NF == 8 { print $7, $8 }' | sort -k2 > report/second.crc
+          join -1 2 -2 2 -a 1 -a 2 -e missing -o 0,1.1,2.1 report/first.crc report/second.crc \
+            | awk '$2 != $3 { print $1 }' > report/entries.txt
+          echo "Entries that differ:"
+          cat report/entries.txt
+          echo "zipinfo differences:"
+          head -n 200 report/zipinfo.diff
+
+          # One diffoscope report per differing entry.
+          unzip -q AnkiQuest-first.apk -d first
+          unzip -q AnkiQuest-second.apk -d second
+          while read -r entry; do
+            name=$(echo "$entry" | tr '/' '_')
+            timeout 600 diffoscope --exclude-command '^procyon' --exclude-command '^javap' \
+              --text "report/$name.txt" "first/$entry" "second/$entry" > /dev/null 2>&1 || true
+          done < report/entries.txt
+          exit 1
+
+      # The job summary holds at most 1 MiB; the full reports are in the artifact.
       - name: Show the differences
         if: failure()
         run: |
-          [ -f report.txt ] || exit 0
-          head -c 500000 report.txt
+          [ -d report ] || exit 0
+          for file in report/*.txt; do
+            [ -f "$file" ] || continue
+            echo "::group::$file"
+            head -c 100000 "$file"
+            echo "::endgroup::"
+          done
           {
+            echo 'Entries that differ:'
             echo '```'
-            head -c 60000 report.txt
+            cat report/entries.txt
+            echo '```'
+            echo 'zipinfo differences:'
+            echo '```'
+            head -n 100 report/zipinfo.diff
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -126,7 +162,5 @@ jobs:
         if: failure()
         with:
           name: diffoscope-report
-          path: |
-            report.html
-            report.txt
+          path: report
           if-no-files-found: ignore
