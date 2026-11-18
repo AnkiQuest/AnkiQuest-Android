@@ -43,8 +43,8 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     private var loading = false
     private var allAchievements = false
 
-    /** Whether the player muted the one shown, and gets deck alerts from them; null where unknown. */
-    private var muted: Boolean? = null
+    /** The player's friends, requests, mutes and groups, and whether they get deck alerts from the one shown; null where unknown. */
+    private var social: AnkiquestSocial.Overview? = null
     private var deckAlerts: Boolean? = null
     private var changing = false
 
@@ -105,7 +105,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             undo.clear()
             account = current
             page = null
-            muted = null
+            social = null
             deckAlerts = null
         }
         loadJob?.cancel()
@@ -142,8 +142,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     }
 
     /**
-     * What the player can change about someone else from their profile: muting them, and their deck
-     * alerts while they share decks with the player. A control the server cannot tell about stays hidden.
+     * What the player can change about someone else from their profile: their friendship, inviting
+     * them to a group, muting them, and their deck alerts while they share decks with the player. A
+     * control the server cannot tell about stays hidden.
      */
     private fun loadControls(
         current: HomeAccount,
@@ -151,15 +152,15 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         turn: Int,
     ) {
         lifecycleScope.launch {
-            var mute: Boolean? = null
+            var overview: AnkiquestSocial.Overview? = null
             var alerts: Boolean? = null
-            boardAttempt { mute = AnkiquestSocial.overview(current).isMuted(user) }
+            boardAttempt { overview = AnkiquestSocial.overview(current) }
             boardAttempt {
                 val subscriptions = AnkiquestSubscriptions.repository.load(current)
                 if (subscriptions.senders.any { it.user == user }) alerts = user !in subscriptions.unsubscribedSenders
             }
             if (turn != generation || account?.scope != current.scope) return@launch
-            muted = mute
+            social = overview
             deckAlerts = alerts
             render()
         }
@@ -204,6 +205,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views.text(content, getString(R.string.ankiquest_streak_protection_summary), small = true)
             return
         }
+        social?.let { friendship(it, p) }
         deckAlerts?.let { on ->
             val label = if (on) R.string.aq_profile_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
             views
@@ -211,7 +213,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                     change { AnkiquestSubscriptions.repository.setSubscribed(it, p.user, !on) }
                 }.isEnabled = !changing
         }
-        muted?.let { isMuted ->
+        social?.isMuted(p.user)?.let { isMuted ->
             views
                 .button(content, getString(if (isMuted) R.string.aq_friends_unmute else R.string.aq_friends_mute)) {
                     if (isMuted) {
@@ -227,6 +229,59 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                     }
                 }.isEnabled = !changing
         }
+    }
+
+    /**
+     * The friendship action for the player shown, by [AnkiquestSocial.Relation], then an invite to
+     * one of the player's groups they are not in. The server has no direct messages, so there is no
+     * Message action.
+     */
+    private fun friendship(
+        overview: AnkiquestSocial.Overview,
+        p: AnkiquestBoards.Profile,
+    ) {
+        when (overview.relation(p.user)) {
+            AnkiquestSocial.Relation.NONE ->
+                socialButton(R.string.aq_profile_add_friend, AnkiquestSocial.Change.Befriend(p.user)) {
+                    getString(R.string.aq_friends_request_sent, p.display)
+                }
+            AnkiquestSocial.Relation.REQUESTED -> {
+                views.text(content, getString(R.string.aq_profile_request_sent), small = true)
+                socialButton(R.string.aq_friends_cancel_request, AnkiquestSocial.Change.Unfriend(p.user)) {
+                    getString(R.string.aq_friends_request_cancelled)
+                }
+            }
+            AnkiquestSocial.Relation.ASKED -> {
+                views.text(content, getString(R.string.aq_profile_request_received, p.display), small = true)
+                socialButton(R.string.aq_profile_accept_request, AnkiquestSocial.Change.Befriend(p.user)) {
+                    getString(R.string.aq_friends_accepted, p.display)
+                }
+                socialButton(R.string.aq_profile_decline_request, AnkiquestSocial.Change.Unfriend(p.user)) {
+                    getString(R.string.aq_friends_declined)
+                }
+            }
+            AnkiquestSocial.Relation.FRIENDS -> views.text(content, getString(R.string.aq_profile_friends, p.display), small = true)
+        }
+
+        // Only groups the player owns have an invite link to share.
+        val groups = overview.invitable(p.user)
+        if (groups.isEmpty()) return
+        views.button(content, getString(R.string.aq_profile_invite)) {
+            val current = account ?: return@button
+            AnkiquestGroupInvite.pick(this, current, groups)
+        }
+    }
+
+    /** A button sending [action], which says [done] once the server took it; befriending stands out. */
+    private fun socialButton(
+        @StringRes label: Int,
+        action: AnkiquestSocial.Change,
+        done: () -> String,
+    ) {
+        views
+            .button(content, getString(label), primary = action is AnkiquestSocial.Change.Befriend) {
+                change(after = { showThemedToast(this, done(), shortLength = true) }) { AnkiquestSocial.change(it, action) }
+            }.isEnabled = !changing
     }
 
     private fun unmute(user: String) {

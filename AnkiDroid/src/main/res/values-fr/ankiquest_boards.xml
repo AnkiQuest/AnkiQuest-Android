@@ -24,6 +24,14 @@
     <string name="aq_board_server_error">Impossible de charger. Essaie d’actualiser.</string>
     <string name="aq_board_account_changed">Cette notification concerne un autre compte. Voici plutôt le classement de ce compte.</string>
     <string name="aq_profile_title">Profil</string>
+    <string name="aq_profile_add_friend">Ajouter un ami</string>
+    <string name="aq_profile_accept_request">Accepter la demande</string>
+    <string name="aq_profile_decline_request">Refuser la demande</string>
+    <string name="aq_profile_request_sent">Demande d’ami envoyée.</string>
+    <string name="aq_profile_request_received">%1$s t’a envoyé une demande d’ami.</string>
+    <string name="aq_profile_friends">%1$s et toi êtes amis.</string>
+    <string name="aq_profile_invite">Inviter dans un groupe</string>
+    <string name="aq_profile_invite_pick">Quel groupe ?</string>
     <string name="aq_profile_refresh">Actualiser le profil</string>
     <string name="aq_profile_loading">Chargement du profil…</string>
     <string name="aq_profile_hidden">Ce profil est privé, ou cette personne n’est pas sur ce serveur.</string>

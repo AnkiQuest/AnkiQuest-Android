@@ -36,6 +36,19 @@ class AnkiquestSocialTest {
     }
 
     @Test
+    fun `the overview says where the player stands with someone and which groups they can join`() {
+        val overview = AnkiquestSocial.parse(JSONObject(example("social")))
+        assertEquals(AnkiquestSocial.Relation.FRIENDS, overview.relation("friend"))
+        assertEquals(AnkiquestSocial.Relation.ASKED, overview.relation("ana"))
+        assertEquals(AnkiquestSocial.Relation.REQUESTED, overview.relation("cerro"))
+        assertEquals(AnkiquestSocial.Relation.NONE, overview.relation("bobby"))
+
+        // Only the owned group has a link to share, and Ana is in it already.
+        assertEquals(listOf("Spanish club"), overview.invitable("friend").map { it.name })
+        assertEquals(emptyList(), overview.invitable("ana"))
+    }
+
+    @Test
     fun `unusable rows are skipped and a missing display name falls back to the username`() {
         val overview =
             AnkiquestSocial.parse(

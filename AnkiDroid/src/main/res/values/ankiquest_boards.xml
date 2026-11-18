@@ -24,6 +24,14 @@
     <string name="aq_board_server_error">This could not be loaded. Try refreshing.</string>
     <string name="aq_board_account_changed">This notification belongs to a different account. Showing this account’s leaderboard instead.</string>
     <string name="aq_profile_title">Profile</string>
+    <string name="aq_profile_add_friend">Add friend</string>
+    <string name="aq_profile_accept_request">Accept request</string>
+    <string name="aq_profile_decline_request">Decline request</string>
+    <string name="aq_profile_request_sent">Friend request sent.</string>
+    <string name="aq_profile_request_received">%1$s sent you a friend request.</string>
+    <string name="aq_profile_friends">You and %1$s are friends.</string>
+    <string name="aq_profile_invite">Invite to group</string>
+    <string name="aq_profile_invite_pick">Which group?</string>
     <string name="aq_profile_refresh">Refresh the profile</string>
     <string name="aq_profile_loading">Loading the profile…</string>
     <string name="aq_profile_hidden">This player’s profile is private, or they are not on this server.</string>

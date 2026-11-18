@@ -40,6 +40,34 @@ internal object AnkiquestSocial {
         val public: Boolean,
     ) {
         fun isMuted(user: String): Boolean = muted.any { it.user == user }
+
+        /** Where the player stands with [user]; friends first, then requests either way. */
+        fun relation(user: String): Relation =
+            when {
+                friends.any { it.user == user } -> Relation.FRIENDS
+                incoming.any { it.user == user } -> Relation.ASKED
+                outgoing.any { it.user == user } -> Relation.REQUESTED
+                else -> Relation.NONE
+            }
+
+        /** The groups the player owns, and so has an invite link for, that [user] is not in yet. */
+        fun invitable(user: String): List<Group> =
+            groups.filter { group -> group.owner && group.invite != null && group.members.none { it.user == user } }
+    }
+
+    /** The player's friendship with someone else, and what [Change.Befriend] or [Change.Unfriend] does to it. */
+    enum class Relation {
+        /** Neither friends nor a request: befriending sends a request ([REQUESTED]). */
+        NONE,
+
+        /** The player's request waits for their answer: unfriending withdraws it ([NONE]). */
+        REQUESTED,
+
+        /** Their request waits for the player: befriending accepts ([FRIENDS]), unfriending declines ([NONE]). */
+        ASKED,
+
+        /** Unfriending removes the friend ([NONE]). */
+        FRIENDS,
     }
 
     /** What an invite link shows before joining. */

@@ -24,6 +24,14 @@
     <string name="aq_board_server_error">Das konnte nicht geladen werden. Versuche es erneut.</string>
     <string name="aq_board_account_changed">Diese Benachrichtigung gehört zu einem anderen Konto. Stattdessen wird die Bestenliste dieses Kontos angezeigt.</string>
     <string name="aq_profile_title">Profil</string>
+    <string name="aq_profile_add_friend">Freund hinzufügen</string>
+    <string name="aq_profile_accept_request">Anfrage annehmen</string>
+    <string name="aq_profile_decline_request">Anfrage ablehnen</string>
+    <string name="aq_profile_request_sent">Freundschaftsanfrage gesendet.</string>
+    <string name="aq_profile_request_received">%1$s hat dir eine Freundschaftsanfrage geschickt.</string>
+    <string name="aq_profile_friends">Du und %1$s seid befreundet.</string>
+    <string name="aq_profile_invite">In Gruppe einladen</string>
+    <string name="aq_profile_invite_pick">Welche Gruppe?</string>
     <string name="aq_profile_refresh">Profil aktualisieren</string>
     <string name="aq_profile_loading">Profil wird geladen…</string>
     <string name="aq_profile_hidden">Das Profil ist privat, oder es gibt diese Person auf diesem Server nicht.</string>
