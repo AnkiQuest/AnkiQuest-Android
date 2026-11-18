@@ -51,7 +51,9 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @Before
     fun prepareProfile() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, AnkiquestCapabilities)
+        // An older server: invitations go by link and there is no Message.
+        coEvery { AnkiquestCapabilities.current(any()) } returns emptySet()
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
@@ -66,7 +68,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @After
     fun clearProfileMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, AnkiquestCapabilities)
     }
 
     private fun person(user: String) = AnkiquestSocial.Person(user, user.replaceFirstChar(Char::uppercase))
@@ -101,7 +103,15 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         name: String,
         members: List<String> = emptyList(),
         invite: String? = "code-$id",
-    ) = AnkiquestSocial.Group(id, name, owner = invite != null, invite = invite, members = members.map(::person))
+        invited: List<String> = emptyList(),
+    ) = AnkiquestSocial.Group(
+        id,
+        name,
+        owner = invite != null,
+        invite = invite,
+        members = members.map(::person),
+        invited = invited.map(::person),
+    )
 
     private fun cerro() {
         coEvery { AnkiquestBoards.player(identity, "cerro") } returns
@@ -192,6 +202,66 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         list.performItemClick(list.adapter.getView(1, null, list), 1, list.adapter.getItemId(1))
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(AnkiquestSocial.inviteLink(identity, "code-4"), sharedLink(two))
+    }
+
+    @Test
+    fun `a server with group invites sends the invitation instead of sharing the link`() {
+        cerro()
+        coEvery { AnkiquestCapabilities.current(identity) } returns setOf(AnkiquestSocial.FEATURE_INVITES)
+        val owned = group(1, "Spanish club")
+        coEvery { AnkiquestSocial.overview(identity) } returns overview(groups = listOf(owned))
+        coEvery { AnkiquestSocial.change(identity, any()) } returns
+            overview(groups = listOf(group(1, "Spanish club", invited = listOf("cerro"))))
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        coEvery { AnkiquestSocial.overview(identity) } returns
+            overview(groups = listOf(group(1, "Spanish club", invited = listOf("cerro"))))
+        screen.click(screen.getString(R.string.aq_profile_invite))
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Invite(1, "cerro")) }
+        assertNull(shadowOf(screen).nextStartedActivity, "no link is shared")
+
+        // Once invited, the profile says so and offers no second invitation to that group.
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_invited, "Cerro", "Spanish club")))
+        assertFalse(screen.hasText(screen.getString(R.string.aq_profile_invite)))
+    }
+
+    @Test
+    fun `a friend can be messaged on a server with messages`() {
+        cerro()
+        mockkObject(AnkiquestMessages)
+        try {
+            coEvery { AnkiquestSocial.overview(identity) } returns standing(AnkiquestSocial.Relation.FRIENDS)
+            val older = launch("cerro")
+            advanceRobolectricLooper()
+            assertFalse(older.hasText(older.getString(R.string.aq_profile_message)), "an older server has no messages")
+
+            coEvery { AnkiquestCapabilities.current(identity) } returns setOf(AnkiquestMessages.FEATURE)
+            coEvery { AnkiquestMessages.send(identity, "cerro", any()) } returns AnkiquestMessages.Outcome.SENT
+            val screen = launch("cerro")
+            advanceRobolectricLooper()
+            screen.click(screen.getString(R.string.aq_profile_message))
+            val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+            val field =
+                dialog.window!!
+                    .decorView.allViews
+                    .filterIsInstance<android.widget.EditText>()
+                    .single()
+            field.setText(" Verbs tonight? ")
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+            advanceRobolectricLooper()
+            advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
+            coVerify(exactly = 1) { AnkiquestMessages.send(identity, "cerro", "Verbs tonight?") }
+
+            // Only friends get Message.
+            for (relation in listOf(AnkiquestSocial.Relation.NONE, AnkiquestSocial.Relation.REQUESTED, AnkiquestSocial.Relation.ASKED)) {
+                coEvery { AnkiquestSocial.overview(identity) } returns standing(relation)
+                val stranger = launch("cerro")
+                advanceRobolectricLooper()
+                assertFalse(stranger.hasText(stranger.getString(R.string.aq_profile_message)), "$relation")
+            }
+        } finally {
+            unmockkObject(AnkiquestMessages)
+        }
     }
 
     /** The invite link in the text the screen last handed to the share sheet. */

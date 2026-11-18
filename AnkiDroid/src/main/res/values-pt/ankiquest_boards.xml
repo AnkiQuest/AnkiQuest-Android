@@ -32,6 +32,12 @@
     <string name="aq_profile_friends">Tu e %1$s são amigos.</string>
     <string name="aq_profile_invite">Convidar para um grupo</string>
     <string name="aq_profile_invite_pick">Que grupo?</string>
+    <string name="aq_profile_message">Mensagem</string>
+    <string name="aq_profile_message_to">Mensagem para %1$s</string>
+    <string name="aq_profile_message_sent">Mensagem enviada para %1$s.</string>
+    <string name="aq_profile_message_limit">Já enviaste hoje todas as mensagens possíveis. Tenta novamente amanhã.</string>
+    <string name="aq_profile_invite_sent">Convite enviado para %1$s.</string>
+    <string name="aq_profile_invited">%1$s foi convidado para %2$s.</string>
     <string name="aq_profile_refresh">Atualizar o perfil</string>
     <string name="aq_profile_loading">A carregar o perfil…</string>
     <string name="aq_profile_hidden">Este perfil é privado ou a pessoa não está neste servidor.</string>

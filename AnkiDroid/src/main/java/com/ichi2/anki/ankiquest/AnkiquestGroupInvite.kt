@@ -8,8 +8,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.R
 
 /**
- * Sharing a group's invite link through the system share sheet, from Friends and from another
- * player's profile. The server has no invitation it delivers itself, so the link is all there is.
+ * Inviting someone to a group, from Friends and from another player's profile: sharing a group's
+ * invite link through the system share sheet, and choosing which group when there are several.
  */
 internal object AnkiquestGroupInvite {
     /** Opens the share sheet for [group]'s invite link; a group without one shares nothing. */
@@ -27,22 +27,24 @@ internal object AnkiquestGroupInvite {
         context.startActivity(Intent.createChooser(send, context.getString(R.string.aq_friends_share_link)))
     }
 
-    /** Shares the only group in [groups] at once, or asks which one first. */
+    /** Hands the only group in [groups] to [chosen] at once, or asks which one first. */
     fun pick(
         context: Context,
-        account: HomeAccount,
         groups: List<AnkiquestSocial.Group>,
+        chosen: (AnkiquestSocial.Group) -> Unit,
     ) {
         val only = groups.singleOrNull()
         if (only != null) {
-            share(context, account, only)
+            chosen(only)
             return
         }
-        if (groups.isEmpty()) return
+        if (groups.isEmpty()) {
+            return
+        }
 
         MaterialAlertDialogBuilder(context)
             .setTitle(R.string.aq_profile_invite_pick)
-            .setItems(groups.map { it.name }.toTypedArray()) { _, which -> share(context, account, groups[which]) }
+            .setItems(groups.map { it.name }.toTypedArray()) { _, which -> chosen(groups[which]) }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }

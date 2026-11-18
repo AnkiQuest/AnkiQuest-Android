@@ -32,6 +32,12 @@
     <string name="aq_profile_friends">You and %1$s are friends.</string>
     <string name="aq_profile_invite">Invite to group</string>
     <string name="aq_profile_invite_pick">Which group?</string>
+    <string name="aq_profile_message">Message</string>
+    <string name="aq_profile_message_to">Message %1$s</string>
+    <string name="aq_profile_message_sent">Message sent to %1$s.</string>
+    <string name="aq_profile_message_limit">You sent as many messages as you can today. Try again tomorrow.</string>
+    <string name="aq_profile_invite_sent">Invitation sent to %1$s.</string>
+    <string name="aq_profile_invited">%1$s is invited to %2$s.</string>
     <string name="aq_profile_refresh">Refresh the profile</string>
     <string name="aq_profile_loading">Loading the profile…</string>
     <string name="aq_profile_hidden">This player’s profile is private, or they are not on this server.</string>
