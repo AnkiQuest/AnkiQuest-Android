@@ -3,7 +3,7 @@
 Anki-tan by Shigeyuki (https://www.patreon.com/Shigeyuki).
 
 The generated derivative `anki_tan_sleeping.webp` retains its exact bytes
-and CC BY-SA 4.0 licence; see [LICENSE](../LICENSE). It was generated with
+and CC BY-SA 4.0 licence; see [LICENSE](LICENSE). It was generated with
 OpenAI image_gen, which did not expose its model identifier, then exported
 from the master by the repository's Rust tool.
 
