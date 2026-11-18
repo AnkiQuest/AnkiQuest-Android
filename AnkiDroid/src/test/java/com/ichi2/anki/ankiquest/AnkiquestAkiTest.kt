@@ -103,6 +103,46 @@ class AnkiquestAkiTest : RobolectricTest() {
     }
 
     @Test
+    fun `the waiting line reads as on the desktop add-on`() {
+        // Wording and plural forms from the add-on's language.py (#356).
+        val expected =
+            mapOf(
+                "de" to
+                    listOf(
+                        "Du hast heute noch nicht gelernt. Deine Lernserie von 1 Tag wartet noch.",
+                        "Du hast heute noch nicht gelernt. Deine Lernserie von 12 Tagen wartet noch.",
+                    ),
+                "es" to
+                    listOf(
+                        "Hoy no has estudiado. Tu racha de 1 día sigue esperando.",
+                        "Hoy no has estudiado. Tu racha de 12 días sigue esperando.",
+                    ),
+                "fr" to
+                    listOf(
+                        "Tu n’as pas encore étudié aujourd’hui. Ta série de 1 jour t’attend toujours.",
+                        "Tu n’as pas encore étudié aujourd’hui. Ta série de 12 jours t’attend toujours.",
+                    ),
+                "pt" to
+                    listOf(
+                        "Ainda não estudaste hoje. A tua sequência de 1 dia continua à espera.",
+                        "Ainda não estudaste hoje. A tua sequência de 12 dias continua à espera.",
+                    ),
+            )
+
+        // Each language gets its own "one" and "other" line.
+        val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
+        for ((language, lines) in expected) {
+            val config = android.content.res.Configuration(targetContext.resources.configuration)
+            config.setLocale(java.util.Locale.forLanguageTag(language))
+            val context = targetContext.createConfigurationContext(config)
+            for ((streak, line) in listOf(1, 12).zip(lines)) {
+                val card = AnkiquestAki.mood(due, profile("pending", 0).put("streak", streak))
+                assertEquals(line, card.text(context), "$language, $streak days")
+            }
+        }
+    }
+
+    @Test
     fun `studying keeps the deck messages`() {
         val due = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 4)), 1)
         val studied = AnkiquestAki.mood(due, profile("studied", 20).put("streak", 13))
