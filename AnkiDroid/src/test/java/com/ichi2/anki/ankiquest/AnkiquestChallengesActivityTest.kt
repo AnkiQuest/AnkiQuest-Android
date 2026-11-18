@@ -67,6 +67,20 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `friend goals unlocked by the first upload drop the line on refresh`() {
+        coEvery { AnkiquestChallenges.overview(identity) } returns overview.copy(lock = AnkiquestLock.UPLOAD_FIRST)
+        val goals = launch()
+        assertTrue(goals.hasText(targetContext.getString(R.string.aq_upload_first)))
+
+        // The upload reached the server, which now counts friends' progress.
+        coEvery { AnkiquestChallenges.overview(identity) } returns overview
+        goals.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible }
+
+        assertFalse(goals.hasText(targetContext.getString(R.string.aq_upload_first)))
+    }
+
+    @Test
     fun `the list shows the invitation first, goals in progress with progress, and finished ones on request`() {
         val goals = launch()
         val texts = goals.texts()

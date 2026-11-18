@@ -87,7 +87,13 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
         // Every locked answer carries the header; only the board's rows matter here.
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
-            val body = if (exchange.requestURI.path == "/api/leaderboard") board.toString() else "{}"
+            val body =
+                when {
+                    exchange.requestURI.path == "/api/leaderboard" -> board.toString()
+                    // A server with scopes answers the Global setting with the player's decks.
+                    exchange.requestURI.path.startsWith("/api/decks/") -> JSONObject().put(AnkiquestBoards.GLOBAL_SETTING, true).toString()
+                    else -> "{}"
+                }
             val bytes = body.toByteArray(Charsets.UTF_8)
             exchange.responseHeaders.set("Content-Type", "application/json")
             if (uploaded == Uploaded.NOT_YET) {
@@ -171,8 +177,75 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
             assertFalse(targetContext.getString(R.string.aq_upload_first) in shown(id))
         }
 
-    private fun placeWidget(): Int =
-        shadowOf(AppWidgetManager.getInstance(targetContext)).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
+    @Test
+    fun `a board unlocked by the first upload drops the line on the next poll`() =
+        runBlocking {
+            board = JSONArray().put(row("hill", "Hill"))
+            val id = placeWidget()
+            AnkiquestPoll.run(targetContext)
+            assertEquals(targetContext.getString(R.string.aq_upload_first), shown(id).last())
+
+            // The upload reached the server, which now lists everyone.
+            uploaded = Uploaded.YES
+            board = JSONArray().put(row("hill", "Hill")).put(row("cerro", "Cerro"))
+            AnkiquestWidget.forgetFresh()
+            AnkiquestPoll.run(targetContext)
+
+            assertEquals(listOf("Hill", "Cerro"), shown(id).filter { it == "Hill" || it == "Cerro" })
+            assertFalse(targetContext.getString(R.string.aq_upload_first) in shown(id))
+        }
+
+    @Test
+    fun `the transparent widget says why the others are missing`() =
+        runBlocking {
+            board = JSONArray().put(row("hill", "Hill"))
+            val id = placeWidget(Kind.TRANSPARENT)
+
+            AnkiquestPoll.run(targetContext)
+
+            val lines = shown(id)
+            assertEquals("Hill", lines.first(), "the player's own row comes first")
+            assertEquals(targetContext.getString(R.string.aq_upload_first), lines.last())
+        }
+
+    @Test
+    fun `Global and group widgets say why the others are missing, until the first upload`() =
+        runBlocking {
+            board = JSONArray().put(row("hill", "Hill"))
+            val global = placeWidget()
+            val group = placeWidget(Kind.TRANSPARENT)
+            AnkiquestWidgetSettings.save(global, AnkiquestWidgetSettings(AnkiquestWidgetSettings.Who.GLOBAL))
+            AnkiquestWidgetSettings.save(group, AnkiquestWidgetSettings(AnkiquestWidgetSettings.Who.GROUP, 7, "Study group"))
+
+            AnkiquestPoll.run(targetContext)
+            for (id in listOf(global, group)) {
+                val lines = shown(id)
+                assertEquals("Hill", lines.first(), "widget $id: the player's own row comes first")
+                assertEquals(targetContext.getString(R.string.aq_upload_first), lines.last(), "widget $id")
+            }
+
+            // After the upload the same widgets show everyone without the line.
+            uploaded = Uploaded.YES
+            board = JSONArray().put(row("hill", "Hill")).put(row("cerro", "Cerro"))
+            AnkiquestWidget.forgetFresh()
+            AnkiquestPoll.run(targetContext)
+            for (id in listOf(global, group)) {
+                val lines = shown(id)
+                assertEquals(listOf("Hill", "Cerro"), lines.filter { it == "Hill" || it == "Cerro" }, "widget $id")
+                assertFalse(targetContext.getString(R.string.aq_upload_first) in lines, "widget $id: $lines")
+            }
+        }
+
+    /** Which of the two leaderboard widgets to place. */
+    private enum class Kind { SOLID, TRANSPARENT }
+
+    private fun placeWidget(kind: Kind = Kind.SOLID): Int {
+        val manager = shadowOf(AppWidgetManager.getInstance(targetContext))
+        return when (kind) {
+            Kind.SOLID -> manager.createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
+            Kind.TRANSPARENT -> manager.createWidget(AnkiquestTransparentWidget::class.java, R.layout.widget_ankiquest_transparent)
+        }
+    }
 
     /** What widget [id] shows: its status line when visible, then one line per list item (a player's name, or the item's text). */
     private fun shown(id: Int): List<String> {
