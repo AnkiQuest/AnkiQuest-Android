@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
 import org.json.JSONObject
@@ -59,7 +60,30 @@ class AnkiquestDayTest {
                 verdict.awaitingUpload,
                 name,
             )
+
+            // Cases from server commits before the day's words were pinned have no label.
+            if (expected.has("label")) {
+                assertEquals(expected.getString("label"), verdict.label.name.lowercase(), name)
+            }
         }
+    }
+
+    @Test
+    fun `a review after a frozen yesterday is short, not unstudied`() {
+        val profile =
+            JSONObject(
+                """{"streak": 4, "streak_state": "protected", "day_ends_at": 2000, "last_review_id": 10,
+                   "today": {"starts_at": 100, "reviews": 1, "time_ms": 180000, "minutes": 3, "streak_minutes": 10}}""",
+            )
+        val verdict = checkNotNull(AnkiquestDay.judge(AnkiquestDay.Server.profile(profile), emptyList(), 1000))
+        assertEquals(AnkiquestDay.State.SHORT, verdict.label)
+
+        // The status line counts the minutes instead of saying nothing was studied.
+        val context = RuntimeEnvironment.getApplication()
+        assertEquals(context.getString(R.string.ankiquest_streak_short, 3, 10), AnkiquestDay.words(context, verdict))
+
+        val untouched = JSONObject(profile.toString()).put("today", profile.getJSONObject("today").put("reviews", 0).put("time_ms", 0))
+        assertEquals(AnkiquestDay.State.PROTECTED, AnkiquestDay.label(AnkiquestDay.Server.profile(untouched), 1000))
     }
 
     @Test
@@ -85,8 +109,13 @@ class AnkiquestDayTest {
             row("""{"streak_state": "pending", "today_reviews": 3, "today_minutes": 4, "streak_minutes": 10, "day_ends_at": 2000}"""),
         )
         assertEquals(
-            AnkiquestDay.State.PROTECTED,
+            AnkiquestDay.State.SHORT,
             row("""{"streak_state": "protected", "today_reviews": 3, "today_minutes": 2, "streak_minutes": 10, "day_ends_at": 2000}"""),
+            "reviews today outrank a protected streak",
+        )
+        assertEquals(
+            AnkiquestDay.State.PROTECTED,
+            row("""{"streak_state": "protected", "today_reviews": 0, "streak_minutes": 10, "day_ends_at": 2000}"""),
         )
         assertEquals(
             AnkiquestDay.State.STUDIED,
