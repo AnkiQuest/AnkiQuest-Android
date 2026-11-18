@@ -37,7 +37,11 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals("aki", AnkiquestCompanion.selected())
         assertTrue(AnkiquestCompanion.remember(alice, "ankilope"))
         assertEquals("ankilope", AnkiquestCompanion.selected())
-        assertEquals(R.drawable.ankilope_study, AnkiquestCompanion.resource(R.drawable.aki_freeze))
+        assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.resource(R.drawable.aki_freeze))
+        assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.resource(R.drawable.aki_freeze_used))
+        assertEquals(R.drawable.ankilope_sad, AnkiquestCompanion.resource(R.drawable.aki_at_risk))
+        assertEquals(R.drawable.ankilope_sleeping, AnkiquestCompanion.resource(R.drawable.aki_sleeping))
+        assertEquals(R.drawable.ankilope_welcome, AnkiquestCompanion.resource(R.drawable.aki_welcome))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.resource(R.drawable.aki_winner))
         assertEquals(R.drawable.ankilope_place_1, AnkiquestCompanion.resource(R.drawable.aki_place_1))
         assertEquals(R.drawable.ankilope_place_2, AnkiquestCompanion.resource(R.drawable.aki_place_2))
@@ -58,6 +62,22 @@ class AnkiquestCompanionTest : RobolectricTest() {
 
         account("alice")
         assertEquals("ankilope", AnkiquestCompanion.selected())
+    }
+
+    @Test
+    fun `every streak mood shows Ankilope's own pose`() {
+        // hill's report: a freeze used yesterday showed Ankilope's study pose although her frozen pose exists.
+        for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
+            chooseCompanion(choice)
+            for ((mood, expected) in ankilopeMoodPoses) {
+                for (streak in listOf(0, 1, 7, 30, 100, 365)) {
+                    val name = targetContext.resources.getResourceEntryName(expected)
+                    val shown = AnkiquestMood.poses(mood, streak).map { AnkiquestCompanion.resource(it) }
+                    assertEquals(listOf(expected), shown.distinct(), "$choice $mood $streak: $name")
+                    assertEquals(expected, AnkiquestCompanion.resource(AnkiquestMood.pose(mood, streak)), "$choice $mood $streak")
+                }
+            }
+        }
     }
 
     @Test
@@ -110,7 +130,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk), AnkiquestCompanion.preview(Choice.AKI))
         for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
             val pictures = AnkiquestCompanion.preview(choice).map { AnkiquestCompanion.resource(it, choice) }
-            assertEquals(listOf(R.drawable.ankilope_face, R.drawable.ankilope_study), pictures)
+            assertEquals(listOf(R.drawable.ankilope_face, R.drawable.ankilope_study, R.drawable.ankilope_sad), pictures)
         }
     }
 

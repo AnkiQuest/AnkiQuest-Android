@@ -151,6 +151,25 @@ class AnkiquestAkiTest : RobolectricTest() {
         assertTrue(checked > 0)
     }
 
+    @Test
+    fun `the home card shows Ankilope's pose for every shared streak mood`() {
+        // hill's report: Ankilope studied on a day a freeze kept; each mood has her own pose.
+        chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
+        val fixtures =
+            JSONObject(
+                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
+            )
+        var checked = 0
+        for (case in fixtures.getJSONArray("moods").objects()) {
+            val profile = homeProfile(case.getJSONObject("today")) ?: continue
+            val card = AnkiquestAki.mood(null, profile)
+            val expected = ankilopeMoodPoses.getValue(card.mood)
+            assertEquals(expected, AnkiquestCompanion.resource(card.image), case.getString("name"))
+            checked++
+        }
+        assertTrue(checked > 0)
+    }
+
     /**
      * A server profile that the Home card judges as the fixture's [today], or null for an unknown
      * day: Home learns the goal and frozen days from the same profile, so it has neither then.
