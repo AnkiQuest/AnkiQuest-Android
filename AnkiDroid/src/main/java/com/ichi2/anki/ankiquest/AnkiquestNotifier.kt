@@ -57,6 +57,7 @@ object AnkiquestNotifier {
         account: String,
         notifications: JSONArray,
         scope: String? = null,
+        @Suppress("UNUSED_PARAMETER") drawn: Collection<String> = AnkiquestCompanion.drawn,
     ) {
         if (scope != null && AnkiquestHomeData.account()?.scope != scope) return
         val prefs = AnkiDroidApp.sharedPrefs()
