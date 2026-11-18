@@ -104,6 +104,12 @@ val buildTimeMillis =
 android {
     namespace = "com.ichi2.anki"
 
+    // AGP writes a dependency list into the APK signing block, encrypted for Google Play with a
+    // random key, so two builds of the same commit differed (#352). App bundles keep it for Play.
+    dependenciesInfo {
+        includeInApk = false
+    }
+
     buildFeatures {
         buildConfig = true
         aidl = true
