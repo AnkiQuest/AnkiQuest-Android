@@ -33,10 +33,10 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 ### Features
 
 <div style="display:flex;">
- 
+
 - AnkiQuest: XP, streaks, quests, records and a leaderboard widget
 - Night mode
-- Whiteboard 
+- Whiteboard
 - Progress widget
 - Detailed statistics
 - [Review heatmap beneath the deck list](docs/review-heatmap.md)
