@@ -14,6 +14,10 @@ class AnkiquestStreakScreenshotTest : ScreenshotTest() {
     @Test
     @OptIn(ExperimentalRoborazziApi::class)
     fun tiers() {
+        // Temporary diagnosis for #364.
+        java.io.File("/tmp/diag364-probe.txt").appendText(
+            "thread=${Thread.currentThread().name} subnormal=${tiny * half != 0.0}\n",
+        )
         val directory = "build/outputs/roborazzi/${javaClass.simpleName}"
         for ((size, width, height) in AnkiquestStreakTiers.sizes) {
             AnkiquestStreakTiers.grid(targetContext, size, width, height).captureRoboImage(
@@ -22,4 +26,8 @@ class AnkiquestStreakScreenshotTest : ScreenshotTest() {
             )
         }
     }
+
+    @Volatile private var tiny = Double.MIN_NORMAL
+
+    @Volatile private var half = 0.5
 }

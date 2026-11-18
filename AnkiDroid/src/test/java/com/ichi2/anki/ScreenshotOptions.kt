@@ -20,7 +20,7 @@ fun screenshotOptions(diffDirectory: String): RoborazziOptions {
     val compare =
         options.compareOptions.copy(
             outputDirectoryPath = diffDirectory,
-            comparisonStyle = ComparisonStyle.Grid(hasLabel = true),
+            comparisonStyle = ComparisonStyle.Grid(hasLabel = !java.io.File("/tmp/diag364-nolabel").exists()),
         )
     return options.copy(compareOptions = compare)
 }
