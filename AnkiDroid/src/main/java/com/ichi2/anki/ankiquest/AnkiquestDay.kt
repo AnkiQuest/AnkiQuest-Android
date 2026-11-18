@@ -133,14 +133,17 @@ internal object AnkiquestDay {
         /** Secured by reviews the server has not received yet: say so until the upload lands. */
         val awaitingUpload: Boolean get() = met && !confirmed
 
-        /** The words every screen uses: studied, protected, short (reviews under the minimum), pending or unknown. */
+        /**
+         * The words every screen uses: studied, protected, short (reviews under the minimum), pending or
+         * unknown. Reviews today outrank a protected streak, whose words say nothing was studied yet.
+         */
         val label: State
             get() =
                 when {
                     met -> State.STUDIED
                     streakState == null -> State.UNKNOWN
-                    streakState == "protected" -> State.PROTECTED
                     reviews > 0 -> State.SHORT
+                    streakState == "protected" -> State.PROTECTED
                     else -> State.PENDING
                 }
     }
