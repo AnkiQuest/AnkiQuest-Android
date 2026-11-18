@@ -50,7 +50,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.resource(R.drawable.aki_freeze))
         assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.resource(R.drawable.aki_freeze_used))
         assertEquals(R.drawable.ankilope_sad, AnkiquestCompanion.resource(R.drawable.aki_at_risk))
-        assertEquals(R.drawable.ankilope_sleeping, AnkiquestCompanion.resource(R.drawable.aki_sleeping))
+        assertEquals(R.drawable.ankilope_asleep, AnkiquestCompanion.resource(R.drawable.aki_asleep))
         assertEquals(R.drawable.ankilope_welcome, AnkiquestCompanion.resource(R.drawable.aki_welcome))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.resource(R.drawable.aki_winner))
         assertEquals(R.drawable.ankilope_place_1, AnkiquestCompanion.resource(R.drawable.aki_place_1))
