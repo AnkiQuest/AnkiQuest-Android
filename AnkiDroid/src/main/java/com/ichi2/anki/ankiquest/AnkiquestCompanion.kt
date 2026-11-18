@@ -52,7 +52,7 @@ internal object AnkiquestCompanion {
     /** The poses a preview card shows, as Aki's: face, fire and sad. */
     private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk)
 
-    /** [choice]'s preview poses as Aki's, without two that look the same (Ankilope studies for fire and sad). */
+    /** [choice]'s preview poses as Aki's, without two that look the same. */
     fun preview(choice: Choice): List<Int> = previewPoses.distinctBy { resource(it, choice) }
 
     /** Degrees that turn Ankilope's tan fur purple for the interim cow. */
@@ -192,38 +192,123 @@ internal object AnkiquestCompanion {
         }
     }
 
+    /**
+     * Aki's art for each pose. The streak moods keep the pictures they had before her core art
+     * (#294); showing that art is separate work.
+     */
+    private val akiPoses =
+        mapOf(
+            AnkiquestPose.FACE to R.drawable.aki_face,
+            AnkiquestPose.ASLEEP to R.drawable.aki_sleeping,
+            AnkiquestPose.HAPPY to R.drawable.aki_celebrate,
+            AnkiquestPose.STREAK to R.drawable.aki_streak,
+            AnkiquestPose.STREAK_HOT to R.drawable.aki_streak_hot,
+            AnkiquestPose.STREAK_BLAZING to R.drawable.aki_streak_blazing,
+            AnkiquestPose.STREAK_LEGEND to R.drawable.aki_streak_legend,
+            AnkiquestPose.STREAK_MILESTONE to R.drawable.aki_streak_milestone,
+            // Interim: at_risk is the most worried, welcome smiles with a card, freeze_used has snow.
+            AnkiquestPose.SAD to R.drawable.aki_at_risk,
+            AnkiquestPose.HOPEFUL to R.drawable.aki_welcome,
+            AnkiquestPose.FROZEN to R.drawable.aki_freeze_used,
+            AnkiquestPose.FROZEN_2 to R.drawable.aki_freeze,
+            AnkiquestPose.FROZEN_3 to R.drawable.aki_freeze_used,
+            AnkiquestPose.NEGLECTED to R.drawable.aki_neglected,
+        )
+
+    /** Ankilope's art for each pose she has; the cow draws it recoloured. */
+    private val ankilopePoses =
+        mapOf(
+            AnkiquestPose.FACE to R.drawable.ankilope_face,
+            AnkiquestPose.ASLEEP to R.drawable.ankilope_sleeping,
+            AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
+            // Interim: Ankilope has no on-fire art yet, so she studies (hill, 2026-11-18).
+            AnkiquestPose.STREAK to R.drawable.ankilope_study,
+            AnkiquestPose.SAD to R.drawable.ankilope_sad,
+            AnkiquestPose.HOPEFUL to R.drawable.ankilope_hopeful,
+            AnkiquestPose.FROZEN to R.drawable.ankilope_frozen,
+            AnkiquestPose.NEGLECTED to R.drawable.ankilope_neglected,
+            AnkiquestPose.WELCOME to R.drawable.ankilope_welcome,
+            AnkiquestPose.REVIEW to R.drawable.ankilope_study,
+        )
+
+    /** The pose each of Aki's pictures shows, so that other companions show theirs. */
+    private val akiPictures =
+        mapOf(
+            R.drawable.aki_face to AnkiquestPose.FACE,
+            R.drawable.aki_icon_happy to AnkiquestPose.FACE,
+            R.drawable.aki_icon_worried to AnkiquestPose.FACE,
+            R.drawable.aki_icon_frozen to AnkiquestPose.FACE,
+            R.drawable.aki_icon_sleepy to AnkiquestPose.FACE,
+            R.drawable.aki_sleeping to AnkiquestPose.ASLEEP,
+            R.drawable.aki_celebrate to AnkiquestPose.HAPPY,
+            R.drawable.aki_achievement to AnkiquestPose.HAPPY,
+            R.drawable.aki_goal to AnkiquestPose.HAPPY,
+            R.drawable.aki_deck_conquered to AnkiquestPose.HAPPY,
+            R.drawable.aki_level_up to AnkiquestPose.HAPPY,
+            R.drawable.aki_streak to AnkiquestPose.STREAK,
+            R.drawable.aki_streak_hot to AnkiquestPose.STREAK_HOT,
+            R.drawable.aki_streak_blazing to AnkiquestPose.STREAK_BLAZING,
+            R.drawable.aki_streak_legend to AnkiquestPose.STREAK_LEGEND,
+            R.drawable.aki_streak_milestone to AnkiquestPose.STREAK_MILESTONE,
+            R.drawable.aki_at_risk to AnkiquestPose.SAD,
+            R.drawable.aki_sad to AnkiquestPose.SAD,
+            R.drawable.aki_hopeful to AnkiquestPose.HOPEFUL,
+            R.drawable.aki_freeze_used to AnkiquestPose.FROZEN,
+            R.drawable.aki_frozen to AnkiquestPose.FROZEN,
+            R.drawable.aki_freeze to AnkiquestPose.FROZEN_2,
+            R.drawable.aki_neglected to AnkiquestPose.NEGLECTED,
+            R.drawable.aki_welcome to AnkiquestPose.WELCOME,
+            R.drawable.aki_comeback to AnkiquestPose.WELCOME,
+            R.drawable.aki_review to AnkiquestPose.REVIEW,
+            R.drawable.aki_minimum to AnkiquestPose.REVIEW,
+            R.drawable.aki_winner to AnkiquestPose.WINNER,
+            R.drawable.aki_leech to AnkiquestPose.LEECH_DEFEATED,
+        )
+
+    /** Ankilope's version of Aki's pictures that are scenes rather than poses. */
+    private val ankilopeScenes =
+        mapOf(
+            R.drawable.aki_nudge to R.drawable.ankilope_nudge,
+            R.drawable.aki_backlog to R.drawable.ankilope_backlog,
+            R.drawable.aki_place_1 to R.drawable.ankilope_place_1,
+            R.drawable.aki_place_2 to R.drawable.ankilope_place_2,
+            R.drawable.aki_place_3 to R.drawable.ankilope_place_3,
+            R.drawable.aki_challenge to R.drawable.ankilope_challenge,
+            R.drawable.aki_challenge_won to R.drawable.ankilope_challenge_won,
+            R.drawable.aki_challenge_lost to R.drawable.ankilope_challenge_lost,
+        )
+
+    /** Whether [choice] is drawn with Ankilope's art: Ankilope, and the cow recoloured. */
+    private fun ankilopeArt(choice: Choice) = choice == Choice.ANKILOPE || choice == Choice.COW
+
+    /** [choice]'s art for [pose], or for its nearest fallback ([AnkiquestPose.chain]) where it has none. */
+    @DrawableRes
+    fun art(
+        pose: AnkiquestPose,
+        choice: Choice = choice(),
+    ): Int {
+        val poses = if (ankilopeArt(choice)) ankilopePoses else akiPoses
+        return pose.chain().firstNotNullOf { poses[it] }
+    }
+
+    /**
+     * [choice]'s version of Aki's picture [aki]: by the pose it shows, or as the same scene. Art that is
+     * already [choice]'s, such as [AnkiquestMood.pose]'s, is returned as it is.
+     */
     @DrawableRes
     fun resource(
         @DrawableRes aki: Int,
         choice: Choice = choice(),
-    ): Int =
-        if (choice != Choice.ANKILOPE && choice != Choice.COW) {
-            aki
-        } else {
-            when (aki) {
-                R.drawable.aki_face, R.drawable.aki_icon_happy, R.drawable.aki_icon_worried,
-                R.drawable.aki_icon_frozen, R.drawable.aki_icon_sleepy,
-                -> R.drawable.ankilope_face
-                R.drawable.aki_nudge -> R.drawable.ankilope_nudge
-                R.drawable.aki_backlog -> R.drawable.ankilope_backlog
-                R.drawable.aki_place_1 -> R.drawable.ankilope_place_1
-                R.drawable.aki_place_2 -> R.drawable.ankilope_place_2
-                R.drawable.aki_place_3 -> R.drawable.ankilope_place_3
-                R.drawable.aki_challenge -> R.drawable.ankilope_challenge
-                R.drawable.aki_challenge_won -> R.drawable.ankilope_challenge_won
-                R.drawable.aki_challenge_lost -> R.drawable.ankilope_challenge_lost
-                R.drawable.aki_welcome, R.drawable.aki_sleeping, R.drawable.aki_comeback,
-                -> R.drawable.ankilope_welcome
-                R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_achievement,
-                R.drawable.aki_goal, R.drawable.aki_deck_conquered,
-                -> R.drawable.ankilope_celebrate
-                R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze, R.drawable.aki_freeze_used,
-                R.drawable.aki_streak_hot, R.drawable.aki_streak_blazing, R.drawable.aki_streak_legend, R.drawable.aki_at_risk,
-                R.drawable.aki_streak_milestone, R.drawable.aki_minimum,
-                -> R.drawable.ankilope_study
-                else -> aki
-            }
+    ): Int {
+        if (!ankilopeArt(choice)) {
+            return aki
         }
+        val pose = akiPictures[aki]
+        if (pose != null) {
+            return art(pose, choice)
+        }
+        return ankilopeScenes[aki] ?: aki
+    }
 
     /**
      * [choice]'s version of [aki], decoded for [size] pixels, or null when it cannot be decoded.

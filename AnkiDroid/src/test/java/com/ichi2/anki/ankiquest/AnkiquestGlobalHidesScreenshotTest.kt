@@ -45,11 +45,9 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
         coEvery { AnkiquestGlobalHides.load(any()) } returns emptyList()
+        val rows = JSONArray("""[{"user":"ana","display":"Ana","rank":3,"level":4,"xp":900,"streak":7}]""")
         coEvery { AnkiquestBoards.leaderboard(any(), any(), any()) } returns
-            AnkiquestBoards.parseLeaderboard(
-                JSONArray("""[{"user":"ana","display":"Ana","rank":3,"level":4,"xp":900,"streak":7}]"""),
-                AnkiquestBoards.Period.WEEK,
-            )
+            AnkiquestBoards.Leaderboard(AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK))
     }
 
     @After

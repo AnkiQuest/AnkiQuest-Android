@@ -12,7 +12,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.android.view.locationInWindow
 import com.ichi2.anki.ankiquest.awaitDeckHolder
-import com.ichi2.anki.ankiquest.heatmap.DeckHeatmapScreenshotTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.libanki.DeckId
@@ -34,7 +33,7 @@ import org.robolectric.shadows.ShadowDialog
  *
  * `./gradlew :AnkiDroid:verifyRoborazziPlayDebug -Pscreenshot --tests "com.ichi2.anki.DeckPickerScreenshotTest"`
  */
-class DeckPickerScreenshotTest : DeckHeatmapScreenshotTest() {
+class DeckPickerScreenshotTest : ScreenshotTest() {
     @Before
     override fun setUp() {
         super.setUp()

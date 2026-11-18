@@ -18,9 +18,9 @@ internal object AnkiquestGallery {
     /** The type of every share picture, in the share cache and in the gallery. */
     const val PNG = "image/png"
 
-    private const val FOLDER = "AnkiQuest"
+    private const val FOLDER = AnkiquestShare.BRAND
 
-    /** The FileProvider that exposes the share cache to other apps and to [save]. */
+    /** The app's FileProvider: it exposes the share cache and downloaded updates to other apps. */
     fun authority(context: Context) = "${context.packageName}.apkgfileprovider"
 
     fun save(

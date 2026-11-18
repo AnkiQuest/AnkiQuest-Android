@@ -36,6 +36,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
     private var account: HomeAccount? = identity
     private var answer = JSONArray()
+    private var lock: AnkiquestLock? = null
 
     @Before
     fun prepare() {
@@ -43,7 +44,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         every { AnkiquestHomeData.account(any()) } answers { account }
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         coEvery { AnkiquestBoards.leaderboard(any(), any(), any()) } answers {
-            AnkiquestBoards.parseLeaderboard(answer, AnkiquestBoards.Period.WEEK)
+            AnkiquestBoards.Leaderboard(AnkiquestBoards.parseLeaderboard(answer, AnkiquestBoards.Period.WEEK), lock)
         }
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
@@ -65,6 +66,14 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         assertTrue("Ana" in words)
         assertFalse(screen.getString(R.string.aq_board_today_reviews, "0") in words)
         assertFalse(words.any { it.contains("Refresh to see") })
+    }
+
+    @Test
+    fun `a locked board asks to study and sync instead of saying nobody plays`() {
+        lock = AnkiquestLock.UPLOAD_FIRST
+        val words = labels(launch().get())
+        assertTrue(targetContext.getString(R.string.aq_upload_first) in words)
+        assertFalse(targetContext.getString(R.string.aq_board_empty) in words)
     }
 
     @Test
@@ -201,7 +210,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
 
     @Test
     fun `a late Global answer cannot replace a newer period`() {
-        val waiting = CompletableDeferred<List<AnkiquestBoards.Standing>>()
+        val waiting = CompletableDeferred<AnkiquestBoards.Leaderboard>()
         coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global) } coAnswers {
             withContext(NonCancellable) { waiting.await() }
         }
@@ -212,12 +221,13 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
             advanceRobolectricLooper()
             answer = JSONArray().put(stranger("current", 4, 70))
             click(screen, R.string.aq_board_month)
-            waiting.complete(AnkiquestBoards.parseLeaderboard(JSONArray().put(stranger("old", 3, 80)), AnkiquestBoards.Period.WEEK))
+            val old = AnkiquestBoards.parseLeaderboard(JSONArray().put(stranger("old", 3, 80)), AnkiquestBoards.Period.WEEK)
+            waiting.complete(AnkiquestBoards.Leaderboard(old))
             advanceRobolectricLooper()
             assertTrue("Current" in labels(screen))
             assertFalse("Old" in labels(screen))
         } finally {
-            waiting.complete(emptyList())
+            waiting.complete(AnkiquestBoards.Leaderboard(emptyList()))
         }
     }
 

@@ -186,7 +186,7 @@ class AnkiquestMoodTest : RobolectricTest() {
                 .put("today", today),
         )
 
-        val view = ReviewHeatmapView(ContextThemeWrapper(targetContext, CommonR.style.Theme_Light))
+        val view = ReviewHeatmapView(ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid))
         val aki = view.findViewById<ImageView>(R.id.review_heatmap_aki)
         assertTrue(aki.isVisible)
         assertEquals(AnkiquestMood.pose(Mood.SAD, 12), shadowOf(aki.drawable).createdFromResId)

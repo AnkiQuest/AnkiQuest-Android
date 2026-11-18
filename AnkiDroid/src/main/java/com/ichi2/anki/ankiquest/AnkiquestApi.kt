@@ -22,6 +22,8 @@ internal class AnkiquestHttpException(
     val explanation: String? = null,
     /** The server wants the player to sign in with their provider again first (`"reauth": true`). */
     val reauth: Boolean = false,
+    /** The password was right and the account wants its two-factor code (`"second_factor": true`). */
+    val secondFactor: Boolean = false,
 ) : IOException(explanation ?: "HTTP $code")
 
 /** The signed-in account is no longer the one a request was prepared for. */
@@ -123,7 +125,12 @@ internal object AnkiquestApi {
             if (!response.isSuccessful) {
                 val text = runCatching { response.peekBody(ERROR_BYTES).string() }.getOrNull()
                 check()
-                throw AnkiquestHttpException(response.code, text?.let(::explanation), text?.let(::reauth) == true)
+                throw AnkiquestHttpException(
+                    response.code,
+                    text?.let(::explanation),
+                    reauth = text?.let { flag(it, "reauth") } == true,
+                    secondFactor = text?.let { flag(it, "second_factor") } == true,
+                )
             }
             // A parse failure quotes the answer it could not read; keep it out of logs.
             val value =
@@ -183,10 +190,13 @@ internal object AnkiquestApi {
             null
         }
 
-    /** Whether a refusal says `"reauth": true`. */
-    fun reauth(body: String): Boolean =
+    /** Whether a refusal says `"<name>": true`, such as `reauth` or `second_factor`. */
+    fun flag(
+        body: String,
+        name: String,
+    ): Boolean =
         try {
-            JSONObject(body).optBoolean("reauth")
+            JSONObject(body).optBoolean(name)
         } catch (_: JSONException) {
             false
         }

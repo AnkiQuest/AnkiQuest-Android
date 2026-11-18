@@ -11,6 +11,13 @@
         android:key="@string/ankiquest_password_key"
         android:persistent="false"
         android:title="@string/ankiquest_password_title" />
+    <!-- Set up on the website; shown for an account on a server that has it. -->
+    <Preference
+        android:key="@string/ankiquest_two_factor_key"
+        android:persistent="false"
+        android:title="@string/ankiquest_two_factor_title"
+        android:summary="@string/ankiquest_two_factor_summary"
+        app:isPreferenceVisible="false" />
     <PreferenceCategory
         android:key="@string/ankiquest_providers_key"
         android:title="@string/ankiquest_providers_title" />

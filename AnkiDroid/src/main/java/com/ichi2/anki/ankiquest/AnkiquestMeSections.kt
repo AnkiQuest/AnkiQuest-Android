@@ -24,12 +24,15 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapGrid
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapWeekdays
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -178,7 +181,7 @@ private class RecordsSection(
         initial,
     ) {
     private var account: HomeAccount? = AnkiquestHomeData.account()
-    private var boards: List<AnkiquestRecords.Board>? = null
+    private var boards: AnkiquestRecords.Records? = null
 
     /** What the player can pick between; null until asked, empty when there is no choice. */
     private var scopes: List<AnkiquestRecords.Scope>? = null
@@ -306,11 +309,16 @@ private class RecordsSection(
         val held = boards
         when {
             held == null -> if (loading) views.text(content, getString(R.string.aq_records_loading), small = true)
-            held.all { it.holders.isEmpty() } -> {
+            held.lock != null -> {
+                // Others' records wait for the player's first upload; only their own can show.
+                held.boards.filter { it.holders.isNotEmpty() }.forEach { renderBoard(content, it, current.user) }
+                views.text(content, getString(held.lock.text), heading = true).setPadding(0, views.dp(16), 0, 0)
+            }
+            held.boards.all { it.holders.isEmpty() } -> {
                 views.text(content, getString(R.string.aq_records_empty), heading = true).setPadding(0, views.dp(16), 0, 0)
                 views.text(content, getString(R.string.aq_records_empty_hint), small = true)
             }
-            else -> held.filter { it.holders.isNotEmpty() }.forEach { renderBoard(content, it, current.user) }
+            else -> held.boards.filter { it.holders.isNotEmpty() }.forEach { renderBoard(content, it, current.user) }
         }
         failure?.let { problem ->
             views.text(content, getString(problem), small = true)
@@ -564,7 +572,9 @@ private class HistorySection(
         val panel = views.card(content)
         views.text(panel, getString(R.string.aq_history_calendar, history.year), heading = true)
         views.text(panel, getString(R.string.review_heatmap_scroll_hint), small = true)
-        val data = history.heatmap(LocalDate.now())
+        // TimeManager, not the host clock, so tests choose the day.
+        val today = Instant.ofEpochMilli(TimeManager.time.intTimeMS()).atZone(ZoneId.systemDefault()).toLocalDate()
+        val data = history.heatmap(today)
         val grid =
             ReviewHeatmapGrid(this).apply {
                 showYear(data, history.year)
