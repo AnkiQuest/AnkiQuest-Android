@@ -73,6 +73,21 @@ val gitCommitHash =
         .map { it.trim() }
 
 /**
+ * The newest upstream AnkiDroid commit merged into this build: `git merge-base HEAD <ankidroid main>`.
+ * Shown in the debug info. CI passes it via -PupstreamCommit=<sha>, because a clone may lack the
+ * upstream remote and fetching it here would make the build depend on the network. "unknown" otherwise.
+ */
+val upstreamCommitHash =
+    providers
+        .gradleProperty("upstreamCommit")
+        .map { sha ->
+            if (!sha.matches(Regex("[0-9a-f]{40}"))) {
+                throw GradleException("upstreamCommit must be a full commit hash")
+            }
+            sha
+        }.orElse("unknown")
+
+/**
  * Epoch millis of the build. Displayed on the 'About' screen.
  *
  * Taken from, in order:
@@ -130,6 +145,7 @@ android {
         buildConfigField("String", "BACKEND_VERSION", "\"${libs.versions.ankiBackend.get()}\"")
         buildConfigField("Boolean", "ENABLE_LEAK_CANARY", "false")
         buildConfigField("String", "GIT_COMMIT_HASH", "\"${gitCommitHash.get()}\"")
+        buildConfigField("String", "UPSTREAM_COMMIT_HASH", "\"${upstreamCommitHash.get()}\"")
         buildConfigField("long", "BUILD_TIME", buildTimeMillis.get())
         // whether UI elements linking to external donation pages are shown ('play' hides them)
         buildConfigField("Boolean", "SHOW_DONATE_LINKS", "true")

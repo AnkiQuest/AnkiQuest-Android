@@ -61,13 +61,23 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "nightly=$nightly" >> "$GITHUB_OUTPUT"
 
+      # The newest upstream AnkiDroid commit merged into this build, for the debug info.
+      # Upstream merges keep upstream history, so the merge base with upstream main is that commit.
+      - name: Upstream commit
+        id: upstream
+        run: |
+          git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
+          sha=$(git merge-base HEAD FETCH_HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Assemble
         run: |
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
             -PcustomSuffix=quest -PcustomName="AnkiQuest" \
             -PankiquestRelease=${{ steps.release.outputs.number }} \
-            -PankiquestNightly=${{ steps.release.outputs.nightly }}
+            -PankiquestNightly=${{ steps.release.outputs.nightly }} \
+            -PupstreamCommit=${{ steps.upstream.outputs.sha }}
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
       - name: Sign with the AnkiQuest release key
