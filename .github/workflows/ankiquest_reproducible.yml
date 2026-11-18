@@ -74,11 +74,15 @@ jobs:
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache \
             -PcustomSuffix=quest -PcustomName="AnkiQuest"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-${{ matrix.build }}.apk"
+          cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-${{ matrix.build }}.txt"
 
+      # The R8 mapping shows which classes and members R8 named or kept differently.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: apk-${{ matrix.build }}
-          path: AnkiQuest-${{ matrix.build }}.apk
+          path: |
+            AnkiQuest-${{ matrix.build }}.apk
+            mapping-${{ matrix.build }}.txt
           if-no-files-found: error
 
   compare:
@@ -125,6 +129,11 @@ jobs:
           cat report/entries.txt
           echo "zipinfo differences:"
           head -n 200 report/zipinfo.diff
+
+          # R8 mapping differences, without the header that holds the mapping's own hash.
+          diff <(grep -v '^#' mapping-first.txt) <(grep -v '^#' mapping-second.txt) > report/mapping.diff || true
+          echo "R8 mapping differences ($(wc -l < report/mapping.diff) lines):"
+          head -n 300 report/mapping.diff
 
           # One diffoscope report per differing entry.
           unzip -q AnkiQuest-first.apk -d first
