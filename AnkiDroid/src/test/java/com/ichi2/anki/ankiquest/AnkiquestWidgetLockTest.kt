@@ -5,9 +5,14 @@ package com.ichi2.anki.ankiquest
 import android.appwidget.AppWidgetManager
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ListView
+import android.widget.RemoteViews
 import android.widget.TextView
 import androidx.core.content.edit
+import androidx.core.view.isVisible
+import androidx.core.widget.RemoteViewsCompat
+import androidx.core.widget.RemoteViewsCompat.RemoteCollectionItems
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
@@ -20,7 +25,9 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockkObject
+import io.mockk.mockkStatic
 import io.mockk.unmockkObject
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -55,6 +62,9 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     @Volatile
     private var uploaded = Uploaded.NOT_YET
 
+    /** The list items each widget was last given. Robolectric's widget host does not load them into its list. */
+    private val items = mutableMapOf<Int, RemoteCollectionItems>()
+
     @Before
     fun serveBoard() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
@@ -63,6 +73,16 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
         every { AnkiquestNotifier.onProfile(any(), any()) } just Runs
         every { AnkiquestNotifier.onDeckCompletions(any(), any(), any(), any()) } just Runs
         AnkiquestWidget.forgetFresh()
+
+        // Keep each widget's list items, then hand them on as usual.
+        mockkStatic(RemoteViewsCompat::class)
+        mockkObject(RemoteViewsCompat)
+        every {
+            RemoteViewsCompat.setRemoteAdapter(any(), any<RemoteViews>(), any(), any(), any<RemoteCollectionItems>())
+        } answers {
+            items[thirdArg()] = arg(4)
+            callOriginal()
+        }
 
         // Every locked answer carries the header; only the board's rows matter here.
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -87,9 +107,13 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     @After
     fun stopServer() {
         try {
-            if (::server.isInitialized) server.stop(0)
+            if (::server.isInitialized) {
+                server.stop(0)
+            }
         } finally {
             AnkiquestWidget.forgetFresh()
+            unmockkObject(RemoteViewsCompat)
+            unmockkStatic(RemoteViewsCompat::class)
             unmockkObject(AnkiquestNotifier)
             SharedPreferencesTestHook.override = null
         }
@@ -150,28 +174,32 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     private fun placeWidget(): Int =
         shadowOf(AppWidgetManager.getInstance(targetContext)).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
 
-    /** The texts widget [id] shows: its status line when visible, then each list item's texts in order. */
+    /** What widget [id] shows: its status line when visible, then one line per list item (a player's name, or the item's text). */
     private fun shown(id: Int): List<String> {
         val root = shadowOf(AppWidgetManager.getInstance(targetContext)).getViewFor(id)
         val status = root.findViewById<TextView>(R.id.ankiquest_widget_status)
         val list = root.findViewById<ListView>(R.id.ankiquest_widget_list)
         val lines = mutableListOf<String>()
-        if (status.visibility == View.VISIBLE) {
+        if (status.isVisible) {
             lines += status.text.toString()
         }
-        if (list.visibility != View.VISIBLE) {
+        if (!list.isVisible) {
             return lines
         }
-        val adapter = list.adapter ?: return lines
-        for (position in 0 until adapter.count) {
-            lines += texts(adapter.getView(position, null, list))
+
+        // The list items as the launcher would inflate them.
+        val given = items[id] ?: return lines
+        for (position in 0 until given.itemCount) {
+            val item = given.getItemView(position).apply(targetContext, FrameLayout(targetContext))
+            val name = item.findViewById<TextView>(R.id.ankiquest_widget_name)
+            lines += name?.text?.toString() ?: texts(item).joinToString(" ")
         }
         return lines
     }
 
     /** The visible, non-empty texts of [view] and its children, in layout order. */
     private fun texts(view: View): List<String> {
-        if (view.visibility != View.VISIBLE) {
+        if (!view.isVisible) {
             return emptyList()
         }
         if (view is TextView) {
