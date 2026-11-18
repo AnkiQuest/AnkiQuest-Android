@@ -3,9 +3,15 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.view.View
+import android.widget.EditText
 import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
+import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.chip.Chip
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
@@ -15,6 +21,7 @@ import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.setIntroductionSlidesShown
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -32,6 +39,8 @@ import org.robolectric.shadows.ShadowDialog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -207,6 +216,69 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             response.countDown()
             ShadowDialog.getLatestDialog()?.dismiss()
             unmockkObject(AnkiquestDecks, AnkiquestApi)
+        }
+    }
+
+    @Test
+    fun `a finished deck opens the common picker once and sends only the chosen friend`() {
+        val intent = Intent().putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
+        val host = startActivityControllerNormallyOpenCollectionWithIntent(DeckPicker::class.java, intent).get()
+        val deck = col.decks.selected()
+        val account = assertNotNull(AnkiquestHomeData.account())
+        val friend = AnkiquestSocial.Person("friend", "Friend")
+        val settings = JSONObject().put("decks", JSONArray()).put("recipients", JSONArray().put(JSONObject().put("user", friend.user)))
+        mockkObject(AnkiquestDecks, AnkiquestApi, AnkiquestCapabilities, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
+        try {
+            every { AnkiquestDecks.dailyStates(any(), any(), any()) } returns mapOf(deck to DailyDeckState(0, 0, 1))
+            every { AnkiquestApi.json(any(), match { it.url.encodedPath == "/api/decks/member" }, any()) } returns settings
+            every { AnkiquestCapabilities.has(any(), any()) } returns true
+            every { AnkiquestShare.render(any(), any()) } answers { createBitmap(1, 1) }
+            coEvery { AnkiquestSocial.overview(account) } returns
+                AnkiquestSocial.Overview(
+                    friends = listOf(friend),
+                    incoming = emptyList(),
+                    outgoing = emptyList(),
+                    muted = emptyList(),
+                    groups = emptyList(),
+                    public = true,
+                )
+            coEvery { AnkiquestSharing.send(account, any(), any(), any()) } returns AnkiquestSharing.Sent(1, 91, null)
+            val offer = CoroutineScope(Dispatchers.Main).async { AnkiquestDeckShare.offer(host) }
+            advanceRobolectricLooperUntil { offer.isCompleted }
+            runBlocking { offer.await() }
+            val dialog = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+            assertFalse(AnkiquestPostStudyPrompts.ready(host))
+            assertNotNull(dialog.findViewById<EditText>(R.id.aq_share_deck_name)).setText("Japanese vocabulary")
+            advanceRobolectricLooperUntil {
+                dialog.window!!
+                    .decorView.allViews
+                    .filterIsInstance<Chip>()
+                    .any { it.text == "Friend" }
+            }
+            dialog.window!!
+                .decorView.allViews
+                .filterIsInstance<Chip>()
+                .first { it.text == "Friend" }
+                .performClick()
+            dialog.findViewById<View>(R.id.aq_share_send)!!.performClick()
+            advanceRobolectricLooperUntil { !dialog.isShowing }
+            coVerify(exactly = 1) {
+                AnkiquestSharing.send(
+                    account,
+                    AnkiquestSharing.MomentRef.Deck(deck.toString(), "Japanese vocabulary"),
+                    AnkiquestSharing.Audience.Chosen(listOf("friend"), emptyList()),
+                    null,
+                )
+            }
+            coVerify(exactly = 0) { AnkiquestSharing.shareFinishedDeck(any(), any(), any(), any()) }
+            val again = CoroutineScope(Dispatchers.Main).async { AnkiquestDeckShare.offer(host) }
+            advanceRobolectricLooperUntil { again.isCompleted }
+            runBlocking { again.await() }
+            assertSame(dialog, ShadowDialog.getLatestDialog())
+            assertFalse(dialog.isShowing, "The common sheet must keep the existing once-per-deck/day rule")
+        } finally {
+            ShadowDialog.getLatestDialog()?.dismiss()
+            unmockkObject(AnkiquestDecks, AnkiquestApi, AnkiquestCapabilities, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
         }
     }
 }
