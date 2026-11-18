@@ -44,6 +44,21 @@ internal object AnkiquestCommunity {
         /** Identical start and end hours switch quiet hours off. */
         val quiet: Boolean get() = quietStart != quietEnd
 
+        /** Keep an unknown local hour quiet until a fresh profile supplies it. */
+        fun holds(hour: Int): Boolean {
+            if (!quiet) {
+                return false
+            }
+            if (hour !in HOURS) {
+                return true
+            }
+            return if (quietStart < quietEnd) {
+                hour >= quietStart && hour < quietEnd
+            } else {
+                hour >= quietStart || hour < quietEnd
+            }
+        }
+
         fun json(): JSONObject =
             JSONObject().apply {
                 for (reminder in Reminder.entries) put(reminder.key, reminder in enabled)
