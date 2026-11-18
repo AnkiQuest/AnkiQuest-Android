@@ -148,7 +148,7 @@ jobs:
           }
           record() {
             ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.record=true -PtestMaxParallelForks=1 --rerun-tasks -q "$@" > /tmp/diag/gradle.log 2>&1 || tail -30 /tmp/diag/gradle.log
-            grep -h -o 'testcase name="[^"]*" classname="[^"]*"' AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml | cut -c1-160 | head -20
+            grep -h -o 'testsuite name="[^"]*".*timestamp="[^"]*"' AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml | sed -E 's/testsuite name="([^"]*)".*timestamp="([^"]*)"/\2 \1/' | sort | head -40
           }
           record --tests '*AnkiquestStreakScreenshotTest'
           check alone
