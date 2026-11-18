@@ -71,6 +71,8 @@ internal object AnkiquestChallenges {
         val challenges: List<Challenge>,
         val recipients: List<Recipient>,
         val suggestion: Suggestion?,
+        /** Why other members' progress reads 0, when the server says so. */
+        val lock: AnkiquestLock? = null,
     )
 
     /** A new goal, as `POST /api/community/challenges/{user}` takes it. */
@@ -170,6 +172,7 @@ internal object AnkiquestChallenges {
                     .orEmpty()
                     .mapNotNull(::recipient),
             suggestion = json.optJSONObject("weekly_suggestion")?.let(::suggestion),
+            lock = AnkiquestLock.of(json),
         )
 
     /** One goal, or null for one without a usable id. */

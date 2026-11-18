@@ -181,7 +181,7 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         val sp = { value: Float -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, targetContext.resources.displayMetrics) }
         for (scale in Scale.entries) {
             AnkiquestWidgetSettings.save(id, AnkiquestWidgetSettings(scale = scale))
-            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false)
+            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false, lock = null)
             assertEquals(sp(15f * (scale.factor ?: 1.6f)), title(), scale.name)
         }
     }
@@ -292,9 +292,9 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
             val friends = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
             AnkiquestWidgetSettings.save(global, AnkiquestWidgetSettings(Who.GLOBAL, period = "month"))
             AnkiquestWidgetSettings.save(group, AnkiquestWidgetSettings(Who.GROUP, 7, "Study group", "day"))
-            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false)
+            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false, lock = null)
 
-            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board()) }
+            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board(), circleLock = null) }
 
             val boards = requests.filter { it.startsWith("/api/leaderboard") }.toSet()
             assertEquals(
@@ -325,9 +325,9 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
             val group = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
             AnkiquestWidgetSettings.save(global, AnkiquestWidgetSettings(Who.GLOBAL))
             AnkiquestWidgetSettings.save(group, AnkiquestWidgetSettings(Who.GROUP, 7, "Study group"))
-            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false)
+            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false, lock = null)
 
-            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board()) }
+            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board(), circleLock = null) }
 
             assertTrue(requests.none { it.startsWith("/api/leaderboard") }, "$requests")
             val status = shadowOf(manager).getViewFor(global).findViewById<TextView>(R.id.ankiquest_widget_status)
@@ -346,9 +346,9 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
             val group = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
             AnkiquestWidgetSettings.save(global, AnkiquestWidgetSettings(Who.GLOBAL))
             AnkiquestWidgetSettings.save(group, AnkiquestWidgetSettings(Who.GROUP, 7, "Study group"))
-            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false)
+            AnkiquestWidget.render(targetContext, board(), TimeManager.time.intTimeMS(), offline = false, lock = null)
 
-            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board()) }
+            runBlocking { AnkiquestWidget.refreshOwnBoards(targetContext, board(), circleLock = null) }
 
             assertEquals(2, requests.count { it.startsWith("/api/leaderboard") }, "slow replies must not choose the old-server fallback")
             for (id in listOf(global, group)) {

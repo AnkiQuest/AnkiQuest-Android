@@ -7,7 +7,7 @@ import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.isCoverageEnabled
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Locale
 import java.util.Properties
 import java.util.regex.Pattern
@@ -73,9 +73,28 @@ val gitCommitHash =
         .map { it.trim() }
 
 /**
+ * The newest upstream AnkiDroid commit merged into this build: `git merge-base HEAD <ankidroid main>`.
+ * Shown in the debug info. CI passes it via -PupstreamCommit=<sha>, because a clone may lack the
+ * upstream remote and fetching it here would make the build depend on the network. "unknown" otherwise.
+ */
+val upstreamCommitHash =
+    providers
+        .gradleProperty("upstreamCommit")
+        .map { sha ->
+            if (!sha.matches(Regex("[0-9a-f]{40}"))) {
+                throw GradleException("upstreamCommit must be a full commit hash")
+            }
+            sha
+        }.orElse("unknown")
+
+/**
  * Epoch millis of the build. Displayed on the 'About' screen.
  *
- * CI passes the real time via -PbuildTime=<epoch> # example: 1776422957000
+ * Taken from, in order:
+ * - -PbuildTime=<epoch millis> # example: 1776422957000
+ * - SOURCE_DATE_EPOCH, in epoch seconds, which reproducible builds set to the commit time
+ *   (https://reproducible-builds.org/specs/source-date-epoch/)
+ * - the start of today in UTC, so that builds on the same day match in any time zone
  *
  * This value is captured in the configuration cache, so it can be stale when the cache is reused.
  */
@@ -83,10 +102,14 @@ val buildTimeMillis =
     providers
         .gradleProperty("buildTime")
         .orElse(
+            providers.environmentVariable("SOURCE_DATE_EPOCH").map { seconds ->
+                (seconds.trim().toLong() * 1000).toString()
+            },
+        ).orElse(
             providers.provider {
                 LocalDate
-                    .now()
-                    .atStartOfDay(ZoneId.systemDefault())
+                    .now(ZoneOffset.UTC)
+                    .atStartOfDay(ZoneOffset.UTC)
                     .toInstant()
                     .toEpochMilli()
                     .toString()
@@ -95,6 +118,12 @@ val buildTimeMillis =
 
 android {
     namespace = "com.ichi2.anki"
+
+    // AGP writes a dependency list into the APK signing block, encrypted for Google Play with a
+    // random key, so two builds of the same commit differed (#352). App bundles keep it for Play.
+    dependenciesInfo {
+        includeInApk = false
+    }
 
     buildFeatures {
         buildConfig = true
@@ -116,6 +145,7 @@ android {
         buildConfigField("String", "BACKEND_VERSION", "\"${libs.versions.ankiBackend.get()}\"")
         buildConfigField("Boolean", "ENABLE_LEAK_CANARY", "false")
         buildConfigField("String", "GIT_COMMIT_HASH", "\"${gitCommitHash.get()}\"")
+        buildConfigField("String", "UPSTREAM_COMMIT_HASH", "\"${upstreamCommitHash.get()}\"")
         buildConfigField("long", "BUILD_TIME", buildTimeMillis.get())
         // whether UI elements linking to external donation pages are shown ('play' hides them)
         buildConfigField("Boolean", "SHOW_DONATE_LINKS", "true")
@@ -350,7 +380,7 @@ android {
                                 )
                             }
                         }
-                        validateInput(theme, listOf("light", "plain", "dark", "black", "eink", "all"))
+                        validateInput(theme, listOf("light", "plain", "dark", "black", "eink", "eink_night", "all"))
                         validateInput(device, listOf("phone", "tablet", "foldable", "desktop", "all"))
 
                         test.systemProperty("screenshot.theme", theme)
@@ -778,6 +808,7 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":common:android"))
     implementation(project(":compat"))
+    implementation(project(":feature:browse"))
     implementation(project(":libanki"))
     implementation(project(":note-editor"))
     implementation(project(":vbpd"))

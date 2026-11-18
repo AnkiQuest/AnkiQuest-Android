@@ -15,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -72,6 +73,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         )
     private val exits = mutableListOf<Exit>()
     private var elsewhere = 0
+    private var exported: AnkiquestShare.Card? = null
 
     @Before
     fun prepare() {
@@ -330,35 +332,96 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         assertEquals(listOf(Exit.CANCELLED), exits)
     }
 
+    @Test
+    fun `a finished deck keeps its edited Unicode name in the picture and chosen send`() {
+        val symbol = "\uD83C\uDF31"
+        val name = symbol.repeat(AnkiquestShare.MAX_LABEL)
+        val reference = MomentRef.Deck("7", "Japanese")
+        coEvery { AnkiquestSharing.send(account, reference.copy(name = name), any(), any()) } returns AnkiquestSharing.Sent(1, 91, null)
+        val (_, dialog) = open(reference = reference)
+        val field = assertNotNull(dialog.findViewById<EditText>(R.id.aq_share_deck_name))
+        field.setText(name + symbol)
+        assertEquals(name, field.text.toString())
+        assertTrue(texts(dialog).contains("I finished my $name studies for today."))
+        chip(dialog, "Cerro").performClick()
+        dialog.findViewById<View>(R.id.aq_share_send)!!.performClick()
+        idle()
+        coVerify(
+            exactly = 1,
+        ) { AnkiquestSharing.send(account, reference.copy(name = name), Audience.Chosen(listOf("cerro"), emptyList()), null) }
+        assertFalse(dialog.isShowing)
+    }
+
+    @Test
+    fun `an edited deck picture goes to other apps and blank names cannot be shared`() {
+        val (_, dialog) = open(reference = MomentRef.Deck("7", "Japanese"))
+        val field = assertNotNull(dialog.findViewById<EditText>(R.id.aq_share_deck_name))
+        chip(dialog, "Ana").performClick()
+        field.setText("   ")
+        assertFalse(dialog.findViewById<View>(R.id.aq_share_send)!!.isEnabled)
+        assertFalse(dialog.findViewById<View>(R.id.aq_share_more)!!.isEnabled)
+        field.setText("Japanese vocabulary")
+        dialog.findViewById<View>(R.id.aq_share_more)!!.performClick()
+        idle()
+        assertEquals("I finished my Japanese vocabulary studies for today.", exported?.body)
+        coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `the finished deck sheet owns the post-study slot and honors Don't ask again`() {
+        val (_, dialog, host) = open(reference = MomentRef.Deck("7", "Japanese"), slot = AnkiquestShareSheet.Slot.POST_STUDY)
+        assertFalse(AnkiquestPostStudyPrompts.ready(host))
+        dialog.window!!
+            .decorView.allViews
+            .filterIsInstance<TextView>()
+            .first { it.text.toString() == targetContext.getString(R.string.ankiquest_deck_share_never) }
+            .performClick()
+        idle()
+        assertFalse(dialog.isShowing)
+        assertTrue(AnkiquestPostStudyPrompts.ready(host))
+        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestDeckShare.PREF_ASK, true))
+        coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
+    }
+
     private data class Opened(
         val sheet: AnkiquestShareSheet,
         val dialog: BottomSheetDialog,
         val screen: EmptyAnkiActivity,
     )
 
-    private fun open(sent: (AnkiquestSharing.Sent) -> Unit = {}): Opened {
+    private fun open(
+        reference: MomentRef = moment,
+        slot: AnkiquestShareSheet.Slot = AnkiquestShareSheet.Slot.INDEPENDENT,
+        sent: (AnkiquestSharing.Sent) -> Unit = {},
+    ): Opened {
         val screen =
             startActivityControllerNormallyOpenCollectionWithIntent(
                 EmptyAnkiActivity::class.java,
                 Intent(targetContext, EmptyAnkiActivity::class.java),
             ).get()
         screen.setContentView(FrameLayout(screen))
-        return show(screen, sent)
+        return show(screen, sent, reference, slot)
     }
 
     private fun show(
         screen: EmptyAnkiActivity,
         sent: (AnkiquestSharing.Sent) -> Unit = {},
+        reference: MomentRef = moment,
+        slot: AnkiquestShareSheet.Slot = AnkiquestShareSheet.Slot.INDEPENDENT,
     ): Opened {
         val sheet =
             AnkiquestShareSheet(
                 screen,
                 account,
-                moment,
+                reference,
                 card,
-                elsewhere = { elsewhere++ },
+                elsewhere = {
+                    elsewhere++
+                    exported = it
+                },
                 sent = sent,
                 closed = { exits += it },
+                slot = slot,
             )
         sheet.show()
         idle()

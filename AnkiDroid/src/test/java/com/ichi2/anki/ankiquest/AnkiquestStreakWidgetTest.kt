@@ -117,14 +117,25 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     }
 
     @Test
-    fun `studied and protected days fill the meter below the minimum`() {
-        for (state in listOf("studied", "protected")) {
-            val widget = render(JSONArray().put(me(9, state, 5, 3, 10)))
+    fun `studied and unstudied protected days fill the meter below the minimum`() {
+        for ((state, reviews) in listOf("studied" to 5, "protected" to 0)) {
+            val widget = render(JSONArray().put(me(9, state, reviews, 3, 10)))
             val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
             assertEquals(View.VISIBLE, meter.visibility, state)
             assertEquals(10, meter.progress, state)
             assertFalse(widget.contentDescription.toString().contains("3 of 10 minutes"), state)
         }
+    }
+
+    @Test
+    fun `a protected day with reviews shows its minutes`() {
+        val widget = render(JSONArray().put(me(9, "protected", 1, 3, 10)))
+        val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+        assertEquals(View.VISIBLE, meter.visibility)
+        assertEquals(3, meter.progress)
+        val description = widget.contentDescription.toString()
+        assertTrue(description.contains("3 of 10 minutes"), description)
+        assertFalse(description.contains("Not studied yet"), description)
     }
 
     @Test
@@ -249,6 +260,29 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap)
         val frozen = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_freeze, minOf(shown.width, shown.height)))
         assertTrue(shown.sameAs(frozen))
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a freeze used yesterday shows Ankilope frozen on every widget`() {
+        // hill's report: the transparent widget showed her study pose with "Streak protected".
+        chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
+        val board = JSONArray().put(me(10, "protected", 0))
+        for (style in AnkiquestStreakWidget.Style.entries) {
+            for (size in AnkiquestStreakWidget.Size.entries) {
+                val widget =
+                    AnkiquestStreakWidget
+                        .views(targetContext, board, "hill", size, style = style)
+                        .apply(targetContext, FrameLayout(targetContext))
+                val name = "$style $size"
+                if (size == AnkiquestStreakWidget.Size.LARGE || size == AnkiquestStreakWidget.Size.HUGE) {
+                    assertPose(widget, R.drawable.ankilope_frozen, name)
+                    continue
+                }
+                val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+                assertEquals(R.drawable.ankilope_frozen, shadowOf(drawable).createdFromResId, name)
+            }
+        }
     }
 
     /** The companion [widget] shows is [pose]. */
@@ -401,13 +435,13 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `every streak pose covers the huge layout on a dense screen`() {
         val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
-        // Every pose the big layouts rotate through, and Ankilope's stand-ins for them.
+        // Every pose the big layouts rotate through, and Ankilope's for each mood.
         val aki =
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
         assertEquals(11, aki.size)
-        val poses = aki + setOf(R.drawable.ankilope_face, R.drawable.ankilope_welcome, R.drawable.ankilope_study)
+        val poses = aki + ankilopeMoodPoses.values
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeResource(targetContext.resources, pose, bounds)

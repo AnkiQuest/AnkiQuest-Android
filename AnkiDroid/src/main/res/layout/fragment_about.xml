@@ -154,17 +154,24 @@
                     android:orientation="vertical"
                     android:gravity="center">
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/rate_anki_droid"
+                        android:id="@+id/rate_ankiquest"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/info_rate"
+                        android:text="@string/ankiquest_rate"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:textColor="?attr/colorAccent" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/ankiquest_changelog"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ankiquest_changelog"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:textColor="?attr/colorAccent" />
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/open_changelog"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/open_changelog"
+                        android:text="@string/ankiquest_ankidroid_changelog"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:textColor="?attr/colorAccent"/>
                     <com.google.android.material.button.MaterialButton
