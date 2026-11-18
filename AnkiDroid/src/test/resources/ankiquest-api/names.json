@@ -49,9 +49,10 @@
         "streak_freezes",
         "study",
         "unlocks",
+        "unlocks_save",
         "upload"
     ],
-    "unused": ["unlocks_save"],
+    "unused": [],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",

@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -23,6 +24,7 @@ import com.google.android.material.color.MaterialColors
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.AnkiquestGoalBar
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Milestone
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Progress
@@ -39,6 +41,9 @@ internal class AnkiquestCompanionPicker(
     private var offers: Map<Choice, Offer> = emptyMap()
     private var chosen: Choice? = null
     private var onTap: (Choice) -> Unit = {}
+
+    /** A companion whose picture grows on the next bind, as it turns into its chibi. */
+    private var growing: Choice? = null
 
     init {
         layoutResource = R.layout.preference_ankiquest_companion_picker
@@ -63,20 +68,47 @@ internal class AnkiquestCompanionPicker(
         onTap = listener
     }
 
+    /** Shows [choice]'s current picture growing, unless animations are off. There is no chibi art to swap to yet. */
+    fun grow(choice: Choice) {
+        growing = choice
+        notifyChanged()
+    }
+
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
         val cards = holder.findViewById(R.id.ankiquest_companion_cards) as LinearLayout
         cards.removeAllViews()
         for ((choice, offer) in offers) {
-            cards.addView(card(choice, offer as? Offer.Locked), cardParams())
+            val card = card(choice, offer as? Offer.Locked)
+            cards.addView(card, cardParams())
+            if (choice == growing && choice != Choice.NONE) {
+                grow(card.getChildAt(0))
+            }
         }
+        growing = null
+    }
+
+    /** [pictures] grow from a smaller size, with a small overshoot; nothing moves when animations are off. */
+    private fun grow(pictures: View) {
+        if (!AnkiquestGoalBar.animationsEnabled(context)) {
+            return
+        }
+        pictures.scaleX = GROW_FROM
+        pictures.scaleY = GROW_FROM
+        pictures
+            .animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(GROW_MS)
+            .setInterpolator(OvershootInterpolator())
+            .start()
     }
 
     /** [choice]'s card; a [locked] one is a silhouette with how to earn it, and cannot be tapped. */
     private fun card(
         choice: Choice,
         locked: Offer.Locked?,
-    ): View {
+    ): LinearLayout {
         val selected = choice == chosen
         val name = context.getString(choice.title)
         val lines = locked?.let { lockedLines(it.progress) }.orEmpty()
@@ -224,5 +256,9 @@ internal class AnkiquestCompanionPicker(
         const val NAME_SP = 16f
         const val LINE_SP = 14f
         const val DISABLED_ALPHA = 0.5f
+
+        /** The chibi grows from this share of its size, over [GROW_MS]. */
+        const val GROW_FROM = 0.6f
+        const val GROW_MS = 300L
     }
 }

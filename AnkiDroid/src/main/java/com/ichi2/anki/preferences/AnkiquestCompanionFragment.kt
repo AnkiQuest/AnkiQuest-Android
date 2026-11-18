@@ -2,16 +2,22 @@
 
 package com.ichi2.anki.preferences
 
+import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestChibi
+import com.ichi2.anki.ankiquest.AnkiquestChibi.Step
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.common.time.TimeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -22,7 +28,8 @@ import kotlinx.coroutines.sync.withLock
  * kept per account on the server and shown here as soon as it is tapped; a failed save puts the
  * saved one back. Companions earned at milestones show locked, with their condition and progress,
  * until the server unlocks them. The screen belongs to one account: when another signs in, it drops
- * the old account's pending choice and status and reads the new one's.
+ * the old account's pending choice and status and reads the new one's. Tapping an unlocked companion
+ * quickly enough times turns it into its chibi ([AnkiquestChibi]).
  */
 class AnkiquestCompanionFragment : SettingsFragment() {
     override val preferenceResource = R.xml.preferences_ankiquest_companion
@@ -37,6 +44,10 @@ class AnkiquestCompanionFragment : SettingsFragment() {
 
     /** The scope of the account whose choice and status the screen shows; null when signed out. */
     private var owner: String? = null
+
+    /** Taps toward a chibi, and the hint shown for the last one, replaced by the next. */
+    private var chibiTaps = AnkiquestChibi.Taps()
+    private var hint: Toast? = null
 
     override fun initSubscreen() {
         picker().setOnTap(::tap)
@@ -57,12 +68,13 @@ class AnkiquestCompanionFragment : SettingsFragment() {
 
     /**
      * Shows the signed-in account from scratch. Answers still running for the old account are
-     * ignored, and their pending choice and status go.
+     * ignored, and their pending choice, chibi taps and status go.
      */
     private fun restart() {
         owner = signedIn()?.scope
         ++generation
         pending = null
+        chibiTaps = AnkiquestChibi.Taps()
         showStatus(null)
         render()
         refresh()
@@ -127,8 +139,66 @@ class AnkiquestCompanionFragment : SettingsFragment() {
             return
         }
         val account = signedIn() ?: return
+        countTap(account, choice)
         if (choice != (pending ?: AnkiquestCompanion.choice())) {
             choose(account, choice)
+        }
+    }
+
+    /** Counts [choice]'s tap toward its chibi: a hint near the end, the chibi on the last tap. */
+    private fun countTap(
+        account: HomeAccount,
+        choice: Choice,
+    ) {
+        val unlocked = AnkiquestUnlocks.found(account)?.ids.orEmpty()
+        when (val step = chibiTaps.tap(choice.id, TimeManager.time.intTimeMS(), unlocked)) {
+            Step.Silent -> {}
+            is Step.Hint -> showHint(step.left)
+            is Step.Done -> claim(account, step.chibi, choice)
+        }
+    }
+
+    // showThemedToast does not return the Toast, which each hint needs to replace the last.
+    @SuppressLint("DirectToastMakeTextUsage")
+    private fun showHint(left: Int) {
+        hint?.cancel()
+        hint =
+            Toast
+                .makeText(
+                    requireContext(),
+                    resources.getQuantityString(R.plurals.ankiquest_companion_chibi_hint, left, left),
+                    Toast.LENGTH_SHORT,
+                ).apply { show() }
+    }
+
+    /** Tells the server [chibi] is unlocked, then shows [base] growing into it. */
+    private fun claim(
+        account: HomeAccount,
+        chibi: AnkiquestChibi.Chibi,
+        base: Choice,
+    ) {
+        hint?.cancel()
+        lifecycleScope.launch {
+            try {
+                writes.withLock { AnkiquestUnlocks.claim(account, chibi) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: HomeAccountChanged) {
+                // The taps were another account's; the screen moves to the account now signed in.
+                if (isAdded) {
+                    restart()
+                }
+                return@launch
+            } catch (e: Exception) {
+                if (isAdded) {
+                    showStatus(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))
+                }
+                return@launch
+            }
+            if (isAdded) {
+                picker().grow(base)
+                render()
+            }
         }
     }
 
