@@ -84,6 +84,14 @@ jobs:
           echo "::error::Screenshot comparison did not run: no downloadable baseline for ${BASE_SHA}. Run ankiquest Screenshots: Store Baseline on a branch at that commit, then rerun this check."
           echo "Screenshot comparison needs a successful, unexpired baseline for commit ${BASE_SHA}. Run **ankiquest Screenshots: Store Baseline** on a branch at that commit, then rerun this check. A different commit is never used as a fallback." >> "$GITHUB_STEP_SUMMARY"
 
+      # Native rendering can differ between CPU models: name both, so CPU-only diffs can be told apart.
+      - name: Report renderer CPUs
+        run: |
+          baseline=$(cat AnkiDroid/build/outputs/roborazzi/cpu.txt 2>/dev/null || echo unknown)
+          current=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | xargs)
+          echo "::notice title=Screenshot CPUs::baseline drawn on ${baseline}; this run on ${current}"
+          echo "Baseline drawn on ${baseline}; this run on ${current}." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:

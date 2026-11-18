@@ -27,3 +27,10 @@ test('failed, empty, or PR recordings cannot be published as branch baselines', 
   assert.match(upload, /github\.event_name != 'pull_request'/);
   assert.match(upload, /if-no-files-found:\s*error/);
 });
+
+test('the baseline names the CPU that drew it', () => {
+  const record = store.indexOf('      - name: Record renderer CPU\n');
+  assert.notEqual(record, -1);
+  assert.ok(record < store.indexOf('      - name: Upload screenshot baseline\n'));
+  assert.match(store.slice(record, store.indexOf('\n      - ', record + 1)), /build\/outputs\/roborazzi\/cpu\.txt/);
+});

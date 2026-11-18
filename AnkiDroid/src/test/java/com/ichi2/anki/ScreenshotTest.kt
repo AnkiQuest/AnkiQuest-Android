@@ -21,12 +21,15 @@ import com.github.takahirom.roborazzi.checkRoboAccessibility
 import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
+import com.ichi2.anki.ankiquest.heatmap.FixedHeatmapRule
 import com.ichi2.anki.settings.PrefsRepository
 import com.ichi2.anki.settings.enums.AppTheme
 import com.ichi2.anki.settings.enums.DayTheme
 import com.ichi2.anki.settings.enums.NightTheme
 import org.junit.Before
+import org.junit.Rule
 import org.junit.experimental.categories.Category
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestParameterInjector
 import org.robolectric.RuntimeEnvironment
@@ -92,6 +95,10 @@ abstract class ScreenshotTest : RobolectricTest() {
     annotation class IncludeDevices(
         vararg val value: DeviceConfig,
     )
+
+    /** AnkiQuest: the deck list's heatmap reads the host clock; every capture uses one study date. */
+    @get:Rule
+    val fixedHeatmap: TestRule = FixedHeatmapRule()
 
     @TestParameter(valuesProvider = ThemeProvider::class)
     lateinit var theme: ThemeConfig
