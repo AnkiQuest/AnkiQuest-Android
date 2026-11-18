@@ -157,7 +157,7 @@ class AnkiquestHeatmapDeckListTest : RobolectricTest() {
     }
 
     private inner class HeatmapDeckListFixture {
-        private val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_Light)
+        private val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid)
         val deckAdapter =
             DeckAdapter(
                 context,

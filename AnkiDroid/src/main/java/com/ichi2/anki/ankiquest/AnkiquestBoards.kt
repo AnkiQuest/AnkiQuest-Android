@@ -176,6 +176,12 @@ internal object AnkiquestBoards {
         val wins: List<Win>,
     )
 
+    /** A board's rows, and why the server left other players out of them, when it did. */
+    data class Leaderboard(
+        val standings: List<Standing>,
+        val lock: AnkiquestLock? = null,
+    )
+
     /** The server knows no such player, or this viewer may not see them. */
     class NotVisible : Exception()
 
@@ -187,7 +193,7 @@ internal object AnkiquestBoards {
         account: HomeAccount,
         period: Period,
         source: Source = Source.Friends,
-    ): List<Standing> =
+    ): Leaderboard =
         withContext(Dispatchers.IO) {
             val url =
                 account
@@ -206,7 +212,7 @@ internal object AnkiquestBoards {
                         }
                     }.build()
             val request = AnkiquestApi.request(url, account.token, account.language).build()
-            parseLeaderboard(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) }, period)
+            AnkiquestApi.call(account, request) { Leaderboard(parseLeaderboard(AnkiquestApi.jsonArray(it), period), AnkiquestLock.of(it)) }
         }
 
     /** Older servers ignore scopes, so never offer a Global board unless the setting is present. */

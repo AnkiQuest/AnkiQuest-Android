@@ -32,6 +32,7 @@ class AnkiquestAccountTest : RobolectricTest() {
             received += exchange.requestURI.path to body
             val (status, answer) =
                 when {
+                    exchange.requestURI.path == "/api/accounts/tokens" && body.getString("user") == "two" -> secondFactor(body)
                     exchange.requestURI.path == "/api/accounts/tokens" && body.getString("password") == "right password" ->
                         200 to JSONObject().put("user", body.getString("user")).put("token", "device-token")
                     exchange.requestURI.path == "/api/accounts/tokens" -> 401 to JSONObject().put("error", "no")
@@ -46,6 +47,18 @@ class AnkiquestAccountTest : RobolectricTest() {
         url = "http://127.0.0.1:${server.address.port}"
     }
 
+    /** An account with two-factor authentication on, answering as docs/mobile-api.md in AnkiQuest-Server describes. */
+    private fun secondFactor(body: JSONObject): Pair<Int, JSONObject> {
+        val asked = JSONObject().put("second_factor", true)
+        return when {
+            body.getString("password") != "right password" -> 401 to JSONObject().put("error", "Username or password not recognized.")
+            !body.has("code") -> 401 to asked.put("error", "Enter the code from your authenticator app.")
+            body.getString("code") == "123456" -> 200 to JSONObject().put("user", "two").put("token", "device-token")
+            body.getString("code") == "locked" -> 429 to asked.put("error", "Too many wrong codes. Try again in 15 minutes.")
+            else -> 401 to asked.put("error", "That code is not right.")
+        }
+    }
+
     @After
     fun stopServer() {
         server.stop(0)
@@ -56,7 +69,8 @@ class AnkiquestAccountTest : RobolectricTest() {
         password: String = "right password",
         display: String = "",
         create: Boolean = false,
-    ) = AnkiquestAccount.Credentials("$url/", user, password, display, create)
+        code: String = "",
+    ) = AnkiquestAccount.Credentials("$url/", user, password, display, create, code)
 
     @Test
     fun `signing in trades the password for a device token`() =
@@ -78,6 +92,53 @@ class AnkiquestAccountTest : RobolectricTest() {
             assertEquals("/api/accounts", path)
             assertEquals("Bo", body.getString("display"))
         }
+
+    /** The refusal of a sign-in for the two-factor account that sends [code]. */
+    private suspend fun held(code: String) =
+        assertFailsWith<AnkiquestAccount.SecondFactorNeeded> {
+            AnkiquestAccount.submit(credentials(user = "two", code = code))
+        }
+
+    @Test
+    fun `a second factor is asked for, and the code is sent only then`() =
+        runBlocking {
+            val asked = held("")
+            assertEquals(AnkiquestAccount.SecondFactor.ASKED, asked.step)
+            assertFalse(received.last().second.has("code"), "older servers refuse unknown fields")
+            val wrong = held("000000")
+            assertEquals(AnkiquestAccount.SecondFactor.REFUSED, wrong.step)
+            val locked = held("locked")
+            assertEquals(AnkiquestAccount.SecondFactor.LOCKED, locked.step)
+            val signed = AnkiquestAccount.submit(credentials(user = "two", code = " 123456 "))
+            assertEquals("device-token", signed.token)
+            assertEquals("123456", received.last().second.getString("code"))
+
+            // The same words as the website and the add-on.
+            assertEquals(
+                listOf(
+                    R.string.ankiquest_two_factor_asked,
+                    R.string.ankiquest_two_factor_refused,
+                    R.string.ankiquest_two_factor_locked,
+                ).map(targetContext::getString),
+                listOf(asked, wrong, locked).map { AnkiquestAccount.message(targetContext, it, url) },
+            )
+            assertEquals("Enter the code from your authenticator app.", targetContext.getString(R.string.ankiquest_two_factor_asked))
+        }
+
+    @Test
+    fun `a wrong password says nothing about a second factor`() =
+        runBlocking {
+            val wrong = assertFailsWith<AnkiquestHttpException> { AnkiquestAccount.submit(credentials(user = "two", password = "wrong")) }
+            assertFalse(wrong.secondFactor)
+            assertEquals(targetContext.getString(R.string.ankiquest_sign_in_wrong), AnkiquestAccount.message(targetContext, wrong, url))
+        }
+
+    @Test
+    fun `a new account never sends a code`() {
+        val request = AnkiquestAccount.httpRequest(credentials(user = "bo", create = true, code = "123456"), "AnkiDroid")
+        val buffer = okio.Buffer().also { request.body!!.writeTo(it) }
+        assertFalse(JSONObject(buffer.readUtf8()).has("code"))
+    }
 
     @Test
     fun `refusals explain themselves`() =

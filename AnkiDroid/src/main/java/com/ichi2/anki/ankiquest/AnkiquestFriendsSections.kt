@@ -482,8 +482,11 @@ private class FeedSection(
             }
         }
         val shown = current.items.filter { item -> attention.none { it.id == item.id } }
+
+        // Friends' study waits for the player's first upload; "all caught up" would be wrong then.
+        current.lock?.let { text(content, getString(it.text), heading = true).setPadding(0, dp(16), 0, 0) }
         if (shown.isEmpty()) {
-            if (!loading) {
+            if (!loading && current.lock == null) {
                 content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
                 text(content, getString(emptyMessage(attention.isNotEmpty())), heading = true)
                 text(content, getString(R.string.aq_feed_empty_hint), small = true)
@@ -1041,7 +1044,7 @@ private class LeaderboardSection(
                 Selection.Global -> Scope.GLOBAL
                 is Selection.Group -> Scope.GROUP
             }
-    private var rows: List<AnkiquestBoards.Standing>? = null
+    private var rows: AnkiquestBoards.Leaderboard? = null
     private var weekEnds: Long? = null
     private var loading = false
 
@@ -1264,7 +1267,8 @@ private class LeaderboardSection(
         }
         val allowed =
             when (action) {
-                AnkiquestGlobalHides.Action.HIDE -> rows.orEmpty().any { it.user == user && it.user != current.user && !it.hasToday }
+                AnkiquestGlobalHides.Action.HIDE ->
+                    rows?.standings.orEmpty().any { it.user == user && it.user != current.user && !it.hasToday }
                 AnkiquestGlobalHides.Action.SHOW -> before.panel == HiddenPanel.OPEN && before.players.any { it.user == user }
             }
         if (!allowed) {
@@ -1359,7 +1363,7 @@ private class LeaderboardSection(
         }
 
     private fun loadPictures(current: HomeAccount) {
-        val users = rows.orEmpty().map { it.user }
+        val users = rows?.standings.orEmpty().map { it.user }
         if (users.isEmpty()) return
         lifecycleScope.launch {
             try {
@@ -1438,9 +1442,15 @@ private class LeaderboardSection(
                 views.text(content, getString(R.string.aq_board_resets, left), small = true)
             }
         }
-        val board = rows
+        val board = rows?.standings
+        val lock = rows?.lock
         when {
             board == null -> if (loading) views.text(content, getString(R.string.aq_board_loading), small = true)
+            lock != null -> {
+                // Others stay hidden until the player's first upload; only their own row can show.
+                board.forEachIndexed { index, row -> row(row.rank ?: (index + 1), row, row.user == current.user, board.first().xp) }
+                if (!loading) empty(lock.text)
+            }
             board.isEmpty() -> if (!loading) empty(R.string.aq_board_empty)
             board.all { it.xp == 0L } && scope != Scope.GLOBAL -> if (!loading) empty(R.string.aq_board_no_xp)
             else -> {

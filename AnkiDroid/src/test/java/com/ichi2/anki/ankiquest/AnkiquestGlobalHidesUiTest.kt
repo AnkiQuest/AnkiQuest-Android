@@ -63,7 +63,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
             }
             rows.put(AnkiquestBoardsTest.row("cerro", 40, 4).put("rank", 20))
             rows.put(AnkiquestBoardsTest.row("hill", 2, 0).put("rank", 103))
-            AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK)
+            AnkiquestBoards.Leaderboard(AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK))
         }
     }
 

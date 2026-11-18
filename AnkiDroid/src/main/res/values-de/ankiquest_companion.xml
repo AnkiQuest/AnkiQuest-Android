@@ -8,4 +8,8 @@
     <string name="ankiquest_companion_level_progress">Level %1$d von %2$d</string>
     <string name="ankiquest_companion_hours_goal">Insgesamt %1$d Stunden lernen</string>
     <string name="ankiquest_companion_hours_progress">%1$d von %2$d Stunden</string>
+    <plurals name="ankiquest_companion_chibi_hint">
+        <item quantity="one">Du bist %1$d Tipp von Chibi entfernt</item>
+        <item quantity="other">Du bist %1$d Tipps von Chibi entfernt</item>
+    </plurals>
 </resources>

@@ -390,7 +390,7 @@ object AnkiquestUpdater {
                 }
                 withContext(Dispatchers.Main) {
                     val host = progress?.attached()
-                    val uri = FileProvider.getUriForFile(app, "${app.packageName}.apkgfileprovider", file)
+                    val uri = FileProvider.getUriForFile(app, AnkiquestGallery.authority(app), file)
                     val install =
                         Intent(Intent.ACTION_VIEW)
                             .setDataAndType(uri, "application/vnd.android.package-archive")

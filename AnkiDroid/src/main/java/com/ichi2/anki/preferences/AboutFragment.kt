@@ -3,7 +3,6 @@
 package com.ichi2.anki.preferences
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.format.DateFormat
@@ -11,17 +10,18 @@ import android.text.method.LinkMovementMethod
 import android.view.View
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
-import androidx.core.net.toUri
 import androidx.core.text.parseAsHtml
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.ankiquest.AnkiquestIcon
+import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
+import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.destinations.ChangelogDestination
 import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.common.utils.android.showThemedToast
@@ -31,7 +31,6 @@ import com.ichi2.anki.scheduling.Fsrs
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.ui.internationalization.sentenceCase
-import com.ichi2.utils.IntentUtil
 import com.ichi2.utils.VersionUtils.pkgVersionName
 import com.ichi2.utils.show
 import dev.androidbroadcast.vbpd.viewBinding
@@ -71,7 +70,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         binding.appLogo.setOnClickListener(DeveloperOptionsSecretClickListener(this))
 
         // Contributors text
-        val repository = getString(R.string.ankiquest_link_source)
+        val repository = AnkiquestLinks.REPOSITORY
         binding.contributorsDescription.apply {
             text =
                 getString(
@@ -117,17 +116,18 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             binding.donateDescription.isVisible = false
         }
 
-        binding.rateAnkiDroid.setOnClickListener {
-            IntentUtil.tryOpenIntent(requireActivity(), AnkiDroidApp.getMarketIntent(requireContext()))
+        // Rate AnkiQuest and the bug form open in a browser; both changelogs are in the app
+        binding.rateAnkiquest.setOnClickListener {
+            requireActivity().openAnkiquestLink(AnkiquestLinks.rateUrl(requireContext()))
         }
-
+        binding.ankiquestChangelog.setOnClickListener {
+            startActivity(AnkiquestChangelogActivity.intent(requireContext()))
+        }
         binding.openChangelog.setOnClickListener {
             navigate(ChangelogDestination)
         }
-
         binding.reportBug.setOnClickListener {
-            val form = "$repository/issues/new?template=bug_report_form.yml".toUri()
-            IntentUtil.tryOpenIntent(requireActivity(), Intent(Intent.ACTION_VIEW, form))
+            requireActivity().openAnkiquestLink(AnkiquestLinks.BUG_FORM)
         }
 
         binding.copyDebugInfo.text = TR.sentenceCase.copyDebugInfo

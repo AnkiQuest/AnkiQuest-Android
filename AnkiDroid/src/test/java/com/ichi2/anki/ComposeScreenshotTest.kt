@@ -9,12 +9,9 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
-import com.ichi2.anki.settings.enums.DayTheme
+import com.google.testing.junit.testparameterinjector.TestParameter
 import com.ichi2.anki.settings.enums.NightTheme
-import com.ichi2.anki.settings.enums.Theme
 import com.ichi2.compose.ui.preview.AnkiDroidPreview
-import com.ichi2.compose.ui.preview.AnkiDroidThemeProvider
 import com.ichi2.testutils.EmptyApplication
 import org.junit.Rule
 import org.junit.experimental.categories.Category
@@ -28,7 +25,7 @@ import org.robolectric.annotation.GraphicsMode
  * Captures Compose content with an AnkiDroid XML theme, without starting an app screen.
  *
  * Subclasses call [capture] with their content. For a dialog, pass `node = isDialog()`.
- * Parameterize a test method with [ThemeProvider] to cover every theme.
+ * Each test runs with the themes selected with `-Ptheme`, as [ScreenshotTest] does.
  * Use [capture]'s `beforeCapture` callback to interact with the content before capturing it.
  * Screenshots participate in the root `recordScreenshots`, `compareScreenshots` and
  * `verifyScreenshots` tasks with `-Pscreenshot`.
@@ -41,15 +38,18 @@ abstract class ComposeScreenshotTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    @TestParameter(valuesProvider = ThemeProvider::class)
+    lateinit var theme: ThemeConfig
+
     @OptIn(ExperimentalRoborazziApi::class)
     protected fun capture(
         name: String,
         node: SemanticsMatcher = isRoot(),
         fontScale: Float = 1f,
-        theme: Theme = DayTheme.LIGHT,
         beforeCapture: () -> Unit = {},
         content: @Composable () -> Unit,
     ) {
+        val theme = theme.theme
         if (theme is NightTheme) RuntimeEnvironment.setQualifiers("+night")
         RuntimeEnvironment.setFontScale(fontScale)
         composeRule.setContent {
@@ -63,9 +63,5 @@ abstract class ComposeScreenshotTest {
             filePath = "$classDir/${name}_${theme.toString().lowercase()}.png",
             roborazziOptions = screenshotOptions("$classDir/diffs"),
         )
-    }
-
-    class ThemeProvider : TestParameterValuesProvider() {
-        override fun provideValues(context: Context?): List<Theme> = AnkiDroidThemeProvider().values.toList()
     }
 }

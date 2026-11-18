@@ -20,12 +20,15 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.github.takahirom.roborazzi.checkRoboAccessibility
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
+import com.ichi2.anki.ankiquest.heatmap.FixedHeatmapRule
 import com.ichi2.anki.settings.PrefsRepository
 import com.ichi2.anki.settings.enums.AppTheme
 import com.ichi2.anki.settings.enums.DayTheme
 import com.ichi2.anki.settings.enums.NightTheme
 import org.junit.Before
+import org.junit.Rule
 import org.junit.experimental.categories.Category
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestParameterInjector
 import org.robolectric.RuntimeEnvironment
@@ -51,17 +54,6 @@ abstract class ScreenshotTest : RobolectricTest() {
     }
 
     var fileNamePrefix = ""
-
-    enum class ThemeConfig {
-        LIGHT,
-        PLAIN,
-        DARK,
-        BLACK,
-        EINK,
-        ;
-
-        val isNight get() = this == DARK || this == BLACK
-    }
 
     enum class DeviceConfig(
         private val screen: String,
@@ -91,6 +83,10 @@ abstract class ScreenshotTest : RobolectricTest() {
     annotation class IncludeDevices(
         vararg val value: DeviceConfig,
     )
+
+    /** AnkiQuest: the deck list's heatmap reads the host clock; every capture uses one study date. */
+    @get:Rule
+    val fixedHeatmap: TestRule = FixedHeatmapRule()
 
     @TestParameter(valuesProvider = ThemeProvider::class)
     lateinit var theme: ThemeConfig
@@ -132,6 +128,7 @@ abstract class ScreenshotTest : RobolectricTest() {
             ThemeConfig.EINK -> prefs.dayTheme = DayTheme.EINK
             ThemeConfig.DARK -> prefs.nightTheme = NightTheme.DARK
             ThemeConfig.BLACK -> prefs.nightTheme = NightTheme.BLACK
+            ThemeConfig.EINK_NIGHT -> prefs.nightTheme = NightTheme.EINK
         }
     }
 
@@ -233,17 +230,6 @@ abstract class ScreenshotTest : RobolectricTest() {
             val windowManager = targetContext.getSystemService<WindowManager>()
             return Shadow.extract<ShadowWindowManagerImpl>(windowManager).views
         }
-
-    class ThemeProvider : TestParameterValuesProvider() {
-        override fun provideValues(context: Context?): List<ThemeConfig> {
-            val requestedTheme = System.getProperty("screenshot.theme") ?: "light"
-            val requestedThemes = requestedTheme.split(",").map { it.trim().lowercase() }
-            if ("all" in requestedThemes) {
-                return ThemeConfig.entries
-            }
-            return ThemeConfig.entries.filter { requestedThemes.contains(it.name.lowercase()) }
-        }
-    }
 
     class DeviceProvider : TestParameterValuesProvider() {
         override fun provideValues(context: Context?): List<DeviceConfig> {
