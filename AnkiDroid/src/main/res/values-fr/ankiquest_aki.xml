@@ -6,4 +6,9 @@
     <string name="aki_complete">Tu as terminé tes cartes pour le moment. Bravo !</string>
     <string name="aki_streak">Tu as étudié aujourd’hui. Ce progrès mérite d’être préservé.</string>
     <string name="aki_protected">Ta série est protégée par un gel. Un nouveau départ t’attend.</string>
+    <plurals name="aki_streak_waiting">
+        <item quantity="one">Tu n’as pas encore étudié aujourd’hui. Ta série de %d jour t’attend toujours.</item>
+        <item quantity="many">Tu n’as pas encore étudié aujourd’hui. Ta série de %d jours t’attend toujours.</item>
+        <item quantity="other">Tu n’as pas encore étudié aujourd’hui. Ta série de %d jours t’attend toujours.</item>
+    </plurals>
 </resources>
