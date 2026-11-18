@@ -130,7 +130,7 @@ class AnkiquestAkiTest : RobolectricTest() {
             JSONObject(
                 checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
             )
-        val cases = fixtures.getJSONArray("moods").objects()
+        val cases = stagedMoodCases(fixtures)
         var checked = 0
         for (case in cases) {
             val name = case.getString("name")
@@ -154,7 +154,7 @@ class AnkiquestAkiTest : RobolectricTest() {
                 checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
             )
         var checked = 0
-        for (case in fixtures.getJSONArray("moods").objects()) {
+        for (case in stagedMoodCases(fixtures)) {
             val profile = homeProfile(case.getJSONObject("today")) ?: continue
             val card = AnkiquestAki.mood(null, profile)
             val expected = ankilopeMoodPoses.getValue(card.mood)
@@ -188,8 +188,8 @@ class AnkiquestAkiTest : RobolectricTest() {
                 "today",
                 JSONObject()
                     .put("reviews", today.getInt("reviews"))
-                    .put("time_ms", today.getLong("time_ms"))
-                    .put("streak_minutes", today.getInt("streak_minutes")),
+                    .put("time_ms", today.optLong("time_ms"))
+                    .put("streak_minutes", today.optInt("streak_minutes", PINNED_MINIMUM)),
             ).put("heatmap", heatmap)
             .put("goal", JSONObject().put("reached", today.getBoolean("goal_reached")))
     }

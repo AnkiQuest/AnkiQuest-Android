@@ -47,7 +47,7 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `every shared mood and pose matches`() {
-        for (case in cases("moods")) {
+        for (case in stagedMoodCases(fixtures)) {
             val name = case.getString("name")
             val today = case.getJSONObject("today")
             val expected = case.getJSONObject("expected")
@@ -56,7 +56,7 @@ class AnkiquestMoodTest : RobolectricTest() {
 
             // The mood from today's verdict, then the pose for that mood by drawable name.
             val state = named<State>(today.getString("state"))
-            val stage = Stage.of(today.getLong("time_ms"), today.getInt("streak_minutes"))
+            val stage = Stage.of(today.optLong("time_ms"), today.optInt("streak_minutes", PINNED_MINIMUM))
             val mood = AnkiquestMood.of(state, today.getInt("reviews"), stage, streak, today.getInt("frozen_days"), goal)
             assertEquals(named<Mood>(expected.getString("mood")), mood, name)
             val shown = targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak))
@@ -67,7 +67,7 @@ class AnkiquestMoodTest : RobolectricTest() {
     @Test
     fun `every shared stage matches`() {
         // The stage starts are the shared ones, in order, and each boundary case lands in its stage.
-        val stages = fixtures.getJSONObject("stages")
+        val stages = stagedStages
         val starts = stages.getJSONArray("starts").objects().map { named<Stage>(it.getString("stage")) to it.getInt("from_percent") }
         assertEquals(Stage.entries.map { it to it.percent }, starts)
         for (case in stages.getJSONArray("cases").objects()) {
@@ -85,7 +85,7 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `the shared moods cover every mood`() {
-        val covered = cases("moods").map { named<Mood>(it.getJSONObject("expected").getString("mood")) }.toSet()
+        val covered = stagedMoodCases(fixtures).map { named<Mood>(it.getJSONObject("expected").getString("mood")) }.toSet()
         assertEquals(Mood.entries.toSet(), covered)
     }
 
