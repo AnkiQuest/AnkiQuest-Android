@@ -9,6 +9,7 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
+import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
@@ -79,6 +80,24 @@ class DebugInfoServiceTest : RobolectricTest() {
                 assertFalse(report.contains(privateValue), "A private account field appeared in the report")
             }
         }
+
+    @Test
+    fun `debug info lists the upstream commit after the AnkiQuest commit`() =
+        runTest {
+            val report = DebugInfoService.getDebugInfo(targetContext)
+
+            assertContains(
+                report,
+                "AnkiQuest Commit = ${BuildConfig.GIT_COMMIT_HASH}  \n" +
+                    "AnkiDroid Upstream Commit = ${BuildConfig.UPSTREAM_COMMIT_HASH}  \n",
+            )
+        }
+
+    @Test
+    fun `builds without the upstream commit property show unknown`() {
+        // Unit tests build without -PupstreamCommit; only ankiquest_apk.yml passes it.
+        assertEquals("unknown", BuildConfig.UPSTREAM_COMMIT_HASH)
+    }
 
     @Test
     @Suppress("AuthLeak") // Deliberate fake credentials exercise report redaction.

@@ -332,7 +332,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                     .put("streak_minutes", 0)
                     .put("day_ends_at", TimeManager.time.intTimeMS() + 2 * hour)
             val fetchedAt = TimeManager.time.intTimeMS() - 60_000
-            AnkiquestWidget.render(targetContext, JSONArray().put(row), fetchedAt, offline = false)
+            AnkiquestWidget.render(targetContext, JSONArray().put(row), fetchedAt, offline = false, lock = null)
             val text = { view: Int ->
                 shadowOf(manager)
                     .getViewFor(id)

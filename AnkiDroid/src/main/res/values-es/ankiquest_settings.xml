@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_deck_alerts_stop">Dejar de recibir avisos de mazos de %1$s</string>
+    <string name="aq_deck_alerts_stopped">No recibirás avisos de mazos de %1$s.</string>
+    <string name="aq_deck_alerts_restored">Volverás a recibir avisos de mazos de %1$s.</string>
+    <string name="aq_deck_alerts_already_stopped">Ya no recibes avisos de mazos de %1$s.</string>
+    <string name="aq_deck_alerts_unavailable">%1$s ya no comparte avisos de mazos.</string>
+    <string name="aq_deck_alerts_failed">No se pudieron cambiar los avisos de mazos. Inténtalo de nuevo.</string>
     <string name="ankiquest_group_account">Cuenta</string>
     <string name="ankiquest_group_notify">Avísame de</string>
     <string name="ankiquest_group_sharing">Compartir</string>
@@ -30,7 +36,6 @@
     <string name="ankiquest_deck_menu_share_on">Los amigos elegidos se enterarán cuando termines %1$s.</string>
     <string name="ankiquest_deck_menu_share_off">Nadie se enterará cuando termines %1$s.</string>
     <string name="aq_goal_change">Cambiar meta</string>
-    <string name="aq_profile_deck_alerts_stop">Dejar de recibir avisos de mazos de %1$s</string>
     <string name="aq_profile_deck_alerts_start">Volver a recibir avisos de mazos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar la protección de racha</string>
     <string name="aq_profile_freezes_resume">Reanudar la protección de racha</string>

@@ -61,6 +61,12 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `friend goals say why others' progress reads 0 until the first upload`() {
+        coEvery { AnkiquestChallenges.overview(identity) } returns overview.copy(lock = AnkiquestLock.UPLOAD_FIRST)
+        assertTrue(launch().hasText(targetContext.getString(R.string.aq_upload_first)))
+    }
+
+    @Test
     fun `the list shows the invitation first, goals in progress with progress, and finished ones on request`() {
         val goals = launch()
         val texts = goals.texts()

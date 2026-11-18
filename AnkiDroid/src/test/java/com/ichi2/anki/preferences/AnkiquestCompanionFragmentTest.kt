@@ -17,6 +17,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
+import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
@@ -39,6 +40,7 @@ import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowToast
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -138,6 +140,20 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         val fragment = open()
         assertEquals(listOf("Aki", "Ankilope", "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
         assertEquals("Ankilope", fragment.chosen())
+    }
+
+    @Test
+    fun `tapping a companion without a live chibi shows no hint and reports no unlock`() {
+        val fragment = open()
+
+        // More taps than a chibi needs, on an unlocked companion: none has a live chibi yet.
+        repeat(2 * AnkiquestChibi.TAPS) {
+            fragment.card("Bluma").performClick()
+            idle()
+        }
+
+        assertNull(ShadowToast.getLatestToast())
+        coVerify(exactly = 0) { AnkiquestHomeData.saveUnlock(any(), any()) }
     }
 
     @Test

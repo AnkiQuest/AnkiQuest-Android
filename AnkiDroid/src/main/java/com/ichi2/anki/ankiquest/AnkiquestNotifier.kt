@@ -127,7 +127,7 @@ object AnkiquestNotifier {
                     title,
                     shownBody,
                     notificationIntent(context, entry, account),
-                    if (answerable || cheerable) {
+                    if (answerable || cheerable || (kind == "completion" && entry.optString("sender").isNotEmpty())) {
                         AnkiquestReply.actions(
                             context,
                             id,
@@ -140,6 +140,7 @@ object AnkiquestNotifier {
                             win = friendsWin,
                             cheer = cheerable,
                             reply = answerable,
+                            sender = entry.optString("sender"),
                         )
                     } else if (AnkiquestShare.shareable(kind)) {
                         val (shareTitle, shareBody) = shareText(entry)
@@ -275,13 +276,17 @@ object AnkiquestNotifier {
     }
 
     /** Posts the server's streak warning once per study day, within the chosen hours before it ends. */
-    fun onProfile(
+    internal fun onProfile(
         context: Context,
         profile: JSONObject,
+        streakDelivery: StreakDelivery,
     ) {
         val prefs = AnkiDroidApp.sharedPrefs()
         AnkiquestDailyGoal.remember(profile, prefs)
         AnkiquestIcon.update(context, profile, TimeManager.time.intTimeMS(), prefs)
+        if (streakDelivery == StreakDelivery.HOLD) {
+            return
+        }
         val hours = prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
         val warning = profile.optJSONObject("streak_warning")
         if (hours <= 0 || warning == null) return
@@ -310,6 +315,17 @@ object AnkiquestNotifier {
             data.getString(AnkiquestReply.EXTRA_TITLE).orEmpty(),
             AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_sent, who, message),
             replyIntent(context, data),
+            listOfNotNull(
+                AnkiquestDeckAlerts.action(
+                    context,
+                    data.getLong(AnkiquestReply.EXTRA_NOTIFICATION, 0),
+                    data.getInt(AnkiquestReply.EXTRA_TAG, 0),
+                    data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT),
+                    data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
+                    data.getString(AnkiquestReply.EXTRA_SENDER),
+                    data.getString(AnkiquestReply.EXTRA_KIND) ?: "completion",
+                ),
+            ),
             silent = true,
         )
     }
@@ -340,6 +356,7 @@ object AnkiquestNotifier {
                 data.getString(AnkiquestReply.EXTRA_KIND) ?: "share",
                 win = true,
                 cheer = false,
+                sender = data.getString(AnkiquestReply.EXTRA_SENDER),
             ),
             silent = true,
         )
@@ -371,6 +388,7 @@ object AnkiquestNotifier {
                 data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
                 data.getString(AnkiquestReply.EXTRA_KIND) ?: "completion",
                 win = data.getBoolean(AnkiquestReply.EXTRA_WIN, false),
+                sender = data.getString(AnkiquestReply.EXTRA_SENDER),
             ),
             silent = true,
         )

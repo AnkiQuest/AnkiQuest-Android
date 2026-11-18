@@ -89,7 +89,7 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
     }
 
     private fun bind(states: Map<DeckId, DailyDeckState>): Map<DeckId, DeckAdapter.ViewHolder> {
-        val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_Light)
+        val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid)
         val adapter =
             DeckAdapter(
                 context,

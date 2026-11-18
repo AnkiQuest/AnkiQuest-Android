@@ -52,6 +52,7 @@ import com.ichi2.anki.utils.Destination
 import com.ichi2.utils.NetworkUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -96,6 +97,9 @@ class DeckPickerViewModel :
 
     var isDeckSearchExpanded: Boolean = false
         private set
+
+    /** Media choice for a metered confirmation waiting for a resumed activity to show it. */
+    var deferredMeteredSyncMedia: Boolean? = null
 
     /**
      * Keep track of which deck was last given focus in the deck list. If we find that this value
@@ -151,7 +155,7 @@ class DeckPickerViewModel :
     val emptyCardsNotification = MutableSharedFlow<EmptyCardsResult>(extraBufferCapacity = 1)
     val flowOfDestination = MutableSharedFlow<Destination>(extraBufferCapacity = 1)
     val flowOfNavigate = MutableSharedFlow<NavigateDestination>(extraBufferCapacity = 1)
-    override val onError = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    override val onError = Channel<Exception>(Channel.BUFFERED)
     val flowOfExportDeck = MutableSharedFlow<DeckId>()
     val flowOfCreateShortcut = MutableSharedFlow<ShortcutData>()
     val flowOfDisableShortcuts = MutableSharedFlow<List<String>>()

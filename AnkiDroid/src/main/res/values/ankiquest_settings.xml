@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_deck_alerts_stop">Stop deck alerts from %1$s</string>
+    <string name="aq_deck_alerts_stopped">You won\'t get deck alerts from %1$s.</string>
+    <string name="aq_deck_alerts_restored">You\'ll get deck alerts from %1$s again.</string>
+    <string name="aq_deck_alerts_already_stopped">You aren\'t getting deck alerts from %1$s.</string>
+    <string name="aq_deck_alerts_unavailable">%1$s no longer shares deck alerts.</string>
+    <string name="aq_deck_alerts_failed">Couldn\'t change deck alerts. Try again.</string>
     <string name="ankiquest_account_group_key" translatable="false">ankiquestAccountGroup</string>
     <string name="ankiquest_notify_group_key" translatable="false">ankiquestNotifyGroup</string>
     <string name="ankiquest_sharing_group_key" translatable="false">ankiquestSharingGroup</string>
@@ -53,7 +59,6 @@
     <string name="ankiquest_deck_menu_share_off">Nobody will hear when you finish %1$s.</string>
 
     <string name="aq_goal_change" maxLength="28">Change goal</string>
-    <string name="aq_profile_deck_alerts_stop">Stop deck alerts from %1$s</string>
     <string name="aq_profile_deck_alerts_start">Get deck alerts from %1$s again</string>
     <string name="aq_profile_freezes_pause" maxLength="41">Pause streak protection</string>
     <string name="aq_profile_freezes_resume" maxLength="41">Resume streak protection</string>
