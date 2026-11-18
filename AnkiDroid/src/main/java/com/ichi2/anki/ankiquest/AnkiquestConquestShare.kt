@@ -79,5 +79,11 @@ internal object AnkiquestConquestShare {
         viewer: HomeAccount,
         card: AnkiquestCommunity.Conquest,
         name: String?,
-    ): String? = deck(context, name.takeIf { card.mine && card.user == viewer.user })
+    ): String? = deck(context, name.takeIf { owns(viewer, card) })
+
+    /** Whether [card] is [viewer]'s own, so its deck and win may be used. */
+    fun owns(
+        viewer: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ): Boolean = card.mine && card.user == viewer.user
 }

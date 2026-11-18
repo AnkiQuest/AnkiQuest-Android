@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_deck_alerts_stop">Stapelmeldungen von %1$s stoppen</string>
+    <string name="aq_deck_alerts_stopped">Du erhältst keine Stapelmeldungen mehr von %1$s.</string>
+    <string name="aq_deck_alerts_restored">Du erhältst wieder Stapelmeldungen von %1$s.</string>
+    <string name="aq_deck_alerts_already_stopped">Du erhältst bereits keine Stapelmeldungen von %1$s.</string>
+    <string name="aq_deck_alerts_unavailable">%1$s teilt keine Stapelmeldungen mehr.</string>
+    <string name="aq_deck_alerts_failed">Stapelmeldungen konnten nicht geändert werden. Versuche es erneut.</string>
     <string name="ankiquest_group_account">Konto</string>
     <string name="ankiquest_group_notify">Benachrichtige mich über</string>
     <string name="ankiquest_group_sharing">Teilen</string>
@@ -30,7 +36,6 @@
     <string name="ankiquest_deck_menu_share_on">Die gewählten Freunde erfahren, wenn du %1$s beendest.</string>
     <string name="ankiquest_deck_menu_share_off">Niemand erfährt, wenn du %1$s beendest.</string>
     <string name="aq_goal_change">Ziel ändern</string>
-    <string name="aq_profile_deck_alerts_stop">Keine Stapelmeldungen mehr von %1$s</string>
     <string name="aq_profile_deck_alerts_start">Stapelmeldungen von %1$s wieder erhalten</string>
     <string name="aq_profile_freezes_pause">Serienschutz pausieren</string>
     <string name="aq_profile_freezes_resume">Serienschutz fortsetzen</string>
