@@ -82,7 +82,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         ANKI_TAN_WORRIED("AnkiquestIconAnkiTanWorried", ANKI_TAN, Mood.WORRIED),
         ANKI_TAN_SLEEPY("AnkiquestIconAnkiTanSleepy", ANKI_TAN, Mood.SLEEPY),
 
-        // Ankilope has only a face so far; Bluma, the cow, is Ankilope's face turned purple.
+        // Ankilope and Bluma (the cow) have only their faces so far.
         ANKILOPE_DEFAULT("AnkiquestIconAnkilopeDefault", ANKILOPE, Mood.DEFAULT),
         BLUMA_DEFAULT("AnkiquestIconBlumaDefault", COW, Mood.DEFAULT),
 

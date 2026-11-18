@@ -143,7 +143,7 @@
                 <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <!-- Ankilope's face, and Bluma (cow) as Ankilope's face turned purple, for every mood. -->
+        <!-- Ankilope's and Bluma's (cow) faces, for every mood. -->
         <activity-alias
             android:name="com.ichi2.anki.ankiquest.AnkiquestIconAnkilopeDefault"
             android:enabled="false"
