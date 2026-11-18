@@ -150,14 +150,24 @@ jobs:
             ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.record=true -PtestMaxParallelForks=1 --rerun-tasks -q "$@" > /tmp/diag/gradle.log 2>&1 || tail -30 /tmp/diag/gradle.log
             grep -h -o 'testsuite name="[^"]*".*timestamp="[^"]*"' AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml | sed -E 's/testsuite name="([^"]*)".*timestamp="([^"]*)"/\2 \1/' | sort | head -40
           }
-          record --tests '*AnkiquestStreakScreenshotTest'
-          check alone
-          record --tests '*AnkiquestClearStreakScreenshotTest' --tests '*AnkiquestStreakScreenshotTest'
-          check ClearStreak
-          record --tests '*AnkiquestStreakDetailsScreenshotTest' --tests '*AnkiquestStreakScreenshotTest'
-          check StreakDetails
-          record --tests 'com.ichi2.anki.ankiquest.*'
-          check all-ankiquest-one-fork
+          ls AnkiDroid/build/test-results/ | head
+          compare_only() {
+            ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.compare=true -PtestMaxParallelForks=1 --rerun-tasks -q "$@" > /tmp/diag/gradle.log 2>&1 || tail -30 /tmp/diag/gradle.log
+            echo "== compare-mode $*"
+            find AnkiDroid/build -name '*_actual.png' -path '*AnkiquestStreakScreenshotTest*' | sort
+            for actual in $(find AnkiDroid/build/outputs -name '*_actual.png' -path '*AnkiquestStreakScreenshotTest*' | sort); do
+              java .github/diag364/PixelDiff.java "/tmp/diag/baseline/AnkiquestStreakScreenshotTest/$(basename "$actual" _actual.png).png" "$actual" 2>/dev/null | head -2
+            done
+          }
+          rm -rf AnkiDroid/build/outputs/roborazzi AnkiDroid/build/intermediates/roborazzi
+          mkdir -p AnkiDroid/build/outputs/roborazzi && cp -r /tmp/diag/baseline/. AnkiDroid/build/outputs/roborazzi/
+          compare_only --tests '*AnkiquestStreakScreenshotTest'
+          rm -rf AnkiDroid/build/outputs/roborazzi AnkiDroid/build/intermediates/roborazzi
+          ./gradlew recordScreenshots -Pscreenshot --stacktrace --rerun-tasks -q > /tmp/diag/gradle.log 2>&1 || tail -30 /tmp/diag/gradle.log
+          check full-suite-record
+          for xml in AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml; do
+            sed -n 's/.*<testsuite name="\([^"]*\)".*timestamp="\([^"]*\)".*/\2 \1/p' "$xml"
+          done | sort | grep -n -B12 'AnkiquestStreakScreenshotTest' | head -30
 
       - name: Stage screenshot diffs
         if: ${{ always() }}
