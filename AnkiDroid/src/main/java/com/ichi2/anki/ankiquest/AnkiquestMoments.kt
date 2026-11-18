@@ -398,13 +398,18 @@ internal object AnkiquestMoments {
         )
     }
 
-    /** The companion that joined in a [Kind.COMPANION] moment, from its key `companion:{companion}`; null otherwise. */
+    /** The companion that joined in a [Kind.COMPANION] moment, if this app draws it; null otherwise. */
     fun joined(moment: Moment): AnkiquestCompanion.Choice? {
+        val id = companion(moment) ?: return null
+        return AnkiquestCompanion.Choice.entries.firstOrNull { it.id == id && it != AnkiquestCompanion.Choice.NONE }
+    }
+
+    /** The server's id of the companion that joined in a [Kind.COMPANION] moment, from its key `companion:{companion}`. */
+    fun companion(moment: Moment): String? {
         if (moment.kind != Kind.COMPANION) {
             return null
         }
-        val id = moment.key.substringAfter(COMPANION_KEY_PREFIX, missingDelimiterValue = "")
-        return AnkiquestCompanion.Choice.entries.firstOrNull { it.id == id && it != AnkiquestCompanion.Choice.NONE }
+        return moment.key.substringAfter(COMPANION_KEY_PREFIX, missingDelimiterValue = "").ifEmpty { null }
     }
 
     /** The streak in a milestone's event key, `streak:{first day}:{days}`. */
@@ -538,7 +543,7 @@ internal object AnkiquestMoments {
         if (moment.kind != Kind.COMPANION) {
             return true
         }
-        return moment.key.substringAfter(COMPANION_KEY_PREFIX, missingDelimiterValue = "") in drawn
+        return companion(moment) in drawn
     }
 
     fun pending(
