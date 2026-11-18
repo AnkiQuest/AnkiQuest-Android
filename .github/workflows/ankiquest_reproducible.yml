@@ -135,6 +135,11 @@ jobs:
           echo "R8 mapping differences ($(wc -l < report/mapping.diff) lines):"
           head -n 300 report/mapping.diff
 
+          # The APK itself without the dex files: the signing block and zip structure.
+          timeout 600 diffoscope --exclude-command '^apktool' --exclude-command '^procyon' \
+            --exclude-command '^javap' --exclude 'classes*.dex' \
+            --text report/apk.txt AnkiQuest-first.apk AnkiQuest-second.apk > /dev/null 2>&1 || true
+
           # One diffoscope report per differing entry.
           unzip -q AnkiQuest-first.apk -d first
           unzip -q AnkiQuest-second.apk -d second
