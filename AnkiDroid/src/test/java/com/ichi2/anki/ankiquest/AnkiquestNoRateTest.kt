@@ -2,9 +2,9 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.ActivityInfo
-import android.content.pm.ResolveInfo
+import android.content.IntentFilter
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -26,15 +26,17 @@ class AnkiquestNoRateTest : RobolectricTest() {
     // A store app is installed, so upstream AnkiDroid would offer Rate AnkiDroid
     @Before
     fun installStore() {
-        val store =
-            ResolveInfo().apply {
-                activityInfo =
-                    ActivityInfo().apply {
-                        packageName = "com.android.vending"
-                        name = "Store"
-                    }
+        val market = AnkiDroidApp.getMarketIntent(targetContext)
+        val store = ComponentName("com.android.vending", "Store")
+        val filter =
+            IntentFilter(market.action).apply {
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addDataScheme(market.data!!.scheme)
             }
-        shadowOf(targetContext.packageManager).addResolveInfoForIntent(AnkiDroidApp.getMarketIntent(targetContext), store)
+        shadowOf(targetContext.packageManager).apply {
+            addActivityIfNotPresent(store)
+            addIntentFilterForActivity(store, filter)
+        }
     }
 
     @Test
