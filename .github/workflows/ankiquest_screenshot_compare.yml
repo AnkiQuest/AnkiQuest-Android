@@ -112,10 +112,46 @@ jobs:
           max_attempts: 3
           command: ./gradlew robolectricSdkDownload compileScreenshotTests -Pscreenshot --daemon
 
+      - name: Diag keep baseline
+        run: |
+          grep -m1 '^model name' /proc/cpuinfo
+          grep -m1 '^flags' /proc/cpuinfo | tr ' ' '\n' | grep -E '^(avx|fma|sse4|f16c|bmi)' | sort | tr '\n' ' '; echo
+          mkdir -p /tmp/diag/baseline && cp -r AnkiDroid/build/outputs/roborazzi/. /tmp/diag/baseline/
+
       - name: Compare screenshots
         id: compare-screenshot-test
         run: |
           ./gradlew compareScreenshots -Pscreenshot --stacktrace
+
+      - name: Diag full-suite diffs
+        if: ${{ always() }}
+        run: |
+          for class in AnkiquestStreakScreenshotTest AnkiquestDeckUndoScreenshotTest AnkiquestClearStreakScreenshotTest; do
+            echo "== $class"
+            find AnkiDroid/build -name '*_actual.png' -path "*$class*" | sort
+            for actual in $(find AnkiDroid/build -name '*_actual.png' -path "*$class*" | sort); do
+              stem=$(basename "$actual" _actual.png)
+              java .github/diag364/PixelDiff.java "/tmp/diag/baseline/$class/$stem.png" "$actual" 2>/dev/null
+              mkdir -p /tmp/diag/run1/$class && cp "$actual" /tmp/diag/run1/$class/$stem.png
+            done
+          done
+
+      - name: Diag isolated record
+        if: ${{ always() }}
+        run: |
+          ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.record=true --rerun-tasks --tests '*AnkiquestStreakScreenshotTest' --tests '*AnkiquestDeckUndoScreenshotTest'
+          for class in AnkiquestStreakScreenshotTest AnkiquestDeckUndoScreenshotTest; do
+            echo "== isolated $class vs baseline"
+            for file in AnkiDroid/build/outputs/roborazzi/$class/*.png; do
+              stem=$(basename "$file" .png)
+              sha256sum "$file" "/tmp/diag/baseline/$class/$stem.png" | cut -c1-16
+              java .github/diag364/PixelDiff.java "/tmp/diag/baseline/$class/$stem.png" "$file" 2>/dev/null | head -3
+              if [ -f "/tmp/diag/run1/$class/$stem.png" ]; then
+                echo "-- vs full-suite run"
+                java .github/diag364/PixelDiff.java "/tmp/diag/run1/$class/$stem.png" "$file" 2>/dev/null | head -3
+              fi
+            done
+          done
 
       - name: Stage screenshot diffs
         if: ${{ always() }}
