@@ -55,3 +55,13 @@ jobs:
       - name: Check the app's art against the server's exporter
         shell: bash
         run: (cd server && cargo run -q -p ankiquest-xtask -- export-android-art --check "$GITHUB_WORKSPACE")
+
+      # The social preview is the server's (`banner --social`); the bytes must match its render.
+      - name: Check the social preview against the server's banner tool
+        shell: bash
+        run: |
+          (cd server && cargo run -q -p ankiquest-xtask -- banner --social --out "$RUNNER_TEMP/social_preview.png")
+          if ! cmp "$RUNNER_TEMP/social_preview.png" docs/graphics/logos/social_preview.png; then
+            echo "::error::docs/graphics/logos/social_preview.png is stale. Regenerate it from the pinned server: cargo run -p ankiquest-xtask -- banner --social --out <this checkout>/docs/graphics/logos/social_preview.png"
+            exit 1
+          fi

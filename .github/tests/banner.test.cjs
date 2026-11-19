@@ -26,3 +26,19 @@ test("banner job fails when the token is missing or the pull request cannot be o
 test("a rerun for the same release reuses the open banner pull request", () => {
     assert.match(propose, /gh pr list [^\n]*--head "\$branch"/);
 });
+
+// The render job runs from "  render:" to the propose job.
+const render = workflow.slice(workflow.indexOf("\n  render:\n"), workflow.indexOf("\n  propose:\n"));
+
+test("the render job runs the documented command", () => {
+    assert.match(render, /cargo run --release --manifest-path tools\/ankiquest-banner\/Cargo\.toml -- --record\n/);
+});
+
+test("a pull request fails when its committed banner is stale", () => {
+    assert.match(render, /if \[ "\$EVENT" = pull_request \]; then\s+ref=HEAD/);
+    assert.match(render, /if: github\.event_name == 'pull_request' && steps\.compare\.outputs\.changed == 'true'\n[\s\S]*?exit 1/);
+});
+
+test("a pull request that changes the banner runs the check", () => {
+    assert.match(workflow, /pull_request:\n {4}paths:[\s\S]*?- 'docs\/graphics\/logos\/banner_readme\.png'/);
+});

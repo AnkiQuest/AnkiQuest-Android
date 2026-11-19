@@ -9,26 +9,33 @@
 //! come from AnkiquestBannerScreenshots, which renders them with Robolectric
 //! from sample decks and players.
 //!
-//! Regenerate (from the repository root):
+//! Regenerate (from the repository root) with one command:
 //!
 //! ```sh
-//! # 1. Record the five screens (360x780dp at xhdpi, 720x1560 px) into
-//! #    AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/
+//! cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml -- --record
+//! ```
+//!
+//! `--record` first runs Gradle to record the five screens (360x780dp at
+//! xhdpi, 720x1560 px) into
+//! AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/:
+//!
+//! ```sh
 //! ./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot -PreadmeBanner \
 //!     --tests '*AnkiquestBannerScreenshots*'
-//!
-//! # 2. Compose the banner
-//! cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml
 //! ```
+//!
+//! Without `--record` it composes the banner from screens already recorded.
 //!
 //! The result is the same on every run: the screens use fixed sample data, a
 //! fixed clock for the server screens, a fixed review card and a heatmap
 //! pinned to 28 October 2026, and text is set in the Roboto bundled here.
 //!
 //! The test is skipped unless -PreadmeBanner is given, so the screenshot
-//! workflows never run it. .github/workflows/ankiquest_banner.yml runs both
-//! steps for every quest-* release tag and opens a pull request against main
-//! when the banner changed; `--compare` tells it whether it did.
+//! workflows never run it. .github/workflows/ankiquest_banner.yml runs this
+//! for pull requests that touch the banner or its tooling and fails when the
+//! committed banner has other pixels, and for every quest-* release tag,
+//! where it opens a pull request against main when the banner changed;
+//! `--compare` tells it whether it did.
 //!
 //! The reviewer's card is a WebView, which Robolectric draws blank: the test
 //! draws the card's rendered question and answer natively over it, in the
@@ -40,7 +47,7 @@ mod fonts;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{self, ExitCode};
 
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ImageEncoder, RgbImage, RgbaImage};
@@ -50,9 +57,25 @@ const SHOTS: &str = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshot
 const DUO: &str = "AnkiDroid/src/main/res/drawable-nodpi/duo_friends.webp";
 const OUT: &str = "docs/graphics/logos/banner_readme.png";
 
-const USAGE: &str = "usage: ankiquest-banner [--shots <dir>] [--font-dir <dir>] [--out <file>]
+/// The Gradle command that records the screens, run by `--record`.
+const GRADLE: &str = if cfg!(windows) {
+    "gradlew.bat"
+} else {
+    "./gradlew"
+};
+const RECORD: [&str; 5] = [
+    ":AnkiDroid:recordRoborazziPlayDebug",
+    "-Pscreenshot",
+    "-PreadmeBanner",
+    "--tests",
+    "*AnkiquestBannerScreenshots*",
+];
+
+const USAGE: &str =
+    "usage: ankiquest-banner [--record] [--shots <dir>] [--font-dir <dir>] [--out <file>]
        ankiquest-banner --compare <new.png> <old.png>
 
+  --record    record the screens with Gradle first
   --shots     folder with the recorded screens
   --font-dir  folder with Roboto-Bold.ttf and Roboto-Regular.ttf, instead
               of the bundled Roboto
@@ -60,9 +83,19 @@ const USAGE: &str = "usage: ankiquest-banner [--shots <dir>] [--font-dir <dir>] 
   --compare   print \"same\" when both images have the same pixels, else
               \"different\"";
 
+/// Whether to record the screens before composing the banner.
+#[derive(Debug, PartialEq)]
+enum Screens {
+    /// Use the screens already in the shots folder.
+    Recorded,
+    /// Run Gradle to record them first.
+    Record,
+}
+
 /// What the command was asked to do.
 enum Command {
     Render {
+        screens: Screens,
         shots: PathBuf,
         font_dir: Option<PathBuf>,
         out: PathBuf,
@@ -92,6 +125,7 @@ fn main() -> ExitCode {
 
 /// Reads the command line.
 fn parse(args: &[String]) -> Result<Command, String> {
+    let mut screens = Screens::Recorded;
     let mut shots = root().join(SHOTS);
     let mut font_dir = None;
     let mut out = root().join(OUT);
@@ -103,6 +137,7 @@ fn parse(args: &[String]) -> Result<Command, String> {
                 .ok_or(format!("{arg} needs a value"))
         };
         match arg.as_str() {
+            "--record" => screens = Screens::Record,
             "--shots" => shots = value()?,
             "--font-dir" => font_dir = Some(value()?),
             "--out" => out = value()?,
@@ -115,6 +150,7 @@ fn parse(args: &[String]) -> Result<Command, String> {
         }
     }
     Ok(Command::Render {
+        screens,
         shots,
         font_dir,
         out,
@@ -124,10 +160,16 @@ fn parse(args: &[String]) -> Result<Command, String> {
 fn run(command: Command) -> Result<(), String> {
     match command {
         Command::Render {
+            screens,
             shots,
             font_dir,
             out,
-        } => render(&shots, font_dir.as_deref(), &out),
+        } => {
+            if screens == Screens::Record {
+                record()?;
+            }
+            render(&shots, font_dir.as_deref(), &out)
+        }
         Command::Compare(new, old) => {
             let same = load(&new)? == load(&old)?;
             println!("{}", if same { "same" } else { "different" });
@@ -138,6 +180,20 @@ fn run(command: Command) -> Result<(), String> {
             Ok(())
         }
     }
+}
+
+/// Records the screens with Gradle, from the repository root.
+fn record() -> Result<(), String> {
+    println!("Running {GRADLE} {}", RECORD.join(" "));
+    let status = process::Command::new(root().join(GRADLE))
+        .args(RECORD)
+        .current_dir(root())
+        .status()
+        .map_err(|e| format!("{GRADLE}: {e}"))?;
+    if !status.success() {
+        return Err(format!("{GRADLE} failed: {status}"));
+    }
+    Ok(())
 }
 
 /// Composes the banner from the screens in `shots` and writes it to `out`.
@@ -206,9 +262,16 @@ mod tests {
 
     #[test]
     fn defaults_point_into_the_repository() {
-        let Ok(Command::Render { shots, out, .. }) = parse(&[]) else {
+        let Ok(Command::Render {
+            screens,
+            shots,
+            out,
+            ..
+        }) = parse(&[])
+        else {
             panic!("expected a render");
         };
+        assert_eq!(Screens::Recorded, screens);
         assert!(shots.ends_with(SHOTS));
         assert!(out.ends_with(OUT));
         assert!(root().join(DUO).is_file());
@@ -221,6 +284,7 @@ mod tests {
             shots,
             font_dir,
             out,
+            ..
         }) = parsed
         else {
             panic!("expected a render");
@@ -233,6 +297,15 @@ mod tests {
             ),
             (shots, font_dir, out)
         );
+    }
+
+    #[test]
+    fn record_runs_gradle_first() {
+        let Ok(Command::Render { screens, .. }) = parse(&args(&["--record"])) else {
+            panic!("expected a render");
+        };
+        assert_eq!(Screens::Record, screens);
+        assert!(root().join(GRADLE).is_file());
     }
 
     #[test]

@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Regenerates the README banner (docs/graphics/logos/banner_readme.png) from the app's own
 # screens for every release, and proposes it to main as a pull request when it changed.
-# Pull requests touching the banner tooling render it without proposing anything.
+# Pull requests touching the banner or its tooling render it and fail unless the committed
+# banner has the same pixels; the render is uploaded so it can be committed.
 name: ankiquest README banner
 
 on:
@@ -13,6 +14,8 @@ on:
       - '.github/workflows/ankiquest_banner.yml'
       - 'tools/ankiquest-banner/**'
       - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
+      - 'AnkiDroid/src/main/res/drawable-nodpi/duo_friends.webp'
+      - 'docs/graphics/logos/banner_readme.png'
 
 permissions: {}
 
@@ -77,23 +80,27 @@ jobs:
           max_attempts: 3
           command: ./gradlew robolectricSdkDownload compileScreenshotTests -Pscreenshot --daemon
 
-      - name: Record the screens
-        run: |
-          ./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot -PreadmeBanner \
-            --tests '*AnkiquestBannerScreenshots*' --stacktrace
+      # The documented command: records the screens with Gradle, then composes the banner.
+      - name: Record the screens and compose the banner
+        run: cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml -- --record
 
-      - name: Compose the banner
-        run: cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml
-
-      # Compare pixels, not bytes, with main's banner: PNG encoders differ between platforms.
-      - name: Compare with main
+      # Compare pixels, not bytes: PNG encoders differ between platforms. A pull request is
+      # compared with its own committed banner, a release with main's.
+      - name: Compare with the committed banner
         id: compare
+        env:
+          EVENT: ${{ github.event_name }}
         run: |
-          git fetch --depth=1 origin main
-          git show FETCH_HEAD:docs/graphics/logos/banner_readme.png > "$RUNNER_TEMP/main_banner.png"
+          if [ "$EVENT" = pull_request ]; then
+            ref=HEAD
+          else
+            git fetch --depth=1 origin main
+            ref=FETCH_HEAD
+          fi
+          git show "$ref:docs/graphics/logos/banner_readme.png" > "$RUNNER_TEMP/committed_banner.png"
           result=$(cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml -- \
-            --compare docs/graphics/logos/banner_readme.png "$RUNNER_TEMP/main_banner.png")
-          echo "The banner is $result from main's."
+            --compare docs/graphics/logos/banner_readme.png "$RUNNER_TEMP/committed_banner.png")
+          echo "The banner is $result from the committed one."
           if [ "$result" = different ]; then changed=true; else changed=false; fi
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
 
@@ -104,6 +111,12 @@ jobs:
             docs/graphics/logos/banner_readme.png
             AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/*.png
           if-no-files-found: error
+
+      - name: Fail when the committed banner is stale
+        if: github.event_name == 'pull_request' && steps.compare.outputs.changed == 'true'
+        run: |
+          echo "::error::docs/graphics/logos/banner_readme.png is stale. Run tools/ankiquest-banner with --record, or commit the banner artifact of this run."
+          exit 1
 
   propose:
     needs: render
