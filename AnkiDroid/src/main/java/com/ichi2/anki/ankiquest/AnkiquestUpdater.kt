@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
@@ -49,6 +50,12 @@ object AnkiquestUpdater {
     const val PREF_CHANNEL = "ankiquestUpdateChannel"
     private const val PREF_CHECKED_AT = "ankiquestUpdateCheckedAt"
     private const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
+
+    /** Runs on every device; released self-updaters download this name. */
+    private const val UNIVERSAL_APK = "AnkiQuest.apk"
+
+    /** An ABI APK adds its ABI's number times this to the universal version code (build.gradle.kts). */
+    private const val ABI_CODE_STEP = 100_000_000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client =
@@ -107,7 +114,30 @@ object AnkiquestUpdater {
         release: Release,
         installedRelease: Int = BuildConfig.ANKIQUEST_RELEASE,
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
-    ): Boolean = if (release.nightly) release.versionCode > installedCode else release.number > installedRelease
+    ): Boolean =
+        if (release.nightly) {
+            baseCode(release.versionCode) > baseCode(installedCode)
+        } else {
+            release.number > installedRelease
+        }
+
+    /** The version code without the ABI digit, so universal and ABI APKs of one build compare equal. */
+    private fun baseCode(code: Long): Long = code % ABI_CODE_STEP
+
+    /**
+     * The APK to download from [names]: the one built for the device's primary ABI, else the
+     * universal one. Staying on one ABI keeps updates from lowering the version code.
+     */
+    internal fun pickApk(
+        names: Collection<String>,
+        primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+    ): String? {
+        val own = primaryAbi?.let { "AnkiQuest-$it.apk" }
+        if (own != null && own in names) {
+            return own
+        }
+        return UNIVERSAL_APK.takeIf { it in names }
+    }
 
     fun maybeCheck(activity: Activity) {
         if (activity !is DeckPicker) return
@@ -237,15 +267,27 @@ object AnkiquestUpdater {
         return parseNightly(json)
     }
 
-    internal fun parseNightly(json: JSONObject): Release? {
+    internal fun parseNightly(
+        json: JSONObject,
+        primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+    ): Release? {
         val number = json.optInt("release")
         val versionCode = json.optLong("version_code")
         if (number <= 0 || versionCode <= 0) return null
+
+        // Nightlies before the ABI APKs list no assets and carry only the universal APK.
+        val sizes =
+            json
+                .optJSONArray("assets")
+                ?.objects()
+                ?.associate { it.getString("name") to it.optLong("size") }
+                ?: mapOf(UNIVERSAL_APK to json.optLong("size"))
+        val apk = pickApk(sizes.keys, primaryAbi) ?: return null
         return Release(
             number = number,
             name = "Nightly $TAG_PREFIX$number+${json.optInt("nightly")} (${json.optString("commit").take(7)})",
-            apkUrl = NIGHTLY_URL + "AnkiQuest.apk",
-            apkSize = json.optLong("size"),
+            apkUrl = NIGHTLY_URL + apk,
+            apkSize = sizes.getValue(apk),
             versionCode = versionCode,
             nightly = true,
         )
@@ -263,15 +305,17 @@ object AnkiquestUpdater {
                 if (!response.isSuccessful) return null
                 JSONObject(response.body.string())
             }
+        return parseLatest(json)
+    }
+
+    internal fun parseLatest(
+        json: JSONObject,
+        primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+    ): Release? {
         val tag = json.getString("tag_name")
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
-        val assets = json.getJSONArray("assets")
-        val apk =
-            assets
-                .objects()
-                .filter { it.getString("name").endsWith(".apk") }
-                .let { apks -> apks.firstOrNull { it.getString("name") == "AnkiQuest.apk" } ?: apks.firstOrNull() }
-                ?: return null
+        val assets = json.getJSONArray("assets").objects().associateBy { it.getString("name") }
+        val apk = pickApk(assets.keys, primaryAbi)?.let(assets::getValue) ?: return null
         return Release(
             number = number,
             name = json.optString("name").ifEmpty { tag },
@@ -473,7 +517,7 @@ object AnkiquestUpdater {
                 return
             }
             val downloaded = versionOf(file)
-            if (downloaded == null || downloaded <= installedCode) {
+            if (downloaded == null || baseCode(downloaded) <= baseCode(installedCode)) {
                 file.delete()
             }
         }

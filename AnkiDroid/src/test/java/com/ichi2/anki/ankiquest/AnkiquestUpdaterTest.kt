@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -259,6 +260,70 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         assertEquals(nightly, AnkiquestUpdater.newest(nightly, null))
     }
 
+    private val abiAssets = listOf("AnkiQuest-arm64-v8a.apk", "AnkiQuest.apk", "AnkiQuest-x86_64.apk", "AnkiQuest.aab")
+
+    @Test
+    fun `the apk for the primary abi is picked, else the universal one`() {
+        assertEquals("AnkiQuest-arm64-v8a.apk", AnkiquestUpdater.pickApk(abiAssets, "arm64-v8a"))
+        assertEquals("AnkiQuest-x86_64.apk", AnkiquestUpdater.pickApk(abiAssets, "x86_64"))
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(abiAssets, "armeabi-v7a"))
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(abiAssets, null))
+        assertNull(AnkiquestUpdater.pickApk(listOf("AnkiQuest.aab", "AnkiQuest-x86.apk"), "arm64-v8a"))
+    }
+
+    @Test
+    fun `a nightly with assets offers the apk for this device`() {
+        val assets =
+            JSONArray(
+                abiAssets.mapIndexed { i, name -> JSONObject().put("name", name).put("size", 1000 + i) },
+            )
+        val json = JSONObject(nightlyJson.toString()).put("assets", assets)
+        val arm = AnkiquestUpdater.parseNightly(json, "arm64-v8a")!!
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest-arm64-v8a.apk", arm.apkUrl)
+        assertEquals(1000, arm.apkSize)
+        val other = AnkiquestUpdater.parseNightly(json, "riscv64")!!
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk", other.apkUrl)
+        assertEquals(1001, other.apkSize)
+    }
+
+    @Test
+    fun `a nightly without assets offers the universal apk`() {
+        val nightly = AnkiquestUpdater.parseNightly(nightlyJson, "arm64-v8a")!!
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk", nightly.apkUrl)
+        assertEquals(90_000_000, nightly.apkSize)
+    }
+
+    @Test
+    fun `a release offers the apk for this device`() {
+        fun release(names: List<String>) =
+            JSONObject()
+                .put("tag_name", "quest-18")
+                .put("name", "AnkiQuest 18")
+                .put(
+                    "assets",
+                    JSONArray(
+                        names.map { name ->
+                            val url = "https://example.org/$name"
+                            JSONObject().put("name", name).put("size", name.length).put("browser_download_url", url)
+                        },
+                    ),
+                )
+        val arm = AnkiquestUpdater.parseLatest(release(abiAssets), "arm64-v8a")!!
+        assertEquals(18, arm.number)
+        assertEquals("https://example.org/AnkiQuest-arm64-v8a.apk", arm.apkUrl)
+        assertEquals("AnkiQuest-arm64-v8a.apk".length.toLong(), arm.apkSize)
+        assertEquals("https://example.org/AnkiQuest.apk", AnkiquestUpdater.parseLatest(release(abiAssets), "x86")!!.apkUrl)
+        assertNull(AnkiquestUpdater.parseLatest(release(listOf("AnkiQuest.aab")), "arm64-v8a"))
+    }
+
+    @Test
+    fun `an abi build compares to a nightly without its abi digit`() {
+        val nightly = AnkiquestUpdater.parseNightly(nightlyJson)!!
+        assertTrue(AnkiquestUpdater.isNewer(nightly, installedRelease = 17, installedCode = 350_017_000))
+        assertFalse(AnkiquestUpdater.isNewer(nightly, installedRelease = 17, installedCode = 350_017_003))
+        assertFalse(AnkiquestUpdater.isNewer(nightly.copy(versionCode = 350_017_003), installedRelease = 17, installedCode = 50_017_003))
+    }
+
     @Test
     fun `the channel follows the setting and defaults to stable`() {
         assertEquals(AnkiquestUpdater.Channel.STABLE, AnkiquestUpdater.channel())
@@ -287,6 +352,20 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         AnkiquestUpdater.cleanStale(targetContext, installedCode = 100) { 101 }
         assertTrue(apk.exists())
         assertFalse(part.exists())
+    }
+
+    @Test
+    fun `a downloaded abi apk of the installed build is deleted`() {
+        val (apk, _) = downloads()
+        AnkiquestUpdater.cleanStale(targetContext, installedCode = 100) { 300_000_100 }
+        assertFalse(apk.exists())
+    }
+
+    @Test
+    fun `a downloaded abi apk newer than the installed build is kept`() {
+        val (apk, _) = downloads()
+        AnkiquestUpdater.cleanStale(targetContext, installedCode = 100) { 300_000_101 }
+        assertTrue(apk.exists())
     }
 
     @Test
