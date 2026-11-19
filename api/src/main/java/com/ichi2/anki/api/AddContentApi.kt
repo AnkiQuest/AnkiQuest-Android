@@ -3,14 +3,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 package com.ichi2.anki.api
 
-import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
-import android.os.Build
 import android.os.Process
 import android.util.SparseArray
 import com.ichi2.anki.FlashCardsContract
@@ -35,7 +33,7 @@ public class AddContentApi(
     context: Context,
 ) {
     private val context: Context = context.applicationContext
-    private val resolver: ContentResolver = this.context.contentResolver
+    private val resolver = TrustedResolver(this.context)
 
     /**
      * Create a new note with specified fields, tags, and model and place it in the specified deck.
@@ -623,24 +621,12 @@ public class AddContentApi(
      * @return the spec version number or -1 if AnkiDroid is not installed.
      */
     public val apiHostSpecVersion: Int
-        @SuppressLint("WrongConstant") // ComponentInfoFlags bug: GET_META_DATA.toLong() was invalid
         get() {
             // PackageManager#resolveContentProvider docs suggest flags should be 0 (but that gives null metadata)
             // GET_META_DATA seems to work anyway
             val info =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    context.packageManager.resolveContentProvider(
-                        FlashCardsContract.AUTHORITY,
-                        PackageManager.ComponentInfoFlags.of(
-                            PackageManager.GET_META_DATA.toLong(),
-                        ),
-                    )
-                } else {
-                    context.packageManager.resolveContentProvider(
-                        FlashCardsContract.AUTHORITY,
-                        PackageManager.GET_META_DATA,
-                    )
-                } ?: return ANKIDROID_NOT_INSTALLED
+                AnkiDroidProvider.resolve(context, PackageManager.GET_META_DATA)
+                    ?: return ANKIDROID_NOT_INSTALLED
 
             return if (info.metaData != null &&
                 info.metaData.containsKey(PROVIDER_SPEC_META_DATA_KEY)
@@ -857,21 +843,85 @@ public class AddContentApi(
          * Get the AnkiDroid package name that the API will communicate with.
          * This can be used to check that a supported version of AnkiDroid is installed,
          * or to get the application label and icon, etc.
+         *
+         * The app holding [FlashCardsContract.AUTHORITY] counts as AnkiDroid only if it has AnkiDroid's
+         * package name and is signed with AnkiDroid's release key. Other builds of AnkiDroid are accepted
+         * only while the calling app is debuggable. Apps that use [FlashCardsContract] directly should
+         * call this first, so they don't send data to another app.
+         *
          * @param context a Context that can be used to get the PackageManager
-         * @return packageId of AnkiDroid if a supported version is not installed, otherwise null
+         * @return packageId of AnkiDroid if a supported version is installed, otherwise null
          */
         @JvmStatic // required for API
-        public fun getAnkiDroidPackageName(context: Context): String? {
-            val manager = context.packageManager
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                manager
-                    .resolveContentProvider(
-                        FlashCardsContract.AUTHORITY,
-                        PackageManager.ComponentInfoFlags.of(0L),
-                    )?.packageName
-            } else {
-                manager.resolveContentProvider(FlashCardsContract.AUTHORITY, 0)?.packageName
-            }
+        public fun getAnkiDroidPackageName(context: Context): String? = AnkiDroidProvider.resolve(context)?.packageName
+    }
+}
+
+/**
+ * The [ContentResolver] calls [AddContentApi] makes, which don't reach the provider if an app other than
+ * AnkiDroid holds [FlashCardsContract.AUTHORITY]. Blocked calls return null or 0, as for a failed call.
+ */
+private class TrustedResolver(
+    private val context: Context,
+) {
+    private val resolver: ContentResolver = context.contentResolver
+
+    private val blocked: Boolean
+        get() = AnkiDroidProvider.isImpostor(context)
+
+    fun query(
+        uri: Uri,
+        projection: Array<String>?,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        sortOrder: String?,
+    ): Cursor? {
+        if (blocked) {
+            return null
         }
+        return resolver.query(uri, projection, selection, selectionArgs, sortOrder)
+    }
+
+    fun insert(
+        uri: Uri,
+        values: ContentValues,
+    ): Uri? {
+        if (blocked) {
+            return null
+        }
+        return resolver.insert(uri, values)
+    }
+
+    fun bulkInsert(
+        uri: Uri,
+        values: Array<ContentValues>,
+    ): Int {
+        if (blocked) {
+            return 0
+        }
+        return resolver.bulkInsert(uri, values)
+    }
+
+    fun update(
+        uri: Uri,
+        values: ContentValues,
+        where: String?,
+        selectionArgs: Array<String>?,
+    ): Int {
+        if (blocked) {
+            return 0
+        }
+        return resolver.update(uri, values, where, selectionArgs)
+    }
+
+    fun delete(
+        uri: Uri,
+        where: String?,
+        selectionArgs: Array<String>?,
+    ): Int {
+        if (blocked) {
+            return 0
+        }
+        return resolver.delete(uri, where, selectionArgs)
     }
 }
