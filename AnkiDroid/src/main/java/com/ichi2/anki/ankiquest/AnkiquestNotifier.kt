@@ -246,7 +246,7 @@ object AnkiquestNotifier {
             if (account != null && moment != null) {
                 AnkiquestMoments.noticeIntent(context, account, moment)
             } else {
-                AnkiquestLeaderboardActivity.intent(context, account = account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                AnkiquestFriendsSections.boardIntent(context, account = account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
@@ -398,8 +398,8 @@ object AnkiquestNotifier {
         context: Context,
         data: Data,
     ): Intent =
-        AnkiquestFeedActivity
-            .intent(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        AnkiquestFriendsSections
+            .feedIntent(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** IDs and kinds become known screens; server-supplied URLs never become arbitrary app destinations. */
@@ -421,10 +421,10 @@ object AnkiquestNotifier {
                     AnkiquestHomeActivity
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
-                AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
+                AnkiquestNavigation.Destination.Activity -> AnkiquestFriendsSections.feedIntent(context, account)
                 AnkiquestNavigation.Destination.Friends -> AnkiquestFriendsActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Challenges -> AnkiquestChallengesActivity.intent(context, destination.id, account)
-                is AnkiquestNavigation.Destination.Leaderboard -> AnkiquestLeaderboardActivity.intent(context, destination.period, account)
+                is AnkiquestNavigation.Destination.Leaderboard -> AnkiquestFriendsSections.boardIntent(context, destination.period, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
