@@ -60,9 +60,9 @@ class DebugInfoServiceTest : RobolectricTest() {
             val path = "private-instance-path"
             val server = "https://study.example.test:8443/$path"
             targetContext.sharedPrefs().edit {
-                putString(AnkiquestPreferences.URL, server)
-                putString(AnkiquestPreferences.USER, user)
-                putString(AnkiquestPreferences.TOKEN, token)
+                putString(AnkiquestPreferences.PREF_URL, server)
+                putString(AnkiquestPreferences.PREF_USER, user)
+                putString(AnkiquestPreferences.PREF_TOKEN, token)
                 putString(
                     scopedKey(AnkiquestCapabilities.PREF_CAPABILITIES, server),
                     JSONObject().put("version", 1).put("features", JSONArray(listOf(token, user))).toString(),
@@ -105,7 +105,7 @@ class DebugInfoServiceTest : RobolectricTest() {
         runTest {
             targetContext.sharedPrefs().edit {
                 putString(
-                    AnkiquestPreferences.URL,
+                    AnkiquestPreferences.PREF_URL,
                     "https://private-user:private-password@study.example.test/?email=private@example.test#private-fragment",
                 )
             }

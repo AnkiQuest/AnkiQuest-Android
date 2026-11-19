@@ -53,9 +53,9 @@ class AnkiquestLoginHintTest : RobolectricTest() {
         address: String = url,
     ) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, address)
-            putString(AnkiquestPreferences.USER, name)
-            putString(AnkiquestPreferences.TOKEN, "test-token-$name")
+            putString(AnkiquestPreferences.PREF_URL, address)
+            putString(AnkiquestPreferences.PREF_USER, name)
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token-$name")
         }
     }
 
@@ -64,8 +64,8 @@ class AnkiquestLoginHintTest : RobolectricTest() {
         AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
 
         assertEquals("member", AnkiquestAccountSettings.signInUsername("$url/"))
-        assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.USER, null))
-        assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.TOKEN, null))
+        assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_USER, null))
+        assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
     }
 
     @Test
@@ -87,8 +87,8 @@ class AnkiquestLoginHintTest : RobolectricTest() {
         AnkiquestAccountSettings.signOut(old)
 
         assertEquals("other", AnkiquestAccountSettings.signInUsername(url))
-        assertEquals("other", AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.USER, null))
-        assertEquals("test-token-other", AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.TOKEN, null))
+        assertEquals("other", AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_USER, null))
+        assertEquals("test-token-other", AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
     }
 
     @Test
@@ -99,7 +99,7 @@ class AnkiquestLoginHintTest : RobolectricTest() {
             AnkiquestAccountSettings.delete(assertNotNull(HomeAccount.current()), "password")
 
             assertNull(AnkiquestAccountSettings.signInUsername(url))
-            assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.TOKEN, null))
+            assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
         }
 
     @Test

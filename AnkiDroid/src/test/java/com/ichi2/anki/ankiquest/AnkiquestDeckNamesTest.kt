@@ -41,9 +41,9 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
 
     private fun account(user: String) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example.test")
-            putString(AnkiquestPreferences.USER, user)
-            putString(AnkiquestPreferences.TOKEN, "synthetic-$user-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example.test")
+            putString(AnkiquestPreferences.PREF_USER, user)
+            putString(AnkiquestPreferences.PREF_TOKEN, "synthetic-$user-token")
         }
     }
 

@@ -35,9 +35,9 @@ class AnkiquestStreakDetailsScreenshotTest : ScreenshotTest() {
         val now = 1_750_000_000_000L
         val prefs = targetContext.sharedPrefs()
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://study.example.test")
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, false)
         }
         AnkiquestWidget.forgetFresh()

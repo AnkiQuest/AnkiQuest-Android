@@ -40,9 +40,9 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
     /** Signs in as hill with the companion set to "none", as in the owner's report. */
     private fun noCompanion() {
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(AnkiquestPreferences.URL, "https://study.example.test")
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "token-hill")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "token-hill")
         }
         val account = assertNotNull(HomeAccount.current())
         assertTrue(AnkiquestCompanion.remember(account, "none"))

@@ -54,9 +54,9 @@ data class HomeAccount(
 
         private fun read(preferences: SharedPreferences) =
             Stored(
-                preferences.text(AnkiquestPreferences.URL),
-                preferences.text(AnkiquestPreferences.USER),
-                preferences.text(AnkiquestPreferences.TOKEN),
+                preferences.text(AnkiquestPreferences.PREF_URL),
+                preferences.text(AnkiquestPreferences.PREF_USER),
+                preferences.text(AnkiquestPreferences.PREF_TOKEN),
                 preferences.text("username"),
                 preferences.text("language"),
             )
@@ -80,14 +80,14 @@ data class HomeAccount(
         /** A credential change invalidates private presentation state, including a same-user token change. */
         fun fingerprint(settings: Map<String, *> = AnkiquestStore.preferences().all): String {
             val player =
-                (settings[AnkiquestPreferences.USER] as? String).orEmpty().trim().ifEmpty {
+                (settings[AnkiquestPreferences.PREF_USER] as? String).orEmpty().trim().ifEmpty {
                     (settings["username"] as? String).orEmpty().trim()
                 }
             return sha256(
-                settings[AnkiquestPreferences.URL].toString(),
-                settings[AnkiquestPreferences.USER].toString(),
+                settings[AnkiquestPreferences.PREF_URL].toString(),
+                settings[AnkiquestPreferences.PREF_USER].toString(),
                 player,
-                settings[AnkiquestPreferences.TOKEN].toString(),
+                settings[AnkiquestPreferences.PREF_TOKEN].toString(),
             )
         }
 
@@ -96,9 +96,9 @@ data class HomeAccount(
             fallbackUser: String,
         ): HomeAccount? =
             from(
-                settings[AnkiquestPreferences.URL] as? String,
-                settings[AnkiquestPreferences.USER] as? String,
-                settings[AnkiquestPreferences.TOKEN] as? String,
+                settings[AnkiquestPreferences.PREF_URL] as? String,
+                settings[AnkiquestPreferences.PREF_USER] as? String,
+                settings[AnkiquestPreferences.PREF_TOKEN] as? String,
                 fallbackUser,
                 settings["language"] as? String,
             )

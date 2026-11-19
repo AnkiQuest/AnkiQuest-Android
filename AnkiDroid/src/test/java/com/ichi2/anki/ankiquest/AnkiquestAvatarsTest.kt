@@ -109,7 +109,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
                 }
             }
             if (path == "/api/avatars" && changeTokenAfterManifest) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "changed-token") }
+                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
             }
             val body =
                 when {
@@ -130,7 +130,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
                     else -> photoStatus
                 }
             if (changeTokenAfterMutation && exchange.requestMethod in listOf("POST", "DELETE")) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "changed-token") }
+                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
             }
             exchange.sendResponseHeaders(status, if (status == 204) -1 else body.size.toLong())
             exchange.responseBody.use { if (status != 204) it.write(body) }
@@ -138,9 +138,9 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         server.start()
         url = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, url)
-            putString(AnkiquestPreferences.USER, "cerro")
-            putString(AnkiquestPreferences.TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, url)
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
     }
 
@@ -157,13 +157,13 @@ class AnkiquestAvatarsTest : RobolectricTest() {
 
         fun switchServer() {
             preferences.edit {
-                putString(AnkiquestPreferences.URL, "https://new-private.example.test")
-                putString(AnkiquestPreferences.TOKEN, "new-private-token")
+                putString(AnkiquestPreferences.PREF_URL, "https://new-private.example.test")
+                putString(AnkiquestPreferences.PREF_TOKEN, "new-private-token")
             }
         }
         every { changingPreferences.getString(any(), any()) } answers { preferences.getString(firstArg(), secondArg()) }
-        every { changingPreferences.getString(AnkiquestPreferences.URL, "") } answers {
-            val captured = preferences.getString(AnkiquestPreferences.URL, "")
+        every { changingPreferences.getString(AnkiquestPreferences.PREF_URL, "") } answers {
+            val captured = preferences.getString(AnkiquestPreferences.PREF_URL, "")
             switchServer()
             captured
         }
@@ -214,7 +214,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     fun `fallback player comes from reads that agree`() {
         val preferences = targetContext.sharedPrefs()
         preferences.edit {
-            remove(AnkiquestPreferences.USER)
+            remove(AnkiquestPreferences.PREF_USER)
             putString("username", "original-fallback")
         }
         var changed = false
@@ -237,17 +237,17 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         runBlocking {
             val captured = assertNotNull(AnkiquestAvatars.account())
             for ((key, value) in listOf(
-                AnkiquestPreferences.URL to "$url/other-server",
-                AnkiquestPreferences.USER to "other-player",
-                AnkiquestPreferences.TOKEN to "other-token",
+                AnkiquestPreferences.PREF_URL to "$url/other-server",
+                AnkiquestPreferences.PREF_USER to "other-player",
+                AnkiquestPreferences.PREF_TOKEN to "other-token",
             )) {
                 AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
                 assertFailsWith<AnkiquestAvatars.AccountChanged> { AnkiquestAvatars.save(captured, createBitmap(64, 64)) }
                 assertFailsWith<AnkiquestAvatars.AccountChanged> { AnkiquestAvatars.remove(captured) }
                 AnkiDroidApp.sharedPrefs().edit {
-                    putString(AnkiquestPreferences.URL, url)
-                    putString(AnkiquestPreferences.USER, "cerro")
-                    putString(AnkiquestPreferences.TOKEN, "test-token")
+                    putString(AnkiquestPreferences.PREF_URL, url)
+                    putString(AnkiquestPreferences.PREF_USER, "cerro")
+                    putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
                 }
             }
             assertTrue(requests.isEmpty())
@@ -258,11 +258,11 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         runBlocking {
             AnkiquestAvatars.refresh(listOf("cerro"))
             assertNotNull(AnkiquestAvatars.bitmap("cerro"))
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "invalid-token") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "invalid-token") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
             protectedManifest = true
             assertFailsWith<AnkiquestHttpException> { AnkiquestAvatars.refresh(listOf("cerro")) }
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "test-token") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "test-token") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
         }
 
@@ -277,7 +277,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
             try {
                 assertTrue(started.await(10, TimeUnit.SECONDS))
                 val remove = async(Dispatchers.IO) { runCatching { AnkiquestAvatars.remove(captured) } }
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "other-token") }
+                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "other-token") }
                 release.countDown()
                 assertTrue(refresh.await().exceptionOrNull() is AnkiquestAvatars.AccountChanged)
                 assertTrue(remove.await().exceptionOrNull() is AnkiquestAvatars.AccountChanged)
@@ -303,7 +303,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     fun `stale queued action preserves the current account valid photo cache`() =
         runBlocking {
             val previous = assertNotNull(AnkiquestAvatars.account())
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "current-member") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "current-member") }
             AnkiquestAvatars.refresh(listOf("cerro"))
             val currentPhoto = assertNotNull(AnkiquestAvatars.bitmap("cerro"))
             val sent = requests.size
@@ -318,9 +318,9 @@ class AnkiquestAvatarsTest : RobolectricTest() {
             val previous = assertNotNull(AnkiquestAvatars.account())
             AnkiquestAvatars.refresh(listOf("cerro"))
             assertNotNull(AnkiquestAvatars.bitmap("cerro"))
-            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.URL) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_URL) }
             assertFailsWith<AnkiquestAvatars.AccountChanged> { AnkiquestAvatars.remove(previous) }
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.URL, url) }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_URL, url) }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
         }
 
@@ -341,7 +341,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     @Test
     fun `public server without a token receives no authorization header`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.TOKEN) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
             AnkiquestAvatars.refresh(listOf("cerro"))
             assertNotNull(AnkiquestAvatars.bitmap("cerro"))
             assertEquals(listOf("", ""), authorizations.toList())
@@ -386,12 +386,12 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         runBlocking {
             AnkiquestAvatars.refresh(listOf("cerro"))
             assertNotNull(AnkiquestAvatars.bitmap("cerro"))
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "other") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
             AnkiquestAvatars.refresh(listOf("cerro"))
             assertNotNull(AnkiquestAvatars.bitmap("cerro"))
             assertEquals(2, requests.count { it.startsWith("GET /api/avatar/") })
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.URL, "$url/another-server") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_URL, "$url/another-server") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
         }
 
@@ -414,8 +414,8 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     fun `missing token prevents mutations and user paths stay encoded`() =
         runBlocking {
             AnkiDroidApp.sharedPrefs().edit {
-                putString(AnkiquestPreferences.USER, "a/b ?")
-                remove(AnkiquestPreferences.TOKEN)
+                putString(AnkiquestPreferences.PREF_USER, "a/b ?")
+                remove(AnkiquestPreferences.PREF_TOKEN)
             }
             val account = assertNotNull(AnkiquestAvatars.account())
             assertTrue(account.url().encodedPath.endsWith("/a%2Fb%20%3F"))

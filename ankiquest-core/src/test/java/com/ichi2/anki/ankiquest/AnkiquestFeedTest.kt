@@ -72,9 +72,9 @@ class AnkiquestFeedTest {
         }
         server.start()
         AnkiquestStore.preferences().edit {
-            putString(AnkiquestPreferences.URL, "http://127.0.0.1:${server.address.port}")
-            putString(AnkiquestPreferences.USER, "member name")
-            putString(AnkiquestPreferences.TOKEN, "member-test-token")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "member name")
+            putString(AnkiquestPreferences.PREF_TOKEN, "member-test-token")
         }
         account = HomeAccount.current()!!
     }

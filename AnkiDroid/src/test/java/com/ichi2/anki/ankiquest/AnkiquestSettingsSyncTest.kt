@@ -93,9 +93,9 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         }
         server.start()
         targetContext.sharedPrefs().edit(commit = true) {
-            putString(AnkiquestPreferences.URL, "http://127.0.0.1:${server.address.port}")
-            putString(AnkiquestPreferences.USER, "cerro")
-            putString(AnkiquestPreferences.TOKEN, "secret")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "secret")
         }
     }
 

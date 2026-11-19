@@ -76,13 +76,13 @@ class AnkiquestDailyGoalTest {
     @Test
     fun `the day's goal is kept for each account`() {
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example")
-            putString(AnkiquestPreferences.USER, "cerro")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
         }
         assertEquals(50, AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs).goal.target)
-        prefs.edit { putString(AnkiquestPreferences.USER, "hill") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_USER, "hill") }
         assertEquals(40, AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 300), prefs).goal.target)
-        prefs.edit { putString(AnkiquestPreferences.USER, "cerro") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_USER, "cerro") }
         assertEquals(50, AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 300), prefs).goal.target)
     }
 
@@ -121,9 +121,9 @@ class AnkiquestDailyGoalTest {
     @Test
     fun `the streak is secured by the server's verdict, or by unsent reviews the server's way`() {
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example")
-            putString(AnkiquestPreferences.USER, "cerro")
-            putString(AnkiquestPreferences.TOKEN, "token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "token")
         }
         val now = TimeManager.time.intTimeMS()
         val server =
@@ -172,9 +172,9 @@ class AnkiquestDailyGoalTest {
     @Test
     fun `today is only called secured once the server counts it`() {
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example")
-            putString(AnkiquestPreferences.USER, "cerro")
-            putString(AnkiquestPreferences.TOKEN, "token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "token")
         }
         val now = TimeManager.time.intTimeMS()
         val done = Load(5, 109, 13, 30, 0)
@@ -207,20 +207,20 @@ class AnkiquestDailyGoalTest {
         assertTrue(AnkiquestDailyGoal.withProfile(pending, day("studied"), prefs, now).secured, "a fresh profile decides")
         assertTrue(AnkiquestDailyGoal.withProfile(unheard, day("pending"), prefs, now).syncing)
 
-        prefs.edit { putString(AnkiquestPreferences.TOKEN, "") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "") }
         assertTrue(AnkiquestDailyGoal.status(done, prefs).secured, "without a token the server stores nothing, so this device decides")
     }
 
     @Test
     fun `another account never inherits the streak minimum`() {
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example")
-            putString(AnkiquestPreferences.USER, "cerro")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
         }
         AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject().put("streak_minutes", 10)), prefs)
-        prefs.edit { putString(AnkiquestPreferences.USER, "hill") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_USER, "hill") }
         assertEquals(0, AnkiquestDailyGoal.streakMinutes(prefs))
-        prefs.edit { putString(AnkiquestPreferences.USER, "cerro") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_USER, "cerro") }
         assertEquals(10, AnkiquestDailyGoal.streakMinutes(prefs))
     }
 }

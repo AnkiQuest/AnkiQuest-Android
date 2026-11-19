@@ -62,9 +62,9 @@ class AnkiquestFriendsWinTest : RobolectricTest() {
         server.start()
         base = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, base)
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, base)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
         account = HomeAccount.current()!!
     }

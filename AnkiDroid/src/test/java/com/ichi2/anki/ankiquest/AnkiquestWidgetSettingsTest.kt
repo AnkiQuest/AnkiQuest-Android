@@ -408,9 +408,9 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         every { AnkiquestPoll.schedule(any()) } just Runs
         try {
             AnkiDroidApp.sharedPrefs().edit {
-                putString(AnkiquestPreferences.URL, "http://127.0.0.1:${server.address.port}")
-                putString(AnkiquestPreferences.USER, "member")
-                putString(AnkiquestPreferences.TOKEN, "member-token")
+                putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+                putString(AnkiquestPreferences.PREF_USER, "member")
+                putString(AnkiquestPreferences.PREF_TOKEN, "member-token")
             }
             block(requests)
         } finally {

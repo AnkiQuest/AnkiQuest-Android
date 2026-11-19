@@ -72,9 +72,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         BackupManagerTestUtilities.setupSpaceForBackup(targetContext)
         TimeManager.resetWith(clock)
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://anki.example.test")
-            putString(AnkiquestPreferences.USER, "member")
-            putString(AnkiquestPreferences.TOKEN, "member-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "member-token")
         }
         mockkObject(AnkiquestStudySession, AnkiquestDeckShare)
         coEvery { AnkiquestStudySession.finish() } returns summary()
@@ -770,7 +770,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         advanceRobolectricLooper()
         val checkbox = assertNotNull(views(card.window!!.decorView).filterIsInstance<CheckBox>().singleOrNull())
         checkbox.isChecked = true
-        prefs.edit { putString(AnkiquestPreferences.TOKEN, "different-token") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "different-token") }
         advanceRobolectricLooper()
         assertFalse(card.isShowing)
         assertTrue(prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true))
@@ -791,7 +791,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         controller.pause().stop()
         result.complete(summary())
         advanceRobolectricLooper()
-        prefs.edit { putString(AnkiquestPreferences.TOKEN, "different-token") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "different-token") }
         controller.start().resume()
         advanceRobolectricLooper()
         assertTrue(ShadowDialog.getShownDialogs().none { it.isShowing && it.findViewById<ViewPager2>(R.id.aq_moment_pager) != null })

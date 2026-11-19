@@ -51,7 +51,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
         server.createContext("/") { exchange ->
             requests += exchange.requestURI.path to exchange.requestHeaders.getFirst("Authorization")
             exchange.requestBody.close()
-            if (switchDuringResponse) AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "bob") }
+            if (switchDuringResponse) AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "bob") }
             if (redirect) exchange.responseHeaders.set("Location", "/other-destination")
             val response = "{\"sent_to\":\"Friend\"}".toByteArray()
             exchange.sendResponseHeaders(if (redirect) 307 else 200, response.size.toLong())
@@ -60,9 +60,9 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, "http://127.0.0.1:${server.address.port}")
-            putString(AnkiquestPreferences.USER, "alice")
-            putString(AnkiquestPreferences.TOKEN, "alice-test-token")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "alice")
+            putString(AnkiquestPreferences.PREF_TOKEN, "alice-test-token")
         }
         captured = HomeAccount.current()!!
     }
@@ -105,9 +105,9 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
             assertEquals(AnkiquestReply.Outcome.FAILED, AnkiquestReply.run(targetContext, missing, 0))
             val original = AnkiDroidApp.sharedPrefs().all
             for ((key, value) in listOf(
-                AnkiquestPreferences.USER to "bob",
-                AnkiquestPreferences.TOKEN to "new-token",
-                AnkiquestPreferences.URL to "http://127.0.0.1:9",
+                AnkiquestPreferences.PREF_USER to "bob",
+                AnkiquestPreferences.PREF_TOKEN to "new-token",
+                AnkiquestPreferences.PREF_URL to "http://127.0.0.1:9",
             )) {
                 AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
                 assertEquals(AnkiquestReply.Outcome.FAILED, AnkiquestReply.run(targetContext, replyData(), 0))

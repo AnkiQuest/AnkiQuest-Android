@@ -122,9 +122,9 @@ class AnkiquestShareTest : RobolectricTest() {
         server.start()
         base = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, base)
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, base)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
     }
 
@@ -180,7 +180,7 @@ class AnkiquestShareTest : RobolectricTest() {
     fun `a win is never shared by an account it does not belong to`() =
         runBlocking {
             val scope = HomeAccount.current()!!.scope
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "another-credential") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "another-credential") }
             assertFailsWith<HomeAccountChanged> { AnkiquestWins.share(42, null, scope) }
             assertFailsWith<HomeAccountChanged> { AnkiquestWins.withFriends(17, scope) }
             assertFailsWith<HomeAccountChanged> { AnkiquestWins.link(17, scope) }
@@ -400,7 +400,7 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `no share button for another account or a signed-out player`() {
         assertNull(AnkiquestShare.action(targetContext, 1, "Level 54", "", 17, 42, null, "someone-else"))
-        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.TOKEN) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
         assertNull(AnkiquestShare.action(targetContext, 1, "Level 54", "", 17, 42, null, null))
     }
 

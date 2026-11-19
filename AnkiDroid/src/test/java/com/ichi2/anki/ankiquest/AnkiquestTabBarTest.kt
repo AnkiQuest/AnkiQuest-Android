@@ -49,9 +49,9 @@ class AnkiquestTabBarTest : RobolectricTest() {
     fun prepareTabs() {
         setIntroductionSlidesShown(true)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, identity.server)
-            putString(AnkiquestPreferences.USER, identity.user)
-            putString(AnkiquestPreferences.TOKEN, identity.token)
+            putString(AnkiquestPreferences.PREF_URL, identity.server)
+            putString(AnkiquestPreferences.PREF_USER, identity.user)
+            putString(AnkiquestPreferences.PREF_TOKEN, identity.token)
         }
         mockkObject(
             AnkiquestHomeData,

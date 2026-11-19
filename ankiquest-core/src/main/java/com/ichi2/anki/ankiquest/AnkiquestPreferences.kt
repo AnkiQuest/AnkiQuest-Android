@@ -8,13 +8,13 @@ package com.ichi2.anki.ankiquest
  */
 object AnkiquestPreferences {
     /** The server address. */
-    const val URL = "ankiquestUrl"
+    const val PREF_URL = "ankiquestUrl"
 
     /** The player's name on the server. */
-    const val USER = "ankiquestUser"
+    const val PREF_USER = "ankiquestUser"
 
     /** This device's token. */
-    const val TOKEN = "ankiquestToken"
+    const val PREF_TOKEN = "ankiquestToken"
 
     /** Whether the recap shows after studying. */
     const val PREF_SESSION_SUMMARY = "ankiquestSessionSummary"
