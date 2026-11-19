@@ -145,13 +145,16 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         return answer.put("progress", progress)
     }
 
-    /** Whether the server refuses to save [chosen]: a locked companion, for a client that shows locks. */
+    /**
+     * Whether the server refuses to save [chosen]: a locked companion, for a client that shows locks;
+     * for released clients, every locked one but Ankilope, which they offered to everyone.
+     */
     private fun refuses(
         chosen: String,
         header: String?,
     ): Boolean {
         val earned = live.any { it.getString("companion") == chosen }
-        return earned && chosen !in unlocks && (header == SHOWS_LOCKS || chosen == Choice.COW.id)
+        return earned && chosen !in unlocks && (header == SHOWS_LOCKS || chosen != Choice.ANKILOPE.id)
     }
 
     private fun signIn(user: String): HomeAccount {
@@ -205,6 +208,20 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     }
 
     @Test
+    fun `Anki-tan is locked by her streak until the server unlocks her`() {
+        val days = progress(Choice.ANKI_TAN, 12)
+        assertEquals(Progress(Milestone.STREAK, 12, 66), days)
+        val locked = Found(emptySet(), mapOf(Choice.ANKI_TAN to days))
+        assertEquals(Offer.Locked(days), AnkiquestUnlocks.offer(Choice.ANKI_TAN, locked, Choice.AKI))
+        val unlocked = Found(setOf(ANKI_TAN), emptyMap())
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKI_TAN, unlocked, Choice.AKI))
+
+        // Like the cow, released servers never offered her.
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.ANKI_TAN, Found.NONE, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.ANKI_TAN, null, Choice.AKI))
+    }
+
+    @Test
     fun `an unlocked companion can be chosen`() {
         val found = Found(setOf(Choice.ANKILOPE.id, Choice.COW.id), emptyMap())
         assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.AKI))
@@ -247,12 +264,13 @@ class AnkiquestUnlocksTest : RobolectricTest() {
                     Choice.AKI to Offer.Free,
                     Choice.ANKILOPE to Offer.Locked(progress(Choice.ANKILOPE, 2)),
                     Choice.COW to Offer.Unlocked,
+                    Choice.ANKI_TAN to Offer.Locked(progress(Choice.ANKI_TAN, 2)),
                     Choice.NONE to Offer.Free,
                 ),
                 AnkiquestCompanion.offers(account, Choice.AKI),
             )
             assertEquals(
-                listOf(Choice.AKI, Choice.ANKILOPE, Choice.COW, Choice.NONE),
+                listOf(Choice.AKI, Choice.ANKILOPE, Choice.COW, Choice.ANKI_TAN, Choice.NONE),
                 AnkiquestCompanion.offers(account, Choice.AKI).keys.toList(),
             )
             assertTrue(requests.none { it.startsWith("POST /api/unlocks") }, "$requests")
@@ -340,13 +358,13 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     fun `unlocks that are not choices here are kept by id`() =
         runBlocking {
             serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
-            unlocks = setOf(Choice.COW.id, ANKI_TAN)
+            unlocks = setOf(Choice.COW.id, ANKI_TAN, ANKI_TAN_CHIBI)
 
             AnkiquestUnlocks.sync(account)
 
             val found = assertNotNull(AnkiquestUnlocks.found(account))
-            assertEquals(setOf(Choice.COW), found.unlocks)
-            assertEquals(setOf(Choice.COW.id, ANKI_TAN), found.ids)
+            assertEquals(setOf(Choice.COW, Choice.ANKI_TAN), found.unlocks)
+            assertEquals(setOf(Choice.COW.id, ANKI_TAN, ANKI_TAN_CHIBI), found.ids)
         }
 
     @Test
@@ -423,6 +441,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     private companion object {
         const val ANKI_TAN = "anki_tan"
+        const val ANKI_TAN_CHIBI = "anki_tan_chibi"
         const val OK = 200
         const val NOT_FOUND = 404
         const val CONFLICT = 409

@@ -196,8 +196,10 @@ class AnkiquestMomentsTest : RobolectricTest() {
         assertEquals(AnkiquestCompanion.Choice.ANKILOPE, AnkiquestMoments.joined(moment("companion:ankilope", Kind.COMPANION)))
         assertEquals(R.drawable.aki_celebrate, AnkiquestMomentCard.art(moment("companion:cow", Kind.COMPANION)))
 
+        assertEquals(AnkiquestCompanion.Choice.ANKI_TAN, AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
+
         // A companion this app does not know, or another kind of moment, shows the chosen one.
-        assertNull(AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
+        assertNull(AnkiquestMoments.joined(moment("companion:anki_tan_chibi", Kind.COMPANION)))
         assertNull(AnkiquestMoments.joined(moment("companion:none", Kind.COMPANION)))
         assertNull(AnkiquestMoments.joined(moment("level:4", Kind.LEVEL)))
     }
