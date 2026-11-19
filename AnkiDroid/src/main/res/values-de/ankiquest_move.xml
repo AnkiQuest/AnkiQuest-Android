@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_move_title">Aus dem alten AnkiQuest umziehen</string>
+    <string name="ankiquest_move_message">Einstellungen und Anmeldung aus dem alten AnkiQuest übernehmen?</string>
+    <string name="ankiquest_move_accept">Übernehmen</string>
+    <string name="ankiquest_move_decline">Nein</string>
+    <string name="ankiquest_move_done_sync">Einstellungen und Anmeldung übernommen. Deine Sammlung kommt mit der ersten Synchronisierung von AnkiWeb, die jetzt startet.</string>
+    <string name="ankiquest_move_done_export">Einstellungen und Anmeldung übernommen. Deine Sammlung ist noch im alten AnkiQuest: Nutze dort „Sammlung exportieren“ und importiere die Datei hier.</string>
+    <string name="ankiquest_move_failed">Das alte AnkiQuest hat seine Einstellungen nicht übergeben. Richte diese App wie gewohnt ein.</string>
+</resources>

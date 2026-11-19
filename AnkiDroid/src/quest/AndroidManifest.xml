@@ -3,6 +3,17 @@
 <!-- AnkiQuest branding, merged over the main manifest only by the quest build (-PcustomSuffix=quest). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        Moving from com.ichi2.anki.quest to the new package (AnkiquestMove). Both apps declare the
+        permission; signature level means only apps signed with the AnkiQuest key hold it.
+    -->
+    <permission
+        android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
+    <queries>
+        <package android:name="com.ichi2.anki.quest" />
+    </queries>
 
     <!-- AnkiquestUpdater installs downloaded releases -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -25,6 +36,12 @@
             android:exported="false"
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay" />
+        <!-- Serves the settings to the new app in com.ichi2.anki.quest only; see AnkiquestMoveProvider. -->
+        <provider
+            android:name="com.ichi2.anki.ankiquest.AnkiquestMoveProvider"
+            android:authorities="${applicationId}.ankiquestmove"
+            android:exported="true"
+            android:permission="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
         <activity-alias
             android:name="com.ichi2.anki.ankiquest.AnkiquestIconDefault"
             android:enabled="true"

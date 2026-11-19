@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_move_title">Passar do AnkiQuest antigo</string>
+    <string name="ankiquest_move_message">Trazer as tuas definições e a tua sessão do AnkiQuest antigo?</string>
+    <string name="ankiquest_move_accept">Trazer</string>
+    <string name="ankiquest_move_decline">Não</string>
+    <string name="ankiquest_move_done_sync">Definições e sessão trazidas. A tua coleção chega do AnkiWeb com a primeira sincronização, que começa agora.</string>
+    <string name="ankiquest_move_done_export">Definições e sessão trazidas. A tua coleção continua no AnkiQuest antigo: usa lá «Exportar coleção» e importa o ficheiro aqui.</string>
+    <string name="ankiquest_move_failed">O AnkiQuest antigo não entregou as suas definições. Configura esta aplicação como de costume.</string>
+</resources>

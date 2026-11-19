@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_move_title">Passer depuis l’ancien AnkiQuest</string>
+    <string name="ankiquest_move_message">Transférer tes réglages et ta connexion depuis l’ancien AnkiQuest ?</string>
+    <string name="ankiquest_move_accept">Transférer</string>
+    <string name="ankiquest_move_decline">Non</string>
+    <string name="ankiquest_move_done_sync">Réglages et connexion transférés. Ta collection arrive d’AnkiWeb avec la première synchronisation, qui commence maintenant.</string>
+    <string name="ankiquest_move_done_export">Réglages et connexion transférés. Ta collection est encore dans l’ancien AnkiQuest : utilise « Exporter la collection » là-bas, puis importe le fichier ici.</string>
+    <string name="ankiquest_move_failed">L’ancien AnkiQuest n’a pas transmis ses réglages. Configure cette application comme d’habitude.</string>
+</resources>
