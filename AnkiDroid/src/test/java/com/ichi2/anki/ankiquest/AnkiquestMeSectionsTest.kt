@@ -200,6 +200,28 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
         )
     }
 
+    @Test
+    fun `legacy explicit activities redirect to the matching Me section`() {
+        val records =
+            startRegularActivity<AnkiquestRecordsActivity>(
+                Intent(targetContext, AnkiquestRecordsActivity::class.java).putExtra("unrelated_launch_payload", ByteArray(300_000)),
+            )
+        assertTrue(records.isFinishing)
+        assertEquals(
+            AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS).toUri(0),
+            shadowOf(records).nextStartedActivity.toUri(0),
+        )
+        val history =
+            startRegularActivity<AnkiquestHistoryActivity>(
+                Intent(targetContext, AnkiquestHistoryActivity::class.java).putExtra("unrelated_launch_payload", ByteArray(300_000)),
+            )
+        assertTrue(history.isFinishing)
+        assertEquals(
+            AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.HISTORY).toUri(0),
+            shadowOf(history).nextStartedActivity.toUri(0),
+        )
+    }
+
     private fun launch(intent: Intent) =
         startActivityControllerNormallyOpenCollectionWithIntent(AnkiquestProfileActivity::class.java, intent).also {
             advanceRobolectricLooperUntil { !it.get().findViewById<View>(R.id.aq_board_loading).isVisible }

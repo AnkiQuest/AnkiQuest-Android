@@ -229,6 +229,31 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
         }
     }
 
+    @Test
+    fun `legacy explicit screens redirect without losing the addressed account or period`() {
+        val feedIntent =
+            Intent(targetContext, AnkiquestFeedActivity::class.java)
+                .putExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT, "old-account")
+                .putExtra("unrelated_payload", ByteArray(300_000))
+        val feed = startRegularActivity<AnkiquestFeedActivity>(feedIntent)
+        assertTrue(feed.isFinishing)
+        assertEquals(
+            AnkiquestFriendsSections.feedIntent(targetContext, "old-account").toUri(0),
+            shadowOf(feed).nextStartedActivity.toUri(0),
+        )
+        val boardIntent =
+            Intent(targetContext, AnkiquestLeaderboardActivity::class.java)
+                .putExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD, "month")
+                .putExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT, "old-account")
+                .putExtra("unrelated_payload", ByteArray(300_000))
+        val board = startRegularActivity<AnkiquestLeaderboardActivity>(boardIntent)
+        assertTrue(board.isFinishing)
+        assertEquals(
+            AnkiquestFriendsSections.boardIntent(targetContext, "month", "old-account").toUri(0),
+            shadowOf(board).nextStartedActivity.toUri(0),
+        )
+    }
+
     private fun launch(intent: Intent = AnkiquestFriendsActivity.intent(targetContext)) =
         startActivityControllerNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, intent).also {
             advanceRobolectricLooperUntil { !it.get().findViewById<View>(R.id.aq_feed_loading).isVisible }
