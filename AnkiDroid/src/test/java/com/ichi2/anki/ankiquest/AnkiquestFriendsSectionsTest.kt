@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
 class AnkiquestFriendsSectionsTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
     private var account: HomeAccount? = identity
-    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE)).copy(attention = emptyList())
+    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE)).copy(attention = emptyList())
     private val board =
         AnkiquestBoards.parseLeaderboard(
             JSONArray().put(AnkiquestBoardsTest.row("cerro", 40, 5)),

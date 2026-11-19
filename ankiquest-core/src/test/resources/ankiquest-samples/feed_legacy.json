@@ -1,0 +1,8 @@
+[
+  {"id": 1, "title": "Daily goal reached!", "body": "5 cards today.", "created_at": 1793183400, "sender": "",
+   "replied": false, "kind": "celebration", "win": 1},
+  {"id": 6, "title": "🎉 Cerro shared a win", "body": "7 day streak!", "created_at": 1793183400, "sender": "cerro",
+   "replied": false, "kind": "share"},
+  {"id": 8, "title": "🎉 Cerro cheered", "body": "“Daily goal reached!”", "created_at": 1793183400, "sender": "cerro",
+   "replied": false, "kind": "reaction"}
+]

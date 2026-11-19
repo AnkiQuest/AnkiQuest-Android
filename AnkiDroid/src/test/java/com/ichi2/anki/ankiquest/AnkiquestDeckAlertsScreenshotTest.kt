@@ -56,7 +56,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
                     .put("sender", "cerro")
                     .put("kind", "completion"),
             )!!
-        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         coEvery { AnkiquestFeed.page(account, any(), any(), any()) } returns
             page.copy(items = listOf(completion), attention = emptyList())
         val repository = mockk<SubscriptionRepository>()
