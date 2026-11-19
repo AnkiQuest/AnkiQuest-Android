@@ -13,9 +13,11 @@
     <string name="review_heatmap_days_studied">Dias de estudo</string>
     <string name="review_heatmap_daily_average">Revisões por dia de estudo</string>
     <string name="review_heatmap_total">Revisões no histórico disponível: %1$s</string>
+    <string name="review_heatmap_share">Estudaste em %1$d%% dos dias desde a tua primeira revisão</string>
     <string name="review_heatmap_previous_year">Ano anterior</string>
     <string name="review_heatmap_next_year">Ano seguinte</string>
     <string name="review_heatmap_year">Ano %1$s</string>
+    <string name="review_heatmap_today">Hoje</string>
     <string name="review_heatmap_scroll_hint">Desliza para percorrer o ano. Toca num dia para ver os detalhes.</string>
     <string name="review_heatmap_forecast_hint">Os quadrados cinzentos estimam os cartões de revisão pendentes nos próximos 90 dias. Os números mudam à medida que estudas.</string>
     <string name="review_heatmap_legend">Menos revisões → Mais revisões · Cinzento = previsão · Azul = sequência mantida pelo AnkiQuest · Areia = abaixo do mínimo da sequência</string>

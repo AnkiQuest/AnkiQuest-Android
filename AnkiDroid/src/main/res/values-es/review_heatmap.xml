@@ -13,9 +13,11 @@
     <string name="review_heatmap_days_studied">Días de estudio</string>
     <string name="review_heatmap_daily_average">Repasos por día de estudio</string>
     <string name="review_heatmap_total">Repasos en el historial disponible: %1$s</string>
+    <string name="review_heatmap_share">Estudiaste el %1$d %% de los días desde tu primer repaso</string>
     <string name="review_heatmap_previous_year">Año anterior</string>
     <string name="review_heatmap_next_year">Año siguiente</string>
     <string name="review_heatmap_year">Año %1$s</string>
+    <string name="review_heatmap_today">Hoy</string>
     <string name="review_heatmap_scroll_hint">Desliza para recorrer el año. Toca un día para ver los detalles.</string>
     <string name="review_heatmap_forecast_hint">Los cuadros grises estiman las tarjetas de repaso pendientes de los próximos 90 días. Las cifras cambian a medida que estudias.</string>
     <string name="review_heatmap_legend">Menos repasos → Más repasos · Gris = previsión · Azul = racha mantenida por AnkiQuest · Arena = por debajo del mínimo de la racha</string>

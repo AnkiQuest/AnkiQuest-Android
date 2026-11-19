@@ -31,6 +31,8 @@ data class ReviewHeatmapData(
     val daysStudied: Int,
     val firstReviewDate: LocalDate?,
     val dailyAverage: Double,
+    /** Days studied as a share of the days since the first review, in whole percent rounded down. */
+    val daysStudiedPercent: Int,
     val protectedDays: Set<LocalDate> = emptySet(),
     val verdicts: Map<LocalDate, DayVerdict> = emptyMap(),
 ) {
@@ -244,6 +246,20 @@ object ReviewHeatmap {
         return summarize(data.today, reviews, data.scheduled, server.protectedDays, server.verdicts)
     }
 
+    /**
+     * Days studied as a share of the days since the first review, rounded down, so 100 means
+     * every day. Today counts once it has reviews: the share does not drop each morning
+     * before you study.
+     */
+    private fun studiedPercent(
+        today: LocalDate,
+        history: Map<LocalDate, Int>,
+    ): Int {
+        val first = history.keys.minOrNull() ?: return 0
+        val last = if (today in history) today else today.minusDays(1)
+        return (history.size * 100L / (ChronoUnit.DAYS.between(first, last) + 1)).toInt()
+    }
+
     internal fun summarize(
         today: LocalDate,
         reviews: Map<LocalDate, Int>,
@@ -296,6 +312,7 @@ object ReviewHeatmap {
             daysStudied = history.size,
             firstReviewDate = firstReviewDate,
             dailyAverage = if (history.isNotEmpty()) totalReviews.toDouble() / history.size else 0.0,
+            daysStudiedPercent = studiedPercent(today, history),
             protectedDays = kept,
             verdicts = judged,
         )

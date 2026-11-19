@@ -13,9 +13,11 @@
     <string name="review_heatmap_days_studied">Jours d’étude</string>
     <string name="review_heatmap_daily_average">Révisions par jour d’étude</string>
     <string name="review_heatmap_total">Révisions dans l’historique disponible : %1$s</string>
+    <string name="review_heatmap_share">Tu as étudié %1$d %% des jours depuis ta première révision</string>
     <string name="review_heatmap_previous_year">Année précédente</string>
     <string name="review_heatmap_next_year">Année suivante</string>
     <string name="review_heatmap_year">Année %1$s</string>
+    <string name="review_heatmap_today">Aujourd’hui</string>
     <string name="review_heatmap_scroll_hint">Fais défiler pour parcourir l’année. Touche un jour pour voir le détail.</string>
     <string name="review_heatmap_forecast_hint">Les cases grises estiment les cartes à réviser des 90 prochains jours. Les chiffres changent pendant que tu étudies.</string>
     <string name="review_heatmap_legend">Moins de révisions → Plus de révisions · Gris = prévision · Bleu = série gardée par AnkiQuest · Sable = sous le minimum de la série</string>
