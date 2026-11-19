@@ -227,12 +227,11 @@ internal object AnkiquestMood {
             Mood.UNKNOWN -> AnkiquestPose.FACE
             Mood.ASLEEP -> AnkiquestPose.ASLEEP
             Mood.SAD -> AnkiquestPose.SAD
-            Mood.FROZEN_1 -> AnkiquestPose.FROZEN
+            // thawing and almost are moods with no pose of their own (AnkiQuest-Server#45).
+            Mood.FROZEN_1, Mood.THAWING -> AnkiquestPose.FROZEN
             Mood.FROZEN_2 -> AnkiquestPose.FROZEN_2
             Mood.FROZEN_3 -> AnkiquestPose.FROZEN_3
-            Mood.THAWING -> AnkiquestPose.THAWING
-            Mood.HOPEFUL -> AnkiquestPose.HOPEFUL
-            Mood.ALMOST -> AnkiquestPose.ALMOST
+            Mood.HOPEFUL, Mood.ALMOST -> AnkiquestPose.HOPEFUL
             Mood.FIRE -> Heat.of(streak).pose
         }
 
