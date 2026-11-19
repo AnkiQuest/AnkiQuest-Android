@@ -37,7 +37,11 @@ internal object AnkiquestChibi {
     )
 
     /** Every chibi in the fixture, live or planned. */
-    val ALL = listOf(Chibi(id = "anki_tan_chibi", base = "anki_tan", status = Status.PLANNED))
+    val ALL =
+        listOf(
+            Chibi(id = "anki_tan_chibi", base = "anki_tan", status = Status.PLANNED),
+            Chibi(id = "quest_chan_chibi", base = "quest_chan", status = Status.PLANNED),
+        )
 
     /** What a tap leads to. */
     sealed interface Step {
