@@ -12,6 +12,7 @@ import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.service.chooser.ChooserAction
+import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
@@ -305,6 +306,7 @@ object AnkiquestShare {
     }
 
     /** Whether [chooser] can offer AnkiQuest friends itself, so no separate question is needed first. */
+    @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun sheetOffersFriends(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
     /** The share sheet's entry for AnkiQuest friends: [share] again, told to send the win to friends. */
