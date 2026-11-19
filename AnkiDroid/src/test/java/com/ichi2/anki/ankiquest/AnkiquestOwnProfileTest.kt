@@ -109,7 +109,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         hoursLeft: Long,
         minutes: Int = 0,
     ) = JSONObject()
-        .put("display", "Hill")
+        .put("display", "hill")
         .put("level", 3)
         .put("xp_total", 120)
         .put("week_xp", 40)
@@ -324,7 +324,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             val row =
                 JSONObject()
                     .put("user", "hill")
-                    .put("display", "Hill")
+                    .put("display", "hill")
                     .put("streak", 12)
                     .put("streak_state", "pending")
                     .put("today_reviews", 0)

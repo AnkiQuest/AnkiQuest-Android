@@ -597,7 +597,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         runBlocking {
             val manager = targetContext.getSystemService<NotificationManager>()!!
             val bodies = CopyOnWriteArrayList<JSONObject>()
-            var change: Any = JSONObject().put("title", "▲ You're now #1").put("body", "You passed Hill.")
+            var change: Any = JSONObject().put("title", "▲ You're now #1").put("body", "You passed hill.")
             val server =
                 rankServer { body ->
                     bodies += body
@@ -607,7 +607,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 val posted = shadowOf(manager).getNotification(5_130_001)
                 assertEquals("▲ You're now #1", posted.extras.getString(Notification.EXTRA_TITLE))
-                assertEquals("You passed Hill.", posted.extras.getString(Notification.EXTRA_TEXT))
+                assertEquals("You passed hill.", posted.extras.getString(Notification.EXTRA_TEXT))
                 val open = shadowOf(posted.contentIntent).savedIntent
                 assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
                 assertEquals("week", open.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
@@ -617,7 +617,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, shadowOf(manager).size())
 
-                change = JSONObject().put("title", "▼ Hill passed you").put("body", "You're now #2.")
+                change = JSONObject().put("title", "▼ hill passed you").put("body", "You're now #2.")
                 AnkiDroidApp.sharedPrefs().edit(commit = true) { putBoolean(AnkiquestNotifier.PREF_RANK, false) }
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, shadowOf(manager).size(), "rank notifications can be turned off")
@@ -654,20 +654,20 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 change =
                     JSONObject()
                         .put("title", "👑 You took the crown")
-                        .put("body", "You passed Hill.")
+                        .put("body", "You passed hill.")
                         .put("share_title", "👑 I took the crown")
-                        .put("share_body", "I passed Hill.")
+                        .put("share_body", "I passed hill.")
                 val shared = climb()
                 assertEquals("👑 I took the crown", shared.getStringExtra(AnkiquestShare.EXTRA_TITLE))
-                assertEquals("I passed Hill.", shared.getStringExtra(AnkiquestShare.EXTRA_BODY))
+                assertEquals("I passed hill.", shared.getStringExtra(AnkiquestShare.EXTRA_BODY))
 
                 order = order.reversed()
                 change = JSONObject.NULL
                 AnkiquestNotifier.onLeaderboard(targetContext)
-                change = JSONObject().put("title", "👑 You took the crown").put("body", "You passed Hill.")
+                change = JSONObject().put("title", "👑 You took the crown").put("body", "You passed hill.")
                 val older = climb()
                 assertEquals("👑 You took the crown", older.getStringExtra(AnkiquestShare.EXTRA_TITLE), "older servers send no share text")
-                assertEquals("You passed Hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
+                assertEquals("You passed hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
             } finally {
                 server.stop(0)
             }

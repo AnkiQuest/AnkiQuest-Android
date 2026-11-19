@@ -61,7 +61,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     private var account = HomeAccount("https://quest.example.test", "hill", "synthetic-token")
     private val moment = MomentRef.Win(17)
     private val card = AnkiquestShare.Card("Level 54", "I reached level 54.")
-    private val members = listOf(AnkiquestSocial.Person("hill", "Hill"), AnkiquestSocial.Person("ana", "Ana"))
+    private val members = listOf(AnkiquestSocial.Person("hill", "hill"), AnkiquestSocial.Person("ana", "Ana"))
     private var overview =
         AnkiquestSocial.Overview(
             friends = listOf(AnkiquestSocial.Person("ana", "Ana"), AnkiquestSocial.Person("cerro", "Cerro")),

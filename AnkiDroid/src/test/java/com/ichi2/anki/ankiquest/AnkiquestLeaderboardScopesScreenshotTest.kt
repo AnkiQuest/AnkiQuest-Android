@@ -49,7 +49,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
                 JSONArray(
                     """[
                     {"user":"ana","display":"Ana","rank":3,"level":4,"xp":900,"streak":7},
-                    {"user":"hill","display":"Hill","rank":103,"level":2,"xp":40,"streak":3,"me":true,"shown":false,
+                    {"user":"hill","display":"hill","rank":103,"level":2,"xp":40,"streak":3,"me":true,"shown":false,
                      "today_reviews":12,"today_minutes":10,"streak_minutes":10,"streak_state":"studied","day_ends_at":4102444800000}
                     ]""",
                 ),

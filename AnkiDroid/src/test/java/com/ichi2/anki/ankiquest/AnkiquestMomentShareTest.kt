@@ -32,7 +32,7 @@ class AnkiquestMomentShareTest : RobolectricTest() {
     private val ana = Target.Friend("ana", "Ana")
     private val cerro = Target.Friend("cerro", "Cerro")
     private val club = Target.Group(3, "Spanish club")
-    private val members = listOf(AnkiquestSocial.Person("hill", "Hill"), AnkiquestSocial.Person("ana", "Ana"))
+    private val members = listOf(AnkiquestSocial.Person("hill", "hill"), AnkiquestSocial.Person("ana", "Ana"))
     private val alone = AnkiquestSocial.Group(4, "Just me", owner = true, invite = "code", members = members.take(1))
     private val overview =
         AnkiquestSocial.Overview(
