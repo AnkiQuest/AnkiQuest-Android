@@ -7,17 +7,14 @@ import org.json.JSONObject
 
 /*
  * The progress stages from AnkiQuest-Server#53, mirrored here until the snapshot bump brings its
- * streak_moods.json and companion_poses.json. At that bump, delete this file and read `stages`,
- * the mood cases and the thawing and almost extensions from the fixtures.
+ * streak_moods.json. At that bump, delete this file and read `stages` and the mood cases from the
+ * fixture. thawing and almost are moods that show the frozen and hopeful poses (#45).
  */
 
 private const val MINIMUM = 20
 
 /** The pinned fixture's cases that #53 replaces; [stagedMoodCases] has their new versions. */
 private val supersededCases = setOf("some study with a streak", "study after a freeze is hopeful")
-
-/** #53's extensions, which the pinned companion_poses.json does not list yet. */
-internal val stagedExtensions = mapOf("thawing" to "frozen", "almost" to "hopeful")
 
 /** #53's `stages` block: the stage starts and the stage cases. */
 internal val stagedStages: JSONObject =
@@ -87,24 +84,24 @@ private val stagedCases =
         case("one review after a freeze stays frozen", "protected", 1, 30_000, 10, 1, "frozen_1", "frozen"),
         case("a freeze holds just under a quarter", "protected", 6, 299_999, 10, 1, "frozen_1", "frozen"),
         case("a review keeps three frozen days frozen", "protected", 1, 30_000, 10, 3, "frozen_3", "frozen_3"),
-        case("a quarter of the minimum after a freeze thaws", "protected", 6, 300_000, 10, 1, "thawing"),
-        case("a quarter of the minimum thaws three frozen days", "protected", 6, 300_000, 10, 3, "thawing"),
-        case("a freeze thaws just under half", "protected", 12, 599_999, 10, 1, "thawing"),
+        case("a quarter of the minimum after a freeze thaws", "protected", 6, 300_000, 10, 1, "thawing", "frozen"),
+        case("a quarter of the minimum thaws three frozen days", "protected", 6, 300_000, 10, 3, "thawing", "frozen"),
+        case("a freeze thaws just under half", "protected", 12, 599_999, 10, 1, "thawing", "frozen"),
         case("half the minimum after a freeze is hopeful", "protected", 12, 600_000, 10, 1, "hopeful"),
         case("a freeze stays hopeful just under three quarters", "protected", 18, 899_999, 10, 1, "hopeful"),
-        case("three quarters of the minimum after a freeze is almost", "protected", 18, 900_000, 10, 1, "almost"),
-        case("a freeze is almost just under the minimum", "protected", 24, 1_199_999, 10, 1, "almost"),
-        case("frozen days before a short day thaw at a quarter", "short", 6, 300_000, 10, 2, "thawing"),
+        case("three quarters of the minimum after a freeze is almost", "protected", 18, 900_000, 10, 1, "almost", "hopeful"),
+        case("a freeze is almost just under the minimum", "protected", 24, 1_199_999, 10, 1, "almost", "hopeful"),
+        case("frozen days before a short day thaw at a quarter", "short", 6, 300_000, 10, 2, "thawing", "frozen"),
         case("a streak stays sad just under a quarter", "short", 6, 299_999, 64, 0, "sad"),
         case("a streak stays sad at a quarter", "short", 6, 300_000, 64, 0, "sad"),
         case("a streak stays sad just under half", "short", 12, 599_999, 64, 0, "sad"),
         case("half the minimum with a streak is hopeful", "short", 12, 600_000, 64, 0, "hopeful"),
         case("a streak stays hopeful just under three quarters", "short", 18, 899_999, 64, 0, "hopeful"),
-        case("three quarters of the minimum with a streak is almost", "short", 18, 900_000, 64, 0, "almost"),
-        case("a streak is almost just under the minimum", "short", 24, 1_199_999, 64, 0, "almost"),
+        case("three quarters of the minimum with a streak is almost", "short", 18, 900_000, 64, 0, "almost", "hopeful"),
+        case("a streak is almost just under the minimum", "short", 24, 1_199_999, 64, 0, "almost", "hopeful"),
         case("without a streak half the minimum is hopeful", "short", 12, 600_000, 0, 0, "hopeful"),
         case("without a streak just under three quarters is hopeful", "short", 18, 899_999, 0, 0, "hopeful"),
-        case("without a streak three quarters of the minimum is almost", "short", 18, 900_000, 0, 0, "almost"),
+        case("without a streak three quarters of the minimum is almost", "short", 18, 900_000, 0, 0, "almost", "hopeful"),
     )
 
 /**
