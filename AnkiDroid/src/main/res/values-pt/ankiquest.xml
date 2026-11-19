@@ -107,7 +107,7 @@
     <string name="ankiquest_update_downloading">A transferir… %1$d%%</string>
     <string name="ankiquest_update_failed">Não foi possível transferir a atualização. Será oferecida novamente mais tarde.</string>
     <string name="ankiquest_moved_title">O AnkiQuest mudou para uma nova aplicação</string>
-    <string name="ankiquest_moved_message">Sincronize e depois instale a nova aplicação a partir da página da versão. Os seus dados voltam depois de iniciar sessão e sincronizar nela.</string>
+    <string name="ankiquest_moved_message">Sincronize e depois instale a nova aplicação a partir da página da versão. Ela oferece-se para trazer as suas definições e o seu início de sessão desta aplicação.</string>
     <string name="ankiquest_moved_open">Abrir a página da versão</string>
     <string name="ankiquest_avatar_crop_hint">Arrasta a imagem para a mover. Usa dois dedos ou o controlo para ampliar.</string>
     <string name="ankiquest_avatar_zoom">Ampliação</string>
