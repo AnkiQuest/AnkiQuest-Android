@@ -229,7 +229,7 @@ internal class AnkiquestBoardViews(
                 }
             } else {
                 val name = display.trim().ifEmpty { user }
-                val initial = name.take(name.offsetByCodePoints(0, minOf(1, name.codePointCount(0, name.length)))).uppercase()
+                val initial = AnkiquestAvatars.initials(name, letters = 1)
                 FrameLayout(context).apply {
                     background =
                         GradientDrawable().apply {
