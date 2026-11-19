@@ -9,8 +9,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.chip.Chip
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,6 +33,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -82,13 +83,13 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `feed and leaderboard links target Friends and preserve their notification context`() {
-        val feed = AnkiquestFeedActivity.intent(targetContext, "old-account")
+        val feed = AnkiquestFriendsSections.feed(targetContext, "old-account")
         assertEquals(AnkiquestFriendsActivity::class.java.name, feed.component?.className)
-        assertEquals("old-account", feed.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
-        val board = AnkiquestLeaderboardActivity.intent(targetContext, "month", "old-account")
+        assertEquals("old-account", feed.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
+        val board = AnkiquestFriendsSections.leaderboard(targetContext, "month", "old-account")
         assertEquals(AnkiquestFriendsActivity::class.java.name, board.component?.className)
-        assertEquals("month", board.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
-        assertEquals("old-account", board.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT))
+        assertEquals("month", board.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
+        assertEquals("old-account", board.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT))
     }
 
     @Test
@@ -109,13 +110,13 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `the selected leaderboard period survives refresh collapse and rotation`() {
-        val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
+        val controller = launch(AnkiquestFriendsSections.leaderboard(targetContext, "month"))
         val screen = controller.get()
         awaitSections(screen)
         screen.click(R.string.ankiquest_dashboard_title)
         assertFalse(screen.findViewById<View>(R.id.aq_friends_board_content).isVisible)
         screen.click(R.string.ankiquest_dashboard_title)
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         awaitSections(screen)
         controller.recreate()
         awaitSections(controller.get())
@@ -128,7 +129,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
     fun `switching accounts clears an expanded board and ignores its late old response`() {
         val pending = CompletableDeferred<AnkiquestBoards.Leaderboard>()
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } coAnswers { withContext(NonCancellable) { pending.await() } }
-        val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
+        val controller = launch(AnkiquestFriendsSections.leaderboard(targetContext, "month"))
         try {
             val screen = controller.get()
             assertTrue(assertNotNull(screen.findViewById<View>(R.id.aq_friends_board_loading)).isVisible)
@@ -159,13 +160,13 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `feed filters survive a parent refresh collapse and rotation`() {
-        val controller = launch(AnkiquestFeedActivity.intent(targetContext))
+        val controller = launch(AnkiquestFriendsSections.feed(targetContext))
         val screen = controller.get()
         awaitSections(screen)
         screen.click(R.string.aq_feed_messages)
         screen.click(R.string.aq_feed_unread_only)
         screen.click(R.string.aq_home_activity)
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         awaitSections(screen)
         screen.click(R.string.aq_home_activity)
         controller.recreate()
@@ -187,7 +188,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
     @Test
     fun `sent messages remain selected after recreation`() {
         coEvery { AnkiquestFeed.sent(any(), any()) } returns AnkiquestFeed.SentPage(emptyList(), null)
-        val controller = launch(AnkiquestFeedActivity.intent(targetContext))
+        val controller = launch(AnkiquestFriendsSections.feed(targetContext))
         awaitSections(controller.get())
         controller.get().click(R.string.aq_feed_sent)
         controller.recreate()
@@ -198,7 +199,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `recreation after an account switch does not restore the old launch period`() {
-        val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
+        val controller = launch(AnkiquestFriendsSections.leaderboard(targetContext, "month"))
         awaitSections(controller.get())
         val next = identity.copy(user = "other", token = "other-token")
         account = next
@@ -210,14 +211,14 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `a late old feed cannot replace the new account and its default filters`() {
-        val controller = launch(AnkiquestFeedActivity.intent(targetContext))
+        val controller = launch(AnkiquestFriendsSections.feed(targetContext))
         val screen = controller.get()
         awaitSections(screen)
         screen.click(R.string.aq_feed_messages)
         screen.click(R.string.aq_feed_unread_only)
         val pending = CompletableDeferred<AnkiquestFeed.Page>()
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } coAnswers { withContext(NonCancellable) { pending.await() } }
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         advanceRobolectricLooper()
         try {
             val next = identity.copy(user = "other", token = "other-token")
@@ -251,32 +252,32 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
             Intent(
                 targetContext,
                 AnkiquestFeedActivity::class.java,
-            ).putExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT, "old-account")
+            ).putExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT, "old-account")
                 .putExtra("unrelated_payload", ByteArray(300_000))
         val feed = startRegularActivity<AnkiquestFeedActivity>(feedIntent)
         assertTrue(feed.isFinishing)
-        assertEquals(AnkiquestFeedActivity.intent(targetContext, "old-account").toUri(0), shadowOf(feed).nextStartedActivity.toUri(0))
+        assertEquals(AnkiquestFriendsSections.feed(targetContext, "old-account").toUri(0), shadowOf(feed).nextStartedActivity.toUri(0))
         val boardIntent =
             Intent(targetContext, AnkiquestLeaderboardActivity::class.java)
-                .putExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD, "month")
-                .putExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT, "old-account")
+                .putExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD, "month")
+                .putExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT, "old-account")
                 .putExtra("unrelated_payload", ByteArray(300_000))
         val board = startRegularActivity<AnkiquestLeaderboardActivity>(boardIntent)
         assertTrue(board.isFinishing)
         assertEquals(
-            AnkiquestLeaderboardActivity.intent(targetContext, "month", "old-account").toUri(0),
+            AnkiquestFriendsSections.leaderboard(targetContext, "month", "old-account").toUri(0),
             shadowOf(board).nextStartedActivity.toUri(0),
         )
     }
 
     private fun launch(intent: Intent = AnkiquestFriendsActivity.intent(targetContext)) =
         startActivityControllerNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, intent).also {
-            advanceRobolectricLooperUntil { !it.get().findViewById<View>(R.id.aq_feed_loading).isVisible }
+            advanceRobolectricLooperUntil { !it.get().findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         }
 
     private fun awaitSections(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
-            listOf(R.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading).none {
+            listOf(AnkiDroidR.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading).none {
                 assertNotNull(screen.findViewById<View>(it)).isVisible
             }
         }

@@ -9,6 +9,7 @@ import android.widget.CheckBox
 import android.widget.ImageButton
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** Draws the deck tree for sharing: indented, collapsible, ticked in whole branches. */
 class AnkiquestDeckAdapter(
@@ -59,7 +60,7 @@ class AnkiquestDeckAdapter(
         )
         holder.expand.contentDescription =
             holder.itemView.context.getString(
-                if (folded) R.string.ankiquest_deck_expand else R.string.ankiquest_deck_collapse,
+                if (folded) AnkiquestR.string.ankiquest_deck_expand else AnkiquestR.string.ankiquest_deck_collapse,
             )
         holder.expand.setOnClickListener {
             if (!collapsed.add(row.id)) collapsed.remove(row.id)

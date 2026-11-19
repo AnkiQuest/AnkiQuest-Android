@@ -28,6 +28,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** The alert action and its Undo stay visible on narrow screens and at large text sizes. */
 class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
@@ -90,14 +91,17 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
     ) {
         RuntimeEnvironment.setFontScale(if (size == TextSize.LARGE) 2f else 1f)
         val screen =
-            startActivityNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
+            startActivityNormallyOpenCollectionWithIntent(
+                AnkiquestFriendsActivity::class.java,
+                AnkiquestFriendsSections.feed(targetContext),
+            )
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_friends_feed_loading).isVisible
+                !screen.findViewById<View>(AnkiquestR.id.aq_friends_feed_loading).isVisible
         }
         val stop =
             screen.window.decorView.allViews.filterIsInstance<TextView>().first {
-                it.text.toString() == screen.getString(R.string.aq_deck_alerts_stop, "cerro")
+                it.text.toString() == screen.getString(AnkiquestR.string.aq_deck_alerts_stop, "cerro")
             }
         val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
         val bounds = Rect(0, 0, stop.width, stop.height)

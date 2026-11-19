@@ -60,7 +60,7 @@ class AnkiquestGalleryTest : RobolectricTest() {
             putString(AnkiquestPreferences.USER, "hill")
             putString(AnkiquestPreferences.TOKEN, "test-token")
         }
-        account = AnkiquestHomeData.account()!!
+        account = HomeAccount.current()!!
         source = "content://${targetContext.packageName}.apkgfileprovider/cache/picture.png".toUri()
         context =
             object : ContextWrapper(targetContext) {

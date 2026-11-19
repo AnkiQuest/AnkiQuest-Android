@@ -9,8 +9,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.allViews
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyAnkiActivity
 import io.mockk.coEvery
 import io.mockk.every
@@ -25,6 +25,7 @@ import org.robolectric.shadows.ShadowDialog
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 class AnkiquestDeckNameScreenshotTest : ScreenshotTest() {
     private val account = HomeAccount("https://quest.example.test", "hill", "screenshot-token")
@@ -92,7 +93,7 @@ class AnkiquestDeckNameScreenshotTest : ScreenshotTest() {
     private fun conquest(screenshot: String) {
         val host = startRegularActivity<AnkiquestConquestActivity>(AnkiquestConquestActivity.intent(targetContext, "hill", 100))
         advanceRobolectricLooperUntil {
-            host.findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<TextView>().any {
+            host.findViewById<View>(AnkiDroidR.id.aq_board_content).allViews.filterIsInstance<TextView>().any {
                 it.text.toString() == host.getString(R.string.aq_share_deck_edit, name)
             }
         }

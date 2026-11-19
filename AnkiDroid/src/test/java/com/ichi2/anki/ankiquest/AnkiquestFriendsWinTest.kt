@@ -66,7 +66,7 @@ class AnkiquestFriendsWinTest : RobolectricTest() {
             putString(AnkiquestPreferences.USER, "hill")
             putString(AnkiquestPreferences.TOKEN, "hill-token")
         }
-        account = AnkiquestHomeData.account()!!
+        account = HomeAccount.current()!!
     }
 
     @After

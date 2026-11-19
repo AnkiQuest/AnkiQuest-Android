@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <!-- Old shortcuts still route Progress to Me. -->
+    <item name="ankiquest_nav_progress" type="id" />
+    <item name="aq_me_records_content" type="id" />
+    <item name="aq_me_records_loading" type="id" />
+    <item name="aq_me_history_content" type="id" />
+    <item name="aq_me_history_loading" type="id" />
+    <!-- Declared here for the views in this module; the app's own layouts and menus place them. -->
+    <item name="ankiquest_nav_today" type="id" />
+    <item name="ankiquest_tab_bar" type="id" />
+    <item name="aq_board_scroll" type="id" />
+    <item name="aq_feed_scroll" type="id" />
+</resources>

@@ -9,7 +9,7 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +71,7 @@ class AnkiquestGalleryActivity : AnkiActivity() {
 
     /** The signed-in account, when this destination has a picture and still belongs to it. */
     private fun account(): HomeAccount? {
-        val account = AnkiquestHomeData.account() ?: return null
+        val account = HomeAccount.current() ?: return null
         if (intent.data == null || intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE) != account.scope) {
             return null
         }

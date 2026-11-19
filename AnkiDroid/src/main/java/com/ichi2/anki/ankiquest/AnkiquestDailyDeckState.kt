@@ -4,8 +4,9 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.text.format.DateFormat
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import java.util.Date
+import com.ichi2.anki.R as AnkiDroidR
 
 enum class DailyDeckStatus { REVIEW_NOW, LEARNING_LATER, DONE, NOTHING_SCHEDULED }
 
@@ -48,8 +49,8 @@ data class DailyDeckState(
 
     val icon: Int get() =
         when (status) {
-            DailyDeckStatus.LEARNING_LATER -> R.drawable.ic_running_clock
-            DailyDeckStatus.DONE -> R.drawable.ic_done
+            DailyDeckStatus.LEARNING_LATER -> AnkiDroidR.drawable.ic_running_clock
+            DailyDeckStatus.DONE -> AnkiDroidR.drawable.ic_done
             else -> 0
         }
 }

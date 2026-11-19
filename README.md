@@ -74,7 +74,7 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 node --test .github/tests/*.test.cjs
 ```
 
-AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/` and the `ankiquest-core` module; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
+AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/` and the `ankiquest-core` and `ankiquest-ui` modules; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 
 ## Credits
 <!--- Do not rename this section. AnkiDroid contains a deep link to the section

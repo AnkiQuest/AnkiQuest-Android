@@ -64,7 +64,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
             putString(AnkiquestPreferences.USER, "alice")
             putString(AnkiquestPreferences.TOKEN, "alice-test-token")
         }
-        captured = AnkiquestHomeData.account()!!
+        captured = HomeAccount.current()!!
     }
 
     @After

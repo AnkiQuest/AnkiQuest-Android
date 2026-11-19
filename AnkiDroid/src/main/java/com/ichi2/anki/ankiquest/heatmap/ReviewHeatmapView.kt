@@ -25,6 +25,7 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** Local review history presented independently of deck selection or an online account. */
 class ReviewHeatmapView
@@ -126,19 +127,19 @@ class ReviewHeatmapView
             loading.isVisible = false
             retry.isVisible = false
             status.isVisible = data.reviews.isEmpty()
-            status.setText(R.string.review_heatmap_empty)
+            status.setText(AnkiquestR.string.review_heatmap_empty)
             summary.isVisible = true
             collapse.isVisible = true
             val number = NumberFormat.getIntegerInstance(resources.configuration.locales[0])
 
-            fun streak(value: Int) = resources.getQuantityString(R.plurals.review_heatmap_streak_days, value, number.format(value))
-            setStat(R.id.review_heatmap_current_streak, streak(data.currentStreak), R.string.review_heatmap_current_streak)
-            setStat(R.id.review_heatmap_longest_streak, streak(data.longestStreak), R.string.review_heatmap_longest_streak)
-            setStat(R.id.review_heatmap_days_studied, number.format(data.daysStudied), R.string.review_heatmap_days_studied)
+            fun streak(value: Int) = resources.getQuantityString(AnkiquestR.plurals.review_heatmap_streak_days, value, number.format(value))
+            setStat(R.id.review_heatmap_current_streak, streak(data.currentStreak), AnkiquestR.string.review_heatmap_current_streak)
+            setStat(R.id.review_heatmap_longest_streak, streak(data.longestStreak), AnkiquestR.string.review_heatmap_longest_streak)
+            setStat(R.id.review_heatmap_days_studied, number.format(data.daysStudied), AnkiquestR.string.review_heatmap_days_studied)
             val decimal = NumberFormat.getNumberInstance(resources.configuration.locales[0]).apply { maximumFractionDigits = 1 }
-            setStat(R.id.review_heatmap_daily_average, decimal.format(data.dailyAverage), R.string.review_heatmap_daily_average)
+            setStat(R.id.review_heatmap_daily_average, decimal.format(data.dailyAverage), AnkiquestR.string.review_heatmap_daily_average)
             findViewById<TextView>(R.id.review_heatmap_total).text =
-                context.getString(R.string.review_heatmap_total, number.format(data.totalReviews))
+                context.getString(AnkiquestR.string.review_heatmap_total, number.format(data.totalReviews))
             val earliest = minOf(data.firstReviewDate?.year ?: data.today.year, data.today.year)
             val latest = data.forecastEndDate.year
             state.year = (state.year ?: data.today.year).coerceIn(earliest, latest)
@@ -150,13 +151,13 @@ class ReviewHeatmapView
         }
 
         fun setLoading() {
-            showStatus(R.string.review_heatmap_loading)
+            showStatus(AnkiquestR.string.review_heatmap_loading)
             loading.isVisible = true
             retry.isVisible = false
         }
 
         fun setError() {
-            showStatus(R.string.review_heatmap_error)
+            showStatus(AnkiquestR.string.review_heatmap_error)
             loading.isVisible = false
             retry.isVisible = true
         }
@@ -175,7 +176,7 @@ class ReviewHeatmapView
             value: String,
             label: Int,
         ) {
-            val text = SpannableString(context.getString(R.string.review_heatmap_stat, value, context.getString(label)))
+            val text = SpannableString(context.getString(AnkiquestR.string.review_heatmap_stat, value, context.getString(label)))
             text.setSpan(StyleSpan(Typeface.BOLD), 0, value.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             findViewById<TextView>(id).text = text
         }
@@ -186,7 +187,9 @@ class ReviewHeatmapView
                 if (state.expanded) R.drawable.ic_expand_less_black_24dp else R.drawable.ic_expand_more_black_24dp_xml,
             )
             collapse.contentDescription =
-                context.getString(if (state.expanded) R.string.review_heatmap_collapse else R.string.review_heatmap_expand)
+                context.getString(
+                    if (state.expanded) AnkiquestR.string.review_heatmap_collapse else AnkiquestR.string.review_heatmap_expand,
+                )
         }
 
         private fun changeYear(delta: Int) {
@@ -203,7 +206,7 @@ class ReviewHeatmapView
             val year = state.year ?: currentData.today.year
             yearLabel.text =
                 NumberFormat.getIntegerInstance(resources.configuration.locales[0]).apply { isGroupingUsed = false }.format(year)
-            yearLabel.contentDescription = context.getString(R.string.review_heatmap_year, yearLabel.text)
+            yearLabel.contentDescription = context.getString(AnkiquestR.string.review_heatmap_year, yearLabel.text)
             previousYear.isEnabled = year > minOf(currentData.firstReviewDate?.year ?: currentData.today.year, currentData.today.year)
             nextYear.isEnabled = year < currentData.forecastEndDate.year
             previousYear.alpha = if (previousYear.isEnabled) 1f else 0.35f
@@ -231,9 +234,9 @@ class ReviewHeatmapView
                 if (date >
                     currentData.today
                 ) {
-                    R.string.review_heatmap_view_due_cards
+                    AnkiquestR.string.review_heatmap_view_due_cards
                 } else {
-                    R.string.review_heatmap_view_reviewed_cards
+                    AnkiquestR.string.review_heatmap_view_reviewed_cards
                 },
             )
         }

@@ -7,8 +7,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -30,6 +30,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h740dp")
@@ -283,13 +284,13 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
     private fun launchController() =
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
-            AnkiquestLeaderboardActivity.intent(targetContext),
+            AnkiquestFriendsSections.leaderboard(targetContext),
         ).also { awaitBoard(it.get()) }
 
     private fun awaitBoard(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
+                !screen.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible
         }
         advanceRobolectricLooper()
     }

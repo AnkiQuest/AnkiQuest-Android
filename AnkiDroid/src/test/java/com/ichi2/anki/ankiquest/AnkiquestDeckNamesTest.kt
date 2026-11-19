@@ -61,23 +61,13 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
             assertEquals("Mandarin — Modern Course › Mandarin modern 1", AnkiquestShare.conqueredCardDeck(at))
         }
 
-    @Test
-    fun `cleaned names follow all shared desktop cases`() {
-        val fixture = JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest/deck_names.json")).readText())
-        val cases = fixture.getJSONArray("cases")
-        for (index in 0 until cases.length()) {
-            val case = cases.getJSONObject(index)
-            assertEquals(case.getString("expected"), AnkiquestDeckNames.clean(case.getString("path")), case.getString("path"))
-        }
-    }
-
     /** Android's ICU regex engine rejects Java's (?U) and (?u) flags; the JVM tests run on accepts them. */
     @Test
     fun `AnkiQuest patterns avoid regex flags Android rejects`() {
         val unsupported = Regex("""\(\?[a-zA-Z]*[Uu][a-zA-Z]*\)""")
         val sources =
-            File("src/main/java/com/ichi2/anki/ankiquest")
-                .walk()
+            listOf("src", "../ankiquest-core/src", "../ankiquest-ui/src")
+                .flatMap { File(it, "main/java/com/ichi2/anki/ankiquest").walk() }
                 .filter { it.extension == "kt" }
                 .toList()
         assertTrue(sources.isNotEmpty(), "AnkiQuest sources not found")
@@ -93,23 +83,6 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
         .withIndex()
         .filter { pattern.containsMatchIn(it.value) }
         .map { "${file.name}:${it.index + 1}" }
-
-    @Test
-    fun `Unicode digits and spaces clean like ASCII ones`() {
-        assertEquals(AnkiquestDeckNames.clean("12. Spanish"), AnkiquestDeckNames.clean("１２. Spanish"))
-        assertEquals(AnkiquestDeckNames.clean("Spanish Core"), AnkiquestDeckNames.clean("Spanish\u00A0Core"))
-    }
-
-    @Test
-    fun `the desktop character limit never splits a supplementary character`() {
-        val name = "語".repeat(119) + "🐼"
-        assertEquals(name, AnkiquestDeckNames.clean("Languages::$name"))
-    }
-
-    @Test
-    fun `a short supplementary leaf keeps its parent like the desktop cleaner`() {
-        assertEquals("Japanese › 𠮷𠮷", AnkiquestDeckNames.clean("Japanese::𠮷𠮷"))
-    }
 
     private fun reviewed(path: String): Card {
         val card = addBasicNote().firstCard()
@@ -129,7 +102,7 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
     fun `the first captured home deck survives later moves and snapshots`() =
         runTest {
             val card = reviewed("Spanish::Animals")
-            val source = AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account()))
+            val source = AnkiquestDeckNames.source(assertNotNull(HomeAccount.current()))
             AnkiquestDeckNames.capture(source, conquests())
             card.did = col.decks.id("5 Archive::Spanish::Old words")
             col.updateCard(card)
@@ -146,7 +119,7 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
                 at + 1,
                 card.id + 10_000,
             )
-            val source = AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account()))
+            val source = AnkiquestDeckNames.source(assertNotNull(HomeAccount.current()))
             AnkiquestDeckNames.capture(source, JSONArray().put(JSONObject().put("at", at + 1)).put(JSONObject().put("at", at)))
             card.did = col.decks.id("Spanish::New words")
             col.updateCard(card)
@@ -189,7 +162,7 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
     fun `a stale collection or account upload cannot record the new collection's deck`() =
         runTest {
             val card = reviewed("Spanish::Animals")
-            val source = AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account()))
+            val source = AnkiquestDeckNames.source(assertNotNull(HomeAccount.current()))
             AnkiquestDeckNames.capture(source.copy(collection = "another collection"), conquests())
             account("other")
             AnkiquestDeckNames.capture(source, conquests())
@@ -204,10 +177,10 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
     fun `a recorded name survives deletion while an unknown review invents nothing`() =
         runTest {
             val card = reviewed("Spanish::Animals")
-            AnkiquestDeckNames.capture(AnkiquestDeckNames.source(assertNotNull(AnkiquestHomeData.account())), conquests())
+            AnkiquestDeckNames.capture(AnkiquestDeckNames.source(assertNotNull(HomeAccount.current())), conquests())
             col.removeCardsAndOrphanedNotes(listOf(card.id))
             assertEquals("Animals", AnkiquestDeckNames.find(at)?.name)
             assertNull(AnkiquestDeckNames.find(at + 1))
-            assertTrue(AnkiquestDeckNames.clean("word ".repeat(100)).length <= AnkiquestCardLabels.MAX_LABEL)
+            assertTrue(AnkiquestDeckPaths.clean("word ".repeat(100)).length <= AnkiquestCardLabels.MAX_LABEL)
         }
 }

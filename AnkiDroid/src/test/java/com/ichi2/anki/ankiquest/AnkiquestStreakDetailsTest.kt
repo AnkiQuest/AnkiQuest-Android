@@ -16,8 +16,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.Runs
@@ -89,7 +89,7 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
         profile: JSONObject,
         size: AnkiquestStreakWidget.Size = AnkiquestStreakWidget.Size.MEDIUM,
     ): View {
-        val user = assertNotNull(Ankiquest.player())
+        val user = assertNotNull(HomeAccount.current()?.user)
         val row = AnkiquestWidget.ownRow(profile, null).put("user", user)
         return AnkiquestStreakWidget
             .views(
@@ -251,7 +251,7 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
         assertEquals(View.VISIBLE, widget.findViewById<ProgressBar>(R.id.ankiquest_streak_goal).visibility)
         profile.put("day_ends_at", now)
         remember(profile)
-        val user = assertNotNull(Ankiquest.player())
+        val user = assertNotNull(HomeAccount.current()?.user)
         AnkiquestStreakWidget
             .views(
                 targetContext,

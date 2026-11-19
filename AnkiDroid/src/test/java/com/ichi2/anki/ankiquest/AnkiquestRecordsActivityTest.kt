@@ -7,8 +7,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -54,7 +54,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     fun `every board shows its record holder and whoever came closest`() {
         val records = launch()
         for (kind in AnkiquestRecords.Kind.entries) {
-            assertTrue(records.hasText(records.getString(AnkiquestRecordsActivity.label(kind))), kind.name)
+            assertTrue(records.hasText(records.getString(AnkiquestMeSections.recordLabel(kind))), kind.name)
         }
         assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "Hill")), "the player's own name says so")
         assertTrue(records.hasText("Cerro"))

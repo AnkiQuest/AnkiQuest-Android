@@ -6,12 +6,12 @@ import android.widget.EditText
 import androidx.core.content.edit
 import androidx.preference.Preference
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.HomeAccount
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.justRun
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -23,6 +23,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.shadows.ShadowDialog
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import com.ichi2.anki.R as AnkiDroidR
 
 class AnkiquestLoginScreenshotTest : ScreenshotTest() {
     override fun applyDeviceConfig() {
@@ -63,7 +64,7 @@ class AnkiquestLoginScreenshotTest : ScreenshotTest() {
         saveControllerForCleanup(controller)
         advanceRobolectricLooper()
         val preferences = controller.get().fragment as PreferencesFragment
-        val fragment = preferences.childFragmentManager.findFragmentById(R.id.settings_container) as AnkiquestSettingsFragment
+        val fragment = preferences.childFragmentManager.findFragmentById(AnkiDroidR.id.settings_container) as AnkiquestSettingsFragment
         assertNotNull(fragment.findPreference<Preference>(targetContext.getString(R.string.ankiquest_sign_in_key))).performClick()
         advanceRobolectricLooper()
         val dialog = assertNotNull(ShadowDialog.getLatestDialog())

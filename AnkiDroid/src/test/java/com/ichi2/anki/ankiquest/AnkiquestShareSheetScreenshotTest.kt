@@ -9,8 +9,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.allViews
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyAnkiActivity
 import io.mockk.coEvery
 import io.mockk.every

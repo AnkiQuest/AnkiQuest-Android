@@ -26,7 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.ioDispatcher
@@ -37,6 +37,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import com.ichi2.anki.R as AnkiDroidR
+import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * A conquered card, natively, as the website's `/conquered/{user}/{at}` shows it: a card that was
@@ -44,7 +46,7 @@ import timber.log.Timber
  * tell friends, share it and choose to say what the card was. Only these numbers are shared, never
  * the card itself, unless the owner adds its label.
  */
-class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board) {
+class AnkiquestConquestActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiquest_board) {
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
@@ -71,21 +73,21 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
         views = AnkiquestBoardViews(this)
-        content = findViewById(R.id.aq_board_content)
-        scroll = findViewById(R.id.aq_board_scroll)
-        findViewById<TextView>(R.id.aq_board_title).apply {
+        content = findViewById(AnkiDroidR.id.aq_board_content)
+        scroll = findViewById(AnkiDroidR.id.aq_board_scroll)
+        findViewById<TextView>(AnkiDroidR.id.aq_board_title).apply {
             setText(R.string.aq_profile_conquest)
             ViewCompat.setAccessibilityHeading(this, true)
         }
-        findViewById<View>(R.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        findViewById<View>(R.id.aq_board_refresh).apply {
+        findViewById<View>(AnkiDroidR.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<View>(AnkiDroidR.id.aq_board_refresh).apply {
             contentDescription = getString(R.string.aq_conquest_refresh)
             setOnClickListener {
                 status = null
                 load()
             }
         }
-        val root = findViewById<View>(R.id.aq_board_root)
+        val root = findViewById<View>(AnkiDroidR.id.aq_board_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
@@ -93,14 +95,14 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         }
         user = intent.getStringExtra(EXTRA_USER).orEmpty()
         at = intent.getLongExtra(EXTRA_AT, 0L)
-        account = AnkiquestHomeData.account()
+        account = HomeAccount.current()
         load()
     }
 
     override fun onResume() {
         super.onResume()
         if (!::content.isInitialized) return
-        if (AnkiquestHomeData.account()?.scope != account?.scope) {
+        if (HomeAccount.current()?.scope != account?.scope) {
             load()
         } else if (!busy && !loading) {
             render()
@@ -108,7 +110,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
     }
 
     private fun load() {
-        val current = AnkiquestHomeData.account()
+        val current = HomeAccount.current()
         if (current?.scope != account?.scope) {
             account = current
             conquest = null
@@ -186,7 +188,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        findViewById<View>(R.id.aq_board_loading).isVisible = loading || busy
+        findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible = loading || busy
         val current = account
         if (current == null) {
             val panel = views.card(content)
@@ -212,7 +214,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         card: AnkiquestCommunity.Conquest,
     ) {
         val headline = getString(if (card.leech) R.string.aq_profile_leech else R.string.aq_profile_conquest)
-        findViewById<TextView>(R.id.aq_board_title).text = headline
+        findViewById<TextView>(AnkiDroidR.id.aq_board_title).text = headline
         val hero = views.card(content, tinted = true)
         hero.gravity = Gravity.CENTER_HORIZONTAL
         if (AnkiquestCompanion.visible()) {
@@ -270,7 +272,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                     }
                 }.apply {
                     isEnabled = !busy
-                    setIconResource(R.drawable.ic_mode_edit_white)
+                    setIconResource(CommonR.drawable.ic_mode_edit_white)
                     iconTint = textColors
                 }
         }
@@ -518,7 +520,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             } finally {
                 if (account?.scope == current.scope) {
                     busy = false
-                    if (AnkiquestHomeData.account()?.scope == current.scope && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    if (HomeAccount.current()?.scope == current.scope && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                         render()
                     }
                 }
@@ -551,7 +553,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         card: AnkiquestCommunity.Conquest,
     ): String? =
         try {
-            card.win?.let { Ankiquest.shareWinLink(it, current.scope).image }
+            card.win?.let { AnkiquestWins.link(it, current.scope).image }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

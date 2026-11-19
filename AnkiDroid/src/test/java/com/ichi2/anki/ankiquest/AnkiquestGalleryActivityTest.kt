@@ -9,8 +9,8 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject

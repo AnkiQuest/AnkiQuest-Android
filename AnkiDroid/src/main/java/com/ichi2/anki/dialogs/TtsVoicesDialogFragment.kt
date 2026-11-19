@@ -37,6 +37,7 @@ import dev.androidbroadcast.vbpd.viewBinding
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * A dialog which allows a user to preview Text to speech voices and copy them to the clipboard
@@ -205,7 +206,7 @@ class TtsVoicesDialogFragment : DialogFragment(R.layout.dialog_tts_voices) {
                 )
                 if (voice.unavailable()) {
                     binding.actionButton.setOnClickListener { openTtsSettings() }
-                    binding.actionButton.setIconResource(R.drawable.ic_file_download_white)
+                    binding.actionButton.setIconResource(CommonR.drawable.ic_file_download_white)
                 } else {
                     binding.actionButton.setOnClickListener { viewModel.copyToClipboard(voice) }
                     binding.actionButton.setIconResource(R.drawable.baseline_content_copy_24)

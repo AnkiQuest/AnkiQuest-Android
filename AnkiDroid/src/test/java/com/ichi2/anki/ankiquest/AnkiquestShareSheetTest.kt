@@ -17,13 +17,13 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestShareSheet.Exit
 import com.ichi2.anki.ankiquest.AnkiquestShareSheet.State
 import com.ichi2.anki.ankiquest.AnkiquestShareSheet.Step
 import com.ichi2.anki.ankiquest.AnkiquestSharing.Audience
 import com.ichi2.anki.ankiquest.AnkiquestSharing.MomentRef
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyAnkiActivity
@@ -379,7 +379,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         idle()
         assertFalse(dialog.isShowing)
         assertTrue(AnkiquestPostStudyPrompts.ready(host))
-        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestDeckShare.PREF_ASK, true))
+        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestPreferences.ASK_DECK_SHARE, true))
         coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
     }
 

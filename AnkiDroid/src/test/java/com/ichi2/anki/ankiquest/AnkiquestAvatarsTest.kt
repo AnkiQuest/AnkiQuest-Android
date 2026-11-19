@@ -20,8 +20,8 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication

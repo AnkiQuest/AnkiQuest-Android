@@ -19,20 +19,21 @@ import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * A player's profile, natively, as the website's `/week#<user>` shows it: level and XP, streak and
  * freezes, today, daily quests, personal bests, hard-won cards and achievements. The player's own
  * profile adds their latest wins, records and study history, and leads to native settings.
  */
-class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board) {
+class AnkiquestProfileActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiquest_board) {
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
@@ -66,27 +67,27 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 }
             }
         views = AnkiquestBoardViews(this)
-        content = findViewById(R.id.aq_board_content)
-        scroll = findViewById(R.id.aq_board_scroll)
+        content = findViewById(AnkiDroidR.id.aq_board_content)
+        scroll = findViewById(AnkiDroidR.id.aq_board_scroll)
         sections = AnkiquestMeSections(this, savedInstanceState)
-        findViewById<TextView>(R.id.aq_board_title).apply {
+        findViewById<TextView>(AnkiDroidR.id.aq_board_title).apply {
             setText(if (intent.hasExtra(EXTRA_USER)) R.string.aq_profile_title else R.string.ankiquest_me)
             ViewCompat.setAccessibilityHeading(this, true)
         }
-        findViewById<View>(R.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        findViewById<View>(R.id.aq_board_refresh).apply {
+        findViewById<View>(AnkiDroidR.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<View>(AnkiDroidR.id.aq_board_refresh).apply {
             contentDescription = getString(R.string.aq_profile_refresh)
             setOnClickListener { load() }
         }
-        findViewById<View>(R.id.aq_board_loading).contentDescription = getString(R.string.aq_profile_loading)
-        val root = findViewById<LinearLayout>(R.id.aq_board_root)
+        findViewById<View>(AnkiDroidR.id.aq_board_loading).contentDescription = getString(R.string.aq_profile_loading)
+        val root = findViewById<LinearLayout>(AnkiDroidR.id.aq_board_root)
         // Me and other profiles are pages above their caller, with Back going up one level.
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
             insets
         }
-        account = AnkiquestHomeData.account()
+        account = HomeAccount.current()
         load()
     }
 
@@ -102,14 +103,14 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         super.onResume()
         if (!::content.isInitialized) return
         // Signing out or into another account must never leave what the old one could see here.
-        if (AnkiquestHomeData.account()?.scope != account?.scope) load()
+        if (HomeAccount.current()?.scope != account?.scope) load()
     }
 
     /** The player shown: the one asked for, or the signed-in player. */
     private fun player(current: HomeAccount): String = intent.getStringExtra(EXTRA_USER)?.ifEmpty { null } ?: current.user
 
     private fun load() {
-        val current = AnkiquestHomeData.account()
+        val current = HomeAccount.current()
         sections.refresh()
         if (current?.scope != account?.scope) {
             undo.clear()
@@ -262,7 +263,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        findViewById<View>(R.id.aq_board_loading).isVisible = loading
+        findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible = loading
         val current = account
         if (current == null) {
             val panel = views.card(content)
@@ -278,7 +279,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (shown == null) {
             if (loading) views.text(content, getString(R.string.aq_profile_loading), small = true)
         } else {
-            findViewById<TextView>(R.id.aq_board_title).text =
+            findViewById<TextView>(AnkiDroidR.id.aq_board_title).text =
                 if (shown.own) getString(R.string.ankiquest_me) else shown.profile.display
             profile(shown)
         }
@@ -296,7 +297,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         views.button(content, getString(R.string.aq_profile_leaderboard)) {
-            startActivity(AnkiquestLeaderboardActivity.intent(this))
+            startActivity(AnkiquestFriendsSections.leaderboard(this))
         }
         scroll.post { scroll.scrollTo(0, position) }
         if (!loading) {

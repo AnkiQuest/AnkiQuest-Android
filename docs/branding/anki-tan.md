@@ -24,7 +24,7 @@ The app does not offer her as a companion yet: she lacks a frozen pose
 | sleepy | `anki_tan_icon_sleepy` | `emoji/Ankitan_35_sleeping.png` |
 | monochrome (themed icon) | `anki_tan_icon_mono` | line art of `emoji/Ankitan_00_smile.png` |
 
-The drawables are in `AnkiDroid/src/main/res/drawable-nodpi/`, written by
+The drawables are in `ankiquest-ui/src/main/res/drawable-nodpi/`, written by
 the server's exporter:
 `cargo run -p ankiquest-xtask -- export-android-art <android-checkout>`.
 The adaptive icons in `AnkiDroid/src/quest/res/` inset her app icon by 10%

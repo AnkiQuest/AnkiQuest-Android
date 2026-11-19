@@ -8,8 +8,8 @@ import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyAnkiActivity
 import io.mockk.coEvery
 import io.mockk.coVerify

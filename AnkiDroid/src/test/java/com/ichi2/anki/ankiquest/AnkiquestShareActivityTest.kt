@@ -13,8 +13,8 @@ import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -43,8 +43,8 @@ import kotlin.test.assertTrue
 @Config(sdk = [34])
 class AnkiquestShareActivityTest : RobolectricTest() {
     private val account = HomeAccount("https://quest.example.test", "hill", "synthetic-token")
-    private val link = AnkiquestShare.Link("https://quest.example.test/w/card", "https://quest.example.test/w/card.png", "A win")
-    private val answer = CompletableDeferred<AnkiquestShare.Link>()
+    private val link = AnkiquestWins.Link("https://quest.example.test/w/card", "https://quest.example.test/w/card.png", "A win")
+    private val answer = CompletableDeferred<AnkiquestWins.Link>()
     private val prepared = AtomicBoolean(false)
     private var operation: Job? = null
 
@@ -52,7 +52,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     fun prepare() {
         mockkObject(
             AnkiquestHomeData,
-            Ankiquest,
+            AnkiquestWins,
             AnkiquestShare,
             AnkiquestSharing,
             AnkiquestMomentShare,
@@ -60,7 +60,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
             HomeAccount.Companion,
         )
         every { HomeAccount.current(any()) } returns account
-        coEvery { Ankiquest.shareWinLink(17, account.scope) } coAnswers {
+        coEvery { AnkiquestWins.link(17, account.scope) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }
@@ -75,7 +75,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         ShadowDialog.getLatestDialog()?.dismiss()
         unmockkObject(
             AnkiquestHomeData,
-            Ankiquest,
+            AnkiquestWins,
             AnkiquestShare,
             AnkiquestSharing,
             AnkiquestMomentShare,
@@ -329,8 +329,8 @@ class AnkiquestShareActivityTest : RobolectricTest() {
                 val host = controller.get()
                 val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
                 coVerify(exactly = 0) { AnkiquestSharing.send(account, reference, any(), any()) }
-                coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
-                coVerify(exactly = 0) { Ankiquest.shareWin(any(), any(), any()) }
+                coVerify(exactly = 0) { AnkiquestWins.withFriends(any(), any()) }
+                coVerify(exactly = 0) { AnkiquestWins.share(any(), any(), any()) }
                 assertNull(shadowOf(host).nextStartedActivity)
                 val everyone = host.getString(R.string.ankiquest_share_all_friends)
                 val content = sheet.window!!.decorView

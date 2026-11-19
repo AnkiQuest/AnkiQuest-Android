@@ -35,6 +35,7 @@ rootProject.name = "AnkiQuest-Android"
 include(
     ":anki-common",
     ":ankiquest-core",
+    ":ankiquest-ui",
     ":api",
     ":AnkiDroid",
     ":baselineprofile",

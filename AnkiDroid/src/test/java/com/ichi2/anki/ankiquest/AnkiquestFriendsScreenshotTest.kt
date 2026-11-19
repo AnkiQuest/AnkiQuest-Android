@@ -7,8 +7,8 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 /** The sections share Friends' scroll and navigation, including offline and large-text states. */
 class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
@@ -82,13 +83,13 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
 
     @Test
     fun leaderboard() {
-        captureFriends("friends_leaderboard", AnkiquestLeaderboardActivity.intent(targetContext))
+        captureFriends("friends_leaderboard", AnkiquestFriendsSections.leaderboard(targetContext))
     }
 
     @Test
     fun leaderboardLargeText() {
         RuntimeEnvironment.setFontScale(2f)
-        val screen = captureFriends("friends_leaderboard_200percent", AnkiquestLeaderboardActivity.intent(targetContext))
+        val screen = captureFriends("friends_leaderboard_200percent", AnkiquestFriendsSections.leaderboard(targetContext))
         val status = screen.getString(R.string.ankiquest_streak_studied)
         val labels =
             screen.window.decorView.allViews
@@ -112,7 +113,7 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
     fun offline() {
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } throws IOException("offline")
-        captureFriends("friends_offline", AnkiquestFeedActivity.intent(targetContext))
+        captureFriends("friends_offline", AnkiquestFriendsSections.feed(targetContext))
     }
 
     private fun captureFriends(
@@ -121,12 +122,12 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
     ): AnkiquestFriendsActivity {
         val screen = startRegularActivity<AnkiquestFriendsActivity>(intent)
         advanceRobolectricLooperUntil {
-            listOf(R.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading)
+            listOf(AnkiDroidR.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading)
                 .none { screen.findViewById<View>(it).isVisible }
         }
         advanceRobolectricLooper()
-        assertEquals(screen.getString(R.string.ankiquest_nav_friends), screen.findViewById<TextView>(R.id.aq_feed_title).text)
-        assertTrue(screen.findViewById<View>(R.id.ankiquest_tab_bar).isShown)
+        assertEquals(screen.getString(R.string.ankiquest_nav_friends), screen.findViewById<TextView>(AnkiDroidR.id.aq_feed_title).text)
+        assertTrue(screen.findViewById<View>(AnkiDroidR.id.ankiquest_tab_bar).isShown)
         assertTrue(
             screen.window.decorView.allViews.filterIsInstance<TextView>().any {
                 it.text ==

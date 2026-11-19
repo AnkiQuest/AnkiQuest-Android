@@ -8,8 +8,8 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
@@ -115,7 +115,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
     }
 
-    private val account: HomeAccount get() = assertNotNull(AnkiquestHomeData.account())
+    private val account: HomeAccount get() = assertNotNull(HomeAccount.current())
 
     @Test
     fun `private Global hiding reads the server's updated player list`() =
@@ -285,7 +285,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `the leaderboard orders the widget rows`() =
         runBlocking {
-            val board = Ankiquest.leaderboard().rows
+            val board = AnkiquestBoards.weekly().rows
             val week = AnkiquestWidget.forPeriod(board, "week")
             assertEquals(listOf("hill", "cerro"), week.objects().map { it.getString("user") })
             val hour = AnkiquestWidget.forPeriod(board, "hour").objects()
@@ -417,8 +417,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `sharing a win, cheering one and the stored settings are read`() =
         runBlocking {
-            assertEquals(2, Ankiquest.shareWinWithFriends(1, account.scope))
-            val link = Ankiquest.shareWinLink(1, account.scope)
+            assertEquals(2, AnkiquestWins.withFriends(1, account.scope))
+            val link = AnkiquestWins.link(1, account.scope)
             assertTrue(link.url.contains("/w/"), link.url)
             assertTrue(link.image.endsWith(".png"), link.image)
             assertTrue(link.text.contains(link.url), link.text)
@@ -431,7 +431,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 AnkiquestDailyGoal.ServerGoal(AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, 14), since = 20754, chosen = true),
                 AnkiquestDailyGoal.ServerGoal.parse(AnkiquestSharing.goal(account)),
             )
-            assertEquals("aki", AnkiquestHomeData.companion(account))
+            assertEquals("aki", AnkiquestCompanions.choice(account))
             assertFalse(Ankiquest.streakProtectionEnabled())
         }
 

@@ -61,7 +61,7 @@ class AnkiquestNotificationOwnerTest : RobolectricTest() {
             putString(AnkiquestPreferences.USER, "hill")
             putString(AnkiquestPreferences.TOKEN, "hill-token")
         }
-        val account = assertNotNull(AnkiquestHomeData.account(prefs))
+        val account = assertNotNull(HomeAccount.current(prefs))
         val cursor = "ankiquestCompletionCursor:${account.notificationAccount}"
         prefs.edit { putLong(cursor, 5) }
         val notices =
@@ -103,7 +103,7 @@ class AnkiquestNotificationOwnerTest : RobolectricTest() {
                 putString(AnkiquestPreferences.TOKEN, "hill-token")
             }
         originalAccount()
-        val account = assertNotNull(AnkiquestHomeData.account(prefs))
+        val account = assertNotNull(HomeAccount.current(prefs))
         val cursor = "ankiquestCompletionCursor:${account.notificationAccount}"
         prefs.edit { putLong(cursor, 5) }
         val image = "https://study.example.test/w/card.png"

@@ -7,9 +7,9 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapGrid
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

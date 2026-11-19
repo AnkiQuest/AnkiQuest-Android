@@ -10,7 +10,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.utils.ext.getParcelableCompat
@@ -71,7 +71,7 @@ internal class AnkiquestDeckChoices(
             }
         }
         fragments.setFragmentResultListener(AnkiquestCopyDialog.REQUEST_COPY, host) { _, result ->
-            val current = AnkiquestHomeData.account() ?: return@setFragmentResultListener
+            val current = HomeAccount.current() ?: return@setFragmentResultListener
             val deck = result.getParcelableCompat<SelectableDeck.Deck>(AnkiquestCopyDialog.RESULT_DECK)
             val recipients = result.getStringArrayList(AnkiquestCopyDialog.RESULT_RECIPIENTS).orEmpty()
             if (deck != null && recipients.isNotEmpty() && result.getString(AnkiquestCopyDialog.RESULT_SCOPE) == current.scope &&
@@ -87,7 +87,7 @@ internal class AnkiquestDeckChoices(
         if (!available() || decks.isEmpty()) {
             return
         }
-        focusState = FocusState.Choosing(AnkiquestHomeData.account()?.scope)
+        focusState = FocusState.Choosing(HomeAccount.current()?.scope)
         DeckSelectionDialog
             .newInstance(
                 title = host.getString(R.string.aq_home_change_deck),
@@ -111,12 +111,12 @@ internal class AnkiquestDeckChoices(
     }
 
     private fun available(): Boolean =
-        owns(AnkiquestHomeData.account()?.scope) && !fragments.isStateSaved &&
+        owns(HomeAccount.current()?.scope) && !fragments.isStateSaved &&
             fragments.findFragmentByTag(DeckSelectionDialog.TAG) == null && fragments.findFragmentByTag(AnkiquestCopyDialog.TAG) == null
 
     private fun owns(scope: String?): Boolean =
         host.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && !host.isFinishing &&
-            AnkiquestHomeData.account()?.scope == scope
+            HomeAccount.current()?.scope == scope
 
     override fun onResume(owner: LifecycleOwner) {
         val picker = fragments.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog ?: return

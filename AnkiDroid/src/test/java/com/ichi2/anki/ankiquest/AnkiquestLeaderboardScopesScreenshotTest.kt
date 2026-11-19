@@ -9,8 +9,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import com.google.android.material.chip.Chip
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -24,6 +24,7 @@ import org.robolectric.RuntimeEnvironment
 import java.net.HttpURLConnection.HTTP_FORBIDDEN
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "screenshot-token")
@@ -117,7 +118,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
             screen.findViewById<View>(R.id.aq_friends_board_content).allViews.first {
                 it.isClickable && it.contentDescription?.contains("Place 103:") == true
             }
-        val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
+        val scroll = screen.findViewById<NestedScrollView>(AnkiDroidR.id.aq_feed_scroll)
         val rowBounds = Rect(0, 0, own.width, own.height)
         scroll.offsetDescendantRectToMyCoords(own, rowBounds)
         scroll.scrollTo(0, rowBounds.top)
@@ -128,12 +129,12 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     }
 
     private fun launch(): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext)).also(::awaitBoard)
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.leaderboard(targetContext)).also(::awaitBoard)
 
     private fun awaitBoard(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
+                !screen.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible
         }
         advanceRobolectricLooper()
     }

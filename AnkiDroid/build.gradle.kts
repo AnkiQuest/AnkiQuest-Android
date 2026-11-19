@@ -809,6 +809,7 @@ dependencies {
     // modules
     implementation(project(":anki-common"))
     implementation(project(":ankiquest-core"))
+    implementation(project(":ankiquest-ui"))
     implementation(project(":common"))
     implementation(project(":common:android"))
     implementation(project(":compat"))

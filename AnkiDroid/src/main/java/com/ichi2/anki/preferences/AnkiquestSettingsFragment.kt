@@ -34,7 +34,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
@@ -48,7 +47,6 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestDialogOwner
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
@@ -61,6 +59,7 @@ import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.servicelayer.DebugInfoService
@@ -75,6 +74,7 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.util.Date
 import java.util.TimeZone
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * AnkiQuest settings on one short screen: the account, what to be notified about, what friends hear
@@ -86,7 +86,7 @@ import java.util.TimeZone
  * and deck alerts on a profile, and telling friends about one deck in that deck's menu.
  */
 class AnkiquestSettingsFragment : SettingsFragment() {
-    override val preferenceResource = R.xml.preferences_ankiquest
+    override val preferenceResource = AnkiDroidR.xml.preferences_ankiquest
     override val analyticsScreenNameConstant = "prefs.ankiquest"
 
     private var running = false
@@ -151,7 +151,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     /** The signed-in account that server settings belong to, or null on a phone that is not signed in. */
-    private fun signedIn(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+    private fun signedIn(): HomeAccount? = HomeAccount.current()?.takeIf { it.token.isNotEmpty() }
 
     private fun requireSignedIn(): HomeAccount = signedIn() ?: throw HomeAccountChanged()
 
@@ -563,7 +563,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build),
             )
         bindAction(R.string.ankiquest_check_updates_key) { AnkiquestUpdater.checkNow(requireActivity()) }
-        requirePreference<Preference>(R.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
+        requirePreference<Preference>(AnkiDroidR.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
             launchCatchingTask { DebugInfoService.copyReport(requireContext()) }
             true
         }
@@ -811,7 +811,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             running = true
             preference.summary = getString(R.string.ankiquest_check_running)
             val context = requireContext()
-            val account = AnkiquestHomeData.account()
+            val account = HomeAccount.current()
             lifecycleScope.launch {
                 val message =
                     try {

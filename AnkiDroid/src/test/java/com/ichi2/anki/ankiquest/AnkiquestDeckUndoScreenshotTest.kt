@@ -34,6 +34,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** Both sharing entry points return to their screen with a readable Undo action. */
 class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
@@ -51,7 +52,7 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
             putString(AnkiquestPreferences.USER, "hill")
             putString(AnkiquestPreferences.TOKEN, "screenshot-token")
         }
-        mockkObject(Ankiquest, AnkiquestPoll, AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions)
+        mockkObject(Ankiquest, AnkiquestPoll, AnkiquestCompanions, AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions)
         justRun { Ankiquest.onActivityResumed(any()) }
         justRun { AnkiquestPoll.refreshNow(any()) }
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns
@@ -61,7 +62,7 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
             )
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         coEvery { Ankiquest.notificationSwitches() } returns JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, true)
-        coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
+        coEvery { AnkiquestCompanions.choice(any()) } returns "aki"
         coEvery { AnkiquestCommunity.reminders(any()) } returns AnkiquestCommunity.Reminders(emptySet(), 19, 22, 8, 2)
         coEvery { AnkiquestSharing.settings(any()) } returns AnkiquestSharing.Settings(mapOf("daily_goal" to "ask"), 3)
         val repository = mockk<SubscriptionRepository>()
@@ -71,7 +72,7 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupSharing() {
-        unmockkObject(Ankiquest, AnkiquestPoll, AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions)
+        unmockkObject(Ankiquest, AnkiquestPoll, AnkiquestCompanions, AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -109,7 +110,9 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
         shadowOf(Looper.getMainLooper()).idle()
         val preferences = controller.get().fragment as PreferencesFragment
         val fragment = preferences.childFragmentManager.findFragmentById(R.id.settings_container) as AnkiquestSettingsFragment
-        assertNotNull(fragment.findPreference<Preference>(targetContext.getString(R.string.ankiquest_moments_decks_key))).performClick()
+        assertNotNull(
+            fragment.findPreference<Preference>(targetContext.getString(AnkiquestR.string.ankiquest_moments_decks_key)),
+        ).performClick()
         shadowOf(Looper.getMainLooper()).idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
         decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()

@@ -47,7 +47,7 @@ enum class ViewerAction(
     REDO(R.id.action_redo, R.drawable.ic_redo, MENU_ONLY),
     FLAG_MENU(R.id.action_flag, R.drawable.ic_flag_transparent, MENU_ONLY),
     MARK(R.id.action_mark, R.drawable.ic_star, MENU_ONLY),
-    EDIT(R.id.action_edit_note, R.drawable.ic_mode_edit_white, MENU_ONLY),
+    EDIT(R.id.action_edit_note, CommonR.drawable.ic_mode_edit_white, MENU_ONLY),
     BURY_MENU(R.id.action_bury, R.drawable.ic_flip_to_back_white, MENU_ONLY),
     SUSPEND_MENU(R.id.action_suspend, R.drawable.ic_suspend, MENU_ONLY),
     DELETE(R.id.action_delete, CommonR.drawable.ic_delete_white, MENU_ONLY),

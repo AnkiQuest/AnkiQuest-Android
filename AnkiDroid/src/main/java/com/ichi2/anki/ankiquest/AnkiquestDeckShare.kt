@@ -12,7 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.withCol
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
@@ -30,7 +30,6 @@ import timber.log.Timber
  * leaves the phone for the friends the player picks. A deck's menu sets the same per deck, see [choose].
  */
 internal object AnkiquestDeckShare {
-    const val PREF_ASK = "ankiquestAskToShareDecks"
     private const val PREF_ASKED = "ankiquestDeckShareAsked"
 
     data class Recipient(
@@ -46,7 +45,8 @@ internal object AnkiquestDeckShare {
     )
 
     /** Whether the question is on; it is unless the player turned it off. */
-    fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ASK, true)
+    fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean =
+        prefs.getBoolean(AnkiquestPreferences.ASK_DECK_SHARE, true)
 
     /**
      * The question to ask about [deck] from the server's deck settings (`GET /api/decks`), or null
@@ -91,7 +91,7 @@ internal object AnkiquestDeckShare {
             .toSet()
 
     /** Whether a deck's menu offers [choose]: only to a signed-in player. */
-    fun available(): Boolean = AnkiquestHomeData.account()?.token?.isNotEmpty() == true
+    fun available(): Boolean = HomeAccount.current()?.token?.isNotEmpty() == true
 
     /**
      * From a deck's menu: who hears whenever [deck] is finished, ticked as the server keeps it now.
@@ -101,7 +101,7 @@ internal object AnkiquestDeckShare {
         activity: AnkiActivity,
         deck: Long,
     ) {
-        val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return
+        val account = HomeAccount.current()?.takeIf { it.token.isNotEmpty() } ?: return
         val undo = deckUndo(activity)
         undo.clear()
         val owner = AnkiquestDialogOwner(activity, account)
@@ -257,7 +257,7 @@ internal object AnkiquestDeckShare {
         try {
             val prefs = AnkiDroidApp.sharedPrefs()
             if (!enabled(prefs)) return
-            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return
+            val account = HomeAccount.current()?.takeIf { it.token.isNotEmpty() } ?: return
             val finished =
                 withCol {
                     val now = TimeManager.time.intTimeMS()
@@ -282,7 +282,7 @@ internal object AnkiquestDeckShare {
                 }
             val prompt = prompt(deck, name, settings) ?: return
             withContext(Dispatchers.Main) {
-                if (!AnkiquestPostStudyPrompts.ready(context) || AnkiquestHomeData.account()?.scope != account.scope) {
+                if (!AnkiquestPostStudyPrompts.ready(context) || HomeAccount.current()?.scope != account.scope) {
                     return@withContext
                 }
                 if (firstAsk(prefs, account.scope, deck, day)) {
@@ -302,7 +302,7 @@ internal object AnkiquestDeckShare {
         prompt: Prompt,
     ) {
         val language = AnkiquestLanguage.context(context)
-        val reference = AnkiquestSharing.MomentRef.Deck(prompt.deck.toString(), AnkiquestDeckNames.clean(prompt.name))
+        val reference = AnkiquestSharing.MomentRef.Deck(prompt.deck.toString(), AnkiquestDeckPaths.clean(prompt.name))
         if (AnkiquestMomentShare.available(account, reference)) {
             val card =
                 AnkiquestShare.Card(
@@ -316,12 +316,12 @@ internal object AnkiquestDeckShare {
                 card,
                 elsewhere = { chosen ->
                     context.lifecycleScope.launch {
-                        if (AnkiquestHomeData.account() != account) {
+                        if (HomeAccount.current() != account) {
                             return@launch
                         }
                         val intent =
                             withContext(Dispatchers.IO) { AnkiquestShare.textChooser(context, chosen.title, chosen.body, art = chosen.art) }
-                        if (AnkiquestHomeData.account() == account && AnkiquestPostStudyPrompts.resumed(context)) {
+                        if (HomeAccount.current() == account && AnkiquestPostStudyPrompts.resumed(context)) {
                             context.startActivity(intent)
                         }
                     }
@@ -342,7 +342,7 @@ internal object AnkiquestDeckShare {
                     if (recipients.isNotEmpty()) send(context.applicationContext, account, prompt, recipients)
                 }.setNegativeButton(language.getString(R.string.ankiquest_deck_share_not_now), null)
                 .setNeutralButton(language.getString(R.string.ankiquest_deck_share_never)) { _, _ ->
-                    AnkiDroidApp.sharedPrefs().edit { putBoolean(PREF_ASK, false) }
+                    AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestPreferences.ASK_DECK_SHARE, false) }
                     showThemedToast(context, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
                 }.show()
         AnkiquestPostStudyPrompts.track(dialog)

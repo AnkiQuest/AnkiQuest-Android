@@ -18,7 +18,7 @@ Strings:
   - changed-files:
       - any-glob-to-any-file:
           - "common/android/src/main/res/values/[0-9][0-9]-*.xml"
-          - "AnkiDroid/src/main/res/values/ankiquest*.xml"
+          - "ankiquest-ui/src/main/res/values/ankiquest*.xml"
 
 tests:
   - changed-files:

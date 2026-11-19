@@ -28,6 +28,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 import com.ichi2.anki.common.android.R as CommonR
 
 /** The review heatmap footer of the DeckPicker deck list. */
@@ -74,7 +75,7 @@ class AnkiquestHeatmapDeckListTest : RobolectricTest() {
 
             val decks = deckPicker.deckPickerBinding.decks
             val footerPosition = checkNotNull(decks.adapter).itemCount - 1
-            val expectedTotal = deckPicker.getString(R.string.review_heatmap_total, "1")
+            val expectedTotal = deckPicker.getString(AnkiquestR.string.review_heatmap_total, "1")
             decks.scrollToPosition(footerPosition)
             advanceRobolectricLooperUntil(lazyMessage = { "The heatmap footer did not display the new review total" }) {
                 decks

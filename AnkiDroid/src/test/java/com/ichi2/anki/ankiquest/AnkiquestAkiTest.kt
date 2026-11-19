@@ -241,7 +241,7 @@ class AnkiquestAkiTest : RobolectricTest() {
         assertTrue(bitmap.width <= 192 && bitmap.height <= 192)
         assertEquals(
             android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO,
-            AnkiquestAki.image(targetContext, com.ichi2.anki.R.drawable.aki_review).importantForAccessibility,
+            AnkiquestAki.image(targetContext, com.ichi2.anki.ankiquest.ui.R.drawable.aki_review).importantForAccessibility,
         )
     }
 }

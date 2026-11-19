@@ -15,7 +15,7 @@ beside this document. The artwork ships inside the app and works offline.
 - Existing local notifications, using a monochrome small icon and a sampled
   face bitmap as the large icon.
 
-The seven pictures are in `AnkiDroid/src/main/res/drawable-nodpi/aki_*.webp`,
+The seven pictures are in `ankiquest-ui/src/main/res/drawable-nodpi/aki_*.webp`,
 downscaled to about three times their largest display size; the full-size PNG
 originals live in the ankiquest server repository under `addon/`.
 Use welcome for introductions, review for studying, celebrate for confirmed
