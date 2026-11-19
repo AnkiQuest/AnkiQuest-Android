@@ -24,9 +24,9 @@ internal object KnownProviders {
     /** AnkiQuest, a fork of AnkiDroid: https://github.com/AnkiQuest/AnkiQuest-Android */
     val ANKIQUEST =
         FlashCardsProvider(
-            packageName = "dev.hilll.anki",
-            authority = "dev.hilll.anki.flashcards",
-            permission = "dev.hilll.anki.permission.READ_WRITE_DATABASE",
+            packageName = "org.ankiquest.anki",
+            authority = "org.ankiquest.anki.flashcards",
+            permission = "org.ankiquest.anki.permission.READ_WRITE_DATABASE",
             // TODO(hill): SHA-256 digest of AnkiQuest's release signing certificate, as upper-case hex
             //  (`apksigner verify --print-certs`). Until it is filled in, AnkiQuest is never trusted,
             //  except by debuggable clients like any other build.
