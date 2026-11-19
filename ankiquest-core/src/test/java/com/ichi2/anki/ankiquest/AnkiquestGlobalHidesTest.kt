@@ -2,7 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.sun.net.httpserver.HttpServer
 import io.mockk.coEvery
 import io.mockk.every
@@ -11,6 +15,8 @@ import io.mockk.unmockkObject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.HttpURLConnection.HTTP_CONFLICT
@@ -33,6 +39,17 @@ class AnkiquestGlobalHidesTest {
     )
 
     private enum class ResponseOwner { CURRENT, CHANGED }
+
+    // Without the app, nothing sets appContext; the default preferences come from the test's context.
+    @Before
+    fun usePreferences() {
+        SharedPreferencesTestHook.override = ApplicationProvider.getApplicationContext<Context>().sharedPrefs()
+    }
+
+    @After
+    fun forgetPreferences() {
+        SharedPreferencesTestHook.override = null
+    }
 
     @Test
     fun `supported servers load only the captured viewer's hidden players`() {
