@@ -1,0 +1,145 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 hill <hill@hilll.dev>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+package com.ichi2.anki.api
+
+import android.content.ContentProvider
+import android.content.ContentValues
+import android.content.pm.ApplicationInfo
+import android.content.pm.Signature
+import android.database.Cursor
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+
+/** Records the URIs it is queried with */
+internal class RecordingProvider : ContentProvider() {
+    val queried = mutableListOf<Uri>()
+
+    override fun onCreate(): Boolean = true
+
+    override fun query(
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?,
+    ): Cursor? {
+        queried += uri
+        return null
+    }
+
+    override fun getType(uri: Uri): String? = null
+
+    override fun insert(
+        uri: Uri,
+        values: ContentValues?,
+    ): Uri? = null
+
+    override fun delete(
+        uri: Uri,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ): Int = 0
+
+    override fun update(
+        uri: Uri,
+        values: ContentValues?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ): Int = 0
+}
+
+/**
+ * [AddContentApi] with the listed fork [KnownProviders.ANKIQUEST]. Its certificate is not filled in yet,
+ * so the client is debuggable, which trusts any certificate of the listed package.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [Build.VERSION_CODES.S_V2])
+internal class ProviderChoiceApiTest {
+    private val context get() = RuntimeEnvironment.getApplication()
+
+    @Before
+    fun setUp() {
+        val info = context.applicationInfo
+        info.flags = info.flags or ApplicationInfo.FLAG_DEBUGGABLE
+    }
+
+    @Test
+    fun forkIsUnusedUntilChosen() {
+        installFork()
+
+        assertEquals(listOf(FORK), AddContentApi.getProviders(context))
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+        assertEquals(-1, AddContentApi(context).apiHostSpecVersion)
+    }
+
+    @Test
+    fun chosenForkIsUsed() {
+        installFork()
+        val recorder = Robolectric.buildContentProvider(RecordingProvider::class.java).create(FORK.authority).get()
+
+        ProviderSelection(context).choose(FORK)
+
+        assertEquals(FORK.packageName, AddContentApi.getAnkiDroidPackageName(context))
+        assertEquals(FORK_SPEC, AddContentApi(context).apiHostSpecVersion)
+
+        // Every URI is built from the fork's authority
+        assertNull(AddContentApi(context).deckList)
+        assertEquals(listOf(FORK.authority), recorder.queried.map { it.authority })
+    }
+
+    @Test
+    fun ankiDroidStaysDefault() {
+        installFork()
+        AnkiDroidPackages.install(ANKIDROID.packageName, Signing.Current(AnkiDroidPackages.RELEASE))
+
+        assertEquals(listOf(ANKIDROID, FORK), AddContentApi.getProviders(context))
+        assertEquals(ANKIDROID.packageName, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    /** Without AnkiDroid, the chooser opens by itself, once */
+    @Test
+    fun chooserOpensOnce() {
+        installFork()
+        val launcher = ChooserLauncher()
+
+        launcher.offer(context)
+        launcher.offer(context)
+
+        val app = shadowOf(context)
+        assertEquals(ProviderChooserActivity::class.java.name, app.nextStartedActivity?.component?.className)
+        assertNull(app.nextStartedActivity)
+    }
+
+    @Test
+    fun chooserOpensFromApi() {
+        AddContentApi.chooseProvider(context)
+
+        assertEquals(ProviderChooserActivity::class.java.name, shadowOf(context).nextStartedActivity?.component?.className)
+    }
+
+    private fun installFork() {
+        AnkiDroidPackages.install(
+            FORK.packageName,
+            Signing.Current(Signature(byteArrayOf(1, 2, 3))),
+            Bundle().apply { putInt("com.ichi2.anki.provider.spec", FORK_SPEC) },
+            authority = FORK.authority,
+        )
+    }
+
+    private companion object {
+        const val FORK_SPEC = 3
+        val ANKIDROID = KnownProviders.ANKIDROID
+        val FORK = KnownProviders.ANKIQUEST
+    }
+}
