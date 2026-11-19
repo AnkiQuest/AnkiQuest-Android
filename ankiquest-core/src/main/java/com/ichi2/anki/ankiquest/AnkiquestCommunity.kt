@@ -2,8 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import androidx.annotation.StringRes
-import com.ichi2.anki.ankiquest.ui.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -21,16 +19,14 @@ object AnkiquestCommunity {
     /** The server's reminder kinds, in the website's order, each a switch the player turns on. */
     enum class Reminder(
         val key: String,
-        @StringRes val title: Int,
-        @StringRes val summary: Int,
     ) {
-        GENTLE_DAILY("gentle_daily", R.string.aq_reminder_gentle_daily, R.string.aq_reminder_gentle_daily_summary),
-        URGENT_STREAK("urgent_streak", R.string.aq_reminder_urgent_streak, R.string.aq_reminder_urgent_streak_summary),
-        FREEZE_USED("freeze_used", R.string.aq_reminder_freeze_used, R.string.aq_reminder_freeze_used_summary),
-        FREEZE_REFILL("freeze_refill", R.string.aq_reminder_freeze_refill, R.string.aq_reminder_freeze_refill_summary),
-        MILESTONE("milestone", R.string.aq_reminder_milestone, R.string.aq_reminder_milestone_summary),
-        WEEKLY_CLOSING("weekly_closing", R.string.aq_reminder_weekly_closing, R.string.aq_reminder_weekly_closing_summary),
-        WEEKLY_RECAP("weekly_recap", R.string.aq_reminder_weekly_recap, R.string.aq_reminder_weekly_recap_summary),
+        GENTLE_DAILY("gentle_daily"),
+        URGENT_STREAK("urgent_streak"),
+        FREEZE_USED("freeze_used"),
+        FREEZE_REFILL("freeze_refill"),
+        MILESTONE("milestone"),
+        WEEKLY_CLOSING("weekly_closing"),
+        WEEKLY_RECAP("weekly_recap"),
     }
 
     /** The player's reminder settings; the server replaces all of them at once. Hours are 0 to 23 in the player's time zone. */
@@ -97,11 +93,10 @@ object AnkiquestCommunity {
     /** The competition calendar's three views. */
     enum class Kind(
         val query: String,
-        @StringRes val label: Int,
     ) {
-        DAY("day", R.string.aq_calendar_days),
-        WEEK("week", R.string.aq_calendar_weeks),
-        MONTH("month", R.string.aq_calendar_months),
+        DAY("day"),
+        WEEK("week"),
+        MONTH("month"),
         ;
 
         companion object {

@@ -2,16 +2,12 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.content.Context
 import android.os.Build
-import com.ichi2.anki.ankiquest.ui.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONObject
-import timber.log.Timber
 import java.io.IOException
-import java.net.UnknownHostException
 
 /** Signs in with a username and password, or creates an account, and keeps only the device token it returns. */
 object AnkiquestAccount {
@@ -115,34 +111,4 @@ object AnkiquestAccount {
         }
 
     private const val TOO_MANY_REQUESTS = 429
-
-    fun message(
-        context: Context,
-        error: Throwable,
-        url: String,
-    ): String =
-        when (error) {
-            is AnkiquestHttpException ->
-                when (error.code) {
-                    400 -> context.getString(R.string.ankiquest_sign_in_invalid)
-                    401 -> context.getString(R.string.ankiquest_sign_in_wrong)
-                    403 -> context.getString(R.string.ankiquest_sign_in_closed)
-                    409 -> context.getString(R.string.ankiquest_sign_in_taken)
-                    429 -> context.getString(R.string.ankiquest_sign_in_limited)
-                    else -> context.getString(R.string.ankiquest_check_http, error.code)
-                }
-            is SecondFactorNeeded ->
-                when (error.step) {
-                    SecondFactor.ASKED -> context.getString(R.string.ankiquest_two_factor_asked)
-                    SecondFactor.REFUSED -> context.getString(R.string.ankiquest_two_factor_refused)
-                    SecondFactor.LOCKED -> context.getString(R.string.ankiquest_two_factor_locked)
-                }
-            is InsecureServer -> context.getString(R.string.ankiquest_check_insecure, url)
-            is UnknownHostException -> context.getString(R.string.ankiquest_check_unreachable, url)
-            is IllegalArgumentException -> context.getString(R.string.ankiquest_check_bad_url, url)
-            else -> {
-                Timber.w(error, "ankiquest sign-in failed")
-                context.getString(R.string.ankiquest_check_failed, error.message ?: error.javaClass.simpleName)
-            }
-        }
 }
