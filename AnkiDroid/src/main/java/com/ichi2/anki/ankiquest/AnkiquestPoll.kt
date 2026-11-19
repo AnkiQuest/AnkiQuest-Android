@@ -137,16 +137,17 @@ object AnkiquestPoll {
                     }
                 if (board != null) {
                     val now = TimeManager.time.intTimeMS()
+                    val lock = board.lock
                     prefs.edit {
                         putString(cacheKey, board.rows.toString())
                         putLong(cacheAtKey, now)
-                        if (board.lock == null) {
+                        if (lock == null) {
                             remove(cacheLockKey)
                         } else {
-                            putString(cacheLockKey, board.lock.name)
+                            putString(cacheLockKey, lock.name)
                         }
                     }
-                    AnkiquestWidget.render(context, board.rows, now, offline = false, board.lock)
+                    AnkiquestWidget.render(context, board.rows, now, offline = false, lock)
                     photoBoard = board.rows
                     photoFetchedAt = now
                     photoLock = board.lock
