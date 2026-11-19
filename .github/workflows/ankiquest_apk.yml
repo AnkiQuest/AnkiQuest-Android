@@ -74,7 +74,7 @@ jobs:
         run: |
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
-            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestUpdates=github \
             -PankiquestRelease=${{ steps.release.outputs.number }} \
             -PankiquestNightly=${{ steps.release.outputs.nightly }} \
             -PupstreamCommit=${{ steps.upstream.outputs.sha }}

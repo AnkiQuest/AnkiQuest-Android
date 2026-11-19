@@ -39,7 +39,11 @@ internal object AnkiquestDiagnostics {
             val version = account?.let(AnkiquestCapabilities::apiVersion)
             val poll = account?.let { AnkiquestPoll.lastSuccessfulPoll(prefs, it.scope) }
 
-            appendLine("Update channel = ${AnkiquestUpdater.channel().name.lowercase()}")
+            val updates = AnkiquestUpdater.source()
+            appendLine("Updates = ${updates.property}")
+            if (updates == AnkiquestUpdater.Source.GITHUB) {
+                appendLine("Update channel = ${AnkiquestUpdater.channel().name.lowercase()}")
+            }
             appendLine("Server host = ${host ?: "not configured"}")
             appendLine("Signed in = $signedIn")
             appendLine("Device token present = $tokenPresent")
