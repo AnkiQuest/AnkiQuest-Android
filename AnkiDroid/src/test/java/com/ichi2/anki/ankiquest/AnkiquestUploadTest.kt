@@ -68,6 +68,10 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Volatile
     private var noticedConquests = JSONArray()
 
+    /** What the server names at `/api/capabilities`. */
+    @Volatile
+    private var features = emptyList<String>()
+
     private enum class ReplyOwner { CURRENT, CHANGED }
 
     @Volatile
@@ -108,10 +112,12 @@ class AnkiquestUploadTest : RobolectricTest() {
                 configureAccount("other", "second-token")
             }
             val answering = path.startsWith("/api/reply/")
+            val capabilities = path == "/api/capabilities"
             val response =
                 when {
                     settings -> deckSettings()
                     answering -> JSONObject().put("sent_to", "Hill")
+                    capabilities -> JSONObject().put("version", 1).put("features", JSONArray(features))
                     else -> profile()
                 }
             val bytes = response.toString().toByteArray(Charsets.UTF_8)
@@ -120,6 +126,7 @@ class AnkiquestUploadTest : RobolectricTest() {
                 when {
                     settings -> settingsStatus
                     answering -> replyStatus
+                    capabilities -> 200
                     else -> reviewStatus
                 }
             exchange.sendResponseHeaders(status, bytes.size.toLong())
@@ -433,6 +440,70 @@ class AnkiquestUploadTest : RobolectricTest() {
         }
 
     @Test
+    fun `a server that stores the button gets the whole history once`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+            val mark = uploadedIds().single()
+            val old = mark - 30 * DAY_MS
+            insertReview(old)
+            assertEquals(AnkiquestEaseResend.State.PENDING, easeResend(), "the first upload went to a server without the button")
+            requests.clear()
+            features = listOf(AnkiquestEaseResend.FEATURE)
+
+            Ankiquest.uploadAfterSync()
+
+            val resend = reviewUploads().single { old in ids(it) }
+            assertEquals(listOf(old, mark), ids(resend))
+            assertTrue(resend.getBoolean("silent"), "a resend announces nothing")
+            val reviews = resend.getJSONArray("reviews")
+            assertTrue((0 until reviews.length()).all { reviews.getJSONObject(it).has("ease") })
+            assertEquals(AnkiquestEaseResend.State.DONE, easeResend())
+            assertEquals(mark, AnkiDroidApp.sharedPrefs().getLong("$PREF_LEGACY_MARK:$url/cerro", 0), "the mark stays")
+            requests.clear()
+
+            Ankiquest.uploadAfterSync()
+            assertTrue(reviewUploads().none { old in ids(it) }, "the history is not sent a second time")
+        }
+
+    @Test
+    fun `a server without the button keeps the resend owed`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+            val old = uploadedIds().single() - 30 * DAY_MS
+            insertReview(old)
+
+            Ankiquest.uploadAfterSync()
+
+            assertTrue(reviewUploads().none { old in ids(it) })
+            assertEquals(AnkiquestEaseResend.State.PENDING, easeResend())
+        }
+
+    @Test
+    fun `an upload after each answer does not ask the server for the resend`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+            requests.clear()
+            addBasicNote("second")
+            col.sched.answerCard(col.sched.card!!, Rating.GOOD)
+
+            Ankiquest.uploadPending()
+
+            assertTrue(requests.none { it.path == "/api/capabilities" })
+            assertEquals(AnkiquestEaseResend.State.PENDING, easeResend())
+        }
+
+    @Test
+    fun `a first upload to a server that stores the button needs no resend`() =
+        runBlocking {
+            features = listOf(AnkiquestEaseResend.FEATURE)
+
+            Ankiquest.uploadPending()
+
+            assertEquals(1, reviewUploads().size, "the first upload is the only pass")
+            assertEquals(AnkiquestEaseResend.State.NOT_NEEDED, easeResend())
+        }
+
+    @Test
     fun `a review still in the collection is never deleted from the server`() =
         runBlocking {
             Ankiquest.uploadPending()
@@ -689,6 +760,17 @@ class AnkiquestUploadTest : RobolectricTest() {
             cid,
         )
     }
+
+    private fun reviewUploads(user: String = "cerro"): List<JSONObject> =
+        requests.filter { it.method == "POST" && it.path == "/api/reviews/$user" }.map { it.body!! }
+
+    private fun ids(upload: JSONObject): List<Long> {
+        val reviews = upload.getJSONArray("reviews")
+        return (0 until reviews.length()).map { reviews.getJSONObject(it).getLong("id") }
+    }
+
+    private fun easeResend(): AnkiquestEaseResend.State =
+        AnkiquestEaseResend.of(AnkiDroidApp.sharedPrefs().getString(Ankiquest.easeResendKey("$url/cerro"), null))
 
     private fun reviewUpload(user: String = "cerro"): JSONObject =
         requests.single { it.method == "POST" && it.path == "/api/reviews/$user" }.body!!
