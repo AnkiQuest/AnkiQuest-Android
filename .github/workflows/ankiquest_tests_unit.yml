@@ -214,6 +214,20 @@ jobs:
         if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''
         run: python3 .github/report_test_failures.py . --pattern "build/test-results/**/TEST-*.xml" --title "Unit test failures"
 
+      - name: Build widget review APK
+        if: runner.os == 'Linux' && matrix.iteration == 1
+        run: ./gradlew :AnkiDroid:assemblePlayDebug --daemon
+
+      - name: Upload widget review APK and evidence
+        if: runner.os == 'Linux' && matrix.iteration == 1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: upstream-widget-review
+          if-no-files-found: error
+          path: |
+            AnkiDroid/build/outputs/apk/play/debug/*.apk
+            review-evidence/widget/
+
       - name: Store Logcat as Artifact
         # cancelled() handles test timeouts
         # remove when test timeouts cause a failure()

@@ -1,0 +1,52 @@
+{
+    "source_commit": "963ea753848d6dce555e3f9bf34ed8fe242347ae",
+    "base_commit": "199928962531217912562ccfc2ec8c3c8399243a",
+    "environment": "Ubuntu 24.04 on WSL2, JetBrains Runtime 21.0.11+10-b1163.125",
+    "layout_tests": {
+        "before_resource_fix": {
+            "expected_failures": 10,
+            "tests": 10
+        },
+        "after_all_fixes": {
+            "errors": 0,
+            "skipped": 0,
+            "tests": 12,
+            "failures": 0
+        },
+        "before_touch_target_fix": {
+            "source_commit": "263f0cb164625887f44776f94cb32aa6d63942fb",
+            "tests": 11,
+            "expected_failures": 1,
+            "failure": "compact widget offers a full-size study target: study target is smaller than 48dp"
+        },
+        "before_clickable_state_fix": {
+            "source_commit": "cdf296e81206bad33159b186614b347d3ecc2b73",
+            "tests": 11,
+            "expected_failures": 1,
+            "failure": "widget must expose one full-size click target: expected 1 but was 2"
+        }
+    },
+    "related_tests_after_fix": {
+        "configuration": 9,
+        "updates": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+    },
+    "screenshot_tests": {
+        "comparison_pairs": 26,
+        "after": 26,
+        "failures": 0,
+        "before": 26
+    },
+    "screenshots": "Actual Roborazzi renders with the same test data before and after the resource changes at 263f0cb164625887f44776f94cb32aa6d63942fb. The later touch-target fix changes click actions and adds a layout alias; the inflated layouts and colors are identical.",
+    "older_android": "Pre-O code path simulated in a newer Robolectric runtime; not an API 24 device run.",
+    "google_accessibility_scanner": {
+        "device": "vivo X300 Pro, Android 16/API 36",
+        "version": "2.5.1.896851528 (331)",
+        "before_touch_target_fix": "Actual light/dark scans show no widget text-contrast warning. The larger widget's outer fixed-size container triggers a Text scaling suggestion although text fits at 130% and 200%. The compact 2x1 widget at 200% triggers a 25dp deck-name touch-target warning.",
+        "after_touch_target_fix": "Final APK rescan pending. All 23 targeted tests pass, including actual clickable nodes, study destination, and updating a previously placed widget with AppWidgetHostView.",
+        "privacy": "Full phone captures include incidental launcher data and are kept locally, not published."
+    },
+    "assisted_by": "Codex (GPT-6)"
+}
