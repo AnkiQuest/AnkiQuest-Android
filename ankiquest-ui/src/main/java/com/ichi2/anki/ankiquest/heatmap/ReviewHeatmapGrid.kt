@@ -168,7 +168,7 @@ class ReviewHeatmapGrid
             }
         }
 
-        internal fun cellBounds(index: Int): RectF = dayBounds(index).apply { inset(2 * density, 2 * density) }
+        fun cellBounds(index: Int): RectF = dayBounds(index).apply { inset(2 * density, 2 * density) }
 
         /** The whole pitch is clickable, including the visual gap between squares. */
         private fun dayBounds(index: Int): RectF {

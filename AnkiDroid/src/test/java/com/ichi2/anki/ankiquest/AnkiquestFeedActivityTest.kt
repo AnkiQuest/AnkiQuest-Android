@@ -39,7 +39,7 @@ import com.ichi2.anki.R as AnkiDroidR
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
 class AnkiquestFeedActivityTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "member", "secret")
-    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
 
     @Before
     fun prepareFeed() {
@@ -299,7 +299,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     @Test
     fun `an older server's list has no filters or read state`() {
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
-            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedTest.LEGACY))
+            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedSamples.LEGACY))
         val feed = launch()
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_legacy)))
         assertFalse(feed.hasText(feed.getString(R.string.aq_feed_messages)))

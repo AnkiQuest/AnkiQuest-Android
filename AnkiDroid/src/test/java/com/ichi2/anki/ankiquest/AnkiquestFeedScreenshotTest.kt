@@ -45,7 +45,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
         mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { HomeAccount.current(any()) } returns identity
-        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         every { AnkiquestShare.picture(any()) } returns
             createBitmap(120, 120).apply { eraseColor(Color.rgb(36, 95, 171)) }
     }
@@ -73,7 +73,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } coAnswers {
             withContext(Dispatchers.IO) {
                 delay(500)
-                AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+                AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
             }
         }
         captureFeed(prefix = "activity_feed_delayed")

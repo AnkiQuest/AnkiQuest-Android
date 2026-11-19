@@ -249,49 +249,13 @@ class AnkiquestFeedTest {
 
     companion object {
         /** The documented page shape (docs/mobile-api.md), with rows as the server's examples record them. */
-        val PAGE =
-            """
-            {
-              "items": [
-                {"id": 42, "title": "Challenge invitation", "body": "alice invited you to Study together.", "day": 20718,
-                 "created_at": 1793183600, "sender": "alice", "replied": false, "kind": "challenge_invite", "read_at": null,
-                 "challenge_id": 8, "route": "/community#challenge-8", "action_required": true},
-                {"action_required": false, "body": "7 day streak!: “A week in a row.”", "challenge_id": null, "created_at": 1793183400,
-                 "day": 20754, "id": 6, "image": "https://anki.example.test/w/example-link-2.png", "kind": "share", "reacted": true,
-                 "read_at": null, "replied": false, "route": null, "sender": "cerro", "title": "🎉 Cerro shared a win",
-                 "topic": "streak", "win": 2},
-                {"action_required": false, "body": "“Daily goal reached!”", "challenge_id": null, "created_at": 1793183400,
-                 "day": 20754, "id": 8, "kind": "reaction", "read_at": null, "replied": false, "route": null, "sender": "cerro",
-                 "title": "🎉 Cerro cheered", "win": 1},
-                {"id": 9, "title": "Cerro replied", "body": "Thanks!", "day": 20754, "created_at": 1793180000, "sender": "cerro",
-                 "replied": true, "kind": "reply", "read_at": 1793183500, "challenge_id": null, "route": null,
-                 "action_required": false, "reply_to": {"title": "Deck complete", "body": "Spanish is done for today."}}
-              ],
-              "attention": [
-                {"id": 42, "title": "Challenge invitation", "body": "alice invited you to Study together.", "day": 20718,
-                 "created_at": 1793183600, "sender": "alice", "replied": false, "kind": "challenge_invite", "read_at": null,
-                 "challenge_id": 8, "route": "/community#challenge-8", "action_required": true}
-              ],
-              "unread_count": 3,
-              "action_count": 1,
-              "latest_id": 42,
-              "retention_days": 90,
-              "window_days": 90,
-              "next_before": 5
-            }
-            """.trimIndent()
+        val PAGE = sample("feed_page.json")
 
         /** The older oldest-first notification array. */
-        val LEGACY =
-            """
-            [
-              {"id": 1, "title": "Daily goal reached!", "body": "5 cards today.", "created_at": 1793183400, "sender": "",
-               "replied": false, "kind": "celebration", "win": 1},
-              {"id": 6, "title": "🎉 Cerro shared a win", "body": "7 day streak!", "created_at": 1793183400, "sender": "cerro",
-               "replied": false, "kind": "share"},
-              {"id": 8, "title": "🎉 Cerro cheered", "body": "“Daily goal reached!”", "created_at": 1793183400, "sender": "cerro",
-               "replied": false, "kind": "reaction"}
-            ]
-            """.trimIndent()
+        val LEGACY = sample("feed_legacy.json")
+
+        /** A sample in `ankiquest-samples`, which the app's tests read too. */
+        private fun sample(name: String): String =
+            checkNotNull(AnkiquestFeedTest::class.java.classLoader?.getResource("ankiquest-samples/$name")).readText()
     }
 }
