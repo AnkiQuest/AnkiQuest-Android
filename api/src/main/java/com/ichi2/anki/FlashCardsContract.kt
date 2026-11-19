@@ -111,6 +111,23 @@ public object FlashCardsContract {
     public const val READ_WRITE_PERMISSION: String = "${BuildConfig.ANKI_PACKAGE_NAME}.permission.READ_WRITE_DATABASE"
 
     /**
+     * Intent action declared by the provider of every app offering this contract
+     * (AnkiDroid, its parallel builds and forks), so clients can find them whatever their package name.
+     *
+     * Providers declare it as:
+     * ```
+     * <provider ...>
+     *     <intent-filter>
+     *         <action android:name="com.ichi2.anki.action.FLASHCARDS_PROVIDER" />
+     *     </intent-filter>
+     * </provider>
+     * ```
+     *
+     * See [com.ichi2.anki.api.AddContentApi.getProviders]
+     */
+    public const val PROVIDER_INTERFACE: String = "com.ichi2.anki.action.FLASHCARDS_PROVIDER"
+
+    /**
      * A content:// style uri to the authority for the flash card provider
      *
      * This uri assumes the default release-build package name.
