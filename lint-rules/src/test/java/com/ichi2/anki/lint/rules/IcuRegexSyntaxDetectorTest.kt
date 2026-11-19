@@ -152,6 +152,86 @@ class IcuRegexSyntaxDetectorTest {
     }
 
     @Test
+    fun `ignores the text of literal patterns`() {
+        lintFiles(
+            kotlin(
+                """
+                package test
+
+                import java.util.regex.Pattern
+
+                fun compile() {
+                    Pattern.compile("(?U)}", Pattern.LITERAL)
+                    Pattern.compile("(?U)}", Pattern.LITERAL or Pattern.CASE_INSENSITIVE)
+                    Regex("(?U)}", RegexOption.LITERAL)
+                    Regex("(?U)}", setOf(RegexOption.IGNORE_CASE, RegexOption.LITERAL))
+                    "(?U)}".toRegex(RegexOption.LITERAL)
+                    "(?U)}".toPattern(Pattern.LITERAL)
+                }
+                """,
+            ).indented(),
+            java(
+                """
+                package test;
+
+                import java.util.regex.Pattern;
+
+                class Literal {
+                    Pattern compile() {
+                        return Pattern.compile("(?U)}", Pattern.LITERAL);
+                    }
+                }
+                """,
+            ).indented(),
+        ).expectClean()
+    }
+
+    @Test
+    fun `ignores comments in comments mode`() {
+        lintFiles(
+            kotlin(
+                """
+                package test
+
+                import java.util.regex.Pattern
+
+                fun compile() {
+                    Regex("a # (?U) and } are a comment\nb", RegexOption.COMMENTS)
+                    Regex("a # (?U)}", setOf(RegexOption.COMMENTS))
+                    Pattern.compile("a # (?U)}", Pattern.COMMENTS)
+                    "a # (?U)}".toRegex(RegexOption.COMMENTS)
+                    Regex("(?x)a # (?U)}")
+                    Regex("(?ix)a # (?U)}")
+                    Regex("a\\# b{2}", RegexOption.COMMENTS)
+                }
+                """,
+            ).indented(),
+        ).expectClean()
+    }
+
+    @Test
+    fun `reports patterns outside comments and literal mode`() {
+        lintFiles(
+            kotlin(
+                """
+                package test
+
+                import java.util.regex.Pattern
+
+                fun compile() {
+                    Regex("a # comment\n(?U)b", RegexOption.COMMENTS)
+                    Regex("a\\# (?U)b", RegexOption.COMMENTS)
+                    Regex("(?x)a(?-x) # (?U)}")
+                    Regex("a # (?U)}")
+                    Regex("(?U)}", RegexOption.IGNORE_CASE)
+                    Pattern.compile("(?U)}", Pattern.CASE_INSENSITIVE)
+                }
+                """,
+            ).indented(),
+        ).expectErrorCount(6)
+    }
+
+    @Test
     fun `ignores patterns that are not constant`() {
         lintFiles(
             kotlin(
