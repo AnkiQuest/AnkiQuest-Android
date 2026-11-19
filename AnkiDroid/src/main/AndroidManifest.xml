@@ -48,7 +48,7 @@
                 android:protectionLevel="dangerous"
                 />
     <!-- The API library declares the providers its clients talk to. AnkiDroid is a provider, not a client -->
-    <uses-permission android:name="dev.hilll.anki.permission.READ_WRITE_DATABASE" tools:node="remove" />
+    <uses-permission android:name="org.ankiquest.anki.permission.READ_WRITE_DATABASE" tools:node="remove" />
 
     <supports-screens
         android:anyDensity="true"

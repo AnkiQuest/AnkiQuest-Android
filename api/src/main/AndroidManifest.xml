@@ -8,15 +8,15 @@
     <!-- AnkiDroid -->
     <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE"/>
     <!-- AnkiQuest -->
-    <uses-permission android:name="dev.hilll.anki.permission.READ_WRITE_DATABASE"/>
+    <uses-permission android:name="org.ankiquest.anki.permission.READ_WRITE_DATABASE"/>
 
     <queries>
         <!-- AnkiDroid -->
         <package android:name="com.ichi2.anki" />
         <provider android:authorities="com.ichi2.anki.flashcards" />
         <!-- AnkiQuest -->
-        <package android:name="dev.hilll.anki" />
-        <provider android:authorities="dev.hilll.anki.flashcards" />
+        <package android:name="org.ankiquest.anki" />
+        <provider android:authorities="org.ankiquest.anki.flashcards" />
     </queries>
 
     <application android:allowBackup="true" android:label="@string/app_name">
