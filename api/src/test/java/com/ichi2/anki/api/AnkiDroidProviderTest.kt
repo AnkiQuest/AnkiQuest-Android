@@ -275,6 +275,45 @@ internal object AnkiDroidPackages {
             ),
         )
 
+    /**
+     * AnkiQuest's current release certificate, from the v3 signature of AnkiQuest.apk in the
+     * quest-23 release on GitHub. SHA-256: B397A61ECFAF0FE354DA611772515E683CCB6FD0E952D477B8B3BCA49E6C490D
+     */
+    val ANKIQUEST_RELEASE =
+        Signature(
+            Base64.getMimeDecoder().decode(
+                """
+                MIIE8DCCAtigAwIBAgIJAML0qH7KwcdSMA0GCSqGSIb3DQEBDAUAMCUxDzANBgNV
+                BAoTBmZsb2F0MzESMBAGA1UEAxMJQW5raVF1ZXN0MCAXDTI2MDkyNDA2MjQxM1oY
+                DzIxMjYwODMxMDYyNDEzWjAlMQ8wDQYDVQQKEwZmbG9hdDMxEjAQBgNVBAMTCUFu
+                a2lRdWVzdDCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAMkAX1Y4QuzJ
+                xZOt7xqfoZFkQRQRSC2ejwKab5kN/GHhOhQ+989fyz4dWvdzewLBt42iY9QboS5i
+                vokSenBjUgq4GVJMgYTuRZ93YpjemlzyGBtyL/Jw37ErrVgeGhLo/iNVXoXzhmz8
+                aJhckkwy81yv6q2tEcWGH4Fr90b4cac/w/5Vl2fAQDgH6ihT4wbYh3ZCm2QXzJ5u
+                2R0/lK1pWH3go9iKHN59Bcl662Nf9rajzmPxrKb1yIxJIRR7EHikFJO4Ph4OBZvp
+                KYwYgrfjdfAPVivjnH4vLqJ7YYF2qp5ygnApgjqc/m3czH6XCJO6/wNI1ZiXrg64
+                U3v75yppPggnfztoEeJbZH7aeVtU/vuAu1jfxn1y8i+Z/eMZzg5CQWXugeK45LqT
+                Hcb0mt5Sts2Lr2boO4T09Xd0uu1L8mI4UnYxqGhR2BHvca/K4HqecmP8qlFJKB2n
+                QUCFwwUOUQ5CJTEISwxUXnQ6324CSnK26hwrdG5K6uRheAovNDSTidOqDoOmtWh8
+                rE9fPwCVzfa+VJR8FqW8iTqNVvHLkBkh1izq/1v7frN6i7Z/d8lv1iFnbgrYBrAm
+                wc22TCNZ8ZeZw5BQgDEm8/Ih3eItpZD2GyHku0weANyMLcccFgSd1WtbvUpGjNIC
+                Qcme4vBdH9IFg5sWTwnupvrR0raQvsA/AgMBAAGjITAfMB0GA1UdDgQWBBTx1Dq+
+                9YFV7EquJR7/fUeKOtmVcDANBgkqhkiG9w0BAQwFAAOCAgEAwfOhaCtcv7SMSYL0
+                K+HeVPXlnBtl0haKBQSF12hW+GZfqoOko8bJjxTxckoS1J8husvWQHEn+Q7rtlxi
+                Q933MbuRh6ZNns1gK+GSjNn3UgOI4bbxBK/wxv2U5GxD8Yo3rz8DlkQVucGe84kQ
+                6B8B4z25hyxRyOa7mPbr45k7UTYjZiEXWLEcCzQBdXjOlb6X2UuFCCUulmIOqouu
+                cjbQYY8ap7BpOgXrnORCDX92KWnPdTuE1rYtcXZX/IzsxZeXpZ0DT0BObJFSEgqf
+                8JKzCcHHeX5Y7lnTK/QTwGo2A+09HLf6MZ9p68Dln1sFCoiWOQZygWsnitYAYAN3
+                AE7na8RfD3pcfPU/8OpPbUiIvfxBwgVsXhLA3x7jsuoXXAAdNwv3LpFfwrsE5F3r
+                h6k/wjVYIIkq1Z5wqq2iw44Pnir6Ca/Lyhdd7bcIvdS+8pULQC5kGVTaQ5VqtD2G
+                7cV+Jef9Eh5fCuq8RBtfwIU3xLJ+02EOrjIq6aPGjOwNeqjgb+eojGfMOdJdplAm
+                hU5sPs9xGXaEy7LngHG9u4NhJnxquDnVTSMbOHUlM2uAJ6WizTTi1U8sC0X3ACnu
+                3aCG4Vu5JQ8x4OJ7fbHwGUzPmrGD83tvcwirZwMqkgRN1Hwrux0mkoUkH79JHx19
+                6Osnkftrax+tSq4o6V4n2flcSOU=
+                """.trimIndent(),
+            ),
+        )
+
     @Suppress("DEPRECATION") // signatures, set only before API 28
     fun install(
         packageName: String,

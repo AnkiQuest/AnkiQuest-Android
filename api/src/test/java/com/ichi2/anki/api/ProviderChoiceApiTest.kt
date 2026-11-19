@@ -59,10 +59,7 @@ internal class RecordingProvider : ContentProvider() {
     ): Int = 0
 }
 
-/**
- * [AddContentApi] with the listed fork [KnownProviders.ANKIQUEST]. Its certificate is not filled in yet,
- * so the client is debuggable, which trusts any certificate of the listed package.
- */
+/** [AddContentApi] with the listed fork [KnownProviders.ANKIQUEST], signed with its release key */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.S_V2])
 internal class ProviderChoiceApiTest {
@@ -70,8 +67,9 @@ internal class ProviderChoiceApiTest {
 
     @Before
     fun setUp() {
+        // A released client, which trusts only the listed certificates
         val info = context.applicationInfo
-        info.flags = info.flags or ApplicationInfo.FLAG_DEBUGGABLE
+        info.flags = info.flags and ApplicationInfo.FLAG_DEBUGGABLE.inv()
     }
 
     @Test
@@ -96,6 +94,16 @@ internal class ProviderChoiceApiTest {
         // Every URI is built from the fork's authority
         assertNull(AddContentApi(context).deckList)
         assertEquals(listOf(FORK.authority), recorder.queried.map { it.authority })
+    }
+
+    @Test
+    fun forkWithUnknownKeyIsRejected() {
+        installFork(Signature(byteArrayOf(1, 2, 3)))
+
+        ProviderSelection(context).choose(FORK)
+
+        assertEquals(emptyList(), AddContentApi.getProviders(context))
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
     }
 
     @Test
@@ -128,10 +136,10 @@ internal class ProviderChoiceApiTest {
         assertEquals(ProviderChooserActivity::class.java.name, shadowOf(context).nextStartedActivity?.component?.className)
     }
 
-    private fun installFork() {
+    private fun installFork(key: Signature = AnkiDroidPackages.ANKIQUEST_RELEASE) {
         AnkiDroidPackages.install(
             FORK.packageName,
-            Signing.Current(Signature(byteArrayOf(1, 2, 3))),
+            Signing.Current(key),
             Bundle().apply { putInt("com.ichi2.anki.provider.spec", FORK_SPEC) },
             authority = FORK.authority,
         )

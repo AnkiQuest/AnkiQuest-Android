@@ -27,10 +27,17 @@ internal object KnownProviders {
             packageName = "org.ankiquest.anki",
             authority = "org.ankiquest.anki.flashcards",
             permission = "org.ankiquest.anki.permission.READ_WRITE_DATABASE",
-            // TODO(hill): SHA-256 digest of AnkiQuest's release signing certificate, as upper-case hex
-            //  (`apksigner verify --print-certs`). Until it is filled in, AnkiQuest is never trusted,
-            //  except by debuggable clients like any other build.
-            certificates = emptySet(),
+            // Read from the APK signing block of AnkiQuest.apk in the quest-23 release on
+            // https://github.com/AnkiQuest/AnkiQuest-Android/releases. Its v3 signature rotates
+            // the key: API 28 and up see both certificates in the signing history, older
+            // versions only the first.
+            certificates =
+                setOf(
+                    // The first key, in the v2 signature and at the start of the v3 lineage
+                    "0A8EBEEA7A7D04F21A737DEBEDFB0B2EC439C84936E4BB69DC7F14894F0BE42A",
+                    // The current key, in the v3 signature: CN=AnkiQuest, O=float3
+                    "B397A61ECFAF0FE354DA611772515E683CCB6FD0E952D477B8B3BCA49E6C490D",
+                ),
         )
 
     /** AnkiDroid first */
