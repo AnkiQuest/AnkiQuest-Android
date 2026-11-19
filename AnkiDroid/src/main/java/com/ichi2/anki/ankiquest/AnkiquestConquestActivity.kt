@@ -271,7 +271,7 @@ class AnkiquestConquestActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiqu
                     }
                 }.apply {
                     isEnabled = !busy
-                    setIconResource(R.drawable.ic_mode_edit_white)
+                    setIconResource(R.drawable.ankiquest_edit)
                     iconTint = textColors
                 }
         }
