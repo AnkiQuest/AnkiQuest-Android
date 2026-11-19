@@ -15,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
@@ -56,6 +57,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     /** What the player's server supports, which decides how inviting works and whether Message shows. */
     private var features: Set<String> = emptySet()
     private var changing = false
+
+    /** Message or the group picker, opened for [account]; closed when the account changes. */
+    private var dialog: AlertDialog? = null
 
     @StringRes private var failure: Int? = null
     private var generation = 0
@@ -121,6 +125,8 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         sections.refresh()
         if (current?.scope != account?.scope) {
             undo.clear()
+            dialog?.dismiss()
+            dialog = null
             account = current
             page = null
             social = null
@@ -206,12 +212,20 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         }
     }
 
-    /** Runs one change from the profile, then reads the profile and its controls again. */
+    /** Whether [opened] is still the account shown and the one signed in. */
+    private fun owns(opened: HomeAccount): Boolean = account?.scope == opened.scope && AnkiquestHomeData.account()?.scope == opened.scope
+
+    /**
+     * Runs one change from the profile as [owner], then reads the profile and its controls again.
+     * Nothing runs once [owner] is no longer the account shown, as for a dialog opened before.
+     */
     private fun change(
+        owner: HomeAccount? = account,
         after: (() -> Unit)? = null,
         work: suspend (HomeAccount) -> Unit,
     ) {
-        val current = account ?: return
+        val current = owner ?: return
+        if (!owns(current)) return
         if (changing) return
         changing = true
         render()
@@ -334,28 +348,35 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         views
             .button(content, getString(R.string.aq_profile_invite)) {
                 val current = account ?: return@button
-                AnkiquestGroupInvite.pick(this, groups) { group ->
-                    when (mode) {
-                        AnkiquestSocial.InviteMode.LINK -> AnkiquestGroupInvite.share(this, current, group)
-                        AnkiquestSocial.InviteMode.DIRECT -> invite(group, p)
+                dialog =
+                    AnkiquestGroupInvite.pick(this, groups) { group ->
+                        // A group picked after the account changed belongs to the old account.
+                        if (!owns(current)) {
+                            return@pick
+                        }
+                        when (mode) {
+                            AnkiquestSocial.InviteMode.LINK -> AnkiquestGroupInvite.share(this, current, group)
+                            AnkiquestSocial.InviteMode.DIRECT -> invite(current, group, p)
+                        }
                     }
-                }
             }.isEnabled = !changing
     }
 
-    /** Has the server invite the player shown to [group], and says so once it did. */
+    /** Has the server invite the player shown to [group] as [owner], and says so once it did. */
     private fun invite(
+        owner: HomeAccount,
         group: AnkiquestSocial.Group,
         p: AnkiquestBoards.Profile,
     ) {
         val sent = getString(R.string.aq_profile_invite_sent, p.display)
-        change(after = { showThemedToast(this, sent, shortLength = true) }) {
+        change(owner, after = { showThemedToast(this, sent, shortLength = true) }) {
             AnkiquestSocial.change(it, AnkiquestSocial.Change.Invite(group.id, p.user))
         }
     }
 
-    /** Asks for a message to the friend shown and sends it. */
+    /** Asks for a message to the friend shown and sends it as the account that asked. */
     private fun askMessage(p: AnkiquestBoards.Profile) {
+        val opened = account ?: return
         val field =
             EditText(this).apply {
                 hint = getString(R.string.ankiquest_reply_hint)
@@ -368,20 +389,22 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
                 addView(field)
             }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.aq_profile_message_to, p.display))
-            .setView(frame)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.aq_feed_send) { _, _ ->
-                val text = AnkiquestReply.clean(field.text.toString())
-                if (text.isNotEmpty()) {
-                    message(p, text)
-                }
-            }.show()
+        dialog =
+            MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.aq_profile_message_to, p.display))
+                .setView(frame)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.aq_feed_send) { _, _ ->
+                    val text = AnkiquestReply.clean(field.text.toString())
+                    if (text.isNotEmpty()) {
+                        message(opened, p, text)
+                    }
+                }.show()
         field.requestFocus()
     }
 
     private fun message(
+        owner: HomeAccount,
         p: AnkiquestBoards.Profile,
         text: String,
     ) {
@@ -392,7 +415,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 AnkiquestMessages.Outcome.DAILY_LIMIT -> getString(R.string.aq_profile_message_limit)
             }
         }
-        change(after = { showThemedToast(this, line(), shortLength = false) }) {
+        change(owner, after = { showThemedToast(this, line(), shortLength = false) }) {
             outcome = AnkiquestMessages.send(it, p.user, text)
         }
     }

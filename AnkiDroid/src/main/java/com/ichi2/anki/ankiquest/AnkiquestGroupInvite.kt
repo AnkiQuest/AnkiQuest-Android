@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.Intent
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.R
 
@@ -27,22 +28,25 @@ internal object AnkiquestGroupInvite {
         context.startActivity(Intent.createChooser(send, context.getString(R.string.aq_friends_share_link)))
     }
 
-    /** Hands the only group in [groups] to [chosen] at once, or asks which one first. */
+    /**
+     * Hands the only group in [groups] to [chosen] at once, or asks which one first and returns
+     * that dialog, so the caller can close it.
+     */
     fun pick(
         context: Context,
         groups: List<AnkiquestSocial.Group>,
         chosen: (AnkiquestSocial.Group) -> Unit,
-    ) {
+    ): AlertDialog? {
         val only = groups.singleOrNull()
         if (only != null) {
             chosen(only)
-            return
+            return null
         }
         if (groups.isEmpty()) {
-            return
+            return null
         }
 
-        MaterialAlertDialogBuilder(context)
+        return MaterialAlertDialogBuilder(context)
             .setTitle(R.string.aq_profile_invite_pick)
             .setItems(groups.map { it.name }.toTypedArray()) { _, which -> chosen(groups[which]) }
             .setNegativeButton(android.R.string.cancel, null)
