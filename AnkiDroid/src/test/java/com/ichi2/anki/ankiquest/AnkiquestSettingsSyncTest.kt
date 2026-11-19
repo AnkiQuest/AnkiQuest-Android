@@ -18,7 +18,6 @@ import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -27,7 +26,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -44,9 +42,9 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         JSONObject(
             checkNotNull(javaClass.classLoader?.getResource(FIXTURE)) { "missing $FIXTURE" }.readText(),
         )
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private val clock = MockTime(NOW)
-    private val requests = CopyOnWriteArrayList<String>()
+    private val requests get() = server.requests.map { "${it.method} ${it.path}" }
     private val sent = CopyOnWriteArrayList<JSONObject>()
 
     /** What the fake server keeps: key -> {value, updated_at}. */
@@ -60,40 +58,17 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
     /** Runs while the server answers a capability request. */
     @Volatile private var duringCapabilities: () -> Unit = {}
 
+    /** How the fake server answers; [keep] unless a test replaces it. */
+    @Volatile private var answer: (TestRequest) -> TestResponse = ::keep
+
     @Before
     fun prepare() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.resetWith(clock)
         AnkiquestCapabilities.forgetMemory()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.path
-            requests += "${exchange.requestMethod} $path"
-            val body = exchange.requestBody.bufferedReader().use { it.readText() }
-            val answer =
-                when {
-                    path == "/api/capabilities" -> {
-                        duringCapabilities()
-                        """{"version":1,"features":$features}"""
-                    }
-                    exchange.requestMethod == "GET" -> {
-                        duringRead()
-                        JSONObject().put("settings", stored).toString()
-                    }
-                    else -> {
-                        val incoming = JSONObject(body).getJSONObject("settings")
-                        sent += incoming
-                        store(incoming)
-                        JSONObject().put("settings", stored).toString()
-                    }
-                }.toByteArray()
-            exchange.sendResponseHeaders(200, answer.size.toLong())
-            exchange.responseBody.use { it.write(answer) }
-            exchange.close()
-        }
-        server.start()
+        server = AnkiquestTestServer { answer(it) }
         targetContext.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "cerro")
             putString(Ankiquest.PREF_TOKEN, "secret")
         }
@@ -101,9 +76,31 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
 
     @After
     fun stop() {
-        runCatching { server.stop(0) }
+        runCatching { server.close() }
         AnkiquestCapabilities.forgetMemory()
         SharedPreferencesTestHook.override = null
+    }
+
+    /** The fake server: capabilities, then the stored settings, merging what is sent. */
+    private fun keep(request: TestRequest): TestResponse {
+        val answer =
+            when {
+                request.path == "/api/capabilities" -> {
+                    duringCapabilities()
+                    """{"version":1,"features":$features}"""
+                }
+                request.method == "GET" -> {
+                    duringRead()
+                    JSONObject().put("settings", stored).toString()
+                }
+                else -> {
+                    val incoming = JSONObject(request.body).getJSONObject("settings")
+                    sent += incoming
+                    store(incoming)
+                    JSONObject().put("settings", stored).toString()
+                }
+            }
+        return TestResponse(bytes = answer.toByteArray())
     }
 
     /** The server's rule: per key, the later time wins and a tie keeps the stored value. */
@@ -237,18 +234,14 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             prefs().edit(commit = true) { putBoolean(AnkiquestNotifier.PREF_RANK, false) }
             assertTrue(AnkiquestSettingsSync.note(Setting.NOTIFY_RANK))
             // The server stores a future time as its own now.
-            server.removeContext("/")
-            server.createContext("/") { exchange ->
-                requests += "${exchange.requestMethod} ${exchange.requestURI.path}"
-                val answer =
+            answer = { request ->
+                val body =
                     when {
-                        exchange.requestURI.path == "/api/capabilities" -> """{"version":1,"features":["settings_sync"]}"""
-                        exchange.requestMethod == "GET" -> """{"settings":{}}"""
+                        request.path == "/api/capabilities" -> """{"version":1,"features":["settings_sync"]}"""
+                        request.method == "GET" -> """{"settings":{}}"""
                         else -> """{"settings":{"notify_rank":{"value":false,"updated_at":${NOW - 1_000}}}}"""
-                    }.toByteArray()
-                exchange.sendResponseHeaders(200, answer.size.toLong())
-                exchange.responseBody.use { it.write(answer) }
-                exchange.close()
+                    }
+                TestResponse(bytes = body.toByteArray())
             }
 
             AnkiquestSettingsSync.sync(targetContext, Trigger.START)
