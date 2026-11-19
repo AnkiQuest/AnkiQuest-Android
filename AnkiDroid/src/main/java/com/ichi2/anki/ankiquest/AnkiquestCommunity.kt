@@ -349,8 +349,6 @@ internal object AnkiquestCommunity {
 
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
-    private const val DAY_MS = 86_400_000L
-
     private fun JSONObject.text(key: String): String = if (isNull(key)) "" else optString(key)
 
     private suspend fun call(

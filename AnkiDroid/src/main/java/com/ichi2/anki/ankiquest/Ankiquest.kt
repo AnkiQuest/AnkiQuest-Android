@@ -74,9 +74,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     internal const val MAX_DELETED = 100
     private const val BASELINE_MAX_AGE_MS = 10 * 60 * 1000L
     private const val RESUME_UPLOAD_INTERVAL_MS = 60 * 1000L
-    private const val RESYNC_WINDOW_MS = 7 * 24 * 60 * 60 * 1000L
-    private const val DAILY_RESYNC_MS = 24 * 60 * 60 * 1000L
-    private const val UNDO_WINDOW_MS = 2 * 24 * 60 * 60 * 1000L
+    private const val RESYNC_WINDOW_MS = 7 * DAY_MS
+    private const val DAILY_RESYNC_MS = DAY_MS
+    private const val UNDO_WINDOW_MS = 2 * DAY_MS
     private const val BANNER_MS = 1800L
     private const val BANNER_LONG_MS = 3500L
     private const val BANNER_TAG = "ankiquest_banner"
@@ -282,15 +282,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     /** The server's address, for inviting people met outside the app. */
     fun serverUrl(): String? = HomeAccount.current()?.server
-
-    /** Streak protection is stored on the server; never infer it from a local default. */
-    suspend fun streakProtectionEnabled(): Boolean {
-        val account = authenticated()
-        return withContext(Dispatchers.IO) {
-            val request = AnkiquestApi.request(account, "api/streak-freezes/${account.encodedUser}").build()
-            AnkiquestApi.json(account, request).getBoolean("enabled")
-        }
-    }
 
     suspend fun setStreakProtection(enabled: Boolean): Boolean {
         val account = authenticated()
