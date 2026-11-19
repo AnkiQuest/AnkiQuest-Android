@@ -102,6 +102,15 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private var seenThrough: Pair<String, Long>? = null
 
     /**
+     * Forgets the application [init] received, as in a process where the app has not started, such
+     * as a Robolectric sandbox whose earlier tests used no AnkiDroidApp.
+     */
+    @VisibleForTesting
+    internal fun forgetApp() {
+        app = null
+    }
+
+    /**
      * Follows activities and collection changes. This singleton subscribes without a lifecycle owner,
      * so nothing takes it off the list: any earlier registration is dropped first, because a second
      * Application in the same process (every Robolectric test builds one) would subscribe it twice,
