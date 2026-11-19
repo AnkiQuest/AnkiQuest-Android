@@ -374,4 +374,16 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         AnkiquestUpdater.cleanStale(targetContext, installedCode = 100)
         assertFalse(apk.exists())
     }
+
+    @Test
+    fun `only an apk of this package is installed as an update`() {
+        val (apk, _) = downloads()
+        val own = targetContext.packageName
+        assertTrue(AnkiquestUpdater.isOwnApk(targetContext, apk) { own })
+
+        // The quest APK must not install next to an AnkiDroid-compatible build.
+        assertFalse(AnkiquestUpdater.isOwnApk(targetContext, apk) { "$own.quest" })
+        assertFalse(AnkiquestUpdater.isOwnApk(targetContext, apk) { null })
+        assertFalse(AnkiquestUpdater.isOwnApk(targetContext, apk))
+    }
 }

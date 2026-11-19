@@ -24,7 +24,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     permissions:
       contents: write
     steps:
@@ -75,7 +75,9 @@ jobs:
       # The full flavor for GitHub: one APK per ABI plus the universal AnkiQuest.apk, whose
       # name released self-updaters download. The ABI APKs follow upstream's split config and
       # version codes. The play flavor goes to Google Play as an app bundle, without the
-      # self-updater, since Play forbids apps updating themselves (#319).
+      # self-updater, since Play forbids apps updating themselves (#319). The AnkiDroid-compatible
+      # APK has no suffix, so it takes AnkiDroid's package and provider authority for apps that
+      # only talk to com.ichi2.anki; it replaces AnkiDroid and does not update itself (README).
       - name: Assemble
         env:
           RELEASE: ${{ steps.release.outputs.number }}
@@ -92,6 +94,10 @@ jobs:
             cp "AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-$abi-release.apk" "AnkiQuest-$abi.apk"
           done
           cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab AnkiQuest.aab
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestPackage=ankidroid \
+            -PankiquestUpdates=none -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE" \
+            -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM"
+          cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk AnkiQuest-ankidroid-compatible.apk
 
       # APKs get the AnkiQuest key with a lineage from the fallback key, so installs signed with
       # either accept the update. The bundle is jar-signed with the AnkiQuest key as its upload
@@ -153,12 +159,17 @@ jobs:
               exit 1
             fi
           done
+          if [ "$(code_of AnkiQuest-ankidroid-compatible.apk)" -ne "$version_code" ]; then
+            echo "::error::AnkiQuest-ankidroid-compatible.apk does not have versionCode $version_code"
+            exit 1
+          fi
           echo "code=$version_code" >> "$GITHUB_OUTPUT"
 
       # The download list for the release notes and nightly.json, most common first.
       - name: Assets
         run: |
-          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab)
+          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk
+            AnkiQuest-ankidroid-compatible.apk AnkiQuest.aab)
           for file in "${files[@]}"; do
             jq -n --arg name "$file" --argjson size "$(stat -c %s "$file")" '{name: $name, size: $size}'
           done | jq -s . > assets.json
@@ -170,6 +181,7 @@ jobs:
             echo "- \`AnkiQuest.apk\`: every device. Pick this if unsure."
             echo "- \`AnkiQuest-armeabi-v7a.apk\`: older 32-bit phones."
             echo "- \`AnkiQuest-x86_64.apk\`, \`AnkiQuest-x86.apk\`: emulators and Chromebooks."
+            echo "- \`AnkiQuest-ankidroid-compatible.apk\`: replaces AnkiDroid, for apps that only work with AnkiDroid. Uninstall AnkiDroid first; does not update itself. See the README."
             echo "- \`AnkiQuest.aab\`: app bundle for Google Play, not for installing."
           } > downloads.md
 

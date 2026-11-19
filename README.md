@@ -66,6 +66,16 @@ In Obtainium, set "Filter APKs by regular expression" to `^AnkiQuest-arm64-v8a\.
 
 </div>
 
+### Apps that only work with AnkiDroid
+
+Some apps (Garmanki, for example) talk only to AnkiDroid's package `com.ichi2.anki` and its card provider `com.ichi2.anki.flashcards`, so they do not see AnkiQuest's `com.ichi2.anki.quest`. For these, releases also have `AnkiQuest-ankidroid-compatible.apk`: AnkiQuest under AnkiDroid's package name, provider and permission.
+
+- It replaces AnkiDroid: it cannot be installed next to it, because Android refuses a second app with the same package and a different signature. Export or sync your collection, uninstall AnkiDroid, then install it.
+- It does not update itself, and AnkiDroid and AnkiQuest updates do not install over it. Install each new release by hand, or in Obtainium with the filter `^AnkiQuest-ankidroid-compatible\.apk$`.
+- It is only on GitHub, never on Google Play, where the package belongs to AnkiDroid.
+
+Use `AnkiQuest.apk` or an ABI APK unless an app needs AnkiDroid's package.
+
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 
 ## Development
