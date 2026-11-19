@@ -4,13 +4,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const PACKAGE = "dev.hilll.anki";
+const PACKAGE = "org.ankiquest.anki";
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 const gradle = read("AnkiDroid/build.gradle.kts");
 const workflows = [".github/workflows/ankiquest_apk.yml", ".github/workflows/ankiquest_reproducible.yml"];
 
-test("the AnkiQuest build installs as dev.hilll.anki and keeps the com.ichi2.anki namespace", () => {
+test("the AnkiQuest build installs as org.ankiquest.anki and keeps the com.ichi2.anki namespace", () => {
     assert.match(gradle, new RegExp(`val ankiquestApplicationId = "${PACKAGE.replaceAll(".", "\\.")}"`));
     assert.match(gradle, /if \(ankiquestBuild\) \{\s*applicationId = ankiquestApplicationId\s*\}/);
     assert.match(gradle, /namespace = "com\.ichi2\.anki"\n/);
@@ -41,6 +41,6 @@ test("nothing hard-codes the old package", () => {
         "AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestLinksTest.kt",
     ];
     for (const file of files) {
-        assert.doesNotMatch(read(file).replace(/^.*Builds before dev\.hilll\.anki.*$/m, ""), /com\.ichi2\.anki\.quest\b/, file);
+        assert.doesNotMatch(read(file).replace(/^.*Builds before org\.ankiquest\.anki.*$/m, ""), /com\.ichi2\.anki\.quest\b/, file);
     }
 });
