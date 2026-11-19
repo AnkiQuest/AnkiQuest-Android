@@ -211,7 +211,7 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             prefs().edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
             assertTrue(AnkiquestSettingsSync.note(Setting.OPEN_TODAY))
             // A choice made before sync existed and different from the default goes up as the oldest change.
-            prefs().edit(commit = true) { putBoolean(AnkiquestPreferences.ASK_DECK_SHARE, false) }
+            prefs().edit(commit = true) { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
 
             AnkiquestSettingsSync.sync(targetContext, Trigger.START)
 

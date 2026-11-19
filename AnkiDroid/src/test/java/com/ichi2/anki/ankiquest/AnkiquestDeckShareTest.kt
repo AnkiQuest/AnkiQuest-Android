@@ -81,7 +81,7 @@ class AnkiquestDeckShareTest : RobolectricTest() {
     fun `the question can be switched off`() {
         val prefs = targetContext.sharedPrefs()
         assertTrue(AnkiquestDeckShare.enabled(prefs))
-        prefs.edit { putBoolean(AnkiquestPreferences.ASK_DECK_SHARE, false) }
+        prefs.edit { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
         assertFalse(AnkiquestDeckShare.enabled(prefs))
     }
 

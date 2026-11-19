@@ -10,9 +10,14 @@ plugins {
 // AnkiDroid: study data comes in through StudySource.
 configure<LibraryExtension> {
     namespace = "com.ichi2.anki.ankiquest.core"
+
+    // java.time below API 26 comes from desugaring, as in the app.
+    compileOptions.isCoreLibraryDesugaringEnabled = true
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
+
     implementation(project(":common"))
     implementation(project(":common:android"))
 

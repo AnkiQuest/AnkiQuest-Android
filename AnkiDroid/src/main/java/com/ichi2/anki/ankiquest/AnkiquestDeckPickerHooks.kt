@@ -98,7 +98,7 @@ object AnkiquestDeckPickerHooks {
                 }
                 val session =
                     AnkiquestMomentCard.Session(
-                        summary = summary?.takeIf { prefs.getBoolean(AnkiquestPreferences.SESSION_SUMMARY, true) },
+                        summary = summary?.takeIf { prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true) },
                         onContinue = openReviewer,
                         onClose = { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } },
                     )

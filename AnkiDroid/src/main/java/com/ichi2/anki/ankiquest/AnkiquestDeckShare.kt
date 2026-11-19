@@ -46,7 +46,7 @@ internal object AnkiquestDeckShare {
 
     /** Whether the question is on; it is unless the player turned it off. */
     fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean =
-        prefs.getBoolean(AnkiquestPreferences.ASK_DECK_SHARE, true)
+        prefs.getBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, true)
 
     /**
      * The question to ask about [deck] from the server's deck settings (`GET /api/decks`), or null
@@ -342,7 +342,7 @@ internal object AnkiquestDeckShare {
                     if (recipients.isNotEmpty()) send(context.applicationContext, account, prompt, recipients)
                 }.setNegativeButton(language.getString(R.string.ankiquest_deck_share_not_now), null)
                 .setNeutralButton(language.getString(R.string.ankiquest_deck_share_never)) { _, _ ->
-                    AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestPreferences.ASK_DECK_SHARE, false) }
+                    AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
                     showThemedToast(context, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
                 }.show()
         AnkiquestPostStudyPrompts.track(dialog)

@@ -175,7 +175,7 @@ class AnkiquestShareSheet(
         more.id = R.id.aq_share_more
         if (slot == Slot.POST_STUDY && moment is MomentRef.Deck) {
             views.button(content, language.getString(R.string.ankiquest_deck_share_never)) {
-                AnkiquestStore.preferences().edit { putBoolean(AnkiquestPreferences.ASK_DECK_SHARE, false) }
+                AnkiquestStore.preferences().edit { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
                 dialog.dismiss()
                 showThemedToast(host, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
             }

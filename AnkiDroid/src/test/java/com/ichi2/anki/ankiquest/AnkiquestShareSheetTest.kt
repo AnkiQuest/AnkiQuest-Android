@@ -379,7 +379,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         idle()
         assertFalse(dialog.isShowing)
         assertTrue(AnkiquestPostStudyPrompts.ready(host))
-        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestPreferences.ASK_DECK_SHARE, true))
+        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, true))
         coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
     }
 

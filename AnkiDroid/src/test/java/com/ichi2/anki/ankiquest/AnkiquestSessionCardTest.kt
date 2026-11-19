@@ -271,7 +271,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         checkbox.isChecked = true
         first.dismiss()
         advanceRobolectricLooper()
-        assertFalse(prefs.getBoolean(AnkiquestPreferences.SESSION_SUMMARY, true))
+        assertFalse(prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true))
 
         queue()
         finish(host)
@@ -773,7 +773,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         prefs.edit { putString(AnkiquestPreferences.TOKEN, "different-token") }
         advanceRobolectricLooper()
         assertFalse(card.isShowing)
-        assertTrue(prefs.getBoolean(AnkiquestPreferences.SESSION_SUMMARY, true))
+        assertTrue(prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true))
         coVerify(exactly = 0) { AnkiquestDeckShare.offer(any()) }
     }
 

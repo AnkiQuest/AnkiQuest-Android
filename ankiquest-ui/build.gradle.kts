@@ -12,9 +12,14 @@ plugins {
 configure<LibraryExtension> {
     namespace = "com.ichi2.anki.ankiquest.ui"
     testOptions.unitTests.isIncludeAndroidResources = true
+
+    // java.time below API 26 comes from desugaring, as in the app.
+    compileOptions.isCoreLibraryDesugaringEnabled = true
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
+
     // The views' public calls take core's accounts and rules.
     api(project(":ankiquest-core"))
     implementation(project(":common"))

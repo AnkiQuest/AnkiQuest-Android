@@ -148,7 +148,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
 
     @Test
     fun `a queued moment joins the recap without another dialog`() {
-        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestPreferences.ASK_DECK_SHARE, false) }
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
         mockkObject(AnkiquestStudySession)
         try {
             coEvery { AnkiquestStudySession.finish() } returns AnkiquestSessionSummary(6, 1, 3, clock.intTimeMS())

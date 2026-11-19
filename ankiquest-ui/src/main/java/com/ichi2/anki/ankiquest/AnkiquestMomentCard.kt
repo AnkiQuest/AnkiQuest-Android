@@ -194,7 +194,7 @@ object AnkiquestMomentCard {
                     return@setOnDismissListener
                 }
                 if (recap.neverAgain) {
-                    prefs.edit { putBoolean(AnkiquestPreferences.SESSION_SUMMARY, false) }
+                    prefs.edit { putBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, false) }
                 }
                 if (reason == Exit.DONE && AnkiquestPostStudyPrompts.ready(host)) {
                     this.session?.onClose?.invoke()

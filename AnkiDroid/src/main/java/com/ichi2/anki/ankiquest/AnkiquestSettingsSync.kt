@@ -64,10 +64,10 @@ internal object AnkiquestSettingsSync {
             Storage.NUMBER_TEXT,
             0..12,
         ),
-        SESSION_SUMMARY("session_summary", AnkiquestPreferences.SESSION_SUMMARY, true, Storage.BOOLEAN),
+        SESSION_SUMMARY("session_summary", AnkiquestPreferences.PREF_SESSION_SUMMARY, true, Storage.BOOLEAN),
         MOOD_ICON("mood_icon", AnkiquestIcon.PREF_ENABLED, true, Storage.BOOLEAN),
         OPEN_TODAY("open_today", AnkiquestNavigation.PREF_OPEN_TODAY, false, Storage.BOOLEAN),
-        ASK_TO_SHARE_DECKS("ask_to_share_decks", AnkiquestPreferences.ASK_DECK_SHARE, true, Storage.BOOLEAN),
+        ASK_TO_SHARE_DECKS("ask_to_share_decks", AnkiquestPreferences.PREF_ASK_DECK_SHARE, true, Storage.BOOLEAN),
         STREAK_CUE("streak_cue", AnkiquestStreakCue.PREF_ENABLED, true, Storage.BOOLEAN),
         ;
 
