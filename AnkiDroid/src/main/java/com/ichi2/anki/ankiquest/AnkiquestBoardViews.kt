@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.ColorRes
+import androidx.annotation.StringRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import com.google.android.material.button.MaterialButton
@@ -29,10 +30,37 @@ import timber.log.Timber
 import java.io.IOException
 import java.text.NumberFormat
 
-/** The cards, text, chips, bars and avatars the leaderboard and profile screens are built from, in the Today screen's colours. */
+/**
+ * The cards, text, chips, bars and avatars the AnkiQuest screens are built from, in the Today
+ * screen's colours. [spacing] sets how much room cards, text and buttons get.
+ */
 internal class AnkiquestBoardViews(
     private val context: Context,
+    private val spacing: Spacing = Spacing.COMPACT,
 ) {
+    /** How much room cards, text and buttons get: the Today screen is [ROOMY], the rest [COMPACT]. */
+    enum class Spacing(
+        val cardPadding: Int,
+        val cardTop: Int,
+        val cardBottom: Int,
+        val textPadding: Int,
+        val headingSize: Float,
+        val buttonTop: Int,
+    ) {
+        COMPACT(cardPadding = 12, cardTop = 10, cardBottom = 0, textPadding = 3, headingSize = 17f, buttonTop = 8),
+        ROOMY(cardPadding = 14, cardTop = 12, cardBottom = 4, textPadding = 5, headingSize = 18f, buttonTop = 6),
+    }
+
+    /** A progress bar's height and the room above and below it. */
+    enum class Bar(
+        val height: Int,
+        val top: Int,
+        val bottom: Int,
+    ) {
+        REGULAR(height = 8, top = 4, bottom = 4),
+        THIN(height = 6, top = 2, bottom = 6),
+    }
+
     private val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
 
     fun number(value: Long): String = numbers.format(value)
@@ -47,15 +75,98 @@ internal class AnkiquestBoardViews(
         LinearLayout(context).apply {
             orientation = if (horizontal) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
             if (horizontal) gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(16), dp(spacing.cardPadding), dp(16), dp(spacing.cardPadding))
             background = shape(if (tinted) R.color.aq_home_tint else R.color.aq_home_surface)
             parent.addView(
                 this,
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(10)
+                    topMargin = dp(spacing.cardTop)
+                    bottomMargin = dp(spacing.cardBottom)
                 },
             )
         }
+
+    /** A horizontal row whose children share its width through [cell]. */
+    fun row(parent: LinearLayout): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+
+    /** A cell of a [row]: text taking [weight] of the width, or only what it needs at 0. */
+    fun cell(
+        row: LinearLayout,
+        value: String,
+        weight: Float,
+        bold: Boolean = false,
+        small: Boolean = false,
+        end: Boolean = false,
+    ): TextView =
+        TextView(context).apply {
+            text = value
+            textSize = if (small) 14f else 16f
+            setTextColor(context.getColor(if (small) R.color.aq_home_muted else R.color.aq_home_text))
+            if (bold) typeface = Typeface.DEFAULT_BOLD
+            gravity = if (end) Gravity.END else Gravity.START
+            setPadding(dp(4), dp(3), dp(4), dp(3))
+            row.addView(
+                this,
+                if (weight > 0) {
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight)
+                } else {
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                },
+            )
+        }
+
+    /** Tiles of a value over its label, with more room when system text is enlarged. */
+    fun tiles(
+        parent: LinearLayout,
+        values: List<Pair<String, String>>,
+        perRow: Int = 3,
+    ) {
+        val columns = if (context.resources.configuration.fontScale >= LARGE_FONT_SCALE) 1 else perRow
+        for (chunk in values.chunked(columns)) {
+            val line = row(parent)
+            for ((value, label) in chunk) {
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(10), dp(8), dp(10), dp(8))
+                    background = shape(R.color.aq_home_surface, 14)
+                    contentDescription = "$value $label"
+                    addView(
+                        TextView(context).apply {
+                            text = value
+                            textSize = 20f
+                            typeface = Typeface.DEFAULT_BOLD
+                            setTextColor(context.getColor(R.color.aq_home_text))
+                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        },
+                    )
+                    addView(
+                        TextView(context).apply {
+                            text = label
+                            textSize = 13f
+                            setTextColor(context.getColor(R.color.aq_home_muted))
+                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        },
+                    )
+                    line.addView(
+                        this,
+                        LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                            topMargin = dp(8)
+                            marginEnd = dp(8)
+                        },
+                    )
+                }
+            }
+            // Match the tiles' height so an incomplete row is not measured as zero height.
+            repeat(
+                columns - chunk.size,
+            ) { line.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)) }
+        }
+    }
 
     /** A column that takes the width left in a horizontal [parent]. */
     fun column(parent: LinearLayout): LinearLayout =
@@ -74,7 +185,7 @@ internal class AnkiquestBoardViews(
             text = value
             textSize =
                 when {
-                    heading -> 17f
+                    heading -> spacing.headingSize
                     small -> 14f
                     else -> 16f
                 }
@@ -83,7 +194,7 @@ internal class AnkiquestBoardViews(
                 typeface = Typeface.DEFAULT_BOLD
                 ViewCompat.setAccessibilityHeading(this, true)
             }
-            setPadding(0, dp(3), 0, dp(3))
+            setPadding(0, dp(spacing.textPadding), 0, dp(spacing.textPadding))
             val width =
                 if (parent.orientation ==
                     LinearLayout.HORIZONTAL
@@ -95,16 +206,22 @@ internal class AnkiquestBoardViews(
             parent.addView(this, LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
 
-    /** A section heading between cards. */
+    /** A section heading between cards, with [hint] below it in small text when given. */
     fun section(
         parent: LinearLayout,
         value: String,
-    ): TextView = text(parent, value, heading = true).apply { setPadding(0, dp(16), 0, 0) }
+        hint: String? = null,
+    ): TextView {
+        val heading = text(parent, value, heading = true).apply { setPadding(0, dp(16), 0, 0) }
+        hint?.let { text(parent, it, small = true) }
+        return heading
+    }
 
     fun button(
         parent: LinearLayout,
         label: String,
         primary: Boolean = false,
+        enabled: Boolean = true,
         click: () -> Unit,
     ): MaterialButton =
         MaterialButton(context).apply {
@@ -114,6 +231,7 @@ internal class AnkiquestBoardViews(
             minHeight = dp(48)
             minimumHeight = dp(48)
             cornerRadius = dp(12)
+            isEnabled = enabled
             setTextColor(context.getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
             backgroundTintList = ColorStateList.valueOf(context.getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
             if (!primary) {
@@ -124,8 +242,7 @@ internal class AnkiquestBoardViews(
             parent.addView(
                 this,
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin =
-                        dp(8)
+                    topMargin = dp(spacing.buttonTop)
                 },
             )
         }
@@ -143,7 +260,7 @@ internal class AnkiquestBoardViews(
                 isSingleLine = true
                 isSingleSelection = true
             }
-        for ((value, label) in options) group.addView(chip(label, checked = value == selected, enabled = enabled) { pick(value) })
+        for ((value, label) in options) chip(group, label, checked = value == selected, enabled = enabled) { pick(value) }
         parent.addView(
             HorizontalScrollView(context).apply {
                 isHorizontalScrollBarEnabled = false
@@ -163,14 +280,38 @@ internal class AnkiquestBoardViews(
         enabled: Boolean,
         click: () -> Unit,
     ): Chip =
-        chip(label, checked, enabled, click).apply {
+        newChip(label, checked, primary = false, enabled, click).apply {
             isCheckable = true
             isChecked = checked
         }
 
-    private fun chip(
+    /** A row of chips that wraps onto more lines when it does not fit. */
+    fun actions(parent: LinearLayout): ChipGroup =
+        ChipGroup(context).also {
+            parent.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+
+    /** A chip added to [parent], filled when [checked] or [primary]. */
+    fun chip(
+        parent: ViewGroup,
+        label: String,
+        checked: Boolean = false,
+        primary: Boolean = false,
+        enabled: Boolean = true,
+        click: () -> Unit,
+    ): Chip =
+        newChip(label, checked, primary, enabled, click).also {
+            if (parent is LinearLayout) {
+                parent.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            } else {
+                parent.addView(it)
+            }
+        }
+
+    private fun newChip(
         label: String,
         checked: Boolean,
+        primary: Boolean,
         enabled: Boolean,
         click: () -> Unit,
     ): Chip =
@@ -183,10 +324,11 @@ internal class AnkiquestBoardViews(
             isChecked = checked
             isCheckedIconVisible = false
             isEnabled = enabled
-            setTextColor(context.getColor(if (checked) R.color.aq_home_primary_text else R.color.aq_home_text))
+            val filled = checked || primary
+            setTextColor(context.getColor(if (filled) R.color.aq_home_primary_text else R.color.aq_home_text))
             chipBackgroundColor =
-                ColorStateList.valueOf(context.getColor(if (checked) R.color.aq_home_primary else R.color.aq_home_surface))
-            chipStrokeWidth = if (checked) 0f else dp(1).toFloat()
+                ColorStateList.valueOf(context.getColor(if (filled) R.color.aq_home_primary else R.color.aq_home_surface))
+            chipStrokeWidth = if (filled) 0f else dp(1).toFloat()
             chipStrokeColor = ColorStateList.valueOf(context.getColor(R.color.aq_home_outline))
             // The state is the selection drawn above; clicking always asks [click], which re-renders.
             setOnClickListener { click() }
@@ -196,6 +338,7 @@ internal class AnkiquestBoardViews(
     fun bar(
         parent: LinearLayout,
         percent: Int,
+        size: Bar = Bar.REGULAR,
     ): ProgressBar =
         ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
@@ -205,9 +348,9 @@ internal class AnkiquestBoardViews(
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             parent.addView(
                 this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(8)).apply {
-                    topMargin = dp(4)
-                    bottomMargin = dp(4)
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(size.height)).apply {
+                    topMargin = dp(size.top)
+                    bottomMargin = dp(size.bottom)
                 },
             )
         }
@@ -271,13 +414,23 @@ internal class AnkiquestBoardViews(
             cornerRadius = dp(radius).toFloat()
             setColor(context.getColor(color))
         }
+
+    private companion object {
+        /** From this system font scale on, [tiles] stack in one column. */
+        const val LARGE_FONT_SCALE = 1.5f
+    }
 }
 
 /**
- * Runs [work] and answers the message for its failure, or null when it worked; a changed account
- * answers [R.string.aq_feed_account_changed], for the screen to start over.
+ * Runs [work] and answers the message for its failure, or null when it worked: a refused token
+ * [R.string.aq_home_auth], a changed account [R.string.aq_feed_account_changed] for the screen to
+ * start over, [offline] and [unreadable].
  */
-internal suspend fun boardAttempt(work: suspend () -> Unit): Int? =
+internal suspend fun boardAttempt(
+    @StringRes offline: Int = R.string.aq_board_offline,
+    @StringRes unreadable: Int = R.string.aq_board_server_error,
+    work: suspend () -> Unit,
+): Int? =
     try {
         work()
         null
@@ -289,11 +442,11 @@ internal suspend fun boardAttempt(work: suspend () -> Unit): Int? =
         R.string.aq_profile_hidden
     } catch (e: AnkiquestHttpException) {
         Timber.w(e, "AnkiQuest board request refused")
-        if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_board_server_error
+        if (e.code == 401 || e.code == 403) R.string.aq_home_auth else unreadable
     } catch (e: IOException) {
         Timber.w(e, "AnkiQuest board unreachable")
-        R.string.aq_board_offline
+        offline
     } catch (e: JSONException) {
         Timber.w(AnkiquestApi.redacted(e), "AnkiQuest board unreadable")
-        R.string.aq_board_server_error
+        unreadable
     }
