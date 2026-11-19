@@ -81,7 +81,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
             appWidgetId: AppWidgetId,
         ) {
             val deckId = getDeckIdForWidget(context, appWidgetId)
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_card_analysis)
+            val remoteViews = RemoteViews(context.packageName, R.layout.widget_card_analysis_full_touch)
 
             if (deckId == NOT_FOUND_DECK_ID) {
                 // If deckId is null, it means no deck was selected or the selected deck was deleted.
@@ -139,7 +139,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
                     configIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-            remoteViews.setOnClickPendingIntent(R.id.empty_widget, configPendingIntent)
+            remoteViews.setWidgetClickAction(configPendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
         }
@@ -165,7 +165,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
                     configIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-            remoteViews.setOnClickPendingIntent(R.id.empty_widget, configPendingIntent)
+            remoteViews.setWidgetClickAction(configPendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
         }
@@ -185,7 +185,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
             deckData: DeckWidgetData,
             size: SizeF,
         ): RemoteViews {
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_card_analysis)
+            val remoteViews = RemoteViews(context.packageName, R.layout.widget_card_analysis_full_touch)
             remoteViews.setTextViewText(R.id.deckNameCardAnalysis, deckData.name)
             remoteViews.setTextViewText(R.id.deckNew_card_analysis_widget, deckData.newCount.toString())
             remoteViews.setTextViewText(R.id.deckDue_card_analysis_widget, deckData.reviewCount.toString())
@@ -211,12 +211,17 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
                     intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-            remoteViews.setOnClickPendingIntent(R.id.deckNameCardAnalysis, pendingIntent)
+            remoteViews.setWidgetClickAction(pendingIntent)
 
             val cornersTooRound = size.height > 0 && size.height < CORNER_RADIUS_DP * 3
             remoteViews.setBackgrounds(cornersTooRound)
             remoteViews.fitTo(context, size)
             return remoteViews
+        }
+
+        private fun RemoteViews.setWidgetClickAction(pendingIntent: PendingIntent) {
+            // Keep the touch target large when fitting shrinks the text.
+            setOnClickPendingIntent(android.R.id.background, pendingIntent)
         }
 
         private fun RemoteViews.setBackgrounds(cornersTooRound: Boolean) {

@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
 import android.view.View.MeasureSpec
+import android.widget.RemoteViews
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.libanki.CardType
@@ -22,6 +23,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import com.ichi2.anki.widgets.R as WidgetR
 
 /**
  * `./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot --tests "com.ichi2.anki.widget.cardanalysis.CardAnalysisWidgetScreenshotTest"`
@@ -88,6 +90,31 @@ class CardAnalysisWidgetScreenshotTest : ScreenshotTest() {
         runTest {
             captureWidget("empty_collection", deckId = Consts.DEFAULT_DECK_ID, widthDp = 262, heightDp = 220)
         }
+
+    @Test
+    fun compactMissingDeck() =
+        runTest {
+            captureWidget("compact_missing_deck", deckId = null, widthDp = 175, heightDp = 102)
+        }
+
+    @Test
+    fun compactEmptyCollection() =
+        runTest {
+            captureWidget("compact_empty_collection", deckId = Consts.DEFAULT_DECK_ID, widthDp = 175, heightDp = 102)
+        }
+
+    @Test
+    fun pickerPreview() {
+        RuntimeEnvironment.setFontScale(1f)
+        val view = RemoteViews(targetContext.packageName, WidgetR.layout.widget_card_analysis_drawable_v31).apply(targetContext, null)
+        val width = 262.dp.toPx(targetContext)
+        view.measure(
+            MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+        )
+        view.layout(0, 0, width, view.measuredHeight)
+        captureView("picker_preview", view)
+    }
 
     private fun TestScope.captureDeck(
         name: String,

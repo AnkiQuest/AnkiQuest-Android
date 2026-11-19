@@ -1,0 +1,5 @@
+<resources>
+    <!-- A new layout ID makes launchers reinflate widgets created with the old child click targets.
+         Clearing a child's click listener leaves it clickable; setClickable is not a RemoteViews API. -->
+    <item name="widget_card_analysis_full_touch" type="layout">@layout/widget_card_analysis</item>
+</resources>

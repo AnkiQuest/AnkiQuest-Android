@@ -13,14 +13,14 @@
         android:id="@+id/empty_widget"
         style="@style/TextAppearance.AppCompat.Medium"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginStart="7dp"
+        android:layout_height="match_parent"
         android:gravity="center"
-        android:layout_centerInParent="true"
-        android:padding="30dp"
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="6dp"
         android:text="@string/empty_widget_state"
-        android:visibility="gone" />/>
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/cardAnalysisDataHolder"
@@ -38,7 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="@color/flag_reviewer_blue"
+            android:textColor="@color/widget_card_analysis_new"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:text="50" />
@@ -49,7 +49,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="@color/flag_reviewer_red"
+            android:textColor="@color/widget_card_analysis_learn"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:text="12" />
@@ -60,7 +60,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="@color/flag_reviewer_green"
+            android:textColor="@color/widget_card_analysis_review"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:text="57" />
