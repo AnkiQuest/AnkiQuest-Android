@@ -85,6 +85,9 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
         AnkiquestIcon.update(targetContext, profile, now, prefs)
     }
 
+    /** The streak widget's progress meter, from a fresh render of [profile]. */
+    private fun progressBar(profile: JSONObject): ProgressBar = render(profile).findViewById(R.id.ankiquest_streak_progress)
+
     private fun render(
         profile: JSONObject,
         size: AnkiquestStreakWidget.Size = AnkiquestStreakWidget.Size.MEDIUM,
@@ -175,13 +178,13 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
             listOf(AnkiquestDay.Review(now - 1, 240_000)),
             prefs,
         )
-        val waiting = render(profile).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+        val waiting = progressBar(profile)
         assertEquals(10, waiting.progress)
         assertTrue(waiting.alpha in 0f..<1f, "local progress must look different while syncing")
         profile.put("streak_state", "studied").put("last_review_id", now - 1)
         profile.getJSONObject("today").put("minutes", 10).put("time_ms", 600_000)
         remember(profile)
-        val confirmed = render(profile).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+        val confirmed = progressBar(profile)
         assertEquals(1f, confirmed.alpha)
     }
 
@@ -200,7 +203,7 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
             }
             if (state == "none") profile.put("streak", 0)
             remember(profile)
-            val meter = render(profile).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+            val meter = progressBar(profile)
             colors.add(assertNotNull(meter.progressTintList, state).defaultColor)
             tracks.add(assertNotNull(meter.progressBackgroundTintList, state).defaultColor)
         }
