@@ -33,12 +33,15 @@ internal object AnkiDroidProvider {
      * SHA-256 digests of the certificates AnkiDroid's releases are signed with.
      *
      * Read from the APK signing block of the releases on
-     * https://github.com/ankidroid/Anki-Android/releases (play and full flavors).
+     * https://github.com/ankidroid/Anki-Android/releases (play and full flavors) and of
+     * com.ichi2.anki_225033004.apk on https://f-droid.org.
      */
     private val RELEASE_CERTIFICATES =
         setOf(
             // Google Play and GitHub releases: CN=Nicolas Raoul, O=http://nrw.free.fr
             "2071534F0F4B5E54AE952DD275D70DA6E3459EE69909D2AB1B4843C4C5B21A45",
+            // F-Droid builds AnkiDroid itself and signs it with its own key for this app
+            "24A3D4756C62DD69C86DF69AA7FA327B2A6BF55F55C4A1749F99BD1DA75906BB",
         )
 
     /** Outcome of checking the app that holds [FlashCardsContract.AUTHORITY] */

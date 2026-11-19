@@ -45,6 +45,13 @@ internal class AnkiDroidProviderTest {
     }
 
     @Test
+    fun fdroidCertificateIsAccepted() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(AnkiDroidPackages.FDROID))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
     fun unknownCertificateIsRejected() {
         AnkiDroidPackages.install(ANKIDROID, Signing.Current(UNKNOWN))
 
@@ -236,6 +243,34 @@ internal object AnkiDroidPackages {
                 017puEL+orrtkb/MSzlDiO9QTvICI0sq1By8Mpzx9bj0dwobh623/Z8tkl4HJOc/
                 q9vkMdb2yjlOty7UEZ2ExtzhyDh7v1go5EA4U/vllnx7cm+B+NywZueNhgDPzo2f
                 8O5qre1YSA==
+                """.trimIndent(),
+            ),
+        )
+
+    /**
+     * The certificate F-Droid signs its AnkiDroid builds with, from the APK signing block of
+     * com.ichi2.anki_225033004.apk on f-droid.org.
+     * SHA-256: 24A3D4756C62DD69C86DF69AA7FA327B2A6BF55F55C4A1749F99BD1DA75906BB
+     */
+    val FDROID =
+        Signature(
+            Base64.getMimeDecoder().decode(
+                """
+                MIIDPDCCAiSgAwIBAgIETSOoMzANBgkqhkiG9w0BAQUFADBgMQswCQYDVQQGEwJVSzEMMAoGA1UE
+                CBMDT1JHMQwwCgYDVQQHEwNPUkcxEzARBgNVBAoTCmZkcm9pZC5vcmcxDzANBgNVBAsTBkZEcm9p
+                ZDEPMA0GA1UEAxMGRkRyb2lkMB4XDTExMDEwNDIzMDczMVoXDTM4MDUyMjIzMDczMVowYDELMAkG
+                A1UEBhMCVUsxDDAKBgNVBAgTA09SRzEMMAoGA1UEBxMDT1JHMRMwEQYDVQQKEwpmZHJvaWQub3Jn
+                MQ8wDQYDVQQLEwZGRHJvaWQxDzANBgNVBAMTBkZEcm9pZDCCASIwDQYJKoZIhvcNAQEBBQADggEP
+                ADCCAQoCggEBAMQ3NiAVlRx4R5+jAy9Q7ZUI4494MWDqcxizyVcC1jPD9cR1KKiYDUvIQ7TM5mPm
+                /VFY0e4/k1Eoc7NTo56i6kFBnFM/eALM2Vso4232AdxyIlBFkRgpFSP6zB6B66W2ZVdXYv0tSqIq
+                Cci9XtatXH/7dqY9oZeUmK9r0AtLVbMKM1A9XTuv78Js4EXE/nCVXNcpR+yE9IHs6MFHm092RZVi
+                sdgdchvfvbHa9cs7EvV80cdl+kMsT2ONGkEx71FXGPMouG9xtsszU4LPtj2qWOH/wE8lI/q0ieqS
+                BRkFvxJVW1XswtWogClXHCe8qWsQ4bku/bT/Y8Ax8HltqN5N+bsCAwEAATANBgkqhkiG9w0BAQUF
+                AAOCAQEAbThxX4eoVwglcVDfSkoQr9ga/gtHpJ/9oPxYFcGewhjS8fV25ts2+Kb8JHxdCIYjYdLR
+                RC2fTkuaek/rVlPwW5/cDTTSX5oyLGZamus9lic+brLri1lo/bh2d/wKOzPbLS4NroxxV2Q6DO9X
+                cR9AuRPUyexnIKars+rjBUCU23wSfaoQw2bjzgwSbrLa1bkkxCNfA8ZIgG1VKj1pQdcnAaTf5cqz
+                6yIzg90sOxzdOuJGIVNJ9OIe4Kc1yyWXQ0wZBIymP2ZJKd5D4LM8Y+vi/5XNLDsvhXKr2pjpc8qf
+                mDHP0OnTAv/K+Y/o1QD7WggKkdD3KXIn55FjWSnKXCJ9zg==
                 """.trimIndent(),
             ),
         )
