@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="review_heatmap_title">Wiederholungs-Heatmap</string>
+    <string name="review_heatmap_subtitle">Deine Sammlung, Tag für Tag</string>
+    <string name="review_heatmap_expand">Wiederholungs-Heatmap ausklappen</string>
+    <string name="review_heatmap_collapse">Wiederholungs-Heatmap einklappen</string>
+    <string name="review_heatmap_loading">Wiederholungsverlauf wird geladen…</string>
+    <string name="review_heatmap_error">Der Wiederholungsverlauf konnte nicht geladen werden.</string>
+    <string name="review_heatmap_empty">Deine Wiederholungen erscheinen hier, sobald du lernst.</string>
+    <string name="review_heatmap_current_streak">Aktuelle Lernserie</string>
+    <string name="review_heatmap_longest_streak">Längste Lernserie</string>
+    <string name="review_heatmap_days_studied">Lerntage</string>
+    <string name="review_heatmap_daily_average">Wiederholungen pro Lerntag</string>
+    <string name="review_heatmap_total">Wiederholungen im verfügbaren Verlauf: %1$s</string>
+    <string name="review_heatmap_previous_year">Vorheriges Jahr</string>
+    <string name="review_heatmap_next_year">Nächstes Jahr</string>
+    <string name="review_heatmap_year">Jahr %1$s</string>
+    <string name="review_heatmap_scroll_hint">Wische, um das Jahr zu erkunden. Tippe auf einen Tag für Details.</string>
+    <string name="review_heatmap_forecast_hint">Graue Felder schätzen die fälligen Wiederholungskarten der nächsten 90 Tage. Die Zahlen ändern sich, während du lernst.</string>
+    <string name="review_heatmap_legend">Weniger Wiederholungen → Mehr Wiederholungen · Grau = Prognose · Blau = Lernserie von AnkiQuest gehalten · Sand = unter dem Minimum der Lernserie</string>
+    <string name="review_heatmap_today_description">%1$s. Heute</string>
+    <string name="review_heatmap_forecast_unavailable">Die Prognose reicht 90 Tage voraus.</string>
+    <string name="review_heatmap_protected_day">%1$s · AnkiQuest hat deine Lernserie gehalten</string>
+    <string name="review_heatmap_short_day">%1$s · %2$s von %3$s Minuten, unter dem Minimum der Lernserie</string>
+    <string name="review_heatmap_short_today">%1$s · bisher %2$s von %3$s Minuten für die Lernserie</string>
+    <string name="review_heatmap_view_reviewed_cards">Wiederholte Karten anzeigen</string>
+    <string name="review_heatmap_view_due_cards">Fällige Karten anzeigen</string>
+    <plurals name="review_heatmap_review_count">
+        <item quantity="one">%1$s Wiederholung</item>
+        <item quantity="other">%1$s Wiederholungen</item>
+    </plurals>
+    <plurals name="review_heatmap_due_count">
+        <item quantity="one">%1$s fällige Wiederholungskarte (geschätzt)</item>
+        <item quantity="other">%1$s fällige Wiederholungskarten (geschätzt)</item>
+    </plurals>
+    <plurals name="review_heatmap_streak_days">
+        <item quantity="one">%1$s Tag</item>
+        <item quantity="other">%1$s Tage</item>
+    </plurals>
+</resources>
