@@ -1,0 +1,290 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 hill <hill@hilll.dev>
+// SPDX-License-Identifier: LGPL-3.0-or-later
+package com.ichi2.anki.api
+
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.content.pm.ProviderInfo
+import android.content.pm.Signature
+import android.content.pm.SigningInfo
+import android.os.Build
+import android.os.Bundle
+import com.ichi2.anki.FlashCardsContract
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowSigningInfo
+import java.util.Base64
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/** Robolectric doesn't shadow the Tiramisu+ `resolveContentProvider`, see [AddContentApiTest] */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [Build.VERSION_CODES.S_V2])
+internal class AnkiDroidProviderTest {
+    private val context get() = RuntimeEnvironment.getApplication()
+
+    @Before
+    fun setUp() {
+        setCaller(Caller.RELEASE)
+    }
+
+    @Test
+    fun genuineCertificateIsAccepted() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(AnkiDroidPackages.RELEASE))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun unknownCertificateIsRejected() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(UNKNOWN))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+        assertEquals(-1, AddContentApi(context).apiHostSpecVersion)
+    }
+
+    @Test
+    fun packageWithoutCertificateIsRejected() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current())
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun otherPackageWithGenuineCertificateIsRejected() {
+        AnkiDroidPackages.install(IMPOSTOR, Signing.Current(AnkiDroidPackages.RELEASE))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun otherPackageIsRejected() {
+        AnkiDroidPackages.install(IMPOSTOR, Signing.Current(UNKNOWN))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    /** A rotated key is signed with the new key, and lists the release key in its history */
+    @Test
+    fun rotatedKeyIsAccepted() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Rotated(past = AnkiDroidPackages.RELEASE, current = UNKNOWN))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun rotationFromUnknownKeyIsRejected() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Rotated(past = UNKNOWN, current = OTHER_UNKNOWN))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun anyOfSeveralSignersIsAccepted() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(UNKNOWN, AnkiDroidPackages.RELEASE))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.O_MR1])
+    fun genuineCertificateIsAcceptedBeforeApi28() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(AnkiDroidPackages.RELEASE))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.O_MR1])
+    fun unknownCertificateIsRejectedBeforeApi28() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(UNKNOWN))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.P])
+    fun genuineCertificateIsAcceptedFromApi28() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(AnkiDroidPackages.RELEASE))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.P])
+    fun unknownCertificateIsRejectedFromApi28() {
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(UNKNOWN))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    /** Developers of a debuggable client can test against their own AnkiDroid build */
+    @Test
+    fun debuggableCallerAcceptsUnknownCertificate() {
+        setCaller(Caller.DEBUGGABLE)
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(UNKNOWN))
+
+        assertEquals(ANKIDROID, AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun debuggableCallerRejectsOtherPackage() {
+        setCaller(Caller.DEBUGGABLE)
+        AnkiDroidPackages.install(IMPOSTOR, Signing.Current(UNKNOWN))
+
+        assertNull(AddContentApi.getAnkiDroidPackageName(context))
+    }
+
+    @Test
+    fun specVersionIsReadFromGenuineProvider() {
+        AnkiDroidPackages.install(
+            ANKIDROID,
+            Signing.Current(AnkiDroidPackages.RELEASE),
+            Bundle().apply { putInt("com.ichi2.anki.provider.spec", 2) },
+        )
+
+        assertEquals(2, AddContentApi(context).apiHostSpecVersion)
+    }
+
+    /** Calls through [AddContentApi] must not reach a provider that isn't AnkiDroid */
+    @Test
+    fun impostorProviderIsNotCalled() {
+        val provider = installFakeCardProvider()
+        AnkiDroidPackages.install(IMPOSTOR, Signing.Current(UNKNOWN))
+
+        assertFalse(AddContentApi(context).setFlag(NOTE_ID, Flag.RED))
+        assertEquals(listOf(Flag.NONE.code), provider.getNoteFlags(NOTE_ID))
+    }
+
+    @Test
+    fun genuineProviderIsCalled() {
+        val provider = installFakeCardProvider()
+        AnkiDroidPackages.install(ANKIDROID, Signing.Current(AnkiDroidPackages.RELEASE))
+
+        assertTrue(AddContentApi(context).setFlag(NOTE_ID, Flag.RED))
+        assertEquals(listOf(Flag.RED.code), provider.getNoteFlags(NOTE_ID))
+    }
+
+    private enum class Caller { RELEASE, DEBUGGABLE }
+
+    private fun setCaller(caller: Caller) {
+        val info = context.applicationInfo
+        info.flags =
+            when (caller) {
+                Caller.RELEASE -> info.flags and ApplicationInfo.FLAG_DEBUGGABLE.inv()
+                Caller.DEBUGGABLE -> info.flags or ApplicationInfo.FLAG_DEBUGGABLE
+            }
+    }
+
+    private fun installFakeCardProvider(): FakeCardContentProvider =
+        Robolectric
+            .buildContentProvider(FakeCardContentProvider::class.java)
+            .create(FlashCardsContract.AUTHORITY)
+            .get()
+            .apply { addNote(NOTE_ID, cardCount = 1) }
+
+    companion object {
+        private val ANKIDROID = BuildConfig.ANKI_PACKAGE_NAME
+        private const val IMPOSTOR = "com.example.impostor"
+        private const val NOTE_ID = 1L
+        private val UNKNOWN = Signature(byteArrayOf(1, 2, 3))
+        private val OTHER_UNKNOWN = Signature(byteArrayOf(4, 5, 6))
+    }
+}
+
+/** How a test package is signed */
+internal sealed interface Signing {
+    /** Signed by [signers], without rotation */
+    class Current(
+        vararg val signers: Signature,
+    ) : Signing
+
+    /** Signed by [current], rotated from [past] */
+    class Rotated(
+        val past: Signature,
+        val current: Signature,
+    ) : Signing
+}
+
+/** Installs packages that hold [FlashCardsContract.AUTHORITY] */
+internal object AnkiDroidPackages {
+    /**
+     * AnkiDroid's release certificate, from the APK signing block of AnkiDroid-2.25.3-arm64-v8a.apk
+     * on GitHub. SHA-256: 2071534F0F4B5E54AE952DD275D70DA6E3459EE69909D2AB1B4843C4C5B21A45
+     */
+    val RELEASE =
+        Signature(
+            Base64.getMimeDecoder().decode(
+                """
+                MIIB4zCCAUygAwIBAgIESkbphTANBgkqhkiG9w0BAQUFADA1MRswGQYDVQQKExJo
+                dHRwOi8vbnJ3LmZyZWUuZnIxFjAUBgNVBAMTDU5pY29sYXMgUmFvdWwwIBcNMDkw
+                NjI4MDM1NDQ1WhgPMjE1OTA1MjMwMzU0NDVaMDUxGzAZBgNVBAoTEmh0dHA6Ly9u
+                cncuZnJlZS5mcjEWMBQGA1UEAxMNTmljb2xhcyBSYW91bDCBnzANBgkqhkiG9w0B
+                AQEFAAOBjQAwgYkCgYEAiNuZzNVFVrd/7cGRFQIfMt3KQp9ub5nJ1VFHFwPNzqY8
+                J0ZoDCATXEyrbX5Aauhmd15OodHvrlmLg6pMCeOr87gywDWYKO8fCarwNZ1VDUN9
+                qvJvyA7fnDjf5fO+cWPPPLIfQHoGc+WE5/CklXdviUZHBIdR08cv1RCFkbdeG18C
+                AwEAATANBgkqhkiG9w0BAQUFAAOBgQBueva+wKhbM1UWijy+AzImhhq+S8PjalDv
+                017puEL+orrtkb/MSzlDiO9QTvICI0sq1By8Mpzx9bj0dwobh623/Z8tkl4HJOc/
+                q9vkMdb2yjlOty7UEZ2ExtzhyDh7v1go5EA4U/vllnx7cm+B+NywZueNhgDPzo2f
+                8O5qre1YSA==
+                """.trimIndent(),
+            ),
+        )
+
+    @Suppress("DEPRECATION") // signatures, set only before API 28
+    fun install(
+        packageName: String,
+        signing: Signing,
+        metaData: Bundle? = null,
+    ) {
+        val manager = shadowOf(RuntimeEnvironment.getApplication().packageManager)
+
+        // Signatures and signing info as the platform reports them for the running API level
+        val info =
+            PackageInfo().apply {
+                this.packageName = packageName
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    signingInfo = signingInfo(signing)
+                } else {
+                    signatures = current(signing)
+                }
+            }
+        manager.installPackage(info)
+
+        // The provider is added after the package, so it keeps the package's signatures
+        val provider =
+            ProviderInfo().apply {
+                authority = FlashCardsContract.AUTHORITY
+                this.packageName = packageName
+                name = "com.ichi2.anki.provider.CardContentProvider"
+                this.metaData = metaData
+            }
+        manager.addOrUpdateProvider(provider)
+    }
+
+    private fun current(signing: Signing): Array<Signature> =
+        when (signing) {
+            is Signing.Current -> arrayOf(*signing.signers)
+            is Signing.Rotated -> arrayOf(signing.current)
+        }
+
+    /** The platform lists past certificates oldest first, ending with the current one */
+    private fun signingInfo(signing: Signing): SigningInfo {
+        val info = Shadow.newInstanceOf(SigningInfo::class.java)
+        val shadow = Shadow.extract<ShadowSigningInfo>(info)
+        shadow.setSignatures(current(signing))
+        if (signing is Signing.Rotated) {
+            shadow.setPastSigningCertificates(arrayOf(signing.past, signing.current))
+        }
+        return info
+    }
+}
