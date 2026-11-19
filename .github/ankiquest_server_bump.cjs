@@ -131,14 +131,14 @@ async function updatePullRequest({ github, context, from, to, commits }) {
             if (!/^[0-9a-f]{40}$/.test(commit.sha)) {
                 throw new Error("Invalid commit ID");
             }
-            return `- [${commit.sha.slice(0, 7)}](https://github.com/AnkiQuest/AnkiQuest-Desktop/commit/${commit.sha}) ${escape(commit.subject).slice(0, 240)}`;
+            return `- [${commit.sha.slice(0, 7)}](https://github.com/AnkiQuest/AnkiQuest-Server/commit/${commit.sha}) ${escape(commit.subject).slice(0, 240)}`;
         })
         .join("\n");
     const generated =
         `${BEGIN}\nCopies server API examples and shared fixtures from \`${to}\` into the committed Android snapshot.\n\n` +
         `Part of #${ISSUE}. Normal PR/main tests use this pin, not a moving server branch. ` +
         `If a new or removed example makes CI fail, update names.json and the consumer test in this PR; do not bypass the strict ownership check.\n\n` +
-        `[All server commits](https://github.com/AnkiQuest/AnkiQuest-Desktop/compare/${from}...${to})\n\n${list || "(No new server commits.)"}` +
+        `[All server commits](https://github.com/AnkiQuest/AnkiQuest-Server/compare/${from}...${to})\n\n${list || "(No new server commits.)"}` +
         (commits.length > 200 ? "\n\nThe compare link includes the remaining commits." : "") +
         `\n${END}`;
     const pr = await openPullRequest(github, context.repo);
