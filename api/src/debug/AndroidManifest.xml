@@ -18,4 +18,10 @@
     So this exists in a 'debug' manifest, which is used by androidTest
     -->
     <uses-permission android:name="com.ichi2.anki.debug.permission.READ_WRITE_DATABASE"/>
+
+    <!-- Lets debug builds of the library see AnkiDroid's debug build on Android 11+ -->
+    <queries>
+        <package android:name="com.ichi2.anki.debug" />
+        <provider android:authorities="com.ichi2.anki.debug.flashcards" />
+    </queries>
 </manifest>
