@@ -96,7 +96,6 @@ class AnkiquestFeedTest : RobolectricTest() {
         assertEquals(1, page.actionCount)
         assertEquals(42L, page.latestId)
         assertEquals(5L, page.nextBefore)
-        assertFalse(page.legacy)
 
         val (invite, share, cheer, reply) = page.items
         assertEquals(8L, invite.challengeId)
@@ -152,25 +151,14 @@ class AnkiquestFeedTest : RobolectricTest() {
         }
 
     @Test
-    fun `a server without the feed answers the last week of notifications, newest first`() =
-        runBlocking {
-            answer = { seen ->
-                if (seen.path == "/api/notifications/member%20name") Answer(200, LEGACY) else Answer(404, "")
-            }
-            val page = AnkiquestFeed.page(account, AnkiquestFeed.Category.MESSAGES, unreadOnly = true)
-            assertTrue(page.legacy)
-            assertEquals(listOf(8L, 6L, 1L), page.items.map { it.id })
-            assertEquals(0, page.unread)
-            assertNull(page.nextBefore)
-            assertEquals(listOf("/api/activity/member%20name", "/api/notifications/member%20name"), requests.map { it.path })
-        }
-
-    @Test
-    fun `an older page that is gone is an error, not the legacy list`() {
+    fun `a missing feed is an error, not the notification list`() {
         answer = { Answer(404, "") }
-        val error = assertFailsWith<AnkiquestHttpException> { runBlocking { AnkiquestFeed.page(account, before = 7) } }
-        assertEquals(404, error.code)
-        assertEquals(1, requests.size)
+        for (before in listOf(null, 7L)) {
+            requests.clear()
+            val error = assertFailsWith<AnkiquestHttpException> { runBlocking { AnkiquestFeed.page(account, before = before) } }
+            assertEquals(404, error.code)
+            assertEquals(listOf("/api/activity/member%20name"), requests.map { it.path })
+        }
     }
 
     @Test
@@ -281,19 +269,6 @@ class AnkiquestFeedTest : RobolectricTest() {
               "window_days": 90,
               "next_before": 5
             }
-            """.trimIndent()
-
-        /** The older oldest-first notification array. */
-        val LEGACY =
-            """
-            [
-              {"id": 1, "title": "Daily goal reached!", "body": "5 cards today.", "created_at": 1793183400, "sender": "",
-               "replied": false, "kind": "celebration", "win": 1},
-              {"id": 6, "title": "🎉 Cerro shared a win", "body": "7 day streak!", "created_at": 1793183400, "sender": "cerro",
-               "replied": false, "kind": "share"},
-              {"id": 8, "title": "🎉 Cerro cheered", "body": "“Daily goal reached!”", "created_at": 1793183400, "sender": "cerro",
-               "replied": false, "kind": "reaction"}
-            ]
             """.trimIndent()
     }
 }

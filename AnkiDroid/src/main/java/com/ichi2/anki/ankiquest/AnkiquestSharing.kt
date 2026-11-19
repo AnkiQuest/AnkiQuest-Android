@@ -131,26 +131,6 @@ internal object AnkiquestSharing {
         }
     }
 
-    /** Tells [recipients] that [account] finished the deck [name] today; answers how many heard it now. */
-    suspend fun shareFinishedDeck(
-        account: HomeAccount,
-        id: Long,
-        name: String,
-        recipients: List<String>,
-    ): Int =
-        call(
-            account,
-            "POST",
-            "api/decks/${account.encodedUser}/share",
-            JSONObject()
-                .put("id", id.toString())
-                .put("name", name)
-                .put("recipients", JSONArray(recipients)),
-        ).optInt("recipients")
-
-    /** The capability of servers that send a moment to chosen friends and groups, with a note, and take it back. */
-    const val FEATURE_MOMENTS = "share_moments"
-
     /** The server keeps a note to one line of this many characters. */
     const val MAX_NOTE = 140
 

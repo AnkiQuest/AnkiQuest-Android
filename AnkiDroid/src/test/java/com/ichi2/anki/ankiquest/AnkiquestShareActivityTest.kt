@@ -50,22 +50,25 @@ class AnkiquestShareActivityTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        mockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestSocial)
         every { AnkiquestHomeData.account(any()) } returns account
         coEvery { Ankiquest.shareWinLink(17, account.scope) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }
-        every { AnkiquestShare.linkChooser(any(), any(), any(), any()) } answers {
+        every { AnkiquestShare.linkChooser(any(), any(), any()) } answers {
             prepared.set(true)
             Intent(Intent.ACTION_CHOOSER)
         }
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(account) } returns
+            AnkiquestSocial.Overview(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), true)
     }
 
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        unmockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestSocial)
     }
 
     private fun intent() =
@@ -74,6 +77,13 @@ class AnkiquestShareActivityTest : RobolectricTest() {
             .putExtra(AnkiquestShare.EXTRA_BODY, "I reached my goal")
             .putExtra(AnkiquestShare.EXTRA_WIN, 17L)
             .putExtra(AnkiquestShare.EXTRA_SCOPE, account.scope)
+
+    /** Presses "More apps…" on AnkiQuest's share sheet, which goes on to Android's share sheet. */
+    private fun moreApps() {
+        advanceRobolectricLooperUntil { (ShadowDialog.getLatestDialog() as? BottomSheetDialog)?.isShowing == true }
+        ShadowDialog.getLatestDialog()!!.findViewById<View>(R.id.aq_share_more)!!.performClick()
+        advanceRobolectricLooper()
+    }
 
     private fun ready() {
         advanceRobolectricLooperUntil { prepared.get() && operation?.children?.none { it.isActive } == true }
@@ -153,6 +163,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         assertEquals("Private suggestion", field.text.toString())
         assertFalse(field.isEnabled)
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        moreApps()
         answer.complete(link)
         advanceRobolectricLooperUntil { shadowOf(activity).peekNextStartedActivity() != null }
         coVerify(exactly = 0) { AnkiquestSharing.setConquestLabel(any(), any(), any()) }
@@ -176,6 +187,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         advanceRobolectricLooper()
         assertFalse(activity.isFinishing, "the second tap must not cancel the first save")
         saved.complete(Unit)
+        moreApps()
         answer.complete(link)
         advanceRobolectricLooperUntil { shadowOf(activity).peekNextStartedActivity() != null }
         coVerify(exactly = 1) { AnkiquestSharing.setConquestLabel(account, 100, "Chosen public label") }
@@ -205,6 +217,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()
         saveControllerForCleanup(controller)
         val activity = controller.get()
+        moreApps()
         advanceRobolectricLooperUntil { operation != null }
         controller.pause()
         answer.complete(link)
@@ -222,6 +235,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()
         saveControllerForCleanup(controller)
         val activity = controller.get()
+        moreApps()
         advanceRobolectricLooperUntil { operation != null }
         controller.pause()
         every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other")
@@ -235,22 +249,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `a server without share_moments keeps Android's share sheet`() {
-        val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()
-        saveControllerForCleanup(controller)
-        val activity = controller.get()
-        assertFalse(ShadowDialog.getLatestDialog() is BottomSheetDialog)
-        answer.complete(link)
-        ready()
-        advanceRobolectricLooperUntil { operation?.isCompleted == true }
-        assertEquals(Intent.ACTION_CHOOSER, assertNotNull(shadowOf(activity).nextStartedActivity).action)
-        assertTrue(activity.isFinishing)
-    }
-
-    @Test
-    fun `a server with share_moments opens AnkiQuest's share sheet, and More apps opens Android's`() {
-        every { AnkiquestMomentShare.available(account) } returns true
-        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+    fun `a notification's Share opens AnkiQuest's share sheet, and More apps opens Android's`() {
         coEvery { AnkiquestSocial.overview(account) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()
@@ -271,10 +270,6 @@ class AnkiquestShareActivityTest : RobolectricTest() {
 
     @Test
     fun `closing AnkiQuest's share sheet closes the share screen`() {
-        every { AnkiquestMomentShare.available(account) } returns true
-        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
-        coEvery { AnkiquestSocial.overview(account) } returns
-            AnkiquestSocial.Overview(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), true)
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()
         saveControllerForCleanup(controller)
         assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog()).cancel()
@@ -284,9 +279,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `weekly places and the friends shortcut wait for the same recipient picker`() {
-        every { AnkiquestMomentShare.available(account, any()) } returns true
-        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+    fun `weekly places and notices wait for the same recipient picker`() {
         coEvery { AnkiquestSocial.overview(account) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
         coEvery { AnkiquestSharing.send(account, any(), AnkiquestSharing.Audience.Circle, null) } returns AnkiquestSharing.Sent(1, 17, null)
@@ -295,8 +288,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
                 removeExtra(AnkiquestShare.EXTRA_WIN)
                 putExtra(AnkiquestShare.EXTRA_PLACE, 2)
             }
-        val shortcut = intent().putExtra(AnkiquestShare.EXTRA_DESTINATION, AnkiquestShare.DESTINATION_FRIENDS)
-        val older =
+        val notice =
             intent().apply {
                 removeExtra(AnkiquestShare.EXTRA_WIN)
                 putExtra(AnkiquestShare.EXTRA_NOTIFICATION, 42L)
@@ -304,8 +296,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         val cases =
             listOf(
                 places to AnkiquestSharing.MomentRef.Place(2),
-                shortcut to AnkiquestSharing.MomentRef.Win(17),
-                older to AnkiquestSharing.MomentRef.Notification(42),
+                notice to AnkiquestSharing.MomentRef.Notification(42),
             )
         for ((launch, reference) in cases) {
             val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, launch).setup()
@@ -313,8 +304,6 @@ class AnkiquestShareActivityTest : RobolectricTest() {
                 val host = controller.get()
                 val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
                 coVerify(exactly = 0) { AnkiquestSharing.send(account, reference, any(), any()) }
-                coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
-                coVerify(exactly = 0) { Ankiquest.shareWin(any(), any(), any()) }
                 assertNull(shadowOf(host).nextStartedActivity)
                 val everyone = host.getString(R.string.ankiquest_share_all_friends)
                 val content = sheet.window!!.decorView

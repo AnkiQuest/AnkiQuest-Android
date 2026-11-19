@@ -68,8 +68,6 @@ internal object AnkiquestFeed {
         val actionCount: Int,
         val latestId: Long?,
         val nextBefore: Long?,
-        /** From a server without the activity feed: the last seven days, with no read state or filters. */
-        val legacy: Boolean = false,
         /** The server ignored the filters asked for and answered the whole feed. */
         val unfiltered: Boolean = false,
         /** Why the server left other players' study out, when it did. */
@@ -92,9 +90,8 @@ internal object AnkiquestFeed {
     private const val READ_BATCH = 200
 
     /**
-     * One page of [account]'s feed, newest first, starting before [before]. A server without the feed
-     * (`404`) answers the older notification list instead, and one that does not know a filter (`400`)
-     * the unfiltered feed, as the website does.
+     * One page of [account]'s feed, newest first, starting before [before]. A server that does not
+     * know a filter (`400`) answers the unfiltered feed, as the website does.
      */
     suspend fun page(
         account: HomeAccount,
@@ -107,11 +104,10 @@ internal object AnkiquestFeed {
             try {
                 activity(account, category, unreadOnly, before)
             } catch (e: AnkiquestHttpException) {
-                when {
-                    e.code == 400 && filtered -> activity(account, Category.ALL, false, before).copy(unfiltered = true)
-                    e.code == 404 && before == null -> legacy(account)
-                    else -> throw e
+                if (e.code != HTTP_BAD_REQUEST || !filtered) {
+                    throw e
                 }
+                activity(account, Category.ALL, false, before).copy(unfiltered = true)
             }
         }
 
@@ -133,11 +129,6 @@ internal object AnkiquestFeed {
                 }.build()
         val request = AnkiquestApi.request(url, account.token, account.language).build()
         return parsePage(AnkiquestApi.json(account, request))
-    }
-
-    private fun legacy(account: HomeAccount): Page {
-        val request = AnkiquestApi.request(account, "api/notifications/${account.encodedUser}").build()
-        return parseLegacy(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) })
     }
 
     /** What [account] sent: replies and nudges, with when they were read. */
@@ -223,18 +214,6 @@ internal object AnkiquestFeed {
             latestId = json.positive("latest_id"),
             nextBefore = json.positive("next_before"),
             lock = AnkiquestLock.of(json),
-        )
-
-    /** The older oldest-first notification array, newest first like the feed. */
-    fun parseLegacy(array: JSONArray): Page =
-        Page(
-            items = items(array).sortedByDescending { it.id },
-            attention = emptyList(),
-            unread = 0,
-            actionCount = 0,
-            latestId = null,
-            nextBefore = null,
-            legacy = true,
         )
 
     fun parseSent(json: JSONObject): SentPage =

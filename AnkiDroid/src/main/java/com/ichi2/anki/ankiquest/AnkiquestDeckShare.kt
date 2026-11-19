@@ -303,79 +303,32 @@ internal object AnkiquestDeckShare {
     ) {
         val language = AnkiquestLanguage.context(context)
         val reference = AnkiquestSharing.MomentRef.Deck(prompt.deck.toString(), AnkiquestDeckNames.clean(prompt.name))
-        if (AnkiquestMomentShare.available(account, reference)) {
-            val card =
-                AnkiquestShare.Card(
-                    language.getString(R.string.ankiquest_deck_moment_title),
-                    language.getString(R.string.ankiquest_deck_moment_body, reference.name),
-                )
-            AnkiquestShareSheet(
-                context,
-                account,
-                reference,
-                card,
-                elsewhere = { chosen ->
-                    context.lifecycleScope.launch {
-                        if (AnkiquestHomeData.account() != account) {
-                            return@launch
-                        }
-                        val intent =
-                            withContext(Dispatchers.IO) { AnkiquestShare.textChooser(context, chosen.title, chosen.body, art = chosen.art) }
-                        if (AnkiquestHomeData.account() == account && AnkiquestPostStudyPrompts.resumed(context)) {
-                            context.startActivity(intent)
-                        }
-                    }
-                },
-                slot = AnkiquestShareSheet.Slot.POST_STUDY,
-            ).show()
+        if (AnkiquestServerUpdate.refuse(context, account)) {
             return
         }
-        val picked = BooleanArray(prompt.recipients.size)
-        val dialog =
-            AlertDialog
-                .Builder(context)
-                .setTitle(language.getString(R.string.ankiquest_deck_share_title, prompt.name))
-                .setMultiChoiceItems(prompt.recipients.map { it.display }.toTypedArray(), picked) { _, which, checked ->
-                    picked[which] = checked
-                }.setPositiveButton(language.getString(R.string.ankiquest_deck_share_send)) { _, _ ->
-                    val recipients = prompt.recipients.filterIndexed { index, _ -> picked[index] }.map { it.user }
-                    if (recipients.isNotEmpty()) send(context.applicationContext, account, prompt, recipients)
-                }.setNegativeButton(language.getString(R.string.ankiquest_deck_share_not_now), null)
-                .setNeutralButton(language.getString(R.string.ankiquest_deck_share_never)) { _, _ ->
-                    AnkiDroidApp.sharedPrefs().edit { putBoolean(PREF_ASK, false) }
-                    showThemedToast(context, language.getString(R.string.ankiquest_deck_share_never_done), shortLength = false)
-                }.show()
-        AnkiquestPostStudyPrompts.track(dialog)
-    }
-
-    private fun send(
-        context: Context,
-        account: HomeAccount,
-        prompt: Prompt,
-        recipients: List<String>,
-    ) {
-        applicationScope.launch {
-            val language = AnkiquestLanguage.context(context)
-            val message =
-                try {
-                    val told = AnkiquestSharing.shareFinishedDeck(account, prompt.deck, prompt.name, recipients)
-                    if (told == 0) {
-                        language.getString(R.string.ankiquest_deck_share_nobody)
-                    } else {
-                        language.resources.getQuantityString(R.plurals.ankiquest_share_sent, told, told)
+        val card =
+            AnkiquestShare.Card(
+                language.getString(R.string.ankiquest_deck_moment_title),
+                language.getString(R.string.ankiquest_deck_moment_body, reference.name),
+            )
+        AnkiquestShareSheet(
+            context,
+            account,
+            reference,
+            card,
+            elsewhere = { chosen ->
+                context.lifecycleScope.launch {
+                    if (AnkiquestHomeData.account() != account) {
+                        return@launch
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: AnkiquestHttpException) {
-                    Timber.w(e, "ankiquest finished deck share refused")
-                    language.getString(
-                        if (e.code == 404 || e.code == 405) R.string.ankiquest_deck_share_unsupported else R.string.ankiquest_share_failed,
-                    )
-                } catch (e: Exception) {
-                    Timber.w(e, "ankiquest finished deck share failed")
-                    language.getString(R.string.ankiquest_share_failed)
+                    val intent =
+                        withContext(Dispatchers.IO) { AnkiquestShare.textChooser(context, chosen.title, chosen.body, art = chosen.art) }
+                    if (AnkiquestHomeData.account() == account && AnkiquestPostStudyPrompts.resumed(context)) {
+                        context.startActivity(intent)
+                    }
                 }
-            launch(Dispatchers.Main) { showThemedToast(context, message, shortLength = false) }
-        }
+            },
+            slot = AnkiquestShareSheet.Slot.POST_STUDY,
+        ).show()
     }
 }

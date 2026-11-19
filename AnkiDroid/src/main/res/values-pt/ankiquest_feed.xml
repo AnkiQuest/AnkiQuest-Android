@@ -22,7 +22,6 @@
     <string name="aq_feed_view_invitation">Ver convite</string>
     <string name="aq_feed_open_goal">Abrir meta</string>
     <string name="aq_feed_all_invitations">Ver todos os convites</string>
-    <string name="aq_feed_legacy">Este servidor mostra os últimos 7 dias. Atualize o servidor para salvar o status de leitura e ter um histórico maior.</string>
     <string name="aq_feed_yesterday">Ontem</string>
     <string name="aq_feed_time_unread">%1$s · Não lida</string>
     <string name="aq_feed_card">Cartão: %1$s</string>

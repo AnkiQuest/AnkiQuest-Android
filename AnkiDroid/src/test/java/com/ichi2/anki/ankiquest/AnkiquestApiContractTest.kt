@@ -134,7 +134,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `activity pages keep global counts and invitation actions`() =
         runBlocking {
             val first = AnkiquestFeed.page(account)
-            assertFalse(first.legacy)
             assertEquals(7, first.unread)
             assertEquals(1, first.actionCount)
             assertEquals(17L, first.latestId)
@@ -276,13 +275,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `telling friends about a finished deck reads how many were told`() =
-        runBlocking {
-            assertEquals(1, AnkiquestSharing.shareFinishedDeck(account, 1L, "Spanish", listOf("cerro")))
-            assertTrue(requests.contains("POST /api/decks/hill/share"))
-        }
-
-    @Test
     fun `the leaderboard orders the widget rows`() =
         runBlocking {
             val board = Ankiquest.leaderboard().rows
@@ -417,7 +409,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `sharing a win, cheering one and the stored settings are read`() =
         runBlocking {
-            assertEquals(2, Ankiquest.shareWinWithFriends(1, account.scope))
             val link = Ankiquest.shareWinLink(1, account.scope)
             assertTrue(link.url.contains("/w/"), link.url)
             assertTrue(link.image.endsWith(".png"), link.image)
@@ -768,7 +759,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `a conquered card shows its numbers, its label and the owner's choices, and tells friends`() =
+    fun `a conquered card shows its numbers, its label and the owner's choices`() =
         runBlocking {
             val at = 1_793_097_000_000L
             val card = AnkiquestCommunity.conquest(account, "hill", at)
@@ -781,8 +772,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(false, card.told)
             assertEquals(0, card.friends)
             assertEquals(6L, card.win)
-            assertEquals(0, AnkiquestCommunity.tell(account, at))
-            assertTrue(requests.containsAll(listOf("GET /api/conquests/hill/$at", "POST /api/conquests/hill/$at/tell")))
+            assertTrue(requests.contains("GET /api/conquests/hill/$at"))
             assertFalse(card.undoable(EXAMPLE_NOW), "nothing to take back before telling")
         }
 
@@ -925,7 +915,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
             path == "/api/unlocks/hill" && method == "GET" -> "unlocks"
             path == "/api/unlocks/hill" && method == "POST" -> "unlocks_save"
-            parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"
             parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
@@ -940,7 +929,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/community" -> "community"
             parts.size == 3 && parts[0] == "community" && parts[1] == "reminders" -> if (method == "POST") "reminders_save" else "reminders"
             parts.size == 3 && parts[0] == "conquests" && method == "GET" -> "conquest"
-            parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "POST" -> "conquest_tell"
             parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "DELETE" -> "conquest_untell"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
@@ -983,7 +971,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "reviews" to "upload",
                 "rank" to "rank",
                 "notifications" to "notifications",
-                "share" to "share_to_friends",
                 "react" to "react",
                 "goal" to "goal",
                 "sharing" to "sharing",

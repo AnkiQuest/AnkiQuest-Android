@@ -77,13 +77,7 @@
         <item quantity="other">%1$s dias para aprender</item>
     </plurals>
     <string name="aq_conquest_tell">Contar aos meus amigos</string>
-    <string name="aq_conquest_telling">A avisar os teus amigos…</string>
     <string name="aq_conquest_told">Amigos avisados</string>
-    <plurals name="aq_conquest_told_count">
-        <item quantity="one">%1$d amigo vai vê-lo na sua atividade.</item>
-        <item quantity="many">%1$d amigos vão vê-lo na sua atividade.</item>
-        <item quantity="other">%1$d amigos vão vê-lo na sua atividade.</item>
-    </plurals>
     <string name="aq_conquest_label_add">Mostrar que cartão era</string>
     <string name="aq_conquest_label_explanation">Qualquer pessoa que possa abrir este cartão vai vê-lo, tal como os amigos a quem contares. Podes retirá-lo mais tarde.</string>
     <string name="aq_conquest_label_save">Mostrar no cartão</string>

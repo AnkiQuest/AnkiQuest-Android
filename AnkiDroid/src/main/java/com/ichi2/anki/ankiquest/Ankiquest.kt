@@ -230,31 +230,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
-    /**
-     * Shares a win with everyone in the player's circle through `/api/share`: one of their own
-     * [notification]s, or their current [place] on this week's board. Answers how many friends got it.
-     *
-     * @param expectedScope the [HomeAccount.scope] the win belongs to; another signed-in account never shares it
-     */
-    suspend fun shareWin(
-        notification: Long?,
-        place: Int?,
-        expectedScope: String,
-    ): Int =
-        share(
-            JSONObject().apply {
-                notification?.let { put("notification", it) }
-                place?.let { put("place", it) }
-            },
-            expectedScope,
-        ).optInt("recipients")
-
-    /** Sends the server's [win] to everyone in the player's circle; answers how many friends got it. */
-    suspend fun shareWinWithFriends(
-        win: Long,
-        expectedScope: String,
-    ): Int = share(JSONObject().put("win", win).put("to", "friends"), expectedScope).optInt("recipients")
-
     /** The public link for the server's [win], with its card and invitation text; the server makes it once and reuses it. */
     internal suspend fun shareWinLink(
         win: Long,

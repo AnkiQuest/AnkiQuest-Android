@@ -116,10 +116,9 @@ open class AnkiquestWidget : AppWidgetProvider() {
         }
 
         /**
-         * Orders [board] by the XP of [period], falling back to the week for older servers. Rows
-         * without `periods`, like strangers on the global board, carry the asked period's `xp`; a
-         * board whose rows all have a `rank` keeps the server's order, where the player's own row may
-         * come last with its own place.
+         * Orders [board] by the XP of [period]. Rows without `periods`, like strangers on the global
+         * board, carry the asked period's `xp`; a board whose rows all have a `rank` keeps the
+         * server's order, where the player's own row may come last with its own place.
          */
         internal fun forPeriod(
             board: JSONArray,
@@ -128,7 +127,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val entries = board.objects()
             val xpOf = { entry: JSONObject ->
                 entry.optJSONObject("periods")?.takeIf { it.has(period) }?.optLong(period)
-                    ?: if (entry.has("xp")) entry.optLong("xp") else entry.optLong("week_xp")
+                    ?: entry.optLong("xp")
             }
             val ranked = entries.isNotEmpty() && entries.all { it.optInt("rank") > 0 }
             val ordered = JSONArray()
@@ -748,7 +747,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val ownDay = AnkiquestDay.own(TimeManager.time.intTimeMS())
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
             val languageContext = AnkiquestLanguage.context(context)
-            val xpOf = { entry: JSONObject -> entry.optLong("xp", entry.optLong("week_xp")) }
+            val xpOf = { entry: JSONObject -> entry.optLong("xp") }
             val leaderXp = board.optJSONObject(0)?.let(xpOf)?.coerceAtLeast(1) ?: 1
             for (i in 0 until board.length()) {
                 val entry = board.getJSONObject(i)

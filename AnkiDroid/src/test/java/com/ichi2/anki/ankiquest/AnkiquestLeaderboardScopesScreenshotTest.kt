@@ -43,7 +43,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestSocial.overview(any()) } returns overview
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
-        coEvery { AnkiquestGlobalHides.load(any()) } returns null
+        coEvery { AnkiquestGlobalHides.load(any()) } returns emptyList()
         val board =
             AnkiquestBoards.parseLeaderboard(
                 JSONArray(

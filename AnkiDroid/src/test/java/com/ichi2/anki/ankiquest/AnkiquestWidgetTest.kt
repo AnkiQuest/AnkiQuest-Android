@@ -220,6 +220,7 @@ class AnkiquestWidgetTest : RobolectricTest() {
             .put("level", 1)
             .put("streak", 0)
             .put("xp_total", week)
+            .put("xp", week)
             .put("week_xp", week)
             .put("periods", JSONObject().put("week", week).put("day", day))
 
@@ -470,7 +471,7 @@ class AnkiquestWidgetTest : RobolectricTest() {
                     JSONObject()
                         .put("user", "player${position + 1}")
                         .put("display", "Player ${position + 1}")
-                        .put("week_xp", (players - position) * 100)
+                        .put("xp", (players - position) * 100)
                         .put("level", position + 1)
                         .put("streak", position),
                 )

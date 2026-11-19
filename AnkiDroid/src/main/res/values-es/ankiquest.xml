@@ -135,4 +135,5 @@
         <item quantity="one">Se envió %d repaso.</item>
         <item quantity="other">Se enviaron %d repasos.</item>
     </plurals>
+    <string name="aq_server_outdated">Actualiza tu servidor de AnkiQuest</string>
 </resources>

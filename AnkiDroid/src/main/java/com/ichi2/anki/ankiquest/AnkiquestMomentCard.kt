@@ -501,7 +501,7 @@ internal object AnkiquestMomentCard {
             val undo = moment.key in undoable
             holder.tell.isVisible = tellable(moment) && (undo || (moment.key !in told && known?.told != true))
             holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
-            holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
+            holder.tell.setOnClickListener { if (undo) untell(moment, position) else share(moment, position) }
             holder.share.setOnClickListener { share(moment, position) }
             holder.download.setOnClickListener { download(moment) }
             holder.deck.isVisible = moment.conquest != null
@@ -631,48 +631,6 @@ internal object AnkiquestMomentCard {
             }
         }
 
-        private fun tell(
-            moment: Moment,
-            position: Int,
-        ) {
-            val scope = scope ?: return
-            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
-            val win = moment.win ?: extras[moment.key]?.win
-            val reference = reference(moment)
-            // Tell -> share sheet -> chosen send. Older servers keep their existing route.
-            if (reference != null && AnkiquestMomentShare.available(signedIn, reference)) {
-                share(moment, position)
-                return
-            }
-            scope.launch {
-                val message =
-                    try {
-                        val friends =
-                            when {
-                                moment.conquest != null -> AnkiquestCommunity.tell(signedIn, moment.conquest)
-                                win != null -> Ankiquest.shareWinWithFriends(win, signedIn.scope)
-                                else -> Ankiquest.shareWin(moment.notification, moment.place, signedIn.scope)
-                            }
-                        told += moment.key
-                        if (moment.conquest != null) undoable += moment.key
-                        changed(position)
-                        if (friends == 0) {
-                            host.getString(R.string.ankiquest_share_nobody)
-                        } else {
-                            host.resources.getQuantityString(R.plurals.ankiquest_share_sent, friends, friends)
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: HomeAccountChanged) {
-                        host.getString(R.string.ankiquest_share_account_changed)
-                    } catch (e: Exception) {
-                        Timber.w(e, "AnkiQuest moment: telling friends failed")
-                        host.getString(R.string.ankiquest_share_failed)
-                    }
-                showThemedToast(host, message, shortLength = false)
-            }
-        }
-
         /** Takes back telling friends about a conquered card, from those who have not read it yet. */
         private fun untell(
             moment: Moment,
@@ -711,8 +669,8 @@ internal object AnkiquestMomentCard {
         }
 
         /**
-         * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
-         * chosen friends; Android's share sheet otherwise.
+         * AnkiQuest's share sheet for a moment the server can pass on; Android's share sheet for one
+         * it cannot. Tell opens the same sheet.
          */
         private fun share(
             moment: Moment,
@@ -720,8 +678,11 @@ internal object AnkiquestMomentCard {
         ) {
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             val ref = reference(moment)
-            if (ref == null || !AnkiquestMomentShare.available(signedIn, ref)) {
+            if (ref == null) {
                 elsewhere(moment)
+                return
+            }
+            if (AnkiquestServerUpdate.refuse(host, signedIn)) {
                 return
             }
             AnkiquestShareSheet(

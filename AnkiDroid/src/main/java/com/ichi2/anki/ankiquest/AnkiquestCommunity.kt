@@ -318,12 +318,6 @@ internal object AnkiquestCommunity {
         )
     }
 
-    /** Puts the owner's conquered card in each friend's activity, once; answers how many friends there are. */
-    suspend fun tell(
-        account: HomeAccount,
-        at: Long,
-    ): Int = call(account, "POST", conquestPath(account.user, at) + "/tell", JSONObject()).optInt("told")
-
     /**
      * Takes back telling friends about the owner's card, from those who have not read it yet;
      * answers how many rows were taken back. Asking again takes nothing back.

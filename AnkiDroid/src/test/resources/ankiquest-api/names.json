@@ -11,9 +11,7 @@
         "community",
         "companion",
         "conquest",
-        "conquest_tell",
         "conquest_untell",
-        "deck_share",
         "decks",
         "devices",
         "devices_sign_out",
@@ -36,7 +34,6 @@
         "settings_save",
         "share_moment",
         "share_moment_group",
-        "share_to_friends",
         "share_to_link",
         "share_undo",
         "share_undo_send",
@@ -53,7 +50,11 @@
         "unlocks_save",
         "upload"
     ],
-    "unused": [],
+    "unused": [
+        "conquest_tell",
+        "deck_share",
+        "share_to_friends"
+    ],
     "boards": [
         "leaderboard_day",
         "leaderboard_global",

@@ -5,11 +5,9 @@ package com.ichi2.anki.ankiquest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.sun.net.httpserver.HttpServer
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
@@ -21,7 +19,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -41,15 +38,6 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
             val people = runBlocking { AnkiquestGlobalHides.load(account) }
             assertEquals(listOf(AnkiquestGlobalHides.Player("ana", "Ana")), people)
             assertEquals(listOf(Request("GET", "/api/leaderboard/hidden/hill", "Bearer test-token", "")), requests.toList())
-        }
-    }
-
-    @Test
-    fun `older servers have no hide controls and receive no hidden-list request`() {
-        withServer { account, requests ->
-            coEvery { AnkiquestCapabilities.current(account) } returns setOf("global_leaderboard")
-            assertNull(runBlocking { AnkiquestGlobalHides.load(account) })
-            assertTrue(requests.isEmpty())
         }
     }
 
@@ -110,15 +98,6 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
         }
     }
 
-    @Test
-    fun `cancelled capability discovery does not become unsupported`() {
-        withServer { account, requests ->
-            coEvery { AnkiquestCapabilities.current(account) } throws CancellationException("screen left")
-            assertFailsWith<CancellationException> { runBlocking { AnkiquestGlobalHides.load(account) } }
-            assertTrue(requests.isEmpty())
-        }
-    }
-
     private fun withServer(
         status: Int = HTTP_OK,
         responseOwner: ResponseOwner = ResponseOwner.CURRENT,
@@ -147,13 +126,12 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
             exchange.close()
         }
         server.start()
-        mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
+        mockkObject(AnkiquestHomeData)
         every { AnkiquestHomeData.account(any()) } answers { current.get() }
-        coEvery { AnkiquestCapabilities.current(any()) } returns setOf("global_leaderboard_hide")
         try {
             block(account, requests)
         } finally {
-            unmockkObject(AnkiquestHomeData, AnkiquestCapabilities)
+            unmockkObject(AnkiquestHomeData)
             server.stop(0)
         }
     }

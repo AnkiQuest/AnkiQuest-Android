@@ -296,17 +296,6 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `an older server's list has no filters or read state`() {
-        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
-            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedTest.LEGACY))
-        val feed = launch()
-        assertTrue(feed.hasText(feed.getString(R.string.aq_feed_legacy)))
-        assertFalse(feed.hasText(feed.getString(R.string.aq_feed_messages)))
-        assertFalse(feed.hasText(feed.getString(R.string.aq_feed_mark_read)))
-        assertTrue(feed.hasText("Daily goal reached!"))
-    }
-
-    @Test
     fun `offline and refused feeds say what to do`() {
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } throws IOException("offline")
         val offline = launch()

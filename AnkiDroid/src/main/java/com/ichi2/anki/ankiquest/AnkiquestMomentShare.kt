@@ -13,15 +13,11 @@ import org.json.JSONException
 
 /**
  * Sending a moment to chosen AnkiQuest friends and groups from the share sheet: who can be
- * chosen, in which order, and the send and its undo. Servers without [AnkiquestSharing.FEATURE_MOMENTS]
- * keep the older ways to share.
+ * chosen, in which order, and the send and its undo.
  */
 internal object AnkiquestMomentShare {
     private const val PREF_RECENT = "ankiquestShareRecent"
     private const val MAX_RECENT = 20
-    private const val FEATURE_PLACE = "share_place"
-    private const val FEATURE_NOTIFICATION = "share_notification"
-    private const val FEATURE_DECK = "share_deck_moment"
 
     /** Someone a moment can be sent to. [key] is stable across loads, for remembering recent choices. */
     sealed class Target {
@@ -74,22 +70,6 @@ internal object AnkiquestMomentShare {
                     )
             }
     }
-
-    /** Whether [account]'s server last reported that it takes chosen recipients and a note. */
-    fun available(account: HomeAccount): Boolean = AnkiquestCapabilities.has(account, AnkiquestSharing.FEATURE_MOMENTS)
-
-    /** New reference kinds require their own advertised capability as well as the picker API. */
-    fun available(
-        account: HomeAccount,
-        moment: MomentRef,
-    ): Boolean =
-        available(account) &&
-            when (moment) {
-                is MomentRef.Place -> AnkiquestCapabilities.has(account, FEATURE_PLACE)
-                is MomentRef.Notification -> AnkiquestCapabilities.has(account, FEATURE_NOTIFICATION)
-                is MomentRef.Deck -> AnkiquestCapabilities.has(account, FEATURE_DECK)
-                else -> true
-            }
 
     /** [account]'s friends and groups, those sent to most recently first. */
     suspend fun targets(account: HomeAccount): List<Target> {

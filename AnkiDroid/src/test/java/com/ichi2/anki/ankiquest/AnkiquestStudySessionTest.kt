@@ -270,7 +270,6 @@ class AnkiquestStudySessionTest : RobolectricTest() {
                     null,
                 )
             }
-            coVerify(exactly = 0) { AnkiquestSharing.shareFinishedDeck(any(), any(), any(), any()) }
             val again = CoroutineScope(Dispatchers.Main).async { AnkiquestDeckShare.offer(host) }
             advanceRobolectricLooperUntil { again.isCompleted }
             runBlocking { again.await() }
