@@ -54,8 +54,7 @@ class AnkiquestSharedFixturesTest {
 
     @Test
     fun `review rows upload the fields the server reads`() {
-        // AnkiQuest-Server#89 replaces every pinned case; see AnkiquestReviewRows.kt.
-        val cases = easeReviewRows
+        val cases = cases("review_row")
         check(cases.isNotEmpty())
         for (case in cases) {
             val row = case.getJSONArray("row")
