@@ -7,4 +7,6 @@
     <item name="aq_me_records_loading" type="id" />
     <item name="aq_me_history_content" type="id" />
     <item name="aq_me_history_loading" type="id" />
+    <item name="aq_me_study_time_content" type="id" />
+    <item name="aq_me_study_time_loading" type="id" />
 </resources>
