@@ -266,6 +266,74 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         }
     }
 
+    @Test
+    fun `a dialog opened under one account sends nothing once the account changed`() {
+        cerro()
+        mockkObject(AnkiquestMessages)
+        try {
+            val other = HomeAccount("https://other.example.test", "hill", "other-secret")
+            coEvery { AnkiquestBoards.player(other, "cerro") } returns
+                AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+            val befriended = overview(friends = listOf("cerro"), groups = listOf(group(1, "Spanish club"), group(4, "Study night")))
+            coEvery { AnkiquestSocial.overview(any()) } returns befriended
+            coEvery { AnkiquestSocial.change(any(), any()) } returns befriended
+            coEvery { AnkiquestMessages.send(any(), any(), any()) } returns AnkiquestMessages.Outcome.SENT
+
+            // Message, and the group picker with invitations sent by the server or shared as links.
+            val dialogs =
+                listOf(
+                    setOf(AnkiquestMessages.FEATURE) to R.string.aq_profile_message,
+                    setOf(AnkiquestSocial.FEATURE_INVITES) to R.string.aq_profile_invite,
+                    emptySet<String>() to R.string.aq_profile_invite,
+                )
+            for ((features, label) in dialogs) {
+                for (next in listOf(other, null)) {
+                    val case = "$features, then ${next?.server ?: "signed out"}"
+                    every { AnkiquestHomeData.account(any()) } returns identity
+                    coEvery { AnkiquestCapabilities.current(any()) } returns features
+                    val controller =
+                        startActivityControllerNormallyOpenCollectionWithIntent(
+                            this,
+                            AnkiquestProfileActivity::class.java,
+                            AnkiquestProfileActivity.intent(targetContext, "cerro"),
+                        )
+                    val screen = controller.get()
+                    advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
+                    advanceRobolectricLooper()
+                    screen.click(screen.getString(label))
+                    val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+                    dialog.window!!
+                        .decorView.allViews
+                        .filterIsInstance<android.widget.EditText>()
+                        .singleOrNull()
+                        ?.setText("Verbs tonight?")
+
+                    // The account changes while the profile is away.
+                    controller.pause()
+                    every { AnkiquestHomeData.account(any()) } returns next
+                    controller.resume()
+                    advanceRobolectricLooper()
+                    val stillOpen = dialog.isShowing
+
+                    // Confirming the stale dialog sends and shares nothing.
+                    if (label == R.string.aq_profile_message) {
+                        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+                    } else {
+                        val list = dialog.listView
+                        list.performItemClick(list.adapter.getView(0, null, list), 0, list.adapter.getItemId(0))
+                    }
+                    advanceRobolectricLooper()
+                    coVerify(exactly = 0) { AnkiquestMessages.send(any(), any(), any()) }
+                    coVerify(exactly = 0) { AnkiquestSocial.change(any(), any()) }
+                    assertNull(shadowOf(screen).nextStartedActivity, "$case: nothing is shared")
+                    assertFalse(stillOpen, "$case: the dialog closes when the account changes")
+                }
+            }
+        } finally {
+            unmockkObject(AnkiquestMessages)
+        }
+    }
+
     /** The invite link in the text the screen last handed to the share sheet. */
     private fun sharedLink(screen: AnkiquestProfileActivity): String? {
         val chooser = assertNotNull(shadowOf(screen).nextStartedActivity)
