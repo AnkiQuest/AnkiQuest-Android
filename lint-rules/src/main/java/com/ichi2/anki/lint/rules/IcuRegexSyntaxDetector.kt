@@ -19,6 +19,8 @@ import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UElement
 import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UReferenceExpression
+import org.jetbrains.uast.USimpleNameReferenceExpression
+import org.jetbrains.uast.visitor.AbstractUastVisitor
 
 /**
  * Reports regular expressions that compile on the JVM but throw on Android.
@@ -43,6 +45,7 @@ class IcuRegexSyntaxDetector :
                 "inline flag other than i, d, m, s, u, w and x, a `}` that does not close a {n,m} " +
                 "quantifier, and the UNICODE_CHARACTER_CLASS and CANON_EQ compile flags. On Android " +
                 "\\d, \\s and \\w already match Unicode characters, so (?U) is not needed. " +
+                "Patterns compiled with LITERAL are not checked, and comments are skipped in COMMENTS mode. " +
                 "See https://unicode-org.github.io/icu/userguide/strings/regexp.html"
 
         /** Crashes on device: the highest priority. */
@@ -61,6 +64,12 @@ class IcuRegexSyntaxDetector :
         private val STRING_METHODS = setOf("matches", "replaceAll", "replaceFirst", "split")
         private val KOTLIN_RECEIVER_METHODS = setOf("toRegex", "toPattern")
         private val KOTLIN_ARGUMENT_METHODS = setOf("matches")
+
+        /** `Pattern.LITERAL` and `Pattern.COMMENTS`: java.util.regex.Pattern's documented values. */
+        private const val LITERAL_FLAG = 0x10
+        private const val COMMENTS_FLAG = 0x04
+        private const val LITERAL = "LITERAL"
+        private const val COMMENTS = "COMMENTS"
 
         private val implementation = Implementation(IcuRegexSyntaxDetector::class.java, Scope.JAVA_FILE_SCOPE)
 
@@ -84,7 +93,9 @@ class IcuRegexSyntaxDetector :
         node: UCallExpression,
         constructor: PsiMethod,
     ) {
-        node.valueArguments.firstOrNull()?.let { checkPattern(context, it) }
+        val arguments = node.valueArguments
+        val pattern = arguments.firstOrNull() ?: return
+        checkPattern(context, RegexCall(pattern, arguments.drop(1)))
     }
 
     override fun getApplicableMethodNames() =
@@ -96,26 +107,29 @@ class IcuRegexSyntaxDetector :
         node: UCallExpression,
         method: PsiMethod,
     ) {
-        val pattern = patternOf(context, node, method) ?: return
-        checkPattern(context, pattern)
+        val call = callOf(context, node, method) ?: return
+        checkPattern(context, call)
     }
 
-    /** The expression that holds the pattern in a call to a regex API, or null for unrelated methods. */
-    private fun patternOf(
+    /** The pattern and options of a call to a regex API, or null for unrelated methods. */
+    private fun callOf(
         context: JavaContext,
         node: UCallExpression,
         method: PsiMethod,
-    ): UExpression? {
+    ): RegexCall? {
         val evaluator = context.evaluator
+        val arguments = node.valueArguments
+        val first = arguments.firstOrNull()
 
-        // Pattern.compile(regex, ...) and Pattern.matches(regex, input).
+        // Pattern.compile(regex, flags) and Pattern.matches(regex, input), which takes no flags.
         if (method.name in PATTERN_METHODS && evaluator.isMemberInClass(method, PATTERN)) {
-            return node.valueArguments.firstOrNull()
+            val flags = if (method.name == "compile") arguments.drop(1) else emptyList()
+            return first?.let { RegexCall(it, flags) }
         }
 
         // input.matches(regex), input.replaceAll(regex, ...), input.split(regex) in Java.
         if (method.name in STRING_METHODS && evaluator.isMemberInClass(method, STRING)) {
-            return node.valueArguments.firstOrNull()
+            return first?.let { RegexCall(it, emptyList()) }
         }
 
         // Kotlin's String extensions; Regex.matches(input) takes an input, not a pattern.
@@ -123,26 +137,83 @@ class IcuRegexSyntaxDetector :
             return null
         }
 
-        // "regex".toRegex() and "regex".toPattern(): the receiver is the pattern.
+        // "regex".toRegex(options) and "regex".toPattern(flags): the receiver is the pattern.
         if (method.name in KOTLIN_RECEIVER_METHODS) {
-            return node.receiver
+            return node.receiver?.let { RegexCall(it, arguments) }
         }
 
         // input.matches("regex"); with a Regex argument the constant check skips it.
         if (method.name in KOTLIN_ARGUMENT_METHODS) {
-            return node.valueArguments.firstOrNull()
+            return first?.let { RegexCall(it, emptyList()) }
         }
         return null
     }
 
-    /** Reports [expression] if it is a constant string that ICU fails to compile. */
+    /** Reports the pattern of [call] if it is a constant string that ICU fails to compile. */
     private fun checkPattern(
         context: JavaContext,
-        expression: UExpression,
+        call: RegexCall,
     ) {
-        val pattern = ConstantEvaluator.evaluate(context, expression) as? String ?: return
-        val problem = IcuRegex.problem(pattern) ?: return
-        report(context, expression, problem)
+        val pattern = ConstantEvaluator.evaluate(context, call.pattern) as? String ?: return
+
+        // A literal pattern is plain text, not regex syntax.
+        val syntax = syntaxOf(context, call.options)
+        if (syntax == Syntax.LITERAL) {
+            return
+        }
+        val problem = IcuRegex.problem(pattern, syntax) ?: return
+        report(context, call.pattern, problem)
+    }
+
+    /** How the options in [options] make the engine read the pattern: literal, with comments or plain. */
+    private fun syntaxOf(
+        context: JavaContext,
+        options: List<UExpression>,
+    ): Syntax {
+        val names = options.flatMap { optionNames(context, it) }.toSet()
+        return when {
+            LITERAL in names -> Syntax.LITERAL
+            COMMENTS in names -> Syntax.COMMENTS
+            else -> Syntax.REGEX
+        }
+    }
+
+    /**
+     * The `LITERAL` and `COMMENTS` options [option] sets: references to `Pattern` and `RegexOption`
+     * fields (`Pattern.LITERAL or Pattern.CASE_INSENSITIVE`, `setOf(RegexOption.LITERAL)`), or the
+     * bits of a constant int flag.
+     */
+    private fun optionNames(
+        context: JavaContext,
+        option: UExpression,
+    ): Set<String> {
+        val names = mutableSetOf<String>()
+
+        // Pattern flags held in a named constant.
+        val flags = ConstantEvaluator.evaluate(context, option) as? Int
+        if (flags != null) {
+            if (flags and LITERAL_FLAG != 0) {
+                names.add(LITERAL)
+            }
+            if (flags and COMMENTS_FLAG != 0) {
+                names.add(COMMENTS)
+            }
+        }
+
+        // Pattern and RegexOption fields named anywhere in the expression.
+        option.accept(
+            object : AbstractUastVisitor() {
+                override fun visitSimpleNameReferenceExpression(node: USimpleNameReferenceExpression): Boolean {
+                    val field = node.resolve() as? PsiField ?: return false
+                    val owner = field.containingClass?.qualifiedName
+                    if (owner == PATTERN || owner == REGEX_OPTION) {
+                        names.add(field.name)
+                    }
+                    return false
+                }
+            },
+        )
+        return names
     }
 
     override fun getApplicableReferenceNames() = UNSUPPORTED_FLAGS.toList()
@@ -171,6 +242,24 @@ class IcuRegexSyntaxDetector :
     }
 }
 
+/** A pattern and the options passed with it. */
+private class RegexCall(
+    val pattern: UExpression,
+    val options: List<UExpression>,
+)
+
+/** How the engine reads a pattern's text. */
+private enum class Syntax {
+    /** Regex syntax. */
+    REGEX,
+
+    /** Regex syntax where `#` starts a comment that runs to the end of the line (`COMMENTS`, `(?x)`). */
+    COMMENTS,
+
+    /** Plain text (`LITERAL`): nothing to check. */
+    LITERAL,
+}
+
 private const val ANDROID_USES_ICU = "Android compiles regular expressions with ICU, unlike the JVM that unit tests run on"
 
 /** The parts of ICU's regex syntax that the JDK accepts and ICU rejects. */
@@ -188,21 +277,38 @@ private object IcuRegex {
     private const val FLAGS_END = ")"
     private const val FLAGS_GROUP_END = ":"
     private const val FLAG_NEGATION = '-'
+    private const val COMMENT_START = '#'
+    private const val LINE_END = '\n'
+    private const val COMMENTS_INLINE_FLAG = 'x'
 
     /** Inline flags ICU accepts in `(?flags)` and `(?flags:...)`: icu4c/source/i18n/regexcst.txt. */
     private const val ICU_FLAGS = "idmsuwx-"
     private const val ICU_FLAGS_LIST = "i, d, m, s, u, w and x"
 
-    /** Why ICU rejects [pattern], or null when it does not use any of the constructs ICU rejects. */
-    fun problem(pattern: String): String? {
+    /**
+     * Why ICU rejects [pattern], read with [syntax], or null when it does not use any of the
+     * constructs ICU rejects.
+     */
+    fun problem(
+        pattern: String,
+        syntax: Syntax,
+    ): String? {
         var index = 0
         var classDepth = 0
+        var mode = syntax
         while (index < pattern.length) {
             val char = pattern[index]
 
             // An escaped character, or a \Q...\E quote, is literal text.
             if (char == ESCAPE) {
                 index = afterEscape(pattern, index)
+                continue
+            }
+
+            // In comments mode `#` outside a class starts a comment that runs to the end of the line.
+            if (mode == Syntax.COMMENTS && classDepth == 0 && char == COMMENT_START) {
+                val end = pattern.indexOf(LINE_END, index)
+                index = if (end < 0) pattern.length else end + 1
                 continue
             }
 
@@ -233,7 +339,14 @@ private object IcuRegex {
                     continue
                 }
                 INTERVAL_END -> return "Unescaped `}` outside a {n,m} quantifier: ICU rejects it, write `\\}`"
-                GROUP_START -> inlineFlagProblem(pattern, index)?.let { return it }
+                GROUP_START -> {
+                    val group = flagGroup(pattern, index)
+                    group?.problem()?.let { return it }
+
+                    // `(?x)` turns comments on and `(?-x)` off. A scoped `(?x:...)` is taken to
+                    // run to the end, which can only skip text, never report text wrongly.
+                    mode = group?.syntaxAfter(mode) ?: mode
+                }
             }
             index++
         }
@@ -267,11 +380,11 @@ private object IcuRegex {
         return next
     }
 
-    /** Reports flags ICU lacks in an inline flag group `(?flags)` or `(?flags:...)` at [index]. */
-    private fun inlineFlagProblem(
+    /** The inline flag group `(?flags)` or `(?flags:...)` at [index], or null for any other text. */
+    private fun flagGroup(
         pattern: String,
         index: Int,
-    ): String? {
+    ): FlagGroup? {
         if (pattern.getOrNull(index + 1) != GROUP_EXTENSION) {
             return null
         }
@@ -289,12 +402,33 @@ private object IcuRegex {
         if (terminator != FLAGS_END && terminator != FLAGS_GROUP_END) {
             return null
         }
-        val flags = pattern.substring(start, end)
-        val unsupported = flags.filter { it !in ICU_FLAGS }
-        if (unsupported.isEmpty()) {
-            return null
+        return FlagGroup(pattern.substring(start, end), terminator)
+    }
+
+    /** An inline flag group: [flags] such as `i-x`, ended by `)` or `:` ([terminator]). */
+    private class FlagGroup(
+        val flags: String,
+        val terminator: String,
+    ) {
+        /** Reports flags ICU lacks, or null when ICU accepts them all. */
+        fun problem(): String? {
+            val unsupported = flags.filter { it !in ICU_FLAGS }
+            if (unsupported.isEmpty()) {
+                return null
+            }
+            return "Inline flag `(?$flags$terminator` uses `$unsupported`, which ICU rejects " +
+                "(it accepts only $ICU_FLAGS_LIST)"
         }
-        return "Inline flag `(?$flags$terminator` uses `$unsupported`, which ICU rejects " +
-            "(it accepts only $ICU_FLAGS_LIST)"
+
+        /** The syntax after this group: `x` before a `-` turns comments on, after it off. */
+        fun syntaxAfter(syntax: Syntax): Syntax {
+            val on = flags.substringBefore(FLAG_NEGATION)
+            val off = flags.substringAfter(FLAG_NEGATION, "")
+            return when {
+                COMMENTS_INLINE_FLAG in off -> Syntax.REGEX
+                COMMENTS_INLINE_FLAG in on -> Syntax.COMMENTS
+                else -> syntax
+            }
+        }
     }
 }
