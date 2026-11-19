@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
-<!-- AnkiQuest branding, merged over the main manifest only by the quest build (-PcustomSuffix=quest). -->
+<!-- AnkiQuest branding, merged over the main manifest only by the AnkiQuest build (-Pankiquest). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 

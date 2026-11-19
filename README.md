@@ -55,7 +55,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 <div style="display:flex;">
 
 1. Create an account on an AnkiQuest server, such as [ankiquest.rationality-munich.com](https://ankiquest.rationality-munich.com). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
-2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
+2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" (package `dev.hilll.anki`) and offers later releases itself. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
@@ -63,6 +63,17 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
         src="https://github.com/user-attachments/assets/713d71c5-3dec-4ec4-a3f2-8d28d025a9c6"/></a>
 
 </div>
+
+### Moving from com.ichi2.anki.quest
+
+Earlier releases were the package `com.ichi2.anki.quest`. AnkiDroid's maintainers ask forks not to use AnkiDroid's package name, so AnkiQuest is now `dev.hilll.anki`, a separate app that cannot update the old one. To move:
+
+1. In the old app, sync with AnkiWeb, or export your collection (**Export collection** with scheduling and media).
+2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest).
+3. In the new app, sync with AnkiWeb (or import the export), then sign in under **Settings → ankiquest → Account**.
+4. Uninstall the old app once your cards are in the new one.
+
+Obtainium tracks apps by package: remove the old entry and add AnkiQuest again.
 
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 

@@ -61,6 +61,28 @@ val androidTestVariantName = rootProject.extra["androidTestVariantName"] as Stri
 val homePath = System.getProperty("user.home")
 
 /**
+ * AnkiQuest: `-Pankiquest` builds AnkiQuest as its own app, `dev.hilll.anki` (debug builds add
+ * `.debug`), because AnkiDroid's maintainers ask forks not to use the `com.ichi2.anki` package.
+ * The Kotlin and resource namespace stays `com.ichi2.anki`, so upstream code merges unchanged.
+ * It also adds src/quest and the quest version codes. `-PcustomSuffix` still appends as upstream.
+ */
+val ankiquestBuild =
+    providers
+        .gradleProperty("ankiquest")
+        .map { value ->
+            if (value !in setOf("", "true")) {
+                throw GradleException("ankiquest takes no value: pass -Pankiquest")
+            }
+            true
+        }.getOrElse(false)
+val ankiquestApplicationId = "dev.hilll.anki"
+
+// Builds before dev.hilll.anki used -PcustomSuffix=quest, which would now give com.ichi2.anki.quest without AnkiQuest's branding.
+if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
+    throw GradleException("-PcustomSuffix=quest is no longer the AnkiQuest build; pass -Pankiquest")
+}
+
+/**
  * Calculates the current git hash, invalidates configuration cache if changed
  * @example edf739d95bad7b370a6ed4398d46723f8219b3cd
  * @see https://docs.gradle.org/current/userguide/configuration_cache_requirements.html#config_cache:requirements:external_processes
@@ -140,6 +162,10 @@ android {
 
     defaultConfig {
         applicationId = "com.ichi2.anki"
+        // AnkiQuest's own package; see ankiquestBuild.
+        if (ankiquestBuild) {
+            applicationId = ankiquestApplicationId
+        }
         buildConfigField("Boolean", "CI", (System.getenv("CI") == "true").toString())
         buildConfigField("String", "ACRA_URL", "\"https://ankidroid.org/acra/report\"")
         buildConfigField("String", "BACKEND_VERSION", "\"${libs.versions.ankiBackend.get()}\"")
@@ -186,7 +212,7 @@ android {
         // quest-<n> is 5nnnn000; nightly builds after it add their commit count,
         // so both channels install over each other in order.
         // Assigned through `this.`, so upstream's validateVersionCode still sees one versionCode literal.
-        if ((project.findProperty("customSuffix") ?: "").toString().replaceFirst(Regex("^\\.*"), "") == "quest") {
+        if (ankiquestBuild) {
             val questRelease = (project.findProperty("ankiquestRelease") ?: "0").toString()
             val questNightly = (project.findProperty("ankiquestNightly") ?: "0").toString()
             if (!questRelease.matches(Regex("[0-9]{1,5}")) || questRelease.toInt() > 49999) {
@@ -420,8 +446,8 @@ android {
     }
 }
 
-// AnkiQuest: the quest build (-PcustomSuffix=quest) adds src/quest, with the launcher icon and the updater's install permission.
-if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
+// AnkiQuest: the AnkiQuest build (-Pankiquest) adds src/quest, with the launcher icon and the updater's install permission.
+if (ankiquestBuild) {
     androidComponents.onVariants { variant ->
         variant.sources.res?.addStaticSourceDirectory("src/quest/res")
         variant.sources.manifests.addStaticManifestFile("src/quest/AndroidManifest.xml")

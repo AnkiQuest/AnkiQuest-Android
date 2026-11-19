@@ -30,6 +30,6 @@ class AnkiquestLinksTest {
     }
 
     private companion object {
-        const val PACKAGE = "com.ichi2.anki.quest"
+        const val PACKAGE = "dev.hilll.anki"
     }
 }
