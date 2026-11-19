@@ -1,5 +1,7 @@
 AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): study, shared goals, and progress in one place.
 
+**AnkiQuest is moving to a new app.** AnkiDroid's maintainers ask forks not to use AnkiDroid's package name, so the next release is a new app, `dev.hilll.anki`, that installs next to this one. When the update says "AnkiQuest moved to a new app": sync with AnkiWeb (or export your collection), install the new app from the release page, sync there and sign in to AnkiQuest. Uninstall this app once your cards are in the new one.
+
 **Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 
 **Friends, Group and Global leaderboards.** The leaderboard switches between Friends, one of your groups and Global, with the server's ranks. Your own row says when it is not shown to others. On Global, "Hide for me" removes a player from your board only; they are not notified. "Hidden players" lists them, each with "Show again". "Show me on the global leaderboard" under Settings → AnkiQuest → Sharing decides whether you are listed.
