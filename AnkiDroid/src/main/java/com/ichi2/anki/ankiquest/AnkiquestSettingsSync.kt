@@ -16,7 +16,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
@@ -405,19 +404,13 @@ internal object AnkiquestSettingsSync {
         account: HomeAccount,
         method: String,
         body: JSONObject?,
-    ): JSONObject? =
-        withContext(Dispatchers.IO) {
-            // Checked after the last wait, so a switch turned off during an earlier request stops this one.
-            if (gate(account) != Gate.OPEN) {
-                return@withContext null
-            }
-            val request =
-                AnkiquestApi
-                    .request(account, "api/settings/${account.encodedUser}")
-                    .method(method, body?.let(AnkiquestApi::body))
-                    .build()
-            AnkiquestApi.json(account, request)
+    ): JSONObject? {
+        // Checked after the last wait, so a switch turned off during an earlier request stops this one.
+        if (gate(account) != Gate.OPEN) {
+            return null
         }
+        return AnkiquestApi.call(account, method, "api/settings/${account.encodedUser}", body)
+    }
 
     /** The well-formed entries of an answer's `settings`; values that are whole numbers become [Int] where they fit. */
     @VisibleForTesting
