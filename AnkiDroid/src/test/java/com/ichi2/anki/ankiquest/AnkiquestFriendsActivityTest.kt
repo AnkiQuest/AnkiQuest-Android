@@ -77,8 +77,8 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         assertTrue(friends.hasText("Night owls"))
         assertEquals(2, texts.count { it == friends.resources.getQuantityString(R.plurals.aq_friends_members, 2, 2) })
         assertTrue(friends.hasText("https://anki.example.test/join/example-invite-1"), "the owner sees the invite link")
-        assertEquals(1, texts.count { it == friends.getString(R.string.aq_friends_share_link) }, "only for the group Hill owns")
-        assertEquals(2, texts.count { it == friends.getString(R.string.aq_friends_you, "Hill") })
+        assertEquals(1, texts.count { it == friends.getString(R.string.aq_friends_share_link) }, "only for the group hill owns")
+        assertEquals(2, texts.count { it == friends.getString(R.string.aq_friends_you, "hill") })
         assertEquals(2, texts.count { it == friends.getString(R.string.aq_friends_leave) })
         assertTrue(friends.hasText(friends.getString(R.string.aq_friends_visibility_public)))
         assertTrue(friends.views<TextView>().any { it.text.toString() == friends.getString(R.string.aq_friends_unmute) })
@@ -220,7 +220,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         friends.settle()
         coVerify { AnkiquestSocial.change(identity, AnkiquestSocial.Change.RenameGroup(1, "Club español")) }
 
-        // Friend's Remove comes first, then Ana's in Hill's own group.
+        // Friend's Remove comes first, then Ana's in hill's own group.
         friends
             .views<TextView>()
             .filter { it.text.toString() == friends.getString(R.string.aq_friends_remove) }[1]
