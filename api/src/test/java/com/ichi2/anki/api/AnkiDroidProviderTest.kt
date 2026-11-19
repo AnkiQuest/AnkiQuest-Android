@@ -215,7 +215,7 @@ internal sealed interface Signing {
     ) : Signing
 }
 
-/** Installs packages that hold [FlashCardsContract.AUTHORITY] */
+/** Installs packages that hold [FlashCardsContract.AUTHORITY], or another [authority] */
 internal object AnkiDroidPackages {
     /**
      * AnkiDroid's release certificate, from the APK signing block of AnkiDroid-2.25.3-arm64-v8a.apk
@@ -245,6 +245,7 @@ internal object AnkiDroidPackages {
         packageName: String,
         signing: Signing,
         metaData: Bundle? = null,
+        authority: String = FlashCardsContract.AUTHORITY,
     ) {
         val manager = shadowOf(RuntimeEnvironment.getApplication().packageManager)
 
@@ -263,7 +264,7 @@ internal object AnkiDroidPackages {
         // The provider is added after the package, so it keeps the package's signatures
         val provider =
             ProviderInfo().apply {
-                authority = FlashCardsContract.AUTHORITY
+                this.authority = authority
                 this.packageName = packageName
                 name = "com.ichi2.anki.provider.CardContentProvider"
                 this.metaData = metaData
