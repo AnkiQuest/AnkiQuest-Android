@@ -2,8 +2,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <plurals name="ankiquest_streak_milestone">
-        <item quantity="one">Falta %1$d dia para %2$d 🔥</item>
-        <item quantity="other">Faltam %1$d dias para %2$d 🔥</item>
+        <item quantity="one">Falta %1$d dia para %2$d</item>
+        <item quantity="other">Faltam %1$d dias para %2$d</item>
     </plurals>
     <string name="ankiquest_streak_nudge">Estuda hoje para a manteres</string>
     <string name="ankiquest_streak_unsent">Ainda não enviado</string>

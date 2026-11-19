@@ -115,7 +115,7 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `the line under the number nudges until today counts`() {
-        assertEquals("36 days to 100 🔥", AnkiquestMood.line(targetContext, AnkiquestMood.Flame.LIT, 64))
+        assertEquals("36 days to 100", AnkiquestMood.line(targetContext, AnkiquestMood.Flame.LIT, 64))
         val nudge = "Study today to keep it"
         assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.UNLIT, 64))
         assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.ICY, 64))

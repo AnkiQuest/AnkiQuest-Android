@@ -43,8 +43,7 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
 
     @Test
     fun `flame grows at each tier and stays stable until the next`() {
-        // The big sizes show the flame in the milestone line instead.
-        for (size in listOf(Size.SMALL, Size.MEDIUM)) {
+        for (size in Size.entries) {
             var previous = 0
             for ((first, last) in listOf(1 to 6, 7 to 29, 30 to 99, 100 to 364, 365 to 1000)) {
                 val number = render(board(first), size).findViewById<TextView>(R.id.ankiquest_streak_number)
@@ -67,7 +66,7 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
                 val remaining = expected - streak
                 val days = if (remaining == 1) "day" else "days"
                 assertEquals(View.VISIBLE, milestone.visibility)
-                assertEquals("$remaining $days to $expected 🔥", milestone.text.toString())
+                assertEquals("$remaining $days to $expected", milestone.text.toString())
                 assertContains(view.contentDescription.toString(), milestone.text.toString())
             }
             val final = render(board(365), size)
@@ -78,13 +77,13 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
     @Test
     fun `large widgets show one flame on a counted day`() {
         for (size in listOf(Size.LARGE, Size.HUGE)) {
-            // The milestone line's flame replaces the one beside the number.
+            // The flame stays beside the number; the milestone line has no second one.
             val view = render(board(66), size)
             val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
-            assertNull(number.compoundDrawablesRelative[2], size.name)
-            assertEquals("34 days to 100 🔥", view.findViewById<TextView>(R.id.ankiquest_streak_milestone).text.toString())
+            assertNotNull(number.compoundDrawablesRelative[2], size.name)
+            assertEquals("34 days to 100", view.findViewById<TextView>(R.id.ankiquest_streak_milestone).text.toString())
 
-            // Past the last milestone there is no line, so the number keeps its flame.
+            // Past the last milestone there is no line and the number keeps its flame.
             val final = render(board(400), size).findViewById<TextView>(R.id.ankiquest_streak_number)
             assertNotNull(final.compoundDrawablesRelative[2], size.name)
         }
@@ -123,7 +122,7 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
             assertEquals("Not studied yet", status.text.toString(), size.name)
             val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
             assertEquals("Study today to keep it", milestone.text.toString(), size.name)
-            assertNull(view.findViewById<TextView>(R.id.ankiquest_streak_number).compoundDrawablesRelative[2], size.name)
+            assertNotNull(view.findViewById<TextView>(R.id.ankiquest_streak_number).compoundDrawablesRelative[2], size.name)
         }
     }
 
@@ -159,15 +158,11 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
             AnkiquestStreakWidget.views(targetContext, stale, "hill", size).reapply(targetContext, view)
             val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
             assertEquals("100", number.text.toString(), size.name)
-            if (size == Size.SMALL || size == Size.MEDIUM) {
-                assertNotNull(number.compoundDrawablesRelative[2], size.name)
-                continue
+            assertNotNull(number.compoundDrawablesRelative[2], size.name)
+            if (size == Size.LARGE || size == Size.HUGE) {
+                val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
+                assertEquals("Study today to keep it", milestone.text.toString(), size.name)
             }
-
-            // The big sizes say it with the nudge instead of the unlit flame.
-            assertNull(number.compoundDrawablesRelative[2], size.name)
-            val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
-            assertEquals("Study today to keep it", milestone.text.toString(), size.name)
         }
     }
 }

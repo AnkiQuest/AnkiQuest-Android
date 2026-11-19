@@ -447,18 +447,18 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val current = streak?.takeIf { it > 0 }
             val tier = current?.let { days -> StreakTier.entries.lastOrNull { it.days <= days } }
 
-            // The milestone's flame shows only once today counts; until then the line asks for study.
-            val big = size == Size.LARGE || size == Size.HUGE
-            val label = if (big) current?.let { AnkiquestMood.line(context, flame, it) } else null
-            if (big) {
-                views.setTextViewText(R.id.ankiquest_streak_milestone, label.orEmpty())
-                views.setViewVisibility(R.id.ankiquest_streak_milestone, if (label == null) View.GONE else View.VISIBLE)
-            }
-
-            // One flame per layout: a line under the number says the day's state in its place.
-            val drawable = if (label == null) tier?.drawable(flame) else null
+            // One flame per layout, beside the number on every size, coloured by the day's state.
+            val drawable = tier?.drawable(flame)
             views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, drawable ?: 0, 0)
             fitLegacyNumber(views, context, size, number, drawable, style)
+            if (size == Size.SMALL || size == Size.MEDIUM) {
+                return null
+            }
+
+            // The line under the number: the next milestone once today counts, until then a nudge.
+            val label = current?.let { AnkiquestMood.line(context, flame, it) }
+            views.setTextViewText(R.id.ankiquest_streak_milestone, label.orEmpty())
+            views.setViewVisibility(R.id.ankiquest_streak_milestone, if (label == null) View.GONE else View.VISIBLE)
             return label
         }
 
