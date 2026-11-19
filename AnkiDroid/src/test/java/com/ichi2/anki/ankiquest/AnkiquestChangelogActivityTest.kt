@@ -4,6 +4,8 @@ package com.ichi2.anki.ankiquest
 
 import android.content.ClipboardManager
 import android.content.Intent
+import android.os.Build
+import android.os.Looper
 import android.text.Spanned
 import android.text.style.ClickableSpan
 import android.view.View
@@ -21,6 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -68,6 +71,7 @@ class AnkiquestChangelogActivityTest : RobolectricTest() {
     }
 
     @Test
+    @Config(sdk = [Build.VERSION_CODES.R, Build.VERSION_CODES.TIRAMISU])
     fun `A link in the notes is copied when no app opens it`() {
         linkedNotes()
         shadowOf(RuntimeEnvironment.getApplication()).checkActivities(true)
@@ -82,6 +86,11 @@ class AnkiquestChangelogActivityTest : RobolectricTest() {
                 ?.getItemAt(0)
                 ?.text
                 ?.toString(),
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(
+            activity.getString(R.string.ankiquest_link_copied),
+            activity.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)?.text?.toString(),
         )
     }
 

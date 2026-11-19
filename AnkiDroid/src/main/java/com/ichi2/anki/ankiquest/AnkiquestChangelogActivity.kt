@@ -36,7 +36,7 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
             ViewCompat.setAccessibilityHeading(this, true)
         }
         findViewById<View>(R.id.aq_changelog_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        val root = findViewById<View>(R.id.aq_changelog_root)
+        val root = findViewById<View>(R.id.root_layout)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
