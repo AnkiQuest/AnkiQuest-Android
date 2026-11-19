@@ -287,13 +287,13 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `reviews answered offline are uploaded by the background poll once`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals(1, reviewUpload().getJSONArray("reviews").length())
             assertEquals("Bearer first-token", requests.single { it.path == "/api/reviews/cerro" }.authorization)
             requests.clear()
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals(0, reviewUpload().getJSONArray("reviews").length())
         }
@@ -304,11 +304,11 @@ class AnkiquestUploadTest : RobolectricTest() {
             val prefs = AnkiDroidApp.sharedPrefs()
             val scope = HomeAccount.current()!!.scope
             reviewStatus = 401
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(AnkiquestUploadProblem.SIGNED_OUT, AnkiquestUploadProblem.last(prefs, scope))
 
             reviewStatus = 200
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertNull(AnkiquestUploadProblem.last(prefs, scope), "the upload that worked forgets it")
         }
 
@@ -323,7 +323,7 @@ class AnkiquestUploadTest : RobolectricTest() {
             val prefs = AnkiDroidApp.sharedPrefs()
             AnkiquestReviewOffsets.record(prefs, listOf(answered), TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             val reviews = reviewUpload().getJSONArray("reviews")
             val byId = (0 until reviews.length()).associate { reviews.getJSONObject(it).getLong("id") to reviews.getJSONObject(it) }
@@ -349,28 +349,28 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `the background poll uploads nothing without a token or while a sync holds the collection`() =
         runBlocking {
             configureAccount("cerro", "")
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertTrue(requests.isEmpty(), "a public preview stores nothing, so the poll has nothing to send")
 
             configureAccount("cerro", "first-token")
-            CollectionManager.withLeaseForTest(CollectionOperation.SYNC) { Ankiquest.uploadPending() }
+            CollectionManager.withLeaseForTest(CollectionOperation.SYNC) { Ankiquest.uploadPending(targetContext) }
             assertTrue(requests.isEmpty())
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(1, reviewUpload().getJSONArray("reviews").length())
         }
 
     @Test
     fun `reviews synced in below the upload mark are sent after a sync`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             val mark = uploadedIds().single()
             requests.clear()
             // Answered elsewhere three days ago and brought in by AnkiWeb: older than the mark and the undo window.
             val synced = mark - 3 * DAY_MS
             insertReview(synced)
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(emptyList<Long>(), uploadedIds(), "an ordinary upload only sends what follows the mark")
             requests.clear()
 
@@ -388,11 +388,11 @@ class AnkiquestUploadTest : RobolectricTest() {
             col.sched.answerCard(col.sched.card!!, Rating.GOOD)
             val answered = col.db.queryLongScalar("select max(id) from revlog")
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(listOf(answered), uploadedIds())
             requests.clear()
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(emptyList<Long>(), uploadedIds(), "nothing is sent twice")
         }
 
@@ -411,7 +411,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `uploading everything sends the whole history silently once`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             val mark = uploadedIds().single()
             requests.clear()
             val old = mark - 30 * DAY_MS
@@ -435,18 +435,18 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `a review still in the collection is never deleted from the server`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             val kept = uploadedIds().single()
             requests.clear()
             // A row the window query does not return, though it is still in the revlog.
             col.db.execute("update revlog set type = 4 where id = ?", kept)
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(0, reviewUpload().getJSONArray("deleted").length())
             requests.clear()
 
             col.db.execute("delete from revlog where id = ?", kept)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(0, reviewUpload().getJSONArray("deleted").length(), "the earlier upload no longer lists it as sent")
         }
 
