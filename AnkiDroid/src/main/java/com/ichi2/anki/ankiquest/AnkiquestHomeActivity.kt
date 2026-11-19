@@ -385,6 +385,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             renderGoalSetup(signed, suggested)
         }
         local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile), suggested) }
+        local?.countdown?.let { renderCountdown(it) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -443,6 +444,15 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(panel, R.string.aq_goal_change) { AnkiquestGoalDialog.edit(this, signed) { refresh() } }
             }
         }
+    }
+
+    /** The nearest countdown and, with a deck, the cards a day to finish it by then. */
+    private fun renderCountdown(countdown: HomeCountdown) {
+        val panel = card()
+        text(panel, getString(R.string.ankiquest_countdowns), small = true)
+        text(panel, AnkiquestCountdownTexts.headline(this, countdown.event, countdown.days), heading = true)
+        AnkiquestCountdownTexts.pace(this, countdown.pace, countdown.event.deck)?.let { text(panel, it, small = true) }
+        button(panel, R.string.ankiquest_countdowns_manage) { startActivity(AnkiquestCountdownsActivity.intent(this)) }
     }
 
     private suspend fun restoreOldGoal(

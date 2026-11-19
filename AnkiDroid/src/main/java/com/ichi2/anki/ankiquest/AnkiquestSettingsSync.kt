@@ -46,6 +46,9 @@ internal object AnkiquestSettingsSync {
 
         /** A whole number kept as text, as a ListPreference does. */
         NUMBER_TEXT,
+
+        /** A countdown list kept as JSON text; synced as a JSON array. */
+        COUNTDOWNS,
     }
 
     /** The synced keys this app has, with the preferences that hold them. */
@@ -55,6 +58,8 @@ internal object AnkiquestSettingsSync {
         val default: Any,
         private val storage: Storage,
         private val range: IntRange? = null,
+        /** The server feature this key needs besides settings sync, if any. */
+        val feature: String? = null,
     ) {
         NOTIFY_RANK("notify_rank", AnkiquestNotifier.PREF_RANK, true, Storage.BOOLEAN),
         STREAK_WARNING_HOURS(
@@ -69,6 +74,13 @@ internal object AnkiquestSettingsSync {
         OPEN_TODAY("open_today", AnkiquestNavigation.PREF_OPEN_TODAY, false, Storage.BOOLEAN),
         ASK_TO_SHARE_DECKS("ask_to_share_decks", AnkiquestDeckShare.PREF_ASK, true, Storage.BOOLEAN),
         STREAK_CUE("streak_cue", AnkiquestStreakCue.PREF_ENABLED, true, Storage.BOOLEAN),
+        COUNTDOWNS(
+            "countdowns",
+            AnkiquestCountdowns.PREF,
+            AnkiquestCountdowns.Countdowns.EMPTY,
+            Storage.COUNTDOWNS,
+            feature = AnkiquestCountdowns.FEATURE,
+        ),
         ;
 
         /** Whether this app can use [value] for this setting. */
@@ -76,6 +88,21 @@ internal object AnkiquestSettingsSync {
             when (storage) {
                 Storage.BOOLEAN -> value is Boolean
                 Storage.NUMBER_TEXT -> value is Int && range?.contains(value) != false
+                Storage.COUNTDOWNS -> value is AnkiquestCountdowns.Countdowns
+            }
+
+        /** [raw] from JSON as this app keeps it; a value it cannot use stays as it is, so [usable] refuses it. */
+        fun decode(raw: Any): Any =
+            when (storage) {
+                Storage.COUNTDOWNS -> AnkiquestCountdowns.parse(raw) ?: raw
+                Storage.BOOLEAN, Storage.NUMBER_TEXT -> raw
+            }
+
+        /** [value] as JSON. */
+        fun encode(value: Any): Any =
+            when (storage) {
+                Storage.COUNTDOWNS -> (value as AnkiquestCountdowns.Countdowns).toJson()
+                Storage.BOOLEAN, Storage.NUMBER_TEXT -> value
             }
 
         /** The value in [prefs]; one this app cannot use counts as the default. */
@@ -85,6 +112,7 @@ internal object AnkiquestSettingsSync {
                     when (storage) {
                         Storage.BOOLEAN -> prefs.getBoolean(pref, default as Boolean)
                         Storage.NUMBER_TEXT -> prefs.getString(pref, null)?.toIntOrNull() ?: default
+                        Storage.COUNTDOWNS -> AnkiquestCountdowns.read(prefs)
                     }
                 } catch (_: ClassCastException) {
                     default
@@ -99,6 +127,7 @@ internal object AnkiquestSettingsSync {
             when (storage) {
                 Storage.BOOLEAN -> editor.putBoolean(pref, value as Boolean)
                 Storage.NUMBER_TEXT -> editor.putString(pref, value.toString())
+                Storage.COUNTDOWNS -> editor.putString(pref, encode(value).toString())
             }
         }
     }
@@ -238,10 +267,16 @@ internal object AnkiquestSettingsSync {
         }
         last = account.scope to TimeManager.time.intTimeMS()
 
-        // Merge every key against what the server has.
+        // Merge every key this server keeps against what it has.
+        val features = AnkiquestCapabilities.features(account)
+        val synced = Setting.entries.filter { it.feature == null || it.feature in features }
         val start = locals()
         val remote = read(account) ?: return
-        val merged = Setting.entries.associateWith { merge(it, start.getValue(it), remote[it.key]) }
+        val merged =
+            synced.associateWith { setting ->
+                val found = remote[setting.key]?.let { Entry(setting.decode(it.value), it.updatedAt) }
+                merge(setting, start.getValue(setting), found)
+            }
         val stamps = merged.mapValuesTo(mutableMapOf<Setting, Long>()) { it.value.changedAt }
         val push = merged.mapNotNull { (setting, result) -> result.push?.let { setting to it } }.toMap()
 
@@ -250,7 +285,7 @@ internal object AnkiquestSettingsSync {
             val saved = write(account, push) ?: return
             for ((setting, sent) in push) {
                 val stored = saved[setting.key] ?: continue
-                if (stored.value == sent.value) {
+                if (setting.decode(stored.value) == sent.value) {
                     stamps[setting] = stored.updatedAt
                 }
             }
@@ -303,7 +338,7 @@ internal object AnkiquestSettingsSync {
 
     /**
      * Applies a finished sync. Dropped unless [gate] is still open; a setting changed here meanwhile
-     * keeps its value and time, and the next sync sends it.
+     * keeps its value and time, and the next sync sends it. Settings this server does not keep are left as they are.
      */
     private fun settle(
         context: Context,
@@ -320,7 +355,7 @@ internal object AnkiquestSettingsSync {
             }
             val records = records(prefs).toMutableMap()
             prefs.edit {
-                for (setting in Setting.entries) {
+                for (setting in merged.keys) {
                     val before = start.getValue(setting)
                     if (setting.read(prefs) != before.value || records[setting] != before) {
                         continue
@@ -392,7 +427,7 @@ internal object AnkiquestSettingsSync {
     ): Map<String, Entry>? {
         val settings = JSONObject()
         for ((setting, entry) in push) {
-            settings.put(setting.key, JSONObject().put("value", entry.value).put("updated_at", entry.updatedAt))
+            settings.put(setting.key, JSONObject().put("value", setting.encode(entry.value)).put("updated_at", entry.updatedAt))
         }
         return call(account, "PUT", JSONObject().put("settings", settings))?.let { entries(it) }
     }
@@ -453,7 +488,7 @@ internal object AnkiquestSettingsSync {
                 if (at < 0 || !record.has("value")) {
                     return@mapNotNull null
                 }
-                setting to Local(number(record.get("value")), at)
+                setting to Local(setting.decode(number(record.get("value"))), at)
             }.toMap()
     }
 
@@ -465,7 +500,7 @@ internal object AnkiquestSettingsSync {
     private fun encode(records: Map<Setting, Local>): String {
         val result = JSONObject()
         for ((setting, local) in records) {
-            result.put(setting.key, JSONObject().put("value", local.value).put("at", local.changedAt))
+            result.put(setting.key, JSONObject().put("value", setting.encode(local.value)).put("at", local.changedAt))
         }
         return result.toString()
     }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_countdowns">Cuentas atrás</string>
+    <string name="ankiquest_countdowns_empty">Añade un examen o un evento para contar los días que faltan.</string>
+    <string name="ankiquest_countdown_add">Añadir cuenta atrás</string>
+    <string name="ankiquest_countdown_edit">Editar cuenta atrás</string>
+    <string name="ankiquest_countdowns_manage">Editar cuentas atrás</string>
+    <string name="ankiquest_countdown_name">Nombre</string>
+    <string name="ankiquest_countdown_date">Fecha</string>
+    <string name="ankiquest_countdown_deck">Mazo (opcional)</string>
+    <string name="ankiquest_countdown_no_deck">Sin mazo</string>
+    <string name="ankiquest_countdown_save">Guardar</string>
+    <string name="ankiquest_countdown_delete">Eliminar</string>
+    <string name="ankiquest_countdown_name_missing">Escribe un nombre.</string>
+    <string name="ankiquest_countdowns_full">Ya tienes el máximo de cuentas atrás. Elimina una para añadir otra.</string>
+    <string name="ankiquest_countdowns_private">Solo tú ves tus cuentas atrás.</string>
+    <string name="ankiquest_countdown_tomorrow">%1$s mañana</string>
+    <string name="ankiquest_countdown_today">%1$s hoy</string>
+    <string name="ankiquest_countdown_past">%1$s ya pasó</string>
+    <string name="ankiquest_countdown_done">No queda nada en %1$s antes de esa fecha</string>
+    <plurals name="ankiquest_countdown_upcoming">
+        <item quantity="one">%1$s en %2$d día</item>
+        <item quantity="other">%1$s en %2$d días</item>
+    </plurals>
+    <plurals name="ankiquest_countdown_pace">
+        <item quantity="one">~%1$d tarjeta al día para terminar %2$s a tiempo</item>
+        <item quantity="other">~%1$d tarjetas al día para terminar %2$s a tiempo</item>
+    </plurals>
+</resources>

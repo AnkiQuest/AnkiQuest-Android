@@ -20,6 +20,7 @@ import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -139,14 +140,19 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         for (row in keys) {
             val setting = Setting.entries.single { it.key == row.getString("key") }
             assertEquals(row.getString("android"), setting.pref, row.toString())
-            assertEquals(row.get("default"), setting.default, row.toString())
-            assertTrue(setting.usable(row.get("default")), row.toString())
+            assertEquals(setting.decode(row.get("default")), setting.default, row.toString())
+            assertTrue(setting.usable(setting.decode(row.get("default"))), row.toString())
             when (row.getString("type")) {
                 "bool" -> assertFalse(setting.usable(1), row.toString())
                 "int" -> {
                     assertTrue(setting.usable(row.getInt("min")) && setting.usable(row.getInt("max")), row.toString())
                     assertFalse(setting.usable(row.getInt("min") - 1) || setting.usable(row.getInt("max") + 1), row.toString())
                     assertFalse(setting.usable(true), row.toString())
+                }
+                "countdowns" -> {
+                    assertEquals(AnkiquestCountdowns.FEATURE, setting.feature, row.toString())
+                    assertFalse(setting.usable(true), row.toString())
+                    assertFalse(setting.usable(setting.decode(JSONArray("[1]"))), row.toString())
                 }
                 else -> error("unknown type in $row")
             }
@@ -175,14 +181,18 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         check(cases.isNotEmpty())
         for (case in cases) {
             val setting = Setting.entries.single { it.key == case.getString("key") }
-            val local = case.getJSONObject("local").let { Local(it.get("value"), it.getLong("changed_at")) }
-            val remote = case.optJSONObject("remote")?.let { Entry(it.get("value"), it.getLong("updated_at")) }
+            val local = case.getJSONObject("local").let { Local(setting.decode(it.get("value")), it.getLong("changed_at")) }
+            val remote = case.optJSONObject("remote")?.let { Entry(setting.decode(it.get("value")), it.getLong("updated_at")) }
             val result = AnkiquestSettingsSync.merge(setting, local, remote)
             val expected = case.getJSONObject("expected")
-            assertEquals(expected.get("value"), result.value, case.getString("name"))
+            assertEquals(setting.decode(expected.get("value")), result.value, case.getString("name"))
             assertEquals(expected.getLong("changed_at"), result.changedAt, case.getString("name"))
             val push = expected.optJSONObject("push")
-            assertEquals(push?.let { Entry(it.get("value"), it.getLong("updated_at")) }, result.push, case.getString("name"))
+            assertEquals(
+                push?.let { Entry(setting.decode(it.get("value")), it.getLong("updated_at")) },
+                result.push,
+                case.getString("name"),
+            )
         }
     }
 
@@ -383,7 +393,40 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         assertEquals(entry(false, NOW).toString(), push.getJSONObject("streak_cue").toString())
     }
 
+    @Test
+    fun `countdowns sync only with a server that keeps them`() =
+        runBlocking {
+            AnkiquestCountdowns.write(prefs(), SPANISH)
+            assertTrue(AnkiquestSettingsSync.note(Setting.COUNTDOWNS))
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            assertTrue(sent.none { it.has("countdowns") }, "an older server would refuse a long list")
+
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestCapabilities.refresh(account())
+            AnkiquestSettingsSync.sync(targetContext, Trigger.CHANGE)
+            val push = assertNotNull(sent.lastOrNull { it.has("countdowns") }, "sent once the server keeps them")
+            assertEquals(SPANISH.toJson().toString(), push.getJSONObject("countdowns").getJSONArray("value").toString())
+            assertEquals(NOW, push.getJSONObject("countdowns").getLong("updated_at"))
+        }
+
+    @Test
+    fun `a newer countdown list from another device replaces the one here`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            stored.put("countdowns", entry(SPANISH.toJson(), NOW - 1_000))
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+            assertTrue(sent.none { it.has("countdowns") })
+        }
+
     private companion object {
+        val SPANISH =
+            AnkiquestCountdowns.Countdowns(
+                listOf(AnkiquestCountdowns.Countdown("Spanish exam", java.time.LocalDate.of(2026, 11, 25), "Spanish::A1")),
+            )
         const val NOW = 1_793_183_400_000L
         const val WAIT_MS = 5_000L
         const val FIXTURE = "ankiquest/synced_settings.json"

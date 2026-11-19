@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_countdowns">Contagens decrescentes</string>
+    <string name="ankiquest_countdowns_empty">Adiciona um exame ou evento para contar os dias que faltam.</string>
+    <string name="ankiquest_countdown_add">Adicionar contagem decrescente</string>
+    <string name="ankiquest_countdown_edit">Editar contagem decrescente</string>
+    <string name="ankiquest_countdowns_manage">Editar contagens decrescentes</string>
+    <string name="ankiquest_countdown_name">Nome</string>
+    <string name="ankiquest_countdown_date">Data</string>
+    <string name="ankiquest_countdown_deck">Baralho (opcional)</string>
+    <string name="ankiquest_countdown_no_deck">Sem baralho</string>
+    <string name="ankiquest_countdown_save">Guardar</string>
+    <string name="ankiquest_countdown_delete">Eliminar</string>
+    <string name="ankiquest_countdown_name_missing">Escreve um nome.</string>
+    <string name="ankiquest_countdowns_full">Já tens o máximo de contagens decrescentes. Elimina uma para adicionar outra.</string>
+    <string name="ankiquest_countdowns_private">Só tu vês as tuas contagens decrescentes.</string>
+    <string name="ankiquest_countdown_tomorrow">%1$s amanhã</string>
+    <string name="ankiquest_countdown_today">%1$s hoje</string>
+    <string name="ankiquest_countdown_past">%1$s já passou</string>
+    <string name="ankiquest_countdown_done">Não falta nada em %1$s até lá</string>
+    <plurals name="ankiquest_countdown_upcoming">
+        <item quantity="one">%1$s daqui a %2$d dia</item>
+        <item quantity="other">%1$s daqui a %2$d dias</item>
+    </plurals>
+    <plurals name="ankiquest_countdown_pace">
+        <item quantity="one">~%1$d cartão por dia para terminar %2$s até lá</item>
+        <item quantity="other">~%1$d cartões por dia para terminar %2$s até lá</item>
+    </plurals>
+</resources>
