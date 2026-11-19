@@ -485,9 +485,9 @@ class AnkiquestUploadTest : RobolectricTest() {
         runBlocking {
             val account = AnkiquestHomeData.account()!!
             for ((key, value) in listOf(
-                AnkiquestPreferences.USER to "other",
-                AnkiquestPreferences.TOKEN to "replacement-token",
-                AnkiquestPreferences.URL to "http://127.0.0.1:9",
+                AnkiquestPreferences.PREF_USER to "other",
+                AnkiquestPreferences.PREF_TOKEN to "replacement-token",
+                AnkiquestPreferences.PREF_URL to "http://127.0.0.1:9",
             )) {
                 configureAccount("cerro", "first-token")
                 AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
@@ -665,9 +665,9 @@ class AnkiquestUploadTest : RobolectricTest() {
         token: String,
     ) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, url)
-            putString(AnkiquestPreferences.USER, user)
-            putString(AnkiquestPreferences.TOKEN, token)
+            putString(AnkiquestPreferences.PREF_URL, url)
+            putString(AnkiquestPreferences.PREF_USER, user)
+            putString(AnkiquestPreferences.PREF_TOKEN, token)
         }
     }
 

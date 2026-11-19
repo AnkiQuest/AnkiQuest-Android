@@ -80,9 +80,9 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
     fun prepare() {
         TimeManager.resetWith(MockTime(NOW))
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example")
-            putString(AnkiquestPreferences.USER, "ana")
-            putString(AnkiquestPreferences.TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "ana")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         mockkObject(AnkiquestAccountSettings, AnkiquestCapabilities)
         coEvery { AnkiquestAccountSettings.methods(any()) } returns withPassword
@@ -136,7 +136,7 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
 
     @Test
     fun `without an account it asks to sign in first`() {
-        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "") }
         val fragment = open().second
         assertEquals(targetContext.getString(R.string.ankiquest_account_configure), fragment.status().summary)
         coVerify(exactly = 0) { AnkiquestAccountSettings.methods(any()) }

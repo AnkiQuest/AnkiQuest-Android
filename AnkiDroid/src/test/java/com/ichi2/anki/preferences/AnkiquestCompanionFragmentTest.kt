@@ -82,9 +82,9 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, "https://quest.example")
-            putString(AnkiquestPreferences.USER, "member")
-            putString(AnkiquestPreferences.TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         mockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
         every { AnkiquestWidget.requestUpdate(any()) } just runs
@@ -189,8 +189,8 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
     private fun signIn(user: String) =
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(AnkiquestPreferences.USER, user)
-            putString(AnkiquestPreferences.TOKEN, "token-$user")
+            putString(AnkiquestPreferences.PREF_USER, user)
+            putString(AnkiquestPreferences.PREF_TOKEN, "token-$user")
         }
 
     private fun AnkiquestCompanionFragment.status() = requirePreference<Preference>(R.string.ankiquest_companion_status_key)

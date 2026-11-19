@@ -226,7 +226,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
         key: String?,
     ) {
         super.onSharedPreferenceChanged(sharedPreferences, key)
-        if (key in setOf(AnkiquestPreferences.URL, AnkiquestPreferences.USER, AnkiquestPreferences.TOKEN)) {
+        if (key in setOf(AnkiquestPreferences.PREF_URL, AnkiquestPreferences.PREF_USER, AnkiquestPreferences.PREF_TOKEN)) {
             afterReauth = null
             refresh()
         }

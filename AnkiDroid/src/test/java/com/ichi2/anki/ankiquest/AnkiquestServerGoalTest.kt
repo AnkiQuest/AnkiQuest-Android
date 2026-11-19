@@ -100,9 +100,9 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         }
         server.start()
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "http://127.0.0.1:${server.address.port}")
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
     }
 
@@ -215,7 +215,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         prefs.edit { remove(AnkiquestDailyGoal.PREF_MODE) }
         AnkiquestDailyGoal.remember(profile, prefs)
         assertEquals(Choice(Mode.MINUTES, 40), AnkiquestDailyGoal.choice(prefs))
-        prefs.edit { putString(AnkiquestPreferences.USER, "cerro") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_USER, "cerro") }
         assertNull(AnkiquestDailyGoal.cached(prefs, AnkiquestHomeData.account(prefs)?.scope), "another account never inherits it")
     }
 
@@ -351,7 +351,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     fun `settings are never read or written for an account that is no longer signed in`() =
         runBlocking {
             val captured = account()
-            prefs.edit { putString(AnkiquestPreferences.TOKEN, "another-credential") }
+            prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "another-credential") }
             assertFailsWith<HomeAccountChanged> { AnkiquestSharing.settings(captured) }
             assertFailsWith<HomeAccountChanged> { AnkiquestDailyGoal.fetch(captured) }
             assertTrue(requests.isEmpty())

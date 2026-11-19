@@ -30,9 +30,9 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     @Before
     fun configure() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, "https://anki.example.test")
-            putString(AnkiquestPreferences.USER, "member name")
-            putString(AnkiquestPreferences.TOKEN, "member-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "member name")
+            putString(AnkiquestPreferences.PREF_TOKEN, "member-token")
         }
     }
 
@@ -64,7 +64,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     fun `changing credentials invalidates the presentation identity`() {
         val before = HomeAccount.fingerprint()
         assertFalse(before.contains("member-token"))
-        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "replacement-token") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "replacement-token") }
         assertNotEquals(before, HomeAccount.fingerprint())
     }
 
@@ -72,7 +72,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     fun `presentation identity captures fallback member in the same settings snapshot`() {
         val preferences = AnkiDroidApp.sharedPrefs()
         preferences.edit {
-            remove(AnkiquestPreferences.USER)
+            remove(AnkiquestPreferences.PREF_USER)
             putString("username", "original-member")
         }
         val before = HomeAccount.fingerprint()

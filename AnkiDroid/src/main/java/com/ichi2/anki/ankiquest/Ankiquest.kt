@@ -1076,12 +1076,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val typed =
             AnkiDroidApp
                 .sharedPrefs()
-                .getString(AnkiquestPreferences.URL, "")
+                .getString(AnkiquestPreferences.PREF_URL, "")
                 .orEmpty()
                 .trim()
         return when {
             AnkiquestHosts.insecure(typed) -> context.getString(R.string.ankiquest_check_insecure, typed)
-            typed.isNotEmpty() && HomeAccount.from(mapOf(AnkiquestPreferences.URL to typed), "player") == null ->
+            typed.isNotEmpty() && HomeAccount.from(mapOf(AnkiquestPreferences.PREF_URL to typed), "player") == null ->
                 context.getString(R.string.ankiquest_check_bad_url, typed)
             else -> context.getString(R.string.ankiquest_check_unconfigured)
         }

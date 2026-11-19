@@ -346,9 +346,9 @@ class AnkiquestIconTest : RobolectricTest() {
         player: String,
     ) {
         prefs.edit {
-            putString(AnkiquestPreferences.URL, "https://study.example.test")
-            putString(AnkiquestPreferences.USER, player)
-            putString(AnkiquestPreferences.TOKEN, "test-$player")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, player)
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-$player")
         }
     }
 

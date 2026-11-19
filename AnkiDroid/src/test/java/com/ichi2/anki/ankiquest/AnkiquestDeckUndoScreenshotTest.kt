@@ -47,9 +47,9 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
     @Before
     fun prepareSharing() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, "https://anki.example.test")
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
         mockkObject(Ankiquest, AnkiquestPoll, AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions)
         justRun { Ankiquest.onActivityResumed(any()) }

@@ -75,9 +75,9 @@ class AnkiquestServerMoveTest : RobolectricTest() {
         oldUrl = "http://127.0.0.1:${old.address.port}"
         publicUrl = "$mainUrl/"
         prefs.edit {
-            putString(AnkiquestPreferences.URL, oldUrl)
-            putString(AnkiquestPreferences.USER, "cerro")
-            putString(AnkiquestPreferences.TOKEN, "secret")
+            putString(AnkiquestPreferences.PREF_URL, oldUrl)
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "secret")
         }
     }
 
@@ -150,7 +150,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
 
             AnkiquestCapabilities.refresh(before)
 
-            assertEquals(mainUrl, prefs.getString(AnkiquestPreferences.URL, null))
+            assertEquals(mainUrl, prefs.getString(AnkiquestPreferences.PREF_URL, null))
             assertEquals(listOf("/api/devices/cerro" to "Bearer secret"), mainRequests.toList())
             val after = account()
             assertEquals(mainUrl, after.server)
@@ -191,7 +191,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
             remember(before)
             main.stop(0)
             AnkiquestCapabilities.refresh(before)
-            assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.URL, null))
+            assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.PREF_URL, null))
             assertEquals(1234L, prefs.getLong("ankiquestUploadedThrough:${before.notificationAccount}", 0L))
         }
 
@@ -204,14 +204,14 @@ class AnkiquestServerMoveTest : RobolectricTest() {
             publicUrl = mainUrl
             AnkiquestCapabilities.refresh(account())
             assertEquals(emptyList(), mainRequests.toList())
-            assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.URL, null))
+            assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.PREF_URL, null))
         }
 
     @Test
     fun `an account changed in the meantime is not moved`() {
         val before = account()
-        prefs.edit { putString(AnkiquestPreferences.TOKEN, "another") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "another") }
         assertFalse(AnkiquestServerMove.move(prefs, before, before.copy(server = mainUrl)))
-        assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.URL, null))
+        assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.PREF_URL, null))
     }
 }

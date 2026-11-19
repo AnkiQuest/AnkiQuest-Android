@@ -31,9 +31,9 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(AnkiquestPreferences.URL, "https://ankiquest.example")
-            putString(AnkiquestPreferences.USER, "member")
-            putString(AnkiquestPreferences.TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://ankiquest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
         mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
         coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")

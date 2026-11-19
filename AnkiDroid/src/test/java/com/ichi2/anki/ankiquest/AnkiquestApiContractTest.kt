@@ -99,9 +99,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
         server.start()
         url = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(AnkiquestPreferences.URL, url)
-            putString(AnkiquestPreferences.USER, "hill")
-            putString(AnkiquestPreferences.TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, url)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
     }
 
@@ -240,7 +240,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(AnkiquestAki.Message.STREAK, AnkiquestAki.mood(null, profile).message)
             assertTrue(assertNotNull(profile.optJSONArray("quests")).objects().all { it.optString("title").isNotEmpty() })
 
-            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "") }
             assertEquals(
                 targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L) + "\n\n" +
                     targetContext.getString(R.string.ankiquest_check_no_token),

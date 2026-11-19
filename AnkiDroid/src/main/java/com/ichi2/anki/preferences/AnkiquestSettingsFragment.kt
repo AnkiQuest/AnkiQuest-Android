@@ -249,7 +249,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val hint = view.findViewById<TextView>(R.id.ankiquest_sign_in_hint)
         val status = view.findViewById<TextView>(R.id.ankiquest_sign_in_status)
         val prefs = AnkiDroidApp.sharedPrefs()
-        server.setText(prefs.getString(AnkiquestPreferences.URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
+        server.setText(prefs.getString(AnkiquestPreferences.PREF_URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
         user.setText(AnkiquestAccountSettings.signInUsername(server.text.toString()))
         var usernameEdited = false
         var updatingSuggestion = false
@@ -304,9 +304,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     val signed = AnkiquestAccount.submit(credentials)
                     if (!isAdded) return@launch
                     prefs.edit {
-                        putString(AnkiquestPreferences.URL, signed.url)
-                        putString(AnkiquestPreferences.USER, signed.user)
-                        putString(AnkiquestPreferences.TOKEN, signed.token)
+                        putString(AnkiquestPreferences.PREF_URL, signed.url)
+                        putString(AnkiquestPreferences.PREF_USER, signed.user)
+                        putString(AnkiquestPreferences.PREF_TOKEN, signed.token)
                     }
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
@@ -792,7 +792,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         if (key != null && AnkiquestSettingsSync.Setting.entries.any { it.pref == key }) {
             findPreference<SwitchPreferenceCompat>(key)?.let { it.isChecked = sharedPreferences.getBoolean(key, it.isChecked) }
         }
-        if (key in setOf(AnkiquestPreferences.URL, AnkiquestPreferences.USER, AnkiquestPreferences.TOKEN)) {
+        if (key in setOf(AnkiquestPreferences.PREF_URL, AnkiquestPreferences.PREF_USER, AnkiquestPreferences.PREF_TOKEN)) {
             pictureAccount = null
             pictureEditor?.dismiss()
             pictureEditor = null

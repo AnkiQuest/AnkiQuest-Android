@@ -94,7 +94,7 @@ object AnkiquestServerMove {
             mapOf(
                 from.scope to to.scope,
                 HomeAccount.fingerprint(settings) to
-                    HomeAccount.fingerprint(settings + (AnkiquestPreferences.URL to to.server)),
+                    HomeAccount.fingerprint(settings + (AnkiquestPreferences.PREF_URL to to.server)),
                 sha256(from.server, from.user) to sha256(to.server, to.user),
             )
         prefs.edit(commit = true) {
@@ -106,12 +106,12 @@ object AnkiquestServerMove {
                 remove(key)
                 put(newKey, newValue)
             }
-            putString(AnkiquestPreferences.URL, to.server)
+            putString(AnkiquestPreferences.PREF_URL, to.server)
         }
         return true
     }
 
-    private val ACCOUNT_KEYS = setOf(AnkiquestPreferences.URL, AnkiquestPreferences.USER, AnkiquestPreferences.TOKEN)
+    private val ACCOUNT_KEYS = setOf(AnkiquestPreferences.PREF_URL, AnkiquestPreferences.PREF_USER, AnkiquestPreferences.PREF_TOKEN)
 
     /** [key] with the account's hashes replaced, and the address after a `:` when it is the old one. */
     private fun movedKey(
