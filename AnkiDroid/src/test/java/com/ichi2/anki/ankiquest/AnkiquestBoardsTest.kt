@@ -50,7 +50,7 @@ class AnkiquestBoardsTest : RobolectricTest() {
     @Test
     fun `a profile reads freezes, records and achievements`() {
         val profile = AnkiquestBoards.parseProfile(JSONObject(PROFILE))
-        assertEquals("hill", profile.display)
+        assertEquals("Aldana", profile.display)
         assertEquals(2, profile.freezes, "stored freezes count, not the ones protecting today")
         assertEquals(mapOf(AnkiquestBoards.Period.WEEK to 101L), profile.periods)
         assertEquals(AnkiquestBoards.Best(51, 5), profile.records[AnkiquestBoards.Period.HOUR])
@@ -116,7 +116,7 @@ class AnkiquestBoardsTest : RobolectricTest() {
                 .put("streak_minutes", 0)
 
         const val PROFILE = """{
-            "user": "hill", "display": "hill", "level": 2, "xp_total": 101, "xp_into_level": 1, "xp_for_next": 280,
+            "user": "aldanita", "display": "Aldana", "level": 2, "xp_total": 101, "xp_into_level": 1, "xp_for_next": 280,
             "periods": {"week": 101}, "streak": 1, "streak_state": "studied", "freezes": 1, "stored_freezes": 2,
             "freezes_enabled": true, "at_risk": false,
             "today": {"reviews": 5, "minutes": 0, "xp": 101, "streak_minutes": 0},

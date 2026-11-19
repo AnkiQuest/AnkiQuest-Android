@@ -99,8 +99,8 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(Ankiquest.PREF_USER, "aldanita")
+            putString(Ankiquest.PREF_TOKEN, "aldanita-token")
         }
     }
 
@@ -122,13 +122,13 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     @Test
     fun `a locked board shows the player's own row, then why the others are missing`() =
         runBlocking {
-            board = JSONArray().put(row("hill", "hill"))
+            board = JSONArray().put(row("aldanita", "Aldana"))
             val id = placeWidget()
 
             AnkiquestPoll.run(targetContext)
 
             val lines = shown(id)
-            assertEquals("hill", lines.first(), "the player's own row comes first")
+            assertEquals("Aldana", lines.first(), "the player's own row comes first")
             assertEquals(targetContext.getString(R.string.aq_upload_first), lines.last())
         }
 
@@ -147,7 +147,7 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     @Test
     fun `a board fetched while offline keeps saying why the others are missing`() =
         runBlocking {
-            board = JSONArray().put(row("hill", "hill"))
+            board = JSONArray().put(row("aldanita", "Aldana"))
             val id = placeWidget()
             AnkiquestPoll.run(targetContext)
 
@@ -162,12 +162,12 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     fun `after the first upload the board shows everyone without the line`() =
         runBlocking {
             uploaded = Uploaded.YES
-            board = JSONArray().put(row("hill", "hill")).put(row("cerro", "Cerro"))
+            board = JSONArray().put(row("aldanita", "Aldana")).put(row("cerro", "Cerro"))
             val id = placeWidget()
 
             AnkiquestPoll.run(targetContext)
 
-            assertEquals(listOf("hill", "Cerro"), shown(id).filter { it == "hill" || it == "Cerro" })
+            assertEquals(listOf("Aldana", "Cerro"), shown(id).filter { it == "Aldana" || it == "Cerro" })
             assertFalse(targetContext.getString(R.string.aq_upload_first) in shown(id))
         }
 
