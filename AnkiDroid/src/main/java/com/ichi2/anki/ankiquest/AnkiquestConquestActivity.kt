@@ -38,7 +38,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import com.ichi2.anki.R as AnkiDroidR
-import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * A conquered card, natively, as the website's `/conquered/{user}/{at}` shows it: a card that was
@@ -272,7 +271,7 @@ class AnkiquestConquestActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiqu
                     }
                 }.apply {
                     isEnabled = !busy
-                    setIconResource(CommonR.drawable.ic_mode_edit_white)
+                    setIconResource(R.drawable.ic_mode_edit_white)
                     iconTint = textColors
                 }
         }

@@ -26,7 +26,6 @@ import androidx.core.widget.RemoteViewsCompat
 import androidx.core.widget.RemoteViewsCompat.RemoteCollectionItems
 import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
-import com.ichi2.widget.getAppWidgetManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

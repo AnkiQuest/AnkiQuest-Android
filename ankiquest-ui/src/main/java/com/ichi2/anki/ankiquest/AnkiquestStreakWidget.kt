@@ -27,7 +27,6 @@ import androidx.core.graphics.ColorUtils
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
-import com.ichi2.widget.getAppWidgetManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
