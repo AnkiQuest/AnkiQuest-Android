@@ -32,8 +32,8 @@ internal object AnkiquestDiagnostics {
 
             // Print derived values only. Server responses and exceptions can contain account fields.
             val account = HomeAccount.current(prefs)
-            val host = prefs.getString(Ankiquest.PREF_URL, null)?.toHttpUrlOrNull()?.host
-            val tokenPresent = !prefs.getString(Ankiquest.PREF_TOKEN, null).isNullOrBlank()
+            val host = prefs.getString(AnkiquestPreferences.URL, null)?.toHttpUrlOrNull()?.host
+            val tokenPresent = !prefs.getString(AnkiquestPreferences.TOKEN, null).isNullOrBlank()
             val signedIn = account != null && tokenPresent
             val upload = account?.takeIf { signedIn }?.let { Ankiquest.uploadDiagnostics(it) }
             val version = account?.let(AnkiquestCapabilities::apiVersion)

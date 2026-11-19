@@ -37,9 +37,9 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
         setIntroductionSlidesShown(true)
         BackupManagerTestUtilities.setupSpaceForBackup(targetContext)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.USER, "member")
+            putString(AnkiquestPreferences.TOKEN, "screenshot-token")
         }
         mockkObject(AnkiquestStudySession, AnkiquestDeckShare)
         coEvery { AnkiquestStudySession.finish() } returns AnkiquestStudySession.Summary(24, 6, 12, 1_750_000_000_000)

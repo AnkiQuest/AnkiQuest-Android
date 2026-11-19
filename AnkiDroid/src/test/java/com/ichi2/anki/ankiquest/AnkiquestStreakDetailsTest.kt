@@ -49,9 +49,9 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
     @Before
     fun prepareAccount() {
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.URL, "https://study.example.test")
+            putString(AnkiquestPreferences.USER, "hill")
+            putString(AnkiquestPreferences.TOKEN, "test-token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, false)
         }
         AnkiquestWidget.forgetFresh()
@@ -155,9 +155,9 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
     fun `another account or a new day cannot reuse cached goal progress`() {
         val profile = profile()
         remember(profile)
-        prefs.edit { putString(Ankiquest.PREF_USER, "other") }
+        prefs.edit { putString(AnkiquestPreferences.USER, "other") }
         assertEquals(1, render(profile).allViews.filterIsInstance<ProgressBar>().count { it.isVisible })
-        prefs.edit { putString(Ankiquest.PREF_USER, "hill") }
+        prefs.edit { putString(AnkiquestPreferences.USER, "hill") }
         profile.put("day_ends_at", now + 2 * HOUR)
         AnkiquestDay.remember(profile, prefs)
         assertEquals(1, render(profile).allViews.filterIsInstance<ProgressBar>().count { it.isVisible })

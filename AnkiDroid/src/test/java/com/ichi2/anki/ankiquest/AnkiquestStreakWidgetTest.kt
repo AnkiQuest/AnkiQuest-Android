@@ -150,9 +150,9 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         val now = TimeManager.time.intTimeMS()
         val prefs = targetContext.sharedPrefs()
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.URL, "https://study.example.test")
+            putString(AnkiquestPreferences.USER, "hill")
+            putString(AnkiquestPreferences.TOKEN, "test-token")
         }
         val server =
             AnkiquestDay.Server(
@@ -356,8 +356,8 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @Test
     fun `placed streak widgets are drawn again when the day ends`() {
         targetContext.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
+            putString(AnkiquestPreferences.URL, "https://study.example.test")
+            putString(AnkiquestPreferences.USER, "hill")
         }
         mockkObject(AnkiquestPoll)
         every { AnkiquestPoll.refreshNow(any()) } just Runs

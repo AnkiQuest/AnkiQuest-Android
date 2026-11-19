@@ -632,7 +632,7 @@ private class FeedSection(
             EditText(this).apply {
                 hint = getString(R.string.ankiquest_reply_hint)
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-                filters = arrayOf(InputFilter.LengthFilter(AnkiquestReply.MAX_MESSAGE))
+                filters = arrayOf(InputFilter.LengthFilter(AnkiquestFeed.MAX_MESSAGE))
                 isSingleLine = true
             }
         val frame =
@@ -645,7 +645,7 @@ private class FeedSection(
             .setView(frame)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.aq_feed_send) { _, _ ->
-                val message = AnkiquestReply.clean(field.text.toString())
+                val message = AnkiquestFeed.clean(field.text.toString())
                 if (message.isNotEmpty()) reply(item, message)
             }.show()
         field.requestFocus()

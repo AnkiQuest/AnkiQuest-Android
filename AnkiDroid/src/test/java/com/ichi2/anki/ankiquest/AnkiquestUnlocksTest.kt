@@ -156,9 +156,9 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     private fun signIn(user: String): HomeAccount {
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.PREF_USER, user)
-            putString(Ankiquest.PREF_TOKEN, "token-$user")
+            putString(AnkiquestPreferences.URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.USER, user)
+            putString(AnkiquestPreferences.TOKEN, "token-$user")
         }
         return requireNotNull(AnkiquestHomeData.account())
     }
@@ -281,8 +281,8 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             assertNull(AnkiquestUnlocks.found(signIn("other")))
 
             // Signing in again with a new token keeps them: they belong to the player, not the token.
-            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_USER, "cerro") }
-            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "renewed") }
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestPreferences.USER, "cerro") }
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestPreferences.TOKEN, "renewed") }
             assertEquals(setOf(Choice.COW), AnkiquestUnlocks.found(requireNotNull(AnkiquestHomeData.account()))?.unlocks)
         }
 

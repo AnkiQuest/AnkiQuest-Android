@@ -32,9 +32,9 @@ class AnkiquestCrashReportTest : RobolectricTest() {
     fun `crash reports omit AnkiQuest credentials and account caches`() {
         val keys =
             listOf(
-                Ankiquest.PREF_URL,
-                Ankiquest.PREF_USER,
-                Ankiquest.PREF_TOKEN,
+                AnkiquestPreferences.URL,
+                AnkiquestPreferences.USER,
+                AnkiquestPreferences.TOKEN,
                 "ankiquestMomentsPending:account-scope",
                 "ankiquestWidgetLeaderboard:account-scope",
                 "ankiquestMoodIconProfile:account-scope",

@@ -57,9 +57,9 @@ class AnkiquestNotificationOwnerTest : RobolectricTest() {
     fun `an account change between entries preserves only the delivered cursor`() {
         val prefs = AnkiDroidApp.sharedPrefs()
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.URL, "https://study.example.test")
+            putString(AnkiquestPreferences.USER, "hill")
+            putString(AnkiquestPreferences.TOKEN, "hill-token")
         }
         val account = assertNotNull(AnkiquestHomeData.account(prefs))
         val cursor = "ankiquestCompletionCursor:${account.notificationAccount}"
@@ -78,7 +78,7 @@ class AnkiquestNotificationOwnerTest : RobolectricTest() {
         val changed =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 if (key == cursor && prefs.getLong(cursor, 0) == 6L) {
-                    prefs.edit { putString(Ankiquest.PREF_USER, "other") }
+                    prefs.edit { putString(AnkiquestPreferences.USER, "other") }
                 }
             }
         prefs.registerOnSharedPreferenceChangeListener(changed)
@@ -98,9 +98,9 @@ class AnkiquestNotificationOwnerTest : RobolectricTest() {
 
         fun originalAccount() =
             prefs.edit {
-                putString(Ankiquest.PREF_URL, "https://study.example.test")
-                putString(Ankiquest.PREF_USER, "hill")
-                putString(Ankiquest.PREF_TOKEN, "hill-token")
+                putString(AnkiquestPreferences.URL, "https://study.example.test")
+                putString(AnkiquestPreferences.USER, "hill")
+                putString(AnkiquestPreferences.TOKEN, "hill-token")
             }
         originalAccount()
         val account = assertNotNull(AnkiquestHomeData.account(prefs))
@@ -131,10 +131,10 @@ class AnkiquestNotificationOwnerTest : RobolectricTest() {
             // This callback is the synchronous image request's return boundary.
             prefs.edit {
                 when (change) {
-                    Change.SIGN_OUT -> remove(Ankiquest.PREF_TOKEN)
-                    Change.USER -> putString(Ankiquest.PREF_USER, "other")
-                    Change.SERVER -> putString(Ankiquest.PREF_URL, "https://other.example.test")
-                    Change.TOKEN -> putString(Ankiquest.PREF_TOKEN, "new-token")
+                    Change.SIGN_OUT -> remove(AnkiquestPreferences.TOKEN)
+                    Change.USER -> putString(AnkiquestPreferences.USER, "other")
+                    Change.SERVER -> putString(AnkiquestPreferences.URL, "https://other.example.test")
+                    Change.TOKEN -> putString(AnkiquestPreferences.TOKEN, "new-token")
                 }
             }
             picture

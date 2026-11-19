@@ -42,7 +42,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Feeds the server's recorded answers in `src/test/resources/ankiquest-api`, which CI replaces with
+ * Feeds the server's recorded answers in `ankiquest-core/src/test/resources/ankiquest-api`, which CI replaces with
  * the server's current ones, to the code the app reads them with, so a server change that would
  * break the app fails here before it is deployed.
  */
@@ -99,9 +99,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
         server.start()
         url = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, url)
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.URL, url)
+            putString(AnkiquestPreferences.USER, "hill")
+            putString(AnkiquestPreferences.TOKEN, "hill-token")
         }
     }
 
@@ -240,7 +240,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(AnkiquestAki.Message.STREAK, AnkiquestAki.mood(null, profile).message)
             assertTrue(assertNotNull(profile.optJSONArray("quests")).objects().all { it.optString("title").isNotEmpty() })
 
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "") }
             assertEquals(
                 targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L) + "\n\n" +
                     targetContext.getString(R.string.ankiquest_check_no_token),
@@ -422,7 +422,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertTrue(link.url.contains("/w/"), link.url)
             assertTrue(link.image.endsWith(".png"), link.image)
             assertTrue(link.text.contains(link.url), link.text)
-            assertFalse(Ankiquest.react(6, account.notificationAccount, account.scope))
+            assertFalse(AnkiquestFeed.react(6, account.notificationAccount, account.scope))
             val sharing = AnkiquestSharing.settings(account)
             assertEquals(3, sharing.dailyCap)
             assertEquals("ask", sharing.policies["daily_goal"])

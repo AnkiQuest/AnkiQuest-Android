@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
-const RESOURCES = "AnkiDroid/src/test/resources";
+const RESOURCES = "ankiquest-core/src/test/resources";
 const PIN = "ankiquest-server.sha";
 const SHA = /^[0-9a-f]{40}$/;
 const PAIRS = [

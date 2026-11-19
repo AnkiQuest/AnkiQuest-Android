@@ -51,9 +51,9 @@ class AnkiquestClearStreakScreenshotTest : ScreenshotTest() {
     ) {
         val prefs = targetContext.sharedPrefs()
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.URL, "https://study.example.test")
+            putString(AnkiquestPreferences.USER, "hill")
+            putString(AnkiquestPreferences.TOKEN, "test-token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, false)
         }
         AnkiquestWidget.forgetFresh()

@@ -46,8 +46,8 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
 
     @Before
     fun prepareFriends() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestSocial.overview(identity) } returns overview
         coEvery { AnkiquestSocial.change(identity, any()) } returns overview
         coEvery { AnkiquestSocial.invite(identity, any()) } returns AnkiquestSocial.parseInvite(JSONObject(example("invite")))
@@ -55,7 +55,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
 
     @After
     fun clearFriendMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
     }
 
     @Test
@@ -338,7 +338,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the screen asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val friends = launch()
         assertTrue(friends.hasText(friends.getString(R.string.aq_friends_connect)))
         coVerify(exactly = 0) { AnkiquestSocial.overview(any()) }

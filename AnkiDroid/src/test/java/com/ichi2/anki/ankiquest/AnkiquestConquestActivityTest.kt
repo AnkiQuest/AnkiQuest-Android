@@ -78,7 +78,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         // limit; a cold first render on macOS took longer than the 10 s wait (#298).
         ioDispatcher = Dispatchers.Main
         ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
         coEvery { AnkiquestShare.conqueredCardLabels(any()) } returns null
         coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(friends = 2)
@@ -562,7 +562,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         val (controller, answer) = lateLabel()
         controller.pause().stop()
         val other = identity.copy(user = "other", token = "other-synthetic-token")
-        every { AnkiquestHomeData.account(any()) } returns other
+        every { HomeAccount.current(any()) } returns other
         coEvery { AnkiquestCommunity.conquest(other, "hill", AT) } returns recorded.copy(told = null, friends = null)
         controller.start().resume()
         controller.get().settle()
@@ -634,7 +634,8 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         private const val AT = 1_793_097_000_000L
 
         /** The objects the card talks to, spied on for the whole class. */
-        private val spied = arrayOf(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
+        private val spied =
+            arrayOf(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest, HomeAccount.Companion)
 
         /**
          * Spies on [spied] once per class. Each spy re-instruments its class,

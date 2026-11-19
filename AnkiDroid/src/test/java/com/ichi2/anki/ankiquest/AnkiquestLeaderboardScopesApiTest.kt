@@ -65,7 +65,7 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
     @Test
     fun `an account change cannot send the old account's scoped request`() {
         withServer { account, requests ->
-            every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other", token = "other-token")
+            every { HomeAccount.current(any()) } returns account.copy(user = "other", token = "other-token")
             assertFailsWith<HomeAccountChanged> {
                 runBlocking { AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global) }
             }
@@ -93,13 +93,13 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
             exchange.responseBody.use { it.write(bytes) }
         }
         server.start()
-        mockkObject(AnkiquestHomeData)
+        mockkObject(AnkiquestHomeData, HomeAccount.Companion)
         val account = HomeAccount("http://127.0.0.1:${server.address.port}", "hill", "test-token")
-        every { AnkiquestHomeData.account(any()) } returns account
+        every { HomeAccount.current(any()) } returns account
         try {
             block(account, requests)
         } finally {
-            unmockkObject(AnkiquestHomeData)
+            unmockkObject(AnkiquestHomeData, HomeAccount.Companion)
             server.stop(0)
         }
     }

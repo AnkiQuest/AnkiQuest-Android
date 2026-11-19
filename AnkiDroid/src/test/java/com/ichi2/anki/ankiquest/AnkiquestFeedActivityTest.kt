@@ -42,9 +42,9 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @Before
     fun prepareFeed() {
-        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns page
         coEvery { AnkiquestFeed.markRead(identity, any()) } returns Unit
         coEvery { AnkiquestFeed.markAllRead(identity, any()) } returns Unit
@@ -55,7 +55,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
     }
 
     @Test
@@ -321,7 +321,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the feed asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val feed = launch()
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_connect)))
         coVerify(exactly = 0) { AnkiquestFeed.page(any(), any(), any(), any()) }

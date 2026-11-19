@@ -148,7 +148,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `a reply carries the message to the server and names who heard it`() =
         runBlocking {
             val account = AnkiquestHomeData.account()!!
-            assertEquals("Hill", Ankiquest.reply(7, "Good job!", account.notificationAccount, account.scope))
+            assertEquals("Hill", AnkiquestFeed.reply(7, "Good job!", account.notificationAccount, account.scope))
 
             val sent = requests.single { it.path == "/api/reply/cerro" }
             assertEquals("POST", sent.method)
@@ -485,9 +485,9 @@ class AnkiquestUploadTest : RobolectricTest() {
         runBlocking {
             val account = AnkiquestHomeData.account()!!
             for ((key, value) in listOf(
-                Ankiquest.PREF_USER to "other",
-                Ankiquest.PREF_TOKEN to "replacement-token",
-                Ankiquest.PREF_URL to "http://127.0.0.1:9",
+                AnkiquestPreferences.USER to "other",
+                AnkiquestPreferences.TOKEN to "replacement-token",
+                AnkiquestPreferences.URL to "http://127.0.0.1:9",
             )) {
                 configureAccount("cerro", "first-token")
                 AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
@@ -665,9 +665,9 @@ class AnkiquestUploadTest : RobolectricTest() {
         token: String,
     ) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, url)
-            putString(Ankiquest.PREF_USER, user)
-            putString(Ankiquest.PREF_TOKEN, token)
+            putString(AnkiquestPreferences.URL, url)
+            putString(AnkiquestPreferences.USER, user)
+            putString(AnkiquestPreferences.TOKEN, token)
         }
     }
 

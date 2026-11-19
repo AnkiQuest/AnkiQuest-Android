@@ -40,15 +40,15 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
 
     @Before
     fun prepareHistory() {
-        mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
         coEvery { AnkiquestRecords.study(identity, any()) } returns study
     }
 
     @After
     fun clearHistoryMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
+        unmockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards, HomeAccount.Companion)
     }
 
     @Test
@@ -140,7 +140,7 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
         assertTrue(launch().let { it.hasText(it.getString(R.string.aq_challenges_offline)) })
         coEvery { AnkiquestRecords.study(identity, any()) } throws AnkiquestHttpException(403)
         assertTrue(launch().let { it.hasText(it.getString(R.string.aq_home_auth)) })
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         assertTrue(launch().let { it.hasText(it.getString(R.string.aq_history_connect)) })
     }
 

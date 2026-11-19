@@ -161,9 +161,9 @@ class AnkiquestGreetingTest : RobolectricTest() {
 
     private fun signIn() =
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "member-token")
+            putString(AnkiquestPreferences.URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.USER, "member")
+            putString(AnkiquestPreferences.TOKEN, "member-token")
         }
 
     private fun greeting(host: DeckPicker): AlertDialog? =

@@ -143,7 +143,7 @@ internal class AnkiquestShareSheet(
         caption = views.text(words, card.body, small = true).apply { isVisible = card.body.isNotEmpty() }
 
         deckName?.let { field ->
-            field.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
+            field.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestCardLabels.MAX_LABEL))
             field.setText((moment as MomentRef.Deck).name)
             content.addView(field, wide())
             field.doAfterTextChanged { text ->

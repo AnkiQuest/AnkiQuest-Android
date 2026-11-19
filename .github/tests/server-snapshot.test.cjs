@@ -5,7 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const root = path.resolve(__dirname, "../..");
-const resources = path.join(root, "AnkiDroid/src/test/resources");
+const resources = path.join(root, "ankiquest-core/src/test/resources");
 const os = require("node:os");
 const snapshot = require("../ankiquest_server_snapshot.cjs");
 const pin = "a".repeat(40);
@@ -15,7 +15,7 @@ function fixture(t) {
     t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
     const app = path.join(folder, "app");
     const server = path.join(folder, "server");
-    const data = path.join(app, "AnkiDroid/src/test/resources");
+    const data = path.join(app, "ankiquest-core/src/test/resources");
     for (const directory of [
         path.join(server, "docs/api/examples"),
         path.join(server, "tests/fixtures"),

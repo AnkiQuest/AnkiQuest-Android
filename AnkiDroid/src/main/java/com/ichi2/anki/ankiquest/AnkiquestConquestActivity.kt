@@ -434,7 +434,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         val field =
             EditText(this).apply {
                 hint = getString(R.string.ankiquest_share_card_hint)
-                filters = arrayOf(InputFilter.LengthFilter(AnkiquestShare.MAX_LABEL))
+                filters = arrayOf(InputFilter.LengthFilter(AnkiquestCardLabels.MAX_LABEL))
                 isSingleLine = true
             }
         val frame =
@@ -451,7 +451,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                 .setPositiveButton(R.string.aq_conquest_label_save) { dialog, _ ->
                     if (!owner.take(dialog)) return@setPositiveButton
                     owner.close()
-                    val label = AnkiquestShare.chosenLabel(include = true, text = field.text.toString())
+                    val label = AnkiquestCardLabels.chosenLabel(include = true, text = field.text.toString())
                     if (label != null) {
                         act(R.string.ankiquest_goal_saving) { current ->
                             AnkiquestSharing.setConquestLabel(current, card.at, label)

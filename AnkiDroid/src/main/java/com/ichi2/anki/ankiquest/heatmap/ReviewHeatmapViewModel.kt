@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.RevlogSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -24,7 +25,7 @@ import timber.log.Timber
  */
 class ReviewHeatmapViewModel(
     private val serverDays: suspend () -> ReviewHeatmap.ServerDays? = ::ankiquestDays,
-    private val load: suspend () -> ReviewHeatmapData = { withCol { ReviewHeatmap.load(this) } },
+    private val load: suspend () -> ReviewHeatmapData = { withCol { ReviewHeatmap.load(RevlogSource(this)) } },
 ) : ViewModel() {
     sealed interface State {
         data object Loading : State

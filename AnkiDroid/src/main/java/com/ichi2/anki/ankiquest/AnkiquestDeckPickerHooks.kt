@@ -88,11 +88,11 @@ object AnkiquestDeckPickerHooks {
         }
         activity.launchCatchingTask {
             val prefs = activity.sharedPrefs()
-            val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
+            val owner = HomeAccount.fingerprint(prefs.all)
             val summary = AnkiquestStudySession.finish()
             // Keep the result with this host while paused; discard it after an account change.
             activity.lifecycle.withResumed {
-                if (owner != AnkiquestNavigation.accountFingerprint(prefs.all)) {
+                if (owner != HomeAccount.fingerprint(prefs.all)) {
                     return@withResumed
                 }
                 val session =

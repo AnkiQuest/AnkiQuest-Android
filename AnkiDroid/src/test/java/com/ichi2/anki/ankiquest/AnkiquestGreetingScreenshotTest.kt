@@ -40,9 +40,9 @@ class AnkiquestGreetingScreenshotTest : ScreenshotTest() {
     @Test
     fun signedIn() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.USER, "member")
+            putString(AnkiquestPreferences.TOKEN, "screenshot-token")
         }
         open()
         captureScreen("greeting_signed_in")

@@ -75,9 +75,9 @@ class AnkiquestServerMoveTest : RobolectricTest() {
         oldUrl = "http://127.0.0.1:${old.address.port}"
         publicUrl = "$mainUrl/"
         prefs.edit {
-            putString(Ankiquest.PREF_URL, oldUrl)
-            putString(Ankiquest.PREF_USER, "cerro")
-            putString(Ankiquest.PREF_TOKEN, "secret")
+            putString(AnkiquestPreferences.URL, oldUrl)
+            putString(AnkiquestPreferences.USER, "cerro")
+            putString(AnkiquestPreferences.TOKEN, "secret")
         }
     }
 
@@ -117,7 +117,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
             putStringSet("ankiquestDeckShareAsked", setOf("${account.scope}:20000:1"))
             putString(
                 "ankiquestLastStudySession",
-                JSONObject().put("account", AnkiquestNavigation.accountFingerprint(prefs.all)).put("reviews", 3).toString(),
+                JSONObject().put("account", HomeAccount.fingerprint(prefs.all)).put("reviews", 3).toString(),
             )
             putLong("ankiquestUploadedThrough:http://elsewhere.test/bo", 5L)
             putString("syncBaseUrl", oldUrl)
@@ -146,11 +146,11 @@ class AnkiquestServerMoveTest : RobolectricTest() {
         runBlocking {
             val before = account()
             remember(before)
-            val fingerprint = AnkiquestNavigation.accountFingerprint(prefs.all)
+            val fingerprint = HomeAccount.fingerprint(prefs.all)
 
             AnkiquestCapabilities.refresh(before)
 
-            assertEquals(mainUrl, prefs.getString(Ankiquest.PREF_URL, null))
+            assertEquals(mainUrl, prefs.getString(AnkiquestPreferences.URL, null))
             assertEquals(listOf("/api/devices/cerro" to "Bearer secret"), mainRequests.toList())
             val after = account()
             assertEquals(mainUrl, after.server)
@@ -163,7 +163,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
             assertEquals(after.scope, JSONObject(prefs.getString("ankiquestWidgetBoard:5", null)!!).getString("account"))
             assertEquals(setOf("${after.scope}:20000:1"), prefs.getStringSet("ankiquestDeckShareAsked", null))
             val session = JSONObject(prefs.getString("ankiquestLastStudySession", null)!!)
-            assertEquals(AnkiquestNavigation.accountFingerprint(prefs.all), session.getString("account"))
+            assertEquals(HomeAccount.fingerprint(prefs.all), session.getString("account"))
             assertFalse(session.getString("account") == fingerprint)
             assertTrue(AnkiquestCapabilities.has(after, "wins"))
 
@@ -191,7 +191,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
             remember(before)
             main.stop(0)
             AnkiquestCapabilities.refresh(before)
-            assertEquals(oldUrl, prefs.getString(Ankiquest.PREF_URL, null))
+            assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.URL, null))
             assertEquals(1234L, prefs.getLong("ankiquestUploadedThrough:${before.notificationAccount}", 0L))
         }
 
@@ -204,14 +204,14 @@ class AnkiquestServerMoveTest : RobolectricTest() {
             publicUrl = mainUrl
             AnkiquestCapabilities.refresh(account())
             assertEquals(emptyList(), mainRequests.toList())
-            assertEquals(oldUrl, prefs.getString(Ankiquest.PREF_URL, null))
+            assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.URL, null))
         }
 
     @Test
     fun `an account changed in the meantime is not moved`() {
         val before = account()
-        prefs.edit { putString(Ankiquest.PREF_TOKEN, "another") }
+        prefs.edit { putString(AnkiquestPreferences.TOKEN, "another") }
         assertFalse(AnkiquestServerMove.move(prefs, before, before.copy(server = mainUrl)))
-        assertEquals(oldUrl, prefs.getString(Ankiquest.PREF_URL, null))
+        assertEquals(oldUrl, prefs.getString(AnkiquestPreferences.URL, null))
     }
 }

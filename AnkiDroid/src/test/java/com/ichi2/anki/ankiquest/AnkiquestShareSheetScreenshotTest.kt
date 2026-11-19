@@ -47,15 +47,15 @@ class AnkiquestShareSheetScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareSheet() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestSocial.overview(identity) } returns overview
     }
 
     @After
     fun cleanupSheet() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

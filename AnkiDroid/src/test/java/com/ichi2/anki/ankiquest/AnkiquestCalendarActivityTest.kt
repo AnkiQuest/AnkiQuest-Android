@@ -47,14 +47,14 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
     @Before
     fun prepareCalendar() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestCommunity)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestCommunity, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestCommunity.calendar(identity, any(), any()) } returns october
     }
 
     @After
     fun clearCalendarMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestCommunity)
+        unmockkObject(AnkiquestHomeData, AnkiquestCommunity, HomeAccount.Companion)
     }
 
     @Test
@@ -120,7 +120,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the calendar asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val calendar = launch()
         assertTrue(calendar.hasText(calendar.getString(R.string.aq_board_connect)))
         coVerify(exactly = 0) { AnkiquestCommunity.calendar(any(), any(), any()) }

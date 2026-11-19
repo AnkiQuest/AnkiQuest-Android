@@ -46,9 +46,9 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.URL, "https://quest.example.test")
+            putString(AnkiquestPreferences.USER, "hill")
+            putString(AnkiquestPreferences.TOKEN, "hill-token")
         }
         shadowOf(targetContext as Application).grantPermissions(POST_NOTIFICATIONS_PERMISSION)
         mockkObject(AnkiquestApi, AnkiquestShare)

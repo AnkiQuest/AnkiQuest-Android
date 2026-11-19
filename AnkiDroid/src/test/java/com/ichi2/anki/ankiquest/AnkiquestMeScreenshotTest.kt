@@ -38,8 +38,8 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
     @Before
     fun prepareMe() {
         val profile = AnkiquestBoards.parseProfile(JSONObject(AnkiquestBoardsTest.PROFILE))
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, identity.user) } returns
             AnkiquestBoards.PlayerPage(profile, own = true, wins = emptyList())
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
@@ -51,7 +51,7 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupMe() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

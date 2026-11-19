@@ -1,6 +1,6 @@
 # Pinned AnkiQuest server data
 
-`AnkiDroid/src/test/resources/ankiquest-server.sha` names the exact server
+`ankiquest-core/src/test/resources/ankiquest-server.sha` names the exact server
 commit used by Android's committed API examples and shared fixtures.
 Normal PR and main builds test those committed files. A cheap isolated job
 checks them against that SHA; it never substitutes server master or runs

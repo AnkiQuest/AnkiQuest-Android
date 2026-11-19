@@ -43,8 +43,8 @@ class AnkiquestDeckAlertsTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSubscriptions)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, AnkiquestSubscriptions, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         every { AnkiquestSubscriptions.repository } returns repository
         coEvery { repository.load(identity) } returns enabled
         coEvery { repository.setSubscribed(identity, "cerro", false) } returns enabled.copy(unsubscribedSenders = setOf("other", "cerro"))
@@ -52,7 +52,7 @@ class AnkiquestDeckAlertsTest : RobolectricTest() {
     }
 
     @After
-    fun cleanup() = unmockkObject(AnkiquestHomeData, AnkiquestSubscriptions)
+    fun cleanup() = unmockkObject(AnkiquestHomeData, AnkiquestSubscriptions, HomeAccount.Companion)
 
     @Test
     fun `stop changes just that sender and offers Undo after success`() {

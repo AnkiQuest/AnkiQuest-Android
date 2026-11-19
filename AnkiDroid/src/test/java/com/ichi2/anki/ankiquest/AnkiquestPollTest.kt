@@ -100,7 +100,7 @@ class AnkiquestPollTest : RobolectricTest() {
             val path = exchange.requestURI.path
             requests.add(path)
             if (path == "/api/avatars" && switchAccountDuringAvatars) {
-                AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "other") }
             }
             if (path == "/api/avatars" && replaceBoardDuringAvatars) {
                 val fetchedAt = cacheKey(AnkiquestPoll.PREF_CACHE_AT)
@@ -112,10 +112,10 @@ class AnkiquestPollTest : RobolectricTest() {
             val inbox = path.startsWith("/api/notifications/")
             val reminders = path == "/api/community/reminders/cerro"
             if (reminders && reminderReply == ReminderReply.CHANGE_ACCOUNT) {
-                AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "changed-token") }
+                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.TOKEN, "changed-token") }
             }
             if (inbox && switchAccountDuringInbox) {
-                AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "other") }
             }
             val status =
                 when {
@@ -142,9 +142,9 @@ class AnkiquestPollTest : RobolectricTest() {
         server.start()
         url = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, url)
-            putString(Ankiquest.PREF_USER, "cerro")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.URL, url)
+            putString(AnkiquestPreferences.USER, "cerro")
+            putString(AnkiquestPreferences.TOKEN, "test-token")
         }
     }
 
@@ -260,9 +260,9 @@ class AnkiquestPollTest : RobolectricTest() {
             val synced = assertNotNull(AnkiquestNotificationHealth.lastSuccessfulSync())
             assertTrue(synced > 0L)
 
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "other") }
             assertNull(AnkiquestNotificationHealth.lastSuccessfulSync())
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "cerro") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.USER, "cerro") }
             assertEquals(synced, AnkiquestNotificationHealth.lastSuccessfulSync())
         }
 
@@ -352,7 +352,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `missing token skips inbox and succeeds without retry`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.TOKEN) }
 
             assertEquals(Result.success(), worker().doWork())
 

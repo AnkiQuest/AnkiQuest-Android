@@ -41,9 +41,9 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
     @Before
     fun prepareFeed() {
         val identity = HomeAccount("https://anki.example.test", "sam", "visual-test-token")
-        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
         every { AnkiquestShare.picture(any()) } returns
             createBitmap(120, 120).apply { eraseColor(Color.rgb(36, 95, 171)) }
@@ -51,7 +51,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

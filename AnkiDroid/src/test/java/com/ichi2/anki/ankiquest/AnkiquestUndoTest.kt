@@ -34,13 +34,13 @@ class AnkiquestUndoTest : RobolectricTest() {
 
     @Before
     fun prepareAccount() {
-        mockkObject(AnkiquestHomeData)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
     }
 
     @After
     fun cleanupAccount() {
-        unmockkObject(AnkiquestHomeData)
+        unmockkObject(AnkiquestHomeData, HomeAccount.Companion)
     }
 
     @Test

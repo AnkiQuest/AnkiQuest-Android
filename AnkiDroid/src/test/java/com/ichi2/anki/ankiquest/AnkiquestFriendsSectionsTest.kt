@@ -48,8 +48,16 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("friends unavailable")
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns page
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
@@ -61,7 +69,15 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
+        unmockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
     }
 
     @Test

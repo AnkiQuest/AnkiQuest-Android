@@ -57,8 +57,8 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @Before
     fun prepareHome() {
-        mockkObject(AnkiquestHomeData)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns profile
         // Otherwise the activity really asks anki.example.test, and the render that follows waits on that socket.
@@ -67,7 +67,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @After
     fun clearHomeMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies)
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies, HomeAccount.Companion)
     }
 
     @Test
@@ -181,7 +181,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         val controller = launchController()
         val home = controller.get()
         switched = true
-        every { AnkiquestHomeData.account(any()) } returns other
+        every { HomeAccount.current(any()) } returns other
         controller.pause().resume()
         advanceRobolectricLooperUntil { home.hasText("Geography") }
 
@@ -206,7 +206,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
             val failure = home.getString(R.string.aq_copies_unavailable)
             advanceRobolectricLooperUntil { home.hasText(failure) }
 
-            every { AnkiquestHomeData.account(any()) } returns other
+            every { HomeAccount.current(any()) } returns other
             controller.pause().resume()
             advanceRobolectricLooper()
 
@@ -525,7 +525,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         val form = copyDialog(controller.get())
         pickCopyFriend(form)
         val replacement = identity.copy(token = "replacement-token")
-        every { AnkiquestHomeData.account(any()) } returns replacement
+        every { HomeAccount.current(any()) } returns replacement
         coEvery { AnkiquestHomeData.profile(replacement) } returns profile
         coEvery { AnkiquestHomeData.companion(replacement) } throws IOException("offline")
         controller.recreate()
@@ -631,7 +631,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         switchCopyOwner()
         controller.pause().resume()
         advanceRobolectricLooper()
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         controller.pause().resume()
         advanceRobolectricLooper()
         val second = copyDialog(home)
@@ -663,7 +663,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     private fun switchCopyOwner() {
         val other = HomeAccount("https://anki.example.test", "other", "other-token")
-        every { AnkiquestHomeData.account(any()) } returns other
+        every { HomeAccount.current(any()) } returns other
         coEvery { AnkiquestHomeData.profile(other) } returns profile
         coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
     }

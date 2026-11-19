@@ -48,8 +48,8 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, Ankiquest)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, Ankiquest, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
     }
@@ -57,7 +57,7 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, Ankiquest)
+        unmockkObject(AnkiquestHomeData, Ankiquest, HomeAccount.Companion)
     }
 
     @Test

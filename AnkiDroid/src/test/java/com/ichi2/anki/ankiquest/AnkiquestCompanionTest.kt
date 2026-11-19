@@ -24,9 +24,9 @@ class AnkiquestCompanionTest : RobolectricTest() {
     private fun account(user: String): HomeAccount {
         val preferences = AnkiDroidApp.sharedPrefs()
         preferences.edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "https://example.com")
-            putString(Ankiquest.PREF_USER, user)
-            putString(Ankiquest.PREF_TOKEN, "token-$user")
+            putString(AnkiquestPreferences.URL, "https://example.com")
+            putString(AnkiquestPreferences.USER, user)
+            putString(AnkiquestPreferences.TOKEN, "token-$user")
         }
         return requireNotNull(AnkiquestHomeData.account())
     }

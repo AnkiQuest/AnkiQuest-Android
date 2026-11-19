@@ -34,7 +34,7 @@ object AnkiquestStudySession {
         if (!AnkiquestNavigation.enabled()) return
         val value =
             JSONObject()
-                .put("account", AnkiquestNavigation.accountFingerprint())
+                .put("account", HomeAccount.fingerprint())
                 .put("started", TimeManager.time.intTimeMS())
         AnkiDroidApp.sharedPrefs().edit { putString(PREF_ACTIVE_SESSION, value.toString()) }
     }
@@ -44,7 +44,7 @@ object AnkiquestStudySession {
         val active = prefs.getString(PREF_ACTIVE_SESSION, null) ?: return null
         prefs.edit { remove(PREF_ACTIVE_SESSION) }
         val data = runCatching { JSONObject(active) }.getOrNull() ?: return null
-        val account = AnkiquestNavigation.accountFingerprint()
+        val account = HomeAccount.fingerprint()
         if (!AnkiquestNavigation.enabled() || data.optString("account") != account) return null
         val now = TimeManager.time.intTimeMS()
         val started = data.optLong("started")
@@ -61,7 +61,7 @@ object AnkiquestStudySession {
                         Summary(cursor.getInt(0), (cursor.getLong(1) / 60_000).toInt(), sched.totalCount(), now)
                     }
             }
-        if (summary.reviews == 0 || account != AnkiquestNavigation.accountFingerprint()) return null
+        if (summary.reviews == 0 || account != HomeAccount.fingerprint()) return null
         val stored =
             JSONObject()
                 .put("account", account)
@@ -77,7 +77,7 @@ object AnkiquestStudySession {
         val prefs = AnkiDroidApp.sharedPrefs()
         val text = prefs.getString(PREF_LATEST_SESSION, null) ?: return null
         val data = runCatching { JSONObject(text) }.getOrNull()
-        if (!AnkiquestNavigation.enabled() || data == null || data.optString("account") != AnkiquestNavigation.accountFingerprint()) {
+        if (!AnkiquestNavigation.enabled() || data == null || data.optString("account") != HomeAccount.fingerprint()) {
             prefs.edit {
                 remove(PREF_LATEST_SESSION)
                 remove(PREF_ACTIVE_SESSION)
