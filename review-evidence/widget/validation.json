@@ -45,7 +45,9 @@
         "device": "vivo X300 Pro, Android 16/API 36",
         "version": "2.5.1.896851528 (331)",
         "before_touch_target_fix": "Actual light/dark scans show no widget text-contrast warning. The larger widget's outer fixed-size container triggers a Text scaling suggestion although text fits at 130% and 200%. The compact 2x1 widget at 200% triggers a 25dp deck-name touch-target warning.",
-        "after_touch_target_fix": "Final APK rescan pending. All 23 targeted tests pass, including actual clickable nodes, study destination, and updating a previously placed widget with AppWidgetHostView.",
+        "after_touch_target_fix": "Scanned the final source APK after updating the already placed widget. Compact 2x1 scans at 200% text in both light and dark themes have no widget suggestions. A 3x2 dark scan at 130% retains one Text scaling advisory on the outer fixed-size ViewGroup, bounds [37,185][925,838]; the text is fully visible and there are no widget contrast or touch-target warnings. Tapping the deck name opens the selected synthetic deck for study. All 23 targeted tests pass, including actual clickable nodes, study destination, and updating a previously placed widget with AppWidgetHostView.",
+        "source_apk_sha256": "7046b270618a07670c8903bf3375d9c231e8b253217081eb7bf2d4b84eb489c0",
+        "cleanup": "The temporary AnkiDroid debug app was uninstalled. The phone's original 130% text size and dark theme were restored and verified; production AnkiDroid and AnkiQuest were unchanged.",
         "privacy": "Full phone captures include incidental launcher data and are kept locally, not published."
     },
     "assisted_by": "Codex (GPT-6)"
