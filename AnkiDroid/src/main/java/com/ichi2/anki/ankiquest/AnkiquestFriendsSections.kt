@@ -1689,9 +1689,16 @@ private class LeaderboardSection(
         if (row.hasToday) {
             views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
         }
-        val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
+        // Around the weekly switch, XP that counts for the week before or after the board's.
+        val now = TimeManager.time.intTimeMS()
+        val week = period == AnkiquestBoards.Period.WEEK
+        val closing = row.closingXp(now)?.takeIf { week }
+        val next = row.nextXp(now, weekEnds)?.takeIf { week }
         closing?.let { xp ->
             views.text(score, getString(R.string.aq_board_closing_xp, views.number(xp)), small = true).gravity = alignment
+        }
+        next?.let { xp ->
+            views.text(score, getString(R.string.aq_board_next_xp, views.number(xp)), small = true).gravity = alignment
         }
         val current = account
         if (hiding && current != null) {
@@ -1718,6 +1725,7 @@ private class LeaderboardSection(
                     }
                 },
                 closing?.let { getString(R.string.aq_board_closing_xp, views.number(it)) },
+                next?.let { getString(R.string.aq_board_next_xp, views.number(it)) },
                 getString(R.string.aq_board_private_row).takeIf { mine && row.shown == false },
             ).joinToString(". ")
         val ripple = TypedValue().also { theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }

@@ -340,7 +340,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         content.addView(AnkiquestAki.encouragement(this, AnkiquestAki.mood(local, profile)))
         profile?.let {
             text(content, getString(R.string.aq_home_streak_level, it.optInt("streak"), it.optInt("level")), small = true)
-            AnkiquestBoards.closingLine(this, AnkiquestBoards.parseClosingWeek(it), TimeManager.time.intTimeMS())?.let { line ->
+            AnkiquestBoards.ownWeekLine(this, AnkiquestBoards.parseOwnWeek(it), TimeManager.time.intTimeMS())?.let { line ->
                 text(card(tinted = true), line)
             }
         }
