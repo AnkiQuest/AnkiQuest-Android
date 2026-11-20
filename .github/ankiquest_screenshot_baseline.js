@@ -6,16 +6,41 @@ const WORKFLOW = "ankiquest_screenshot_store.yml";
 const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
 
+// The commit whose baseline a run compares against: a pull request's base, the main commit a
+// merge queue group was built on, or the pushed commit itself.
+async function baseCommit({ github, context }) {
+    if (context.payload.pull_request) {
+        return context.payload.pull_request.base;
+    }
+
+    // A group's parent can be the group queued ahead of it, which never gets a baseline.
+    // Its merge base with the target branch is the branch commit the queue started from.
+    const group = context.payload.merge_group;
+    if (group) {
+        const ref = group.base_ref.replace(/^refs\/heads\//, "");
+        const {
+            data: { merge_base_commit: mergeBase },
+        } = await github.rest.repos.compareCommitsWithBasehead({
+            ...context.repo,
+            basehead: `${ref}...${group.head_sha}`,
+            per_page: 1,
+        });
+        return { sha: mergeBase.sha, ref };
+    }
+
+    return { sha: context.sha, ref: context.ref.replace(/^refs\/heads\//, "") };
+}
+
 module.exports = async function waitForScreenshotBaseline({
     github,
     context,
     core,
     sleep = delay => new Promise(resolve => setTimeout(resolve, delay)),
 }) {
-    const base = context.payload.pull_request?.base || {
-        sha: context.sha,
-        ref: context.ref.replace(/^refs\/heads\//, ""),
-    };
+    const base = await baseCommit({ github, context });
+
+    // The workflow names this commit when no baseline can be downloaded.
+    core.setOutput("base", base.sha);
 
     // Store jobs can overlap or outlive the branch tip. Only this commit's artifact is safe.
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
