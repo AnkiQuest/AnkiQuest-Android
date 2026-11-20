@@ -329,7 +329,7 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
     /** Turns sync off after the request is queued, before its IO work begins. */
     private suspend fun switchOffBeforeIo(at: Int) {
         AnkiquestCapabilities.current(account())
-        requests.clear()
+        server.requests.clear()
         val io = Dispatchers.IO
         val dispatched = AtomicInteger()
         val queued =
