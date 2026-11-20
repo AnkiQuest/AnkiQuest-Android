@@ -4,10 +4,10 @@ package com.ichi2.anki.ankiquest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** Check password text on Android's runtime as well as the host JVM. */
 @RunWith(AndroidJUnit4::class)
@@ -20,7 +20,7 @@ class AnkiquestPasswordDeviceTest {
         val cases = listOf(5 to length, 9 to length, 10 to null, 129 to null, 256 to null, 257 to length)
         for ((count, expected) in cases) {
             val typed = emoji.repeat(count)
-            assertEquals("$count Unicode characters", expected, AnkiquestPasswordPrompt.problem(typed, typed))
+            assertEquals(expected, AnkiquestPasswordPrompt.problem(typed, typed), "$count Unicode characters")
         }
     }
 
