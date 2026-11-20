@@ -8,12 +8,18 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.utils.LanguageUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -90,6 +96,17 @@ internal object AnkiquestMoveImport {
         fun read(): String?
     }
 
+    /** A provider reply has no side effects until the active setup screen accepts it. */
+    private sealed interface Payload {
+        data class Ready(
+            val settings: Map<String, Any>,
+        ) : Payload
+
+        data class Failed(
+            val reason: Reason,
+        ) : Payload
+    }
+
     // Transitions. Each leaves a state it does not apply to unchanged.
 
     fun start(
@@ -128,26 +145,43 @@ internal object AnkiquestMoveImport {
         source: Source,
         prefs: SharedPreferences,
         exclusions: AnkiquestMovePayload.Exclusions,
-    ): Result {
+    ): Result = apply(load(source), prefs, exclusions)
+
+    /** Read and validate on the worker thread; do not write preferences there. */
+    private fun load(source: Source): Payload {
         val text =
             try {
                 source.read()
             } catch (e: SecurityException) {
-                return Result.Failed(Reason.REFUSED)
+                return Payload.Failed(Reason.REFUSED)
             } catch (e: Exception) {
                 // The provider is gone or crashed; its message carries nothing of the payload.
                 Timber.w(e, "ankiquest move: old app unavailable")
-                return Result.Failed(Reason.UNAVAILABLE)
+                return Payload.Failed(Reason.UNAVAILABLE)
             }
         if (text == null) {
-            return Result.Failed(Reason.UNAVAILABLE)
+            return Payload.Failed(Reason.UNAVAILABLE)
         }
 
         val settings =
             when (val decoded = AnkiquestMovePayload.decode(text)) {
                 is AnkiquestMovePayload.Decoded.Read -> decoded.settings
-                is AnkiquestMovePayload.Decoded.UnknownVersion -> return Result.Failed(Reason.UNKNOWN_VERSION)
-                AnkiquestMovePayload.Decoded.Malformed -> return Result.Failed(Reason.MALFORMED)
+                is AnkiquestMovePayload.Decoded.UnknownVersion -> return Payload.Failed(Reason.UNKNOWN_VERSION)
+                AnkiquestMovePayload.Decoded.Malformed -> return Payload.Failed(Reason.MALFORMED)
+            }
+        return Payload.Ready(settings)
+    }
+
+    /** Commit the in-memory settings and result together, after the cancelled-read boundary. */
+    private fun apply(
+        payload: Payload,
+        prefs: SharedPreferences,
+        exclusions: AnkiquestMovePayload.Exclusions,
+    ): Result {
+        val settings =
+            when (payload) {
+                is Payload.Failed -> return Result.Failed(payload.reason)
+                is Payload.Ready -> payload.settings
             }
         AnkiquestMovePayload.apply(prefs, settings, exclusions)
         val next = if (prefs.getString(HKEY, null).isNullOrEmpty()) Next.EXPORT else Next.SYNC
@@ -156,7 +190,7 @@ internal object AnkiquestMoveImport {
 
     private const val HKEY = "hkey"
 
-    private var state: State? = null
+    private val state = MutableStateFlow<State?>(null)
 
     /**
      * Called by the first setup screen when it is created. Shows the prompt while the flow is
@@ -167,12 +201,28 @@ internal object AnkiquestMoveImport {
         activity: AppCompatActivity,
         onDone: (Next) -> Unit,
     ) {
-        val current = state ?: begin(activity)
-        state = current
-        when (current) {
-            State.Offered -> ask(activity, onDone)
-            is State.Done -> guide(activity, current.next, onDone)
-            State.NotNeeded, State.Importing, is State.Failed -> Unit
+        if (state.value == null) {
+            state.value = begin(activity)
+        }
+        activity.lifecycleScope.launch {
+            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                state.filterNotNull().collectLatest { current ->
+                    val dialog =
+                        when (current) {
+                            State.Offered -> ask(activity)
+                            State.Importing -> waiting(activity)
+                            is State.Done -> guide(activity, current.next, onDone)
+                            is State.Failed -> failed(activity)
+                            State.NotNeeded -> null
+                        }
+                    // Each visible screen owns its dialogs; recreation observes the latest state.
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        dialog?.dismiss()
+                    }
+                }
+            }
         }
     }
 
@@ -187,44 +237,44 @@ internal object AnkiquestMoveImport {
 
     private fun account(): Account = if (Ankiquest.isConfigured()) Account.SIGNED_IN else Account.NONE
 
-    private fun ask(
-        activity: AppCompatActivity,
-        onDone: (Next) -> Unit,
-    ) {
+    private fun ask(activity: AppCompatActivity): AlertDialog =
         AlertDialog
             .Builder(activity)
             .setTitle(R.string.ankiquest_move_title)
             .setMessage(R.string.ankiquest_move_message)
             .setCancelable(false)
-            .setPositiveButton(R.string.ankiquest_move_accept) { _, _ -> import(activity, onDone) }
-            .setNegativeButton(R.string.ankiquest_move_decline) { _, _ -> state = decline(requireNotNull(state)) }
+            .setPositiveButton(R.string.ankiquest_move_accept) { _, _ -> import(activity) }
+            .setNegativeButton(R.string.ankiquest_move_decline) { _, _ -> state.value = decline(requireNotNull(state.value)) }
             .show()
-    }
 
-    private fun import(
-        activity: AppCompatActivity,
-        onDone: (Next) -> Unit,
-    ) {
-        state = accept(requireNotNull(state))
+    /** Keep the setup buttons covered while importing, so they cannot start another login. */
+    private fun waiting(activity: AppCompatActivity): AlertDialog =
+        AlertDialog
+            .Builder(activity)
+            .setTitle(R.string.ankiquest_move_title)
+            .setMessage(R.string.ankiquest_move_loading)
+            .setCancelable(false)
+            .show()
+
+    private fun import(activity: AppCompatActivity) {
+        state.value = accept(requireNotNull(state.value))
         activity.lifecycleScope.launch {
-            val result =
+            val payload =
                 try {
                     withContext(Dispatchers.IO) {
-                        read(source(activity.applicationContext), AnkiDroidApp.sharedPrefs(), AnkiquestMovePayload.Exclusions.of(activity))
+                        load(source(activity.applicationContext))
                     }
                 } catch (e: CancellationException) {
-                    state = interrupt(requireNotNull(state))
+                    state.value = interrupt(requireNotNull(state.value))
                     throw e
                 }
-            state = finish(requireNotNull(state), result)
-            Timber.i("ankiquest move: %s", state)
-            when (result) {
-                is Result.Imported -> {
-                    // The usual post-login path: capabilities and the first AnkiQuest refresh.
-                    AnkiquestPoll.refreshNow(activity)
-                    guide(activity, result.next, onDone)
-                }
-                is Result.Failed -> failed(activity)
+            // withContext checks cancellation before returning to main. A closed screen never
+            // applies a late provider reply; applying and publishing the result do not suspend.
+            val result = apply(payload, AnkiDroidApp.sharedPrefs(), AnkiquestMovePayload.Exclusions.of(activity))
+            state.value = finish(requireNotNull(state.value), result)
+            Timber.i("ankiquest move: %s", state.value)
+            if (result is Result.Imported) {
+                AnkiquestPoll.refreshNow(activity)
             }
         }
     }
@@ -234,31 +284,31 @@ internal object AnkiquestMoveImport {
         activity: AppCompatActivity,
         next: Next,
         onDone: (Next) -> Unit,
-    ) {
+    ): AlertDialog {
         val message =
             when (next) {
                 Next.SYNC -> R.string.ankiquest_move_done_sync
                 Next.EXPORT -> R.string.ankiquest_move_done_export
             }
-        AlertDialog
+        return AlertDialog
             .Builder(activity)
             .setTitle(R.string.ankiquest_move_title)
             .setMessage(message)
             .setCancelable(false)
             .setPositiveButton(android.R.string.ok) { _, _ ->
+                state.value = State.NotNeeded
                 onDone(next)
                 applyLanguage()
             }.show()
     }
 
-    private fun failed(activity: AppCompatActivity) {
+    private fun failed(activity: AppCompatActivity): AlertDialog =
         AlertDialog
             .Builder(activity)
             .setTitle(R.string.ankiquest_move_title)
             .setMessage(R.string.ankiquest_move_failed)
-            .setPositiveButton(android.R.string.ok, null)
+            .setPositiveButton(android.R.string.ok) { _, _ -> state.value = State.NotNeeded }
             .show()
-    }
 
     /** The moved app language takes effect as when it is chosen in the settings. */
     private fun applyLanguage() {

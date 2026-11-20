@@ -8,4 +8,5 @@
     <string name="ankiquest_move_done_sync">Ajustes e inicio de sesión traídos. Tu colección llega desde AnkiWeb con la primera sincronización, que empieza ahora.</string>
     <string name="ankiquest_move_done_export">Ajustes e inicio de sesión traídos. Tu colección sigue en el AnkiQuest anterior: usa allí «Exportar colección» e importa el archivo aquí.</string>
     <string name="ankiquest_move_failed">El AnkiQuest anterior no entregó sus ajustes. Configura esta aplicación como siempre.</string>
+    <string name="ankiquest_move_loading">Transfiriendo tus ajustes e inicio de sesión…</string>
 </resources>

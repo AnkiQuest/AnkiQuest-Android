@@ -8,4 +8,5 @@
     <string name="ankiquest_move_done_sync">Réglages et connexion transférés. Ta collection arrive d’AnkiWeb avec la première synchronisation, qui commence maintenant.</string>
     <string name="ankiquest_move_done_export">Réglages et connexion transférés. Ta collection est encore dans l’ancien AnkiQuest : utilise « Exporter la collection » là-bas, puis importe le fichier ici.</string>
     <string name="ankiquest_move_failed">L’ancien AnkiQuest n’a pas transmis ses réglages. Configure cette application comme d’habitude.</string>
+    <string name="ankiquest_move_loading">Transfert de tes réglages et de ta connexion…</string>
 </resources>

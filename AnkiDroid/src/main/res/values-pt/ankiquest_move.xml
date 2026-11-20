@@ -8,4 +8,5 @@
     <string name="ankiquest_move_done_sync">Definições e sessão trazidas. A tua coleção chega do AnkiWeb com a primeira sincronização, que começa agora.</string>
     <string name="ankiquest_move_done_export">Definições e sessão trazidas. A tua coleção continua no AnkiQuest antigo: usa lá «Exportar coleção» e importa o ficheiro aqui.</string>
     <string name="ankiquest_move_failed">O AnkiQuest antigo não entregou as suas definições. Configura esta aplicação como de costume.</string>
+    <string name="ankiquest_move_loading">A transferir as tuas definições e sessão…</string>
 </resources>

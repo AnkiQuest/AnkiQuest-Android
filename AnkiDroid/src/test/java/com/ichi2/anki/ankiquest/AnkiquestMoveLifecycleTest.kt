@@ -12,11 +12,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.IntroductionActivity
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestMoveImport.State
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,7 +42,7 @@ class AnkiquestMoveLifecycleTest : RobolectricTest() {
 
     @Before
     fun prepareMove() {
-        ReflectionHelpers.setStaticField(AnkiquestMoveImport::class.java, "state", null)
+        stateFlow().value = null
         mockkObject(AnkiquestMove, AnkiquestMove.Role.Companion, AnkiquestPoll)
         every { AnkiquestMove.Role.of(any()) } returns AnkiquestMove.Role.NEW
         every { AnkiquestMove.oldApp(any()) } returns AnkiquestMove.OldApp.READY
@@ -59,7 +61,7 @@ class AnkiquestMoveLifecycleTest : RobolectricTest() {
         provider.release.countDown()
         ShadowDialog.getShownDialogs().toList().forEach { it.dismiss() }
         unmockkObject(AnkiquestMove, AnkiquestMove.Role.Companion, AnkiquestPoll)
-        ReflectionHelpers.setStaticField(AnkiquestMoveImport::class.java, "state", null)
+        stateFlow().value = null
     }
 
     @Test
@@ -85,6 +87,8 @@ class AnkiquestMoveLifecycleTest : RobolectricTest() {
             ShadowDialog.getShownDialogs().any { it.isShowing },
             "The recreated setup must present the interrupted move without another recreation",
         )
+        val offer = assertIs<AlertDialog>(ShadowDialog.getLatestDialog())
+        assertEquals(targetContext.getString(R.string.ankiquest_move_accept), offer.getButton(AlertDialog.BUTTON_POSITIVE).text)
     }
 
     @Test
@@ -106,11 +110,14 @@ class AnkiquestMoveLifecycleTest : RobolectricTest() {
         }
 
     private fun accept() {
+        advanceRobolectricLooperUntil { ShadowDialog.getLatestDialog()?.isShowing == true }
         assertIs<AlertDialog>(ShadowDialog.getLatestDialog()).getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         advanceRobolectricLooperUntil { provider.entered.count == 0L }
     }
 
-    private fun state(): State? = ReflectionHelpers.getStaticField(AnkiquestMoveImport::class.java, "state")
+    private fun stateFlow(): MutableStateFlow<State?> = ReflectionHelpers.getStaticField(AnkiquestMoveImport::class.java, "state")
+
+    private fun state(): State? = stateFlow().value
 
     private fun awaitRead() {
         advanceRobolectricLooperUntil { state() != State.Importing }

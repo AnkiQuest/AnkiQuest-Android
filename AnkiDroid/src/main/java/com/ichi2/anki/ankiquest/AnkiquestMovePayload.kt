@@ -220,7 +220,8 @@ internal object AnkiquestMovePayload {
         settings: Map<String, Any>,
         exclusions: Exclusions,
     ) {
-        prefs.edit(commit = true) {
+        // Apply in memory atomically; Android queues the disk write before leaving the component.
+        prefs.edit {
             for ((key, value) in settings) {
                 if (!exclusions.movable(key, value)) {
                     continue
