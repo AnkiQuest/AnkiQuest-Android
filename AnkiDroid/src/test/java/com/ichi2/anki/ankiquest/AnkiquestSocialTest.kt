@@ -87,7 +87,7 @@ class AnkiquestSocialTest {
     }
 
     @Test
-    fun `accepting the recorded invitation returns membership without an invite link`() {
+    fun acceptedInviteExample() {
         val accepted = AnkiquestSocial.parse(JSONObject(example("group_invite_accept")))
         val group = accepted.groups.single()
         assertEquals(1L, group.id)
