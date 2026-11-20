@@ -11,6 +11,8 @@ import android.content.pm.Signature
 import android.content.pm.SigningInfo
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
+import androidx.annotation.RequiresApi
 import com.ichi2.anki.FlashCardsContract
 import org.junit.Before
 import org.junit.Test
@@ -22,7 +24,6 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowSigningInfo
-import java.util.Base64
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -240,7 +241,7 @@ internal object AnkiDroidPackages {
      */
     val RELEASE =
         Signature(
-            Base64.getMimeDecoder().decode(
+            Base64.decode(
                 """
                 MIIB4zCCAUygAwIBAgIESkbphTANBgkqhkiG9w0BAQUFADA1MRswGQYDVQQKExJo
                 dHRwOi8vbnJ3LmZyZWUuZnIxFjAUBgNVBAMTDU5pY29sYXMgUmFvdWwwIBcNMDkw
@@ -254,6 +255,7 @@ internal object AnkiDroidPackages {
                 q9vkMdb2yjlOty7UEZ2ExtzhyDh7v1go5EA4U/vllnx7cm+B+NywZueNhgDPzo2f
                 8O5qre1YSA==
                 """.trimIndent(),
+                Base64.DEFAULT,
             ),
         )
 
@@ -264,7 +266,7 @@ internal object AnkiDroidPackages {
      */
     val FDROID =
         Signature(
-            Base64.getMimeDecoder().decode(
+            Base64.decode(
                 """
                 MIIDPDCCAiSgAwIBAgIETSOoMzANBgkqhkiG9w0BAQUFADBgMQswCQYDVQQGEwJVSzEMMAoGA1UE
                 CBMDT1JHMQwwCgYDVQQHEwNPUkcxEzARBgNVBAoTCmZkcm9pZC5vcmcxDzANBgNVBAsTBkZEcm9p
@@ -282,6 +284,7 @@ internal object AnkiDroidPackages {
                 6yIzg90sOxzdOuJGIVNJ9OIe4Kc1yyWXQ0wZBIymP2ZJKd5D4LM8Y+vi/5XNLDsvhXKr2pjpc8qf
                 mDHP0OnTAv/K+Y/o1QD7WggKkdD3KXIn55FjWSnKXCJ9zg==
                 """.trimIndent(),
+                Base64.DEFAULT,
             ),
         )
 
@@ -291,7 +294,7 @@ internal object AnkiDroidPackages {
      */
     val ANKIQUEST_RELEASE =
         Signature(
-            Base64.getMimeDecoder().decode(
+            Base64.decode(
                 """
                 MIIE8DCCAtigAwIBAgIJAML0qH7KwcdSMA0GCSqGSIb3DQEBDAUAMCUxDzANBgNV
                 BAoTBmZsb2F0MzESMBAGA1UEAxMJQW5raVF1ZXN0MCAXDTI2MDkyNDA2MjQxM1oY
@@ -321,6 +324,7 @@ internal object AnkiDroidPackages {
                 3aCG4Vu5JQ8x4OJ7fbHwGUzPmrGD83tvcwirZwMqkgRN1Hwrux0mkoUkH79JHx19
                 6Osnkftrax+tSq4o6V4n2flcSOU=
                 """.trimIndent(),
+                Base64.DEFAULT,
             ),
         )
 
@@ -399,6 +403,7 @@ internal object AnkiDroidPackages {
         }
 
     /** The platform lists past certificates oldest first, ending with the current one */
+    @RequiresApi(Build.VERSION_CODES.P)
     private fun signingInfo(signing: Signing): SigningInfo {
         val info = Shadow.newInstanceOf(SigningInfo::class.java)
         val shadow = Shadow.extract<ShadowSigningInfo>(info)
