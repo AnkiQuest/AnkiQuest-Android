@@ -158,7 +158,9 @@ jobs:
       # The download list for the release notes and nightly.json, most common first.
       - name: Assets
         run: |
-          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab)
+          # Released updaters still request this name. Copy after signing so the bytes match.
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab AnkiDroid-Quest.apk)
           for file in "${files[@]}"; do
             jq -n --arg name "$file" --argjson size "$(stat -c %s "$file")" '{name: $name, size: $size}'
           done | jq -s . > assets.json
@@ -171,6 +173,7 @@ jobs:
             echo "- \`AnkiQuest-armeabi-v7a.apk\`: older 32-bit phones."
             echo "- \`AnkiQuest-x86_64.apk\`, \`AnkiQuest-x86.apk\`: emulators and Chromebooks."
             echo "- \`AnkiQuest.aab\`: app bundle for Google Play, not for installing."
+            echo "- \`AnkiDroid-Quest.apk\`: the same universal APK, kept for older built-in updaters."
           } > downloads.md
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -180,6 +183,7 @@ jobs:
             AnkiQuest.apk
             AnkiQuest-*.apk
             AnkiQuest.aab
+            AnkiDroid-Quest.apk
           if-no-files-found: error
 
       - name: Publish release
