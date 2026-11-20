@@ -423,7 +423,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 AnkiquestDailyGoal.ServerGoal.parse(AnkiquestSharing.goal(account)),
             )
             assertEquals("aki", AnkiquestHomeData.companion(account))
-            assertFalse(Ankiquest.streakProtectionEnabled())
+            assertFalse(Ankiquest.setStreakProtection(false))
         }
 
     @Test

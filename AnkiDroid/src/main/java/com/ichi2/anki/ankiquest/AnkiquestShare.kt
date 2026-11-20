@@ -47,7 +47,7 @@ internal object AnkiquestShare {
     private const val MAX_IMAGE_BYTES = 4L * 1024 * 1024
     private const val MAX_PICTURE_SIDE = 1080
     private const val IMAGE_SECONDS = 10L
-    private val CACHE_LIFETIME = TimeUnit.DAYS.toMillis(1)
+    private const val CACHE_LIFETIME = DAY_MS
 
     /** The notification kind behind a Share button, for its picture's art. */
     private const val EXTRA_KIND = "ankiquestShareKind"

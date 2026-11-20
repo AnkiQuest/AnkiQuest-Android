@@ -87,7 +87,7 @@ internal class AnkiquestFriendsSections(
             activity,
             restored,
             initial,
-            activity.intent.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD).takeIf { savedState == null },
+            activity.intent.getStringExtra(EXTRA_BOARD_PERIOD).takeIf { savedState == null },
         )
     private val root =
         LinearLayout(activity).apply {
@@ -129,10 +129,35 @@ internal class AnkiquestFriendsSections(
         private const val EXTRA_SECTION = "ankiquest.friends_section"
         private const val STATE_ACCOUNT = "ankiquest.friends_sections_account"
 
+        /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's feed says so. */
+        const val EXTRA_FEED_ACCOUNT = "ankiquest.feed_account"
+
+        /** A period's name, as [AnkiquestBoards.Period.query]; the week when missing or unknown. */
+        const val EXTRA_BOARD_PERIOD = "ankiquest.board_period"
+
+        /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's board says so. */
+        const val EXTRA_BOARD_ACCOUNT = "ankiquest.board_account"
+
         fun intent(
             context: Context,
             destination: Destination,
         ): Intent = AnkiquestFriendsActivity.intent(context).putExtra(EXTRA_SECTION, destination.name)
+
+        fun feedIntent(
+            context: Context,
+            account: String? = null,
+        ): Intent =
+            intent(context, Destination.FEED)
+                .apply { account?.let { putExtra(EXTRA_FEED_ACCOUNT, it) } }
+
+        fun boardIntent(
+            context: Context,
+            period: String = AnkiquestBoards.Period.WEEK.query,
+            account: String? = null,
+        ): Intent =
+            intent(context, Destination.LEADERBOARD)
+                .putExtra(EXTRA_BOARD_PERIOD, period)
+                .apply { account?.let { putExtra(EXTRA_BOARD_ACCOUNT, it) } }
     }
 }
 
@@ -253,7 +278,7 @@ private class FeedSection(
             ?: AnkiquestFeed.Category.ALL
         unreadOnly = saved?.getBoolean(STATE_UNREAD) ?: false
         if (saved == null) {
-            val addressed = activity.intent.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT)
+            val addressed = activity.intent.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
                 status = getString(R.string.aq_home_account_route_changed)
             }
@@ -550,7 +575,7 @@ private class FeedSection(
             chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
         }
         if (item.answerable) {
-            AnkiquestFeedActivity.quickReply(item.kind)?.let { words ->
+            quickReply(item.kind)?.let { words ->
                 chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
             }
             chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
@@ -964,6 +989,15 @@ private class FeedSection(
         private const val STATE_CATEGORY = "ankiquest.feed_category"
         private const val STATE_UNREAD = "ankiquest.feed_unread"
         private const val DATE_AND_TIME = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH
+
+        /** The suggested one-tap answer to a row of [kind], as the website and notifications suggest it. */
+        private fun quickReply(kind: String): Int? =
+            when (kind) {
+                "completion", "conquest", "share" -> R.string.ankiquest_reply_cheer
+                "reply", "reaction" -> R.string.ankiquest_reply_thanks
+                "nudge" -> R.string.ankiquest_reply_on_it
+                else -> null
+            }
     }
 }
 
@@ -1062,7 +1096,7 @@ private class LeaderboardSection(
                 else -> Selection.Friends
             }
         if (saved == null) {
-            val addressed = activity.intent.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT)
+            val addressed = activity.intent.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
                 status = getString(R.string.aq_board_account_changed)
             }
@@ -1432,7 +1466,7 @@ private class LeaderboardSection(
         if (scope == Scope.GLOBAL) {
             hiddenControls(current)
         }
-        views.section(content, getString(R.string.aq_board_xp_in, getString(AnkiquestLeaderboardActivity.periodPhrase(period))))
+        views.section(content, getString(R.string.aq_board_xp_in, getString(periodPhrase(period))))
         weekEnds?.takeIf { period == AnkiquestBoards.Period.WEEK }?.let { ends ->
             val now = TimeManager.time.intTimeMS()
             if (ends > now) {
@@ -1687,9 +1721,16 @@ private class LeaderboardSection(
         if (row.hasToday) {
             views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
         }
-        val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
+        // Around the weekly switch, XP that counts for the week before or after the board's.
+        val now = TimeManager.time.intTimeMS()
+        val week = period == AnkiquestBoards.Period.WEEK
+        val closing = row.closingXp(now)?.takeIf { week }
+        val next = row.nextXp(now, weekEnds)?.takeIf { week }
         closing?.let { xp ->
             views.text(score, getString(R.string.aq_board_closing_xp, views.number(xp)), small = true).gravity = alignment
+        }
+        next?.let { xp ->
+            views.text(score, getString(R.string.aq_board_next_xp, views.number(xp)), small = true).gravity = alignment
         }
         val current = account
         if (hiding && current != null) {
@@ -1716,6 +1757,7 @@ private class LeaderboardSection(
                     }
                 },
                 closing?.let { getString(R.string.aq_board_closing_xp, views.number(it)) },
+                next?.let { getString(R.string.aq_board_next_xp, views.number(it)) },
                 getString(R.string.aq_board_private_row).takeIf { mine && row.shown == false },
             ).joinToString(". ")
         val ripple = TypedValue().also { theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }
@@ -1749,5 +1791,17 @@ private class LeaderboardSection(
         private const val STATE_SCOPE = "ankiquest.board_scope"
         private const val STATE_GROUP = "ankiquest.board_group"
         private const val STACKED_TEXT_SCALE = 1.5f
+
+        /** The phrase for [period] after "XP", such as "this week". */
+        @StringRes
+        private fun periodPhrase(period: AnkiquestBoards.Period): Int =
+            when (period) {
+                AnkiquestBoards.Period.HOUR -> R.string.ankiquest_period_hour
+                AnkiquestBoards.Period.DAY -> R.string.ankiquest_period_day
+                AnkiquestBoards.Period.WEEK -> R.string.ankiquest_period_week
+                AnkiquestBoards.Period.MONTH -> R.string.ankiquest_period_month
+                AnkiquestBoards.Period.YEAR -> R.string.ankiquest_period_year
+                AnkiquestBoards.Period.ALL -> R.string.ankiquest_period_all
+            }
     }
 }

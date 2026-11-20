@@ -74,9 +74,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     internal const val MAX_DELETED = 100
     private const val BASELINE_MAX_AGE_MS = 10 * 60 * 1000L
     private const val RESUME_UPLOAD_INTERVAL_MS = 60 * 1000L
-    private const val RESYNC_WINDOW_MS = 7 * 24 * 60 * 60 * 1000L
-    private const val DAILY_RESYNC_MS = 24 * 60 * 60 * 1000L
-    private const val UNDO_WINDOW_MS = 2 * 24 * 60 * 60 * 1000L
+    private const val RESYNC_WINDOW_MS = 7 * DAY_MS
+    private const val DAILY_RESYNC_MS = DAY_MS
+    private const val UNDO_WINDOW_MS = 2 * DAY_MS
     private const val BANNER_MS = 1800L
     private const val BANNER_LONG_MS = 3500L
     private const val BANNER_TAG = "ankiquest_banner"
@@ -100,6 +100,15 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     @VisibleForTesting
     internal var resumeUploadAt = 0L
     private var seenThrough: Pair<String, Long>? = null
+
+    /**
+     * Forgets the application [init] received, as in a process where the app has not started, such
+     * as a Robolectric sandbox whose earlier tests used no AnkiDroidApp.
+     */
+    @VisibleForTesting
+    internal fun forgetApp() {
+        app = null
+    }
 
     /**
      * Follows activities and collection changes. This singleton subscribes without a lifecycle owner,
@@ -184,7 +193,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         unshared: List<String>,
         recipients: List<String>,
         account: HomeAccount = authenticated(),
-    ) = withContext(Dispatchers.IO) {
+    ): JSONObject {
         val decks = JSONArray()
         for (id in shared) {
             decks.put(JSONObject().put("id", id).put("enabled", true).put("recipients", JSONArray(recipients)))
@@ -192,13 +201,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         for (id in unshared) {
             decks.put(JSONObject().put("id", id).put("enabled", false).put("recipients", JSONArray()))
         }
-        AnkiquestApi.json(
-            account,
-            AnkiquestApi
-                .request(account, "api/decks/${account.encodedUser}")
-                .post(AnkiquestApi.body(JSONObject().put("decks", decks)))
-                .build(),
-        )
+        return AnkiquestApi.call(account, "POST", "api/decks/${account.encodedUser}", JSONObject().put("decks", decks))
     }
 
     /**
@@ -219,15 +222,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         enabled: Boolean,
     ): JSONObject {
         val account = authenticated()
-        return withContext(Dispatchers.IO) {
-            AnkiquestApi.json(
-                account,
-                AnkiquestApi
-                    .request(account, "api/decks/${account.encodedUser}")
-                    .post(AnkiquestApi.body(JSONObject().put("decks", JSONArray()).put(name, enabled)))
-                    .build(),
-            )
-        }
+        return AnkiquestApi.call(
+            account,
+            "POST",
+            "api/decks/${account.encodedUser}",
+            JSONObject().put("decks", JSONArray()).put(name, enabled),
+        )
     }
 
     /** The public link for the server's [win], with its card and invitation text; the server makes it once and reuses it. */
@@ -258,27 +258,15 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     /** The server's address, for inviting people met outside the app. */
     fun serverUrl(): String? = HomeAccount.current()?.server
 
-    /** Streak protection is stored on the server; never infer it from a local default. */
-    suspend fun streakProtectionEnabled(): Boolean {
-        val account = authenticated()
-        return withContext(Dispatchers.IO) {
-            val request = AnkiquestApi.request(account, "api/streak-freezes/${account.encodedUser}").build()
-            AnkiquestApi.json(account, request).getBoolean("enabled")
-        }
-    }
-
     suspend fun setStreakProtection(enabled: Boolean): Boolean {
         val account = authenticated()
-        return withContext(Dispatchers.IO) {
-            AnkiquestApi
-                .json(
-                    account,
-                    AnkiquestApi
-                        .request(account, "api/streak-freezes/${account.encodedUser}")
-                        .post(AnkiquestApi.body(JSONObject().put("enabled", enabled)))
-                        .build(),
-                ).getBoolean("enabled")
-        }
+        return AnkiquestApi
+            .call(
+                account,
+                "POST",
+                "api/streak-freezes/${account.encodedUser}",
+                JSONObject().put("enabled", enabled),
+            ).getBoolean("enabled")
     }
 
     /**
@@ -483,20 +471,21 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             return
         }
         if (!refreshes.offer(account.scope, showFeedback, resync)) return
-        scope.launch { refresh(account, background = false) }
+        scope.launch { refresh(account, Refresh.FOREGROUND, app) }
     }
 
     /**
      * Uploads the reviews the server does not have yet, for the background poll: reviews made offline
      * would otherwise wait until the app is next opened. It joins a refresh that is already waiting
      * instead of queueing another, and does nothing without a token or while the collection cannot be
-     * used, such as during a sync.
+     * used, such as during a sync. [context] refreshes the icon and widgets: the poll can run in a
+     * process where [init] has not run yet.
      */
-    internal suspend fun uploadPending() {
+    internal suspend fun uploadPending(context: Context) {
         val account = HomeAccount.current()?.takeIf { it.token.isNotEmpty() } ?: return
         if (!collectionAvailable()) return
         if (!refreshes.offer(account.scope, showFeedback = false, resync = false)) return
-        refresh(account, background = true)
+        refresh(account, Refresh.BACKGROUND, context)
     }
 
     /**
@@ -509,7 +498,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         if (!collectionAvailable()) return
         refreshLocalDay()
         if (!refreshes.offer(account.scope, showFeedback = false, resync = true)) return
-        refresh(account, background = true)
+        refresh(account, Refresh.BACKGROUND, app)
     }
 
     /** [uploadAfterSync] without waiting for it, for a sync that finished on screen. */
@@ -538,10 +527,17 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             false
         }
 
-    /** Runs the waiting refresh. A background one shows nothing unless an answer asked for feedback meanwhile. */
+    /** Who started a refresh: a screen in front, or the poll or a sync with nothing on screen. */
+    private enum class Refresh { FOREGROUND, BACKGROUND }
+
+    /**
+     * Runs the waiting refresh. A background one shows nothing unless an answer asked for feedback
+     * meanwhile. [context] brings the icon and widgets up to date; without one they wait for the next refresh.
+     */
     private suspend fun refresh(
         account: HomeAccount,
-        background: Boolean,
+        kind: Refresh,
+        context: Context?,
     ) {
         try {
             mutex.lock()
@@ -567,10 +563,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     } else {
                         recordingProblem(account) { upload(account, again) }
                     }
-                onOwnProfile(account, profile)
-                if (!background || feedback) present(profile, feedback)
+                onOwnProfile(context, account, profile)
+                if (kind == Refresh.FOREGROUND || feedback) present(profile, feedback)
                 if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
-                if (account.token.isNotEmpty()) queueConquests(account, profile)
+                if (account.token.isNotEmpty()) queueConquests(context, account, profile)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -588,10 +584,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      * until the app is hidden. [account] must still be the one signed in.
      */
     private fun onOwnProfile(
+        context: Context?,
         account: HomeAccount,
         profile: JSONObject,
     ) {
-        val context = app ?: return
+        context ?: return
         if (HomeAccount.current()?.scope != account.scope) return
         try {
             val prefs = AnkiDroidApp.sharedPrefs()
@@ -611,6 +608,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      * no screen in front, as for the background poll, it waits for the next upload made in the app.
      */
     private suspend fun queueConquests(
+        context: Context?,
         account: HomeAccount,
         profile: JSONObject,
     ) {
@@ -624,7 +622,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 TimeManager.time.intTimeMS(),
             )
         if (fresh.isEmpty()) return
-        val language = AnkiquestLanguage.context(app ?: return)
+        val language = AnkiquestLanguage.context(context ?: return)
         val moments =
             fresh.map { conquest ->
                 val at = conquest.getLong("at")

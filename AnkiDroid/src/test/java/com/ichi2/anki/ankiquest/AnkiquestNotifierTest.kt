@@ -225,6 +225,30 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
+    fun `a moment the server withheld for missing art is shown once after an update adds it`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val cow = message(1, 30).put("kind", "celebration").put("topic", "companion").put("moment", "companion:cow")
+        val completion = message(2, 30)
+
+        // Without the cow's art the server leaves out its unlock (id 1); the next row moves the cursor past it.
+        val withoutCow = AnkiquestCompanion.drawn - "cow"
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(completion), drawn = withoutCow)
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        // The update adds the art; the server now sends the older unlock, which is shown once.
+        val inbox = JSONArray().put(cow).put(completion)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertTrue(shadowOf(manager).getNotification(5_140_001) != null, "the revealed unlock is shown")
+        assertNull(shadowOf(manager).getNotification(5_140_002), "the completion is not shown again")
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(0, shadowOf(manager).size())
+    }
+
+    @Test
     fun `first poll delivers fresh completion and discards stale backlog`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(1, 90_000)).put(message(2, 30)))
@@ -423,7 +447,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         assertNull(sent.actions)
         val open = shadowOf(sent.contentIntent).savedIntent
         assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
-        assertEquals(account.notificationAccount, open.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
+        assertEquals(account.notificationAccount, open.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
 
         AnkiquestNotifier.onReplyFailed(targetContext, data)
         val failed = shadowOf(manager).getNotification(5_140_007)
@@ -597,7 +621,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         runBlocking {
             val manager = targetContext.getSystemService<NotificationManager>()!!
             val bodies = CopyOnWriteArrayList<JSONObject>()
-            var change: Any = JSONObject().put("title", "▲ You're now #1").put("body", "You passed Hill.")
+            var change: Any = JSONObject().put("title", "▲ You're now #1").put("body", "You passed hill.")
             val server =
                 rankServer { body ->
                     bodies += body
@@ -607,17 +631,17 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 val posted = shadowOf(manager).getNotification(5_130_001)
                 assertEquals("▲ You're now #1", posted.extras.getString(Notification.EXTRA_TITLE))
-                assertEquals("You passed Hill.", posted.extras.getString(Notification.EXTRA_TEXT))
+                assertEquals("You passed hill.", posted.extras.getString(Notification.EXTRA_TEXT))
                 val open = shadowOf(posted.contentIntent).savedIntent
                 assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
-                assertEquals("week", open.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
+                assertEquals("week", open.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
                 manager.cancelAll()
 
                 change = JSONObject.NULL
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, shadowOf(manager).size())
 
-                change = JSONObject().put("title", "▼ Hill passed you").put("body", "You're now #2.")
+                change = JSONObject().put("title", "▼ hill passed you").put("body", "You're now #2.")
                 AnkiDroidApp.sharedPrefs().edit(commit = true) { putBoolean(AnkiquestNotifier.PREF_RANK, false) }
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, shadowOf(manager).size(), "rank notifications can be turned off")
@@ -654,20 +678,20 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 change =
                     JSONObject()
                         .put("title", "👑 You took the crown")
-                        .put("body", "You passed Hill.")
+                        .put("body", "You passed hill.")
                         .put("share_title", "👑 I took the crown")
-                        .put("share_body", "I passed Hill.")
+                        .put("share_body", "I passed hill.")
                 val shared = climb()
                 assertEquals("👑 I took the crown", shared.getStringExtra(AnkiquestShare.EXTRA_TITLE))
-                assertEquals("I passed Hill.", shared.getStringExtra(AnkiquestShare.EXTRA_BODY))
+                assertEquals("I passed hill.", shared.getStringExtra(AnkiquestShare.EXTRA_BODY))
 
                 order = order.reversed()
                 change = JSONObject.NULL
                 AnkiquestNotifier.onLeaderboard(targetContext)
-                change = JSONObject().put("title", "👑 You took the crown").put("body", "You passed Hill.")
+                change = JSONObject().put("title", "👑 You took the crown").put("body", "You passed hill.")
                 val older = climb()
                 assertEquals("👑 You took the crown", older.getStringExtra(AnkiquestShare.EXTRA_TITLE), "older servers send no share text")
-                assertEquals("You passed Hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
+                assertEquals("You passed hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
             } finally {
                 server.stop(0)
             }

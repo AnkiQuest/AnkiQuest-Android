@@ -272,7 +272,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
     private fun launchController() =
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
-            AnkiquestLeaderboardActivity.intent(targetContext),
+            AnkiquestFriendsSections.boardIntent(targetContext),
         ).also { awaitBoard(it.get()) }
 
     private fun awaitBoard(screen: AnkiquestFriendsActivity) {
