@@ -2,7 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.content.Context
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
@@ -35,30 +34,13 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
     )
 
-/**
- * Aki's core pose for each streak mood but fire, which burns by heat. AnkiQuest-Server#45's
- * `streak_moods.json` names these poses; the pinned copy still names Aki's interim pictures until
- * the snapshot bump, after which the tests read the pose from the fixture.
- */
-internal val akiMoodPoses =
-    mapOf(
-        AnkiquestMood.Mood.UNKNOWN to R.drawable.aki_face,
-        AnkiquestMood.Mood.ASLEEP to R.drawable.aki_asleep,
-        AnkiquestMood.Mood.SAD to R.drawable.aki_sad,
-        AnkiquestMood.Mood.FROZEN_1 to R.drawable.aki_frozen,
-        AnkiquestMood.Mood.FROZEN_2 to R.drawable.aki_frozen,
-        AnkiquestMood.Mood.FROZEN_3 to R.drawable.aki_frozen,
-        AnkiquestMood.Mood.THAWING to R.drawable.aki_frozen,
-        AnkiquestMood.Mood.HOPEFUL to R.drawable.aki_hopeful,
-        AnkiquestMood.Mood.ALMOST to R.drawable.aki_hopeful,
-    )
-
-/** The drawable name Aki shows for a `streak_moods.json` case's [expected] mood and pose. */
-internal fun akiMoodArt(
-    context: Context,
-    expected: JSONObject,
-): String {
-    val mood = enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase())
-    val art = akiMoodPoses[mood] ?: return expected.getString("pose")
-    return context.resources.getResourceEntryName(art)
+/** The shared pose's Aki drawable; her missing frozen extensions use the core frozen pose. */
+internal fun akiMoodArt(expected: JSONObject): String {
+    val pose = expected.getString("pose")
+    val shown =
+        when (pose) {
+            "frozen_2", "frozen_3" -> "frozen"
+            else -> pose
+        }
+    return "aki_$shown"
 }
