@@ -2,50 +2,88 @@
 name: ankiquest API publish
 
 # Publishes the api module to Maven Central as org.ankiquest:api, signed, with the vanniktech
-# plugin (see api/build.gradle.kts and docs/ankiquest-api.md). Runs only on a tag
-# api-v<version> or when dispatched; never on pull requests. The tag must name the version in
-# api/build.gradle.kts, such as api-v2.0.0-ankiquest.1.
+# plugin (see api/build.gradle.kts and docs/ankiquest-api.md).
+#
+# Releases are automatic: a push to main that touches api/ (or a manual run) publishes the
+# version in api/build.gradle.kts when it is not released yet (no tag api-v<version>, not on
+# Maven Central), then tags it. Pull requests that change api/ without a new version fail,
+# since a version on Maven Central can never change; they never publish.
 #
 # Secrets: MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD (a Central Portal user token for
 # the org.ankiquest namespace), SIGNING_PRIVATE_KEY and SIGNING_PASSWORD (the GPG key that
 # signs the artefacts), as in AnkiQuest's Anki-Android-Backend fork.
 on:
   push:
-    tags:
-      - "api-v*-ankiquest.*"
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/ankiquest_api_publish.yml"
+  pull_request:
+    paths:
+      - "api/**"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Releases queue; one never cancels another
+# A newer push never cancels a release run; pull request runs replace older ones.
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
 
 jobs:
-  publish:
+  # Which version this is, and whether to release it
+  version:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      publish: ${{ steps.read.outputs.publish }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
-      # A tag must match the version Gradle publishes, so the two never disagree
-      - name: Check the tag against the api version
-        if: github.ref_type == 'tag'
-        env:
-          TAG: ${{ github.ref_name }}
+      - id: read
         run: |
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' api/build.gradle.kts)
-          if [ "$TAG" != "api-v$version" ]; then
-            echo "::error::Tag $TAG does not match api version $version"
-            exit 1
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # Pull requests: changing the published library needs a new version
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git fetch -q origin "$GITHUB_BASE_REF"
+            before=$(git show "origin/$GITHUB_BASE_REF:api/build.gradle.kts" | sed -n 's/^version = "\(.*\)"$/\1/p')
+            changed=$(git diff --name-only "origin/$GITHUB_BASE_REF...HEAD" -- api ':!api/**/*.md')
+            if [ -n "$changed" ] && [ "$before" = "$version" ]; then
+              echo "::error file=api/build.gradle.kts::api/ changed but the version is still $version; raise -ankiquest.N"
+              exit 1
+            fi
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # Released already: tagged, or on Maven Central
+          pom="https://repo1.maven.org/maven2/org/ankiquest/api/$version/api-$version.pom"
+          if git ls-remote --exit-code --tags origin "refs/tags/api-v$version" > /dev/null || curl -sfI "$pom" > /dev/null; then
+            echo "$version is released already"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$version is new: publishing"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: version
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # for the release tag
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -72,3 +110,10 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
         run: ./gradlew :api:publishAllPublicationsToMavenCentral --no-configuration-cache
+
+      - name: Tag the release
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          git tag "api-v$VERSION"
+          git push origin "api-v$VERSION"

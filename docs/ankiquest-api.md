@@ -35,6 +35,6 @@ Apps that build content URIs from `FlashCardsContract` directly should use `Flas
 
 ## Publishing
 
-`.github/workflows/ankiquest_api_publish.yml` tests the module and publishes it to Maven Central, signed, on a tag `api-v<version>` (such as `api-v2.0.0-ankiquest.1`, matching `version` in `api/build.gradle.kts`) or when dispatched. It needs the repository secrets `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD` (a Central Portal user token for the `org.ankiquest` namespace), `SIGNING_PRIVATE_KEY` and `SIGNING_PASSWORD`.
+`.github/workflows/ankiquest_api_publish.yml` releases automatically. When a push to `main` touches `api/`, or on a manual run, it publishes the `version` in `api/build.gradle.kts` (such as `2.0.0-ankiquest.1`) to Maven Central, signed, if that version is not released yet (no tag `api-v<version>`, no POM on Maven Central), then tags it `api-v<version>`. A pull request that changes `api/` without a new `version` fails, since a version on Maven Central can never change. It needs the secrets `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD` (a Central Portal user token for the `org.ankiquest` namespace), `SIGNING_PRIVATE_KEY` and `SIGNING_PASSWORD`, as organisation secrets shared with this repository.
 
-To release: bump `version` in `api/build.gradle.kts`, merge, then push the tag.
+To release: raise `version` in `api/build.gradle.kts` in the pull request and merge it.
