@@ -193,7 +193,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         unshared: List<String>,
         recipients: List<String>,
         account: HomeAccount = authenticated(),
-    ) = withContext(Dispatchers.IO) {
+    ): JSONObject {
         val decks = JSONArray()
         for (id in shared) {
             decks.put(JSONObject().put("id", id).put("enabled", true).put("recipients", JSONArray(recipients)))
@@ -201,13 +201,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         for (id in unshared) {
             decks.put(JSONObject().put("id", id).put("enabled", false).put("recipients", JSONArray()))
         }
-        AnkiquestApi.json(
-            account,
-            AnkiquestApi
-                .request(account, "api/decks/${account.encodedUser}")
-                .post(AnkiquestApi.body(JSONObject().put("decks", decks)))
-                .build(),
-        )
+        return AnkiquestApi.call(account, "POST", "api/decks/${account.encodedUser}", JSONObject().put("decks", decks))
     }
 
     /**
@@ -228,15 +222,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         enabled: Boolean,
     ): JSONObject {
         val account = authenticated()
-        return withContext(Dispatchers.IO) {
-            AnkiquestApi.json(
-                account,
-                AnkiquestApi
-                    .request(account, "api/decks/${account.encodedUser}")
-                    .post(AnkiquestApi.body(JSONObject().put("decks", JSONArray()).put(name, enabled)))
-                    .build(),
-            )
-        }
+        return AnkiquestApi.call(
+            account,
+            "POST",
+            "api/decks/${account.encodedUser}",
+            JSONObject().put("decks", JSONArray()).put(name, enabled),
+        )
     }
 
     /**
@@ -294,16 +285,13 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     suspend fun setStreakProtection(enabled: Boolean): Boolean {
         val account = authenticated()
-        return withContext(Dispatchers.IO) {
-            AnkiquestApi
-                .json(
-                    account,
-                    AnkiquestApi
-                        .request(account, "api/streak-freezes/${account.encodedUser}")
-                        .post(AnkiquestApi.body(JSONObject().put("enabled", enabled)))
-                        .build(),
-                ).getBoolean("enabled")
-        }
+        return AnkiquestApi
+            .call(
+                account,
+                "POST",
+                "api/streak-freezes/${account.encodedUser}",
+                JSONObject().put("enabled", enabled),
+            ).getBoolean("enabled")
     }
 
     /**

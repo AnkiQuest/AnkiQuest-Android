@@ -84,13 +84,13 @@ internal object AnkiquestCommunity {
         }
     }
 
-    suspend fun reminders(account: HomeAccount): Reminders = Reminders.parse(call(account, "GET", remindersPath(account)))
+    suspend fun reminders(account: HomeAccount): Reminders = Reminders.parse(AnkiquestApi.call(account, "GET", remindersPath(account)))
 
     /** Saves [value] and answers what the server kept. */
     suspend fun saveReminders(
         account: HomeAccount,
         value: Reminders,
-    ): Reminders = Reminders.parse(call(account, "POST", remindersPath(account), value.json()))
+    ): Reminders = Reminders.parse(AnkiquestApi.call(account, "POST", remindersPath(account), value.json()))
 
     private fun remindersPath(account: HomeAccount) = "api/community/reminders/${account.encodedUser}"
 
@@ -293,7 +293,7 @@ internal object AnkiquestCommunity {
         at: Long,
     ): Conquest =
         try {
-            parseConquest(call(account, "GET", conquestPath(user, at)))
+            parseConquest(AnkiquestApi.call(account, "GET", conquestPath(user, at)))
         } catch (e: AnkiquestHttpException) {
             if (e.code == 404) throw Missing()
             throw e
@@ -322,7 +322,7 @@ internal object AnkiquestCommunity {
     suspend fun tell(
         account: HomeAccount,
         at: Long,
-    ): Int = call(account, "POST", conquestPath(account.user, at) + "/tell", JSONObject()).optInt("told")
+    ): Int = AnkiquestApi.call(account, "POST", conquestPath(account.user, at) + "/tell", JSONObject()).optInt("told")
 
     /**
      * Takes back telling friends about the owner's card, from those who have not read it yet;
@@ -333,7 +333,7 @@ internal object AnkiquestCommunity {
     suspend fun untell(
         account: HomeAccount,
         at: Long,
-    ): Int = call(account, "DELETE", conquestPath(account.user, at) + "/tell").optInt("retracted")
+    ): Int = AnkiquestApi.call(account, "DELETE", conquestPath(account.user, at) + "/tell").optInt("retracted")
 
     /** The card's page on [server], to share where the app is not installed. */
     fun conquestLink(
@@ -350,19 +350,4 @@ internal object AnkiquestCommunity {
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
     private fun JSONObject.text(key: String): String = if (isNull(key)) "" else optString(key)
-
-    private suspend fun call(
-        account: HomeAccount,
-        method: String,
-        path: String,
-        body: JSONObject? = null,
-    ): JSONObject =
-        withContext(Dispatchers.IO) {
-            val request =
-                AnkiquestApi
-                    .request(account, path)
-                    .method(method, body?.let(AnkiquestApi::body))
-                    .build()
-            AnkiquestApi.json(account, request)
-        }
 }
