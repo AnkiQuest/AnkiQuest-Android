@@ -17,7 +17,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.regex.PatternSyntaxException
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -91,6 +93,26 @@ class AnkiquestDeviceTest : InstrumentedTest() {
         // An unreachable server is a transient failure: retry; anything thrown fails the test.
         val result = runBlocking { worker.doWork() }
         assertTrue(result == Result.retry() || result == Result.success(), "Unexpected poll result: $result")
+    }
+
+    /** Check the lint parser's group rules against Android's actual ICU engine. */
+    @Test
+    fun regexCommentsStayInTheirGroup() {
+        val patterns =
+            mapOf(
+                "(?x)(?-x:a)# (?U)\nb" to "ab",
+                "(?x)(a(?-x)b)# (?U)\nc" to "abc",
+                "(?x)(?-x:(?i:a))# (?U)\nb" to "ab",
+                "(?x)((?-x)a)# (?U)\nb" to "ab",
+            )
+        patterns.forEach { (pattern, text) -> assertTrue(Regex(pattern).matches(text), pattern) }
+    }
+
+    /** Outside the comments group, the deliberately invalid flag must still be rejected. */
+    @Test
+    fun regexFlagsAfterGroupStillFail() {
+        val patterns = listOf("(?x:a)# (?U)b", "((?x)a)# (?U)b", "(?x:a(?i))# (?U)b")
+        patterns.forEach { pattern -> assertFailsWith<PatternSyntaxException>(pattern) { Regex(pattern) } }
     }
 
     /** Writes [value] under [key] with the setter for its type, as [SharedPreferences.getAll] returned it. */

@@ -210,6 +210,41 @@ class IcuRegexSyntaxDetectorTest {
     }
 
     @Test
+    fun `restores comments mode after a group closes`() {
+        lintFiles(
+            kotlin(
+                """
+                package test
+
+                fun compile() {
+                    Regex("(?x)(?-x:a)# (?U)\nb")
+                    Regex("(?x)(a(?-x)b)# (?U)\nc")
+                    Regex("(?x)(?-x:(?i:a))# (?U)\nb")
+                    Regex("(?x)((?-x)a)# (?U)\nb")
+                }
+                """,
+            ).indented(),
+        ).expectClean()
+    }
+
+    @Test
+    fun `reports invalid flags after a comments group closes`() {
+        lintFiles(
+            kotlin(
+                """
+                package test
+
+                fun compile() {
+                    Regex("(?x:a)# (?U)b")
+                    Regex("((?x)a)# (?U)b")
+                    Regex("(?x:a(?i))# (?U)b")
+                }
+                """,
+            ).indented(),
+        ).expectErrorCount(3)
+    }
+
+    @Test
     fun `reports patterns outside comments and literal mode`() {
         lintFiles(
             kotlin(
