@@ -11,12 +11,15 @@ import org.json.JSONArray
 
 /**
  * How Aki feels about today's streak: the one rule for every place the companion shows today, from
- * the streak widget and the Home card to the launcher icon, the heatmap and streak reminders. Sad
- * before any study, hopeful after some, on fire once today counts, and frozen after days a freeze
- * kept. Each mood is an [AnkiquestPose]; [AnkiquestCompanion.art] draws it as the chosen companion.
+ * the streak widget and the Home card to the launcher icon, the heatmap and streak reminders. Until
+ * today counts, the mood follows today's [Stage] toward the streak minimum: after a freeze frozen,
+ * thawing, hopeful, almost; with a streak sad, sad, hopeful, almost. On fire once today counts.
+ * Each mood is an [AnkiquestPose]; [AnkiquestCompanion.art] draws it as the chosen companion.
  */
 internal object AnkiquestMood {
     private const val DAY_MS = 86_400_000L
+    private const val MINUTE_MS = 60_000L
+    private const val PERCENT = 100L
 
     /** Ends the milestone line on moment cards and share pictures. */
     private const val FLAME = "🔥"
@@ -35,13 +38,19 @@ internal object AnkiquestMood {
         /** A streak and no study yet today. */
         SAD,
 
-        /** A freeze kept yesterday and no study yet today. */
+        /** A freeze kept yesterday, and under a quarter of today's minimum studied. */
         FROZEN_1,
         FROZEN_2,
         FROZEN_3,
 
-        /** Some study today, short of the streak minimum. */
+        /** A freeze kept yesterday, and a quarter of today's minimum studied. */
+        THAWING,
+
+        /** Half of today's minimum studied; without a streak, any study. */
         HOPEFUL,
+
+        /** Three quarters of today's minimum studied. */
+        ALMOST,
 
         /** Today counts, or today's goal is reached. */
         FIRE,
@@ -64,6 +73,38 @@ internal object AnkiquestMood {
 
     /** Whether today's daily goal is reached. */
     enum class Goal { OPEN, REACHED }
+
+    /**
+     * How far today's review time has come toward the streak minimum. Each stage starts at
+     * [percent] of the minimum, as `stages` in streak_moods.json says.
+     */
+    enum class Stage(
+        val percent: Int,
+    ) {
+        STARTED(0),
+        QUARTER(25),
+        HALF(50),
+        THREE_QUARTERS(75),
+        ;
+
+        companion object {
+            /**
+             * The stage of [timeMs] toward [streakMinutes], compared in whole numbers so no rounding
+             * moves a boundary. Without a minimum the first review counts the day, so it is [STARTED].
+             */
+            fun of(
+                timeMs: Long,
+                streakMinutes: Int,
+            ): Stage {
+                if (streakMinutes <= 0) {
+                    return STARTED
+                }
+                val goalMs = streakMinutes * MINUTE_MS
+                val time = timeMs.coerceAtLeast(0) * PERCENT
+                return entries.last { time >= it.percent * goalMs }
+            }
+        }
+    }
 
     /**
      * How hot a streak burns, from the day it starts at: its pose, and the share picture's and moment
@@ -89,13 +130,13 @@ internal object AnkiquestMood {
     }
 
     /**
-     * The mood for today's [state] with [reviews] so far, a [streak] of that many days and
-     * [frozenDays] frozen days in a row ending yesterday. Once the player studies, the freeze no
-     * longer decides the mood.
+     * The mood for today's [state] with [reviews] so far at [stage] toward the minimum, a [streak]
+     * of that many days and [frozenDays] frozen days in a row ending yesterday.
      */
     fun of(
         state: State,
         reviews: Int,
+        stage: Stage,
         streak: Int,
         frozenDays: Int,
         goal: Goal,
@@ -107,20 +148,40 @@ internal object AnkiquestMood {
         if (state == State.UNKNOWN) {
             return Mood.UNKNOWN
         }
-        if (reviews > 0) {
-            return Mood.HOPEFUL
-        }
 
         // A protected day means a freeze kept at least yesterday, even without the heatmap.
         val frozen = maxOf(frozenDays, if (state == State.PROTECTED) 1 else 0)
-        return when {
-            frozen >= 3 -> Mood.FROZEN_3
-            frozen == 2 -> Mood.FROZEN_2
-            frozen == 1 -> Mood.FROZEN_1
-            streak == 0 -> Mood.ASLEEP
-            else -> Mood.SAD
+        if (frozen > 0) {
+            return when (stage) {
+                Stage.STARTED -> frozen(frozen)
+                Stage.QUARTER -> Mood.THAWING
+                Stage.HALF -> Mood.HOPEFUL
+                Stage.THREE_QUARTERS -> Mood.ALMOST
+            }
+        }
+
+        // Without a streak there is nothing to lose: any study is hopeful.
+        if (streak == 0) {
+            return when {
+                reviews == 0 -> Mood.ASLEEP
+                stage == Stage.THREE_QUARTERS -> Mood.ALMOST
+                else -> Mood.HOPEFUL
+            }
+        }
+        return when (stage) {
+            Stage.STARTED, Stage.QUARTER -> Mood.SAD
+            Stage.HALF -> Mood.HOPEFUL
+            Stage.THREE_QUARTERS -> Mood.ALMOST
         }
     }
+
+    /** The frozen mood for [days] frozen days in a row; 3 means 3 or more. */
+    private fun frozen(days: Int): Mood =
+        when {
+            days >= 3 -> Mood.FROZEN_3
+            days == 2 -> Mood.FROZEN_2
+            else -> Mood.FROZEN_1
+        }
 
     /**
      * The mood for today's [day] verdict; [Mood.UNKNOWN] without one. [frozenDays] and [goal] must
@@ -134,7 +195,7 @@ internal object AnkiquestMood {
         if (day == null) {
             return Mood.UNKNOWN
         }
-        return of(day.label, day.reviews, day.streak ?: 0, frozenDays, goal)
+        return of(day.label, day.reviews, Stage.of(day.timeMs, day.streakMinutes), day.streak ?: 0, frozenDays, goal)
     }
 
     /**
@@ -155,8 +216,8 @@ internal object AnkiquestMood {
     fun flame(mood: Mood): Flame =
         when (mood) {
             Mood.UNKNOWN, Mood.ASLEEP -> Flame.NONE
-            Mood.SAD, Mood.HOPEFUL -> Flame.UNLIT
-            Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3 -> Flame.ICY
+            Mood.SAD, Mood.HOPEFUL, Mood.ALMOST -> Flame.UNLIT
+            Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3, Mood.THAWING -> Flame.ICY
             Mood.FIRE -> Flame.LIT
         }
 
@@ -169,10 +230,11 @@ internal object AnkiquestMood {
             Mood.UNKNOWN -> AnkiquestPose.FACE
             Mood.ASLEEP -> AnkiquestPose.ASLEEP
             Mood.SAD -> AnkiquestPose.SAD
-            Mood.FROZEN_1 -> AnkiquestPose.FROZEN
+            // thawing and almost are moods with no pose of their own (AnkiQuest-Server#45).
+            Mood.FROZEN_1, Mood.THAWING -> AnkiquestPose.FROZEN
             Mood.FROZEN_2 -> AnkiquestPose.FROZEN_2
             Mood.FROZEN_3 -> AnkiquestPose.FROZEN_3
-            Mood.HOPEFUL -> AnkiquestPose.HOPEFUL
+            Mood.HOPEFUL, Mood.ALMOST -> AnkiquestPose.HOPEFUL
             Mood.FIRE -> Heat.of(streak).pose
         }
 
