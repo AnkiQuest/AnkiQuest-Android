@@ -61,6 +61,6 @@ jobs:
             nixos/nix sh -euc '
               git config --global --add safe.directory /src
               nix flake check
-              nix run nixpkgs#alejandra -- --check flake.nix
+              nix fmt -- --check flake.nix
               nix develop --command ./gradlew --no-daemon assemblePlayDebug
             '
