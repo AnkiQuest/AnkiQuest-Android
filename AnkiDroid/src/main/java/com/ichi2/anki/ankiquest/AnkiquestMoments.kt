@@ -17,6 +17,7 @@ import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.pages.CongratsPage
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.text.NumberFormat
@@ -36,6 +37,9 @@ internal object AnkiquestMoments {
     private const val PREF_SHOWN = "ankiquestMomentsShown"
     private const val PREF_QUIET = "ankiquestMomentsQuiet"
     private const val PREF_MINIMUM_DAY = "ankiquestMinimumMomentDay"
+
+    /** The server's ids for the day's minimum card, kept after the card was shown so it can still be shared. */
+    private const val PREF_MINIMUM_IDS = "ankiquestMinimumMomentIds"
     private const val EXTRA_MOMENT = "ankiquest.moment"
     private const val EXTRA_OWNER = "ankiquest.moment_owner"
     private val milestoneDays = setOf(7, 30, 100, 365)
@@ -265,17 +269,12 @@ internal object AnkiquestMoments {
 
         val recorded = recordedDay(prefs, account)?.takeIf { moment.at in it }
         if (recorded != null) {
+            // The local card may be shown already; its server ids are kept either way, so Share can send it.
+            prefs.edit { putString("$PREF_MINIMUM_IDS:$account", moment.copy(key = recorded.key).json().toString()) }
             val queue = pending(prefs, account)
             val local = queue.firstOrNull { it.key == recorded.key }
             if (local != null) {
-                val confirmed =
-                    local.copy(
-                        win = moment.win,
-                        notification = moment.notification,
-                        shareTitle = moment.shareTitle,
-                        shareBody = moment.shareBody,
-                    )
-                save(prefs, account, queue.map { if (it.key == recorded.key) confirmed else it })
+                save(prefs, account, queue.map { if (it.key == recorded.key) withServerIds(it, moment) else it })
             }
             markShown(prefs, account, listOf(moment.key))
             return if (local == null) Route.SEEN else Route.QUEUED
@@ -288,6 +287,42 @@ internal object AnkiquestMoments {
         rememberMinimum(prefs, account, moment)
         return Route.QUEUED
     }
+
+    /**
+     * [moment] with the server's ids to share it by. The local minimum card is queued before the
+     * server knows the day and is often shown before the server's notice arrives; that notice's ids
+     * are looked up here. Any other moment, or one the server has not confirmed yet, is unchanged.
+     */
+    internal fun confirmed(
+        prefs: SharedPreferences,
+        account: String,
+        moment: Moment,
+    ): Moment {
+        if (moment.kind != Kind.SECURED || moment.win != null || moment.notification != null) {
+            return moment
+        }
+        val stored =
+            try {
+                prefs.getString("$PREF_MINIMUM_IDS:$account", null)?.let { Moment.parse(JSONObject(it)) }
+            } catch (_: JSONException) {
+                null
+            }
+        if (stored == null || stored.key != moment.key) {
+            return moment
+        }
+        return withServerIds(moment, stored)
+    }
+
+    private fun withServerIds(
+        local: Moment,
+        server: Moment,
+    ): Moment =
+        local.copy(
+            win = server.win,
+            notification = server.notification,
+            shareTitle = server.shareTitle,
+            shareBody = server.shareBody,
+        )
 
     /** Records a quiet notification or queued server card against the same window as a local crossing. */
     @Synchronized

@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMoments.Kind
@@ -464,7 +465,7 @@ internal object AnkiquestMomentCard {
             holder: Holder,
             position: Int,
         ) {
-            val original = moments[position]
+            val original = confirmed(moments[position])
             val deck = deckNames[original.key]
             val moment = if (deck != null) original.copy(deck = deck.name) else original
             val picture = pictures[moment.key]
@@ -620,6 +621,10 @@ internal object AnkiquestMomentCard {
             return Extras(told, image, win, undo, record)
         }
 
+        /** [moment] with the server's ids, which a streak card shown before the server confirmed the day lacks. */
+        private fun confirmed(moment: Moment): Moment =
+            AnkiquestMoments.confirmed(AnkiDroidApp.sharedPrefs(), account.notificationAccount, moment)
+
         private fun current(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.scope == account.scope && it.token.isNotEmpty() }
 
         /** A cached response may finish inside onBindViewHolder; refresh after that layout. */
@@ -632,9 +637,10 @@ internal object AnkiquestMomentCard {
         }
 
         private fun tell(
-            moment: Moment,
+            shown: Moment,
             position: Int,
         ) {
+            val moment = confirmed(shown)
             val scope = scope ?: return
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             val win = moment.win ?: extras[moment.key]?.win
@@ -715,9 +721,10 @@ internal object AnkiquestMomentCard {
          * chosen friends; Android's share sheet otherwise.
          */
         private fun share(
-            moment: Moment,
+            shown: Moment,
             position: Int,
         ) {
+            val moment = confirmed(shown)
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             val ref = reference(moment)
             if (ref == null || !AnkiquestMomentShare.available(signedIn, ref)) {
