@@ -66,7 +66,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
     private var labelJob: Job? = null
 
-    /** The server's recorded card: Hill forgot "el murciélago" four times; friends not told yet. */
+    /** The server's recorded card: hill forgot "el murciélago" four times; friends not told yet. */
     private val recorded =
         AnkiquestCommunity.parseConquest(
             JSONObject(assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/conquest.json")).readText(Charsets.UTF_8)),

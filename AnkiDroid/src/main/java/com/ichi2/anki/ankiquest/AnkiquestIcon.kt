@@ -120,14 +120,18 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         return mood(AnkiquestDay.judgeOwn(AnkiquestDay.carried(server, now), now, prefs))
     }
 
-    /** The icon for [day]'s mood; the icon has one frozen face and none for hopeful. */
+    /** The icon for [day]'s mood; the icon has one frozen face, also for thawing, and none for hopeful or almost. */
     private fun mood(day: AnkiquestDay.Verdict?): Mood =
         when (AnkiquestMood.of(day, 0, AnkiquestMood.Goal.OPEN)) {
             AnkiquestMood.Mood.FIRE -> Mood.HAPPY
             AnkiquestMood.Mood.SAD -> Mood.WORRIED
-            AnkiquestMood.Mood.FROZEN_1, AnkiquestMood.Mood.FROZEN_2, AnkiquestMood.Mood.FROZEN_3 -> Mood.FROZEN
+            AnkiquestMood.Mood.FROZEN_1,
+            AnkiquestMood.Mood.FROZEN_2,
+            AnkiquestMood.Mood.FROZEN_3,
+            AnkiquestMood.Mood.THAWING,
+            -> Mood.FROZEN
             AnkiquestMood.Mood.ASLEEP -> Mood.SLEEPY
-            AnkiquestMood.Mood.HOPEFUL, AnkiquestMood.Mood.UNKNOWN -> Mood.DEFAULT
+            AnkiquestMood.Mood.HOPEFUL, AnkiquestMood.Mood.ALMOST, AnkiquestMood.Mood.UNKNOWN -> Mood.DEFAULT
         }
 
     fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, true)

@@ -24,6 +24,10 @@ on:
     branches:
       - main
   pull_request:
+  # Required check: the merge queue waits for it on its merge commit, which is compared
+  # against the baseline of the main commit the queue built it on.
+  merge_group:
+    types: [checks_requested]
 
 permissions: {}
 
@@ -79,7 +83,7 @@ jobs:
       - name: Explain unavailable baseline
         if: ${{ failure() && (steps.source.outcome == 'failure' || steps.baseline.outcome == 'failure') }}
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          BASE_SHA: ${{ steps.source.outputs.base || github.sha }}
         run: |
           echo "::error::Screenshot comparison did not run: no downloadable baseline for ${BASE_SHA}. Run ankiquest Screenshots: Store Baseline on a branch at that commit, then rerun this check."
           echo "Screenshot comparison needs a successful, unexpired baseline for commit ${BASE_SHA}. Run **ankiquest Screenshots: Store Baseline** on a branch at that commit, then rerun this check. A different commit is never used as a fallback." >> "$GITHUB_STEP_SUMMARY"
@@ -128,8 +132,9 @@ jobs:
       - name: Stage screenshot diffs
         if: ${{ always() }}
         env:
-          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-main" on push)
-          SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || format('screenshot-diff-{0}', github.ref_name) }}
+          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-merge-group"
+          # in the merge queue, "screenshot-diff-main" on push)
+          SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || github.event_name == 'merge_group' && 'screenshot-diff-merge-group' || format('screenshot-diff-{0}', github.ref_name) }}
         run: |
           # Preserve module paths so identically named tests cannot overwrite one another.
           mkdir -p "screenshot-diff/$SUBDIR"
