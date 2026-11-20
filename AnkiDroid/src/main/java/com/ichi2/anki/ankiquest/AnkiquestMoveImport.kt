@@ -184,11 +184,11 @@ internal object AnkiquestMoveImport {
                 is Payload.Ready -> payload.settings
             }
         AnkiquestMovePayload.apply(prefs, settings, exclusions)
-        val next = if (prefs.getString(HKEY, null).isNullOrEmpty()) Next.EXPORT else Next.SYNC
+        val next = if (prefs.getString(PREF_HKEY, null).isNullOrEmpty()) Next.EXPORT else Next.SYNC
         return Result.Imported(next)
     }
 
-    private const val HKEY = "hkey"
+    private const val PREF_HKEY = "hkey"
 
     private val state = MutableStateFlow<State?>(null)
 
@@ -312,13 +312,13 @@ internal object AnkiquestMoveImport {
 
     /** The moved app language takes effect as when it is chosen in the settings. */
     private fun applyLanguage() {
-        val language = AnkiDroidApp.sharedPrefs().getString(LANGUAGE, null) ?: return
+        val language = AnkiDroidApp.sharedPrefs().getString(PREF_LANGUAGE, null) ?: return
         LanguageUtil.setDefaultBackendLanguages(language)
         val tag = language.takeIf { it != LanguageUtil.SYSTEM_LANGUAGE_TAG }
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
     }
 
-    private const val LANGUAGE = "language"
+    private const val PREF_LANGUAGE = "language"
 
     private fun source(context: Context): Source =
         Source {

@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -42,6 +43,8 @@ class AnkiquestMovePayloadTest : RobolectricTest() {
     }
 
     @Test
+    // The old app's own paths are the data under test.
+    @SuppressLint("SdCardPath")
     fun `install-specific settings stay behind`() {
         val local =
             mapOf(
@@ -63,6 +66,7 @@ class AnkiquestMovePayloadTest : RobolectricTest() {
     }
 
     @Test
+    @SuppressLint("SdCardPath")
     fun `applying fills the new app and keeps its own install settings`() {
         val prefs = targetContext.getSharedPreferences("ankiquest-move-target", Context.MODE_PRIVATE)
         prefs.edit {

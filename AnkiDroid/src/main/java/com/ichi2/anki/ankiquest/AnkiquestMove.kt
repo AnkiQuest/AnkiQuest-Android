@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 
 /**
  * Moving from the old package, `com.ichi2.anki.quest`, to the new one, `org.ankiquest.anki`.
@@ -30,7 +31,7 @@ internal object AnkiquestMove {
     const val METHOD_EXPORT = "export"
     const val KEY_PAYLOAD = "payload"
 
-    val uri: Uri = Uri.parse("content://$AUTHORITY")
+    val uri: Uri = "content://$AUTHORITY".toUri()
 
     /** Which side of the move the running package is on. */
     enum class Role {

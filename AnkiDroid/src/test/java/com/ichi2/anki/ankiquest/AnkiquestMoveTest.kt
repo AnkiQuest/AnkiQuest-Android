@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.annotation.SuppressLint
 import android.app.role.RoleManager
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -58,6 +59,8 @@ class AnkiquestMoveTest : RobolectricTest() {
     }
 
     @Test
+    // A string constant compiled into the test, which runs on the JVM.
+    @SuppressLint("InlinedApi")
     fun `the old app does not serve while it holds a sensitive role`() {
         assertEquals(Verdict.SENSITIVE_ROLE, verdict(roles = setOf(RoleManager.ROLE_SMS)))
     }
