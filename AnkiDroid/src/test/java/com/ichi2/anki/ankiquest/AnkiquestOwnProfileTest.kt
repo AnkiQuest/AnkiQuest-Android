@@ -125,11 +125,11 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         runBlocking {
             registerAliases()
             answer = profile("pending", 12, 2)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(listOf(Icon.AKI_WORRIED), enabled(), "a streak not studied today worries Aki")
 
             answer = profile("studied", 13, 2)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals(listOf(Icon.AKI_HAPPY), enabled())
             assertEquals("studied", AnkiquestIcon.lastKnown()!!.getString("streak_state"), "the next app start begins from it")
@@ -294,7 +294,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             val account = checkNotNull(HomeAccount.current()).scope
             val owner = Any()
             mutex.lock(owner)
-            val upload = launch(Dispatchers.IO) { Ankiquest.uploadPending() }
+            val upload = launch(Dispatchers.IO) { Ankiquest.uploadPending(targetContext) }
             try {
                 // Wait for the queue barrier, then cancel while the upload still cannot run.
                 withTimeout(10_000) {
@@ -304,7 +304,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 }
                 upload.cancelAndJoin()
                 mutex.unlock(owner)
-                Ankiquest.uploadPending()
+                Ankiquest.uploadPending(targetContext)
                 val requested = synchronized(paths) { paths.toList() }
                 assertTrue(requested.any { it == "/api/reviews/hill" }, "the next poll must still upload after cancellation: $requested")
             } finally {
@@ -344,7 +344,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             assertEquals("Not studied yet", text(R.id.ankiquest_streak_status))
 
             answer = profile("studied", 13, 2)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals("13", text(R.id.ankiquest_streak_number))
             assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), text(R.id.ankiquest_streak_status))
