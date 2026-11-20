@@ -12,7 +12,7 @@ import com.ichi2.anki.FlashCardsContract
 
 /**
  * Finds installed apps offering the [FlashCardsContract] content provider: any app whose
- * provider declares [FlashCardsContract.PROVIDER_INTERFACE], and the [KnownProviders] by
+ * provider declares [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER], and the [KnownProviders] by
  * their authority.
  *
  * A known provider is a candidate only if its app passes [AnkiDroidProvider]'s certificate
@@ -36,7 +36,7 @@ internal object ProviderDiscovery {
     ): List<FlashCardsProvider> {
         val manager = context.packageManager
 
-        // Releases older than FlashCardsContract.PROVIDER_INTERFACE only answer to their authority
+        // Releases older than FlashCardsContract.ACTION_FLASHCARDS_PROVIDER only answer to their authority
         val listed = known.mapNotNull { manager.resolve(it.authority) }
 
         // Current AnkiDroid builds, parallel builds and forks declare the intent filter
@@ -124,7 +124,7 @@ internal object ProviderDiscovery {
             return emptyList()
         }
 
-        val intent = Intent(FlashCardsContract.PROVIDER_INTERFACE)
+        val intent = Intent(FlashCardsContract.ACTION_FLASHCARDS_PROVIDER)
         val matches =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 queryIntentContentProviders(intent, PackageManager.ResolveInfoFlags.of(0L))

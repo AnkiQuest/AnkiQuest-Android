@@ -21,18 +21,18 @@ internal class ChoiceStore(
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun load(): Choice? {
-        val packageName = prefs.getString(KEY_PACKAGE, null) ?: return null
-        val authority = prefs.getString(KEY_AUTHORITY, null) ?: return null
-        val certificate = prefs.getString(KEY_CERTIFICATE, null) ?: return null
+        val packageName = prefs.getString(PREF_PACKAGE, null) ?: return null
+        val authority = prefs.getString(PREF_AUTHORITY, null) ?: return null
+        val certificate = prefs.getString(PREF_CERTIFICATE, null) ?: return null
         return Choice(packageName, authority, certificate)
     }
 
     fun save(choice: Choice) {
         prefs
             .edit()
-            .putString(KEY_PACKAGE, choice.packageName)
-            .putString(KEY_AUTHORITY, choice.authority)
-            .putString(KEY_CERTIFICATE, choice.certificate)
+            .putString(PREF_PACKAGE, choice.packageName)
+            .putString(PREF_AUTHORITY, choice.authority)
+            .putString(PREF_CERTIFICATE, choice.certificate)
             .apply()
     }
 
@@ -42,8 +42,8 @@ internal class ChoiceStore(
 
     private companion object {
         const val PREFS_NAME = "com.ichi2.anki.api.provider_choice"
-        const val KEY_PACKAGE = "package"
-        const val KEY_AUTHORITY = "authority"
-        const val KEY_CERTIFICATE = "certificate"
+        const val PREF_PACKAGE = "package"
+        const val PREF_AUTHORITY = "authority"
+        const val PREF_CERTIFICATE = "certificate"
     }
 }

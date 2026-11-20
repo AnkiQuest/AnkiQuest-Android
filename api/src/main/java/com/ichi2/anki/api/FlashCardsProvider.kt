@@ -6,7 +6,7 @@ import com.ichi2.anki.FlashCardsContract
 
 /**
  * An app offering the [FlashCardsContract] content provider: AnkiDroid, AnkiQuest, or another
- * app declaring [FlashCardsContract.PROVIDER_INTERFACE].
+ * app declaring [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER].
  *
  * [AddContentApi.getProviders] returns the installed ones. With one installed the API uses it;
  * with several the user picks one with [AddContentApi.chooseProvider].

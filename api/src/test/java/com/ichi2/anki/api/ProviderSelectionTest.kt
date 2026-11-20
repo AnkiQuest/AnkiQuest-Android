@@ -53,7 +53,7 @@ internal class ProviderSelectionTest {
         assertEquals(ANKIDROID, selection().inUse())
     }
 
-    /** Any app declaring FlashCardsContract.PROVIDER_INTERFACE is a candidate */
+    /** Any app declaring FlashCardsContract.ACTION_FLASHCARDS_PROVIDER is a candidate */
     @Test
     fun unlistedOnlyIsUsed() {
         installUnlisted()

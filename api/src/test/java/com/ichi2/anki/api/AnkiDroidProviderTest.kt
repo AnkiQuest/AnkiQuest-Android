@@ -210,7 +210,7 @@ internal class AnkiDroidProviderTest {
     }
 }
 
-/** Whether a test provider declares [FlashCardsContract.PROVIDER_INTERFACE] */
+/** Whether a test provider declares [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER] */
 internal enum class ProviderInterface { DECLARED, NOT_DECLARED }
 
 /** Whether the client app declares a test provider's permission */
@@ -360,11 +360,11 @@ internal object AnkiDroidPackages {
             request(FlashCardsContract.getPermission(packageName))
         }
 
-        // Current builds declare FlashCardsContract.PROVIDER_INTERFACE on the provider
+        // Current builds declare FlashCardsContract.ACTION_FLASHCARDS_PROVIDER on the provider
         if (filter == ProviderInterface.DECLARED) {
             manager.addIntentFilterForProvider(
                 ComponentName(packageName, provider.name),
-                IntentFilter(FlashCardsContract.PROVIDER_INTERFACE),
+                IntentFilter(FlashCardsContract.ACTION_FLASHCARDS_PROVIDER),
             )
         }
     }

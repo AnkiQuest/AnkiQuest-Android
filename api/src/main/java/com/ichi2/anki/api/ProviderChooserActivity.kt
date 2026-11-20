@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 hill <hill@hilll.dev>
 // SPDX-License-Identifier: LGPL-3.0-or-later
+
+// The api library depends on no AppCompat, and client apps' themes need not be AppCompat ones,
+// so the chooser uses the platform AlertDialog
+@file:SuppressLint("AvoidAlertDialogUsage")
+
 package com.ichi2.anki.api
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context

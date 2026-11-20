@@ -16,7 +16,7 @@ Maven Central is the repository (`mavenCentral()`). Versions are `<AnkiDroid's a
 
 ## Which provider the API talks to
 
-- Candidates are the installed apps whose provider declares the intent action `FlashCardsContract.PROVIDER_INTERFACE` (`com.ichi2.anki.action.FLASHCARDS_PROVIDER`), plus AnkiDroid and AnkiQuest by their authority for releases without it.
+- Candidates are the installed apps whose provider declares the intent action `FlashCardsContract.ACTION_FLASHCARDS_PROVIDER` (`com.ichi2.anki.action.FLASHCARDS_PROVIDER`), plus AnkiDroid and AnkiQuest by their authority for releases without it.
 - AnkiDroid (`com.ichi2.anki`) and AnkiQuest (`org.ankiquest.anki`) count only when signed with their release keys (AnkiDroid: Google Play/GitHub and F-Droid). A debuggable client also accepts self-built ones. No other package may hold their authority.
 - Android grants only permissions the client declares, so an app whose permission the client does not declare is not a candidate. The library declares AnkiDroid's and AnkiQuest's. For another app, declare its permission, `<package>.permission.READ_WRITE_DATABASE`, in the client's manifest.
 - One candidate: the API uses it once the client holds its permission. Request it as before; Android's dialog names the app.
@@ -29,7 +29,7 @@ All additive; existing calls behave as before with AnkiDroid as the only provide
 - `AddContentApi.getProvider(context)`: the provider in use (`packageName`, `authority`, `permission`), or null. Request its `permission` instead of `FlashCardsContract.READ_WRITE_PERMISSION` to support other providers.
 - `AddContentApi.getProviders(context)`: the candidates.
 - `AddContentApi.chooseProvider(context)`: opens the chooser.
-- `FlashCardsContract.PROVIDER_INTERFACE`: the intent action providers declare.
+- `FlashCardsContract.ACTION_FLASHCARDS_PROVIDER`: the intent action providers declare.
 
 Apps that build content URIs from `FlashCardsContract` directly should use `FlashCardsContract.getAuthorityUri(getProvider(context).authority)` instead of `AUTHORITY_URI`.
 

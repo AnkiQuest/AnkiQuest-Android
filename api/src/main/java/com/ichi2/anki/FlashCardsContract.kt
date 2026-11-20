@@ -125,7 +125,7 @@ public object FlashCardsContract {
      *
      * See [com.ichi2.anki.api.AddContentApi.getProviders]
      */
-    public const val PROVIDER_INTERFACE: String = "com.ichi2.anki.action.FLASHCARDS_PROVIDER"
+    public const val ACTION_FLASHCARDS_PROVIDER: String = "com.ichi2.anki.action.FLASHCARDS_PROVIDER"
 
     /**
      * A content:// style uri to the authority for the flash card provider

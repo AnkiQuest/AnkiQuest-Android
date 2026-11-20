@@ -144,7 +144,7 @@ internal object AnkiDroidProvider {
             return Trust.WRONG_PACKAGE
         }
 
-        // No key is listed for apps found by FlashCardsContract.PROVIDER_INTERFACE alone
+        // No key is listed for apps found by FlashCardsContract.ACTION_FLASHCARDS_PROVIDER alone
         if (listed.certificates.isEmpty()) {
             return Trust.UNLISTED
         }

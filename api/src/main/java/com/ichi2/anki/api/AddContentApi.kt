@@ -886,7 +886,7 @@ public class AddContentApi(
 
         /**
          * Installed apps offering the [FlashCardsContract] provider: AnkiDroid, AnkiQuest and any app
-         * declaring [FlashCardsContract.PROVIDER_INTERFACE] whose permission this app declares.
+         * declaring [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER] whose permission this app declares.
          * AnkiDroid and AnkiQuest count only if signed with their release keys. AnkiDroid first.
          * Optional: the API picks one without it.
          * @param context a Context that can be used to get the PackageManager

@@ -688,7 +688,7 @@
             tools:ignore="ExportedContentProvider"
             >
             <meta-data android:name="com.ichi2.anki.provider.spec" android:value="2" />
-            <!-- FlashCardsContract.PROVIDER_INTERFACE: lets API clients find parallel builds -->
+            <!-- FlashCardsContract.ACTION_FLASHCARDS_PROVIDER: lets API clients find parallel builds -->
             <intent-filter>
                 <action android:name="com.ichi2.anki.action.FLASHCARDS_PROVIDER" />
             </intent-filter>
