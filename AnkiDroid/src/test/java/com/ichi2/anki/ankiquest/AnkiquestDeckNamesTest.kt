@@ -177,12 +177,12 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
         runTest {
             reviewed("Spanish::Animals")
             val old = assertNotNull(AnkiquestDeckNames.find(at))
-            old.save("Hill's deck")
+            old.save("hill's deck")
             account("other")
             assertEquals("Animals", AnkiquestDeckNames.find(at)?.name)
             assertFailsWith<HomeAccountChanged> { old.save("must not save") }
             account("hill")
-            assertEquals("Hill's deck", AnkiquestDeckNames.find(at)?.name)
+            assertEquals("hill's deck", AnkiquestDeckNames.find(at)?.name)
         }
 
     @Test

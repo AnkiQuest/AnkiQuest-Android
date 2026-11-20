@@ -9,5 +9,5 @@
     android:paddingTop="6dp"
     android:paddingEnd="10dp"
     android:paddingBottom="6dp"
-    android:textColor="@color/ankiquest_widget_text"
+    style="@style/AnkiquestWidgetText"
     android:textSize="13sp" />

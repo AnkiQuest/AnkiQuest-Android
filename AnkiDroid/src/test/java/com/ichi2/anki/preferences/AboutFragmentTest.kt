@@ -35,6 +35,17 @@ class AboutFragmentTest : RobolectricTest() {
     }
 
     @Test
+    fun `About credits link the server and the desktop add-on separately`() {
+        val credits = about().binding.contributorsDescription.text as Spanned
+        val links =
+            credits.getSpans(0, credits.length, URLSpan::class.java).associate { span ->
+                credits.subSequence(credits.getSpanStart(span), credits.getSpanEnd(span)).toString() to span.url
+            }
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Server", links["AnkiQuest server"])
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Desktop", links["AnkiQuest desktop add-on"])
+    }
+
+    @Test
     fun `About credits Shigeyuki for Anki-tan`() {
         val license = licence()
         assertContains(license.toString(), "Anki-tan by Shigeyuki, CC BY-SA 4.0.")

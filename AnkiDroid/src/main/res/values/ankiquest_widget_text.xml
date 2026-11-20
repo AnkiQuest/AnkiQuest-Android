@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!--
+The leaderboard widget's text colours, applied with style= so the transparent widget's shadow
+also works before Android 9, where android:textAppearance ignores shadows.
+-->
+<resources>
+    <style name="AnkiquestWidgetText">
+        <item name="android:textColor">@color/ankiquest_widget_text</item>
+    </style>
+    <style name="AnkiquestWidgetText.Dim">
+        <item name="android:textColor">@color/ankiquest_widget_text_dim</item>
+    </style>
+    <style name="AnkiquestWidgetText.Gold">
+        <item name="android:textColor">@color/ankiquest_widget_gold</item>
+    </style>
+    <style name="AnkiquestWidgetText.Accent">
+        <item name="android:textColor">@color/ankiquest_widget_accent</item>
+    </style>
+
+    <!-- On the wallpaper: lighter colours and a shadow keep the text readable on any background. -->
+    <style name="AnkiquestWidgetClearText">
+        <item name="android:textColor">@color/ankiquest_widget_clear_text</item>
+        <item name="android:shadowColor">#B3000000</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">3</item>
+    </style>
+    <style name="AnkiquestWidgetClearText.Dim">
+        <item name="android:textColor">@color/ankiquest_widget_clear_text_dim</item>
+    </style>
+    <style name="AnkiquestWidgetClearText.Gold">
+        <item name="android:textColor">@color/ankiquest_widget_clear_gold</item>
+    </style>
+    <style name="AnkiquestWidgetClearText.Accent">
+        <item name="android:textColor">@color/ankiquest_widget_clear_accent</item>
+    </style>
+</resources>

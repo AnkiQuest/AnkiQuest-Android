@@ -9,8 +9,5 @@
     android:paddingTop="6dp"
     android:paddingEnd="10dp"
     android:paddingBottom="6dp"
-    android:shadowColor="#B3000000"
-    android:shadowDy="1"
-    android:shadowRadius="3"
-    android:textColor="@color/ankiquest_widget_clear_text"
+    style="@style/AnkiquestWidgetClearText"
     android:textSize="13sp" />
