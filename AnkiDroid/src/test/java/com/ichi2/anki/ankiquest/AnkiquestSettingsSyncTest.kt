@@ -18,6 +18,11 @@ import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -27,6 +32,8 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -298,6 +305,55 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             assertEquals(listOf("GET /api/capabilities", "GET /api/settings/cerro"), requests.toList())
             assertTrue(sent.isEmpty(), "the switch stopped outgoing changes")
         }
+
+    @Test
+    fun `switching sync off while the read waits for IO prevents the request`() =
+        runBlocking {
+            switchOffBeforeIo(1)
+
+            assertTrue(requests.isEmpty(), "the queued read must respect the switch")
+        }
+
+    @Test
+    fun `switching sync off while the write waits for IO prevents the request`() =
+        runBlocking {
+            prefs().edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+            assertTrue(AnkiquestSettingsSync.note(Setting.OPEN_TODAY))
+
+            switchOffBeforeIo(2)
+
+            assertEquals(listOf("GET /api/settings/cerro"), requests.toList())
+            assertTrue(sent.isEmpty(), "the queued write must respect the switch")
+        }
+
+    /** Turns sync off after the request is queued, before its IO work begins. */
+    private suspend fun switchOffBeforeIo(at: Int) {
+        AnkiquestCapabilities.current(account())
+        requests.clear()
+        val io = Dispatchers.IO
+        val dispatched = AtomicInteger()
+        val queued =
+            object : CoroutineDispatcher() {
+                override fun dispatch(
+                    context: CoroutineContext,
+                    block: Runnable,
+                ) {
+                    if (dispatched.incrementAndGet() == at) {
+                        switchOff()
+                    }
+                    io.dispatch(context, block)
+                }
+            }
+
+        mockkStatic(Dispatchers::class)
+        try {
+            every { Dispatchers.IO } returns queued
+            AnkiquestSettingsSync.sync(targetContext, Trigger.CHANGE)
+        } finally {
+            unmockkStatic(Dispatchers::class)
+        }
+        assertEquals(at, dispatched.get(), "the requested IO boundary was reached")
+    }
 
     @Test
     fun `switching sync off while capabilities are fetched prevents the read`() =

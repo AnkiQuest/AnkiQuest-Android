@@ -223,6 +223,30 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
+    fun `a moment the server withheld for missing art is shown once after an update adds it`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val cow = message(1, 30).put("kind", "celebration").put("topic", "companion").put("moment", "companion:cow")
+        val completion = message(2, 30)
+
+        // Without the cow's art the server leaves out its unlock (id 1); the next row moves the cursor past it.
+        val withoutCow = AnkiquestCompanion.drawn - "cow"
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(completion), drawn = withoutCow)
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        // The update adds the art; the server now sends the older unlock, which is shown once.
+        val inbox = JSONArray().put(cow).put(completion)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertTrue(shadowOf(manager).getNotification(5_140_001) != null, "the revealed unlock is shown")
+        assertNull(shadowOf(manager).getNotification(5_140_002), "the completion is not shown again")
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(0, shadowOf(manager).size())
+    }
+
+    @Test
     fun `first poll delivers fresh completion and discards stale backlog`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(1, 90_000)).put(message(2, 30)))
