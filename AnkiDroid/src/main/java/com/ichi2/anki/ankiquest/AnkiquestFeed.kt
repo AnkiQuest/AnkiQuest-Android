@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection.HTTP_BAD_REQUEST
 
 /**
  * The activity feed: friends' wins, cheers, messages, replies, deck completions and challenge news
