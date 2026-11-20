@@ -54,8 +54,8 @@ An Android PR can pin a commit on a server feature branch. In a local clean
 server checkout at that commit, run from the Android repository:
 
 ```sh
-node .github/ankiquest_server_snapshot.cjs copy ../ankiquest
-node .github/ankiquest_server_snapshot.cjs verify ../ankiquest
+node .github/ankiquest_server_snapshot.cjs copy ../AnkiQuest-Server
+node .github/ankiquest_server_snapshot.cjs verify ../AnkiQuest-Server
 ./gradlew :AnkiDroid:testFullDebugUnitTest --tests 'com.ichi2.anki.ankiquest.AnkiquestApiContractTest'
 ```
 
