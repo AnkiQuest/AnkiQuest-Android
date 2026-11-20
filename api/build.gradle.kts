@@ -6,7 +6,7 @@ plugins {
 }
 
 // <AnkiDroid's api version>-ankiquest.<n>; the publish workflow checks the tag against it
-group = "org.ankiquest.anki"
+group = "org.ankiquest"
 version = "2.0.0-ankiquest.1"
 
 configure<LibraryExtension> {
@@ -44,7 +44,7 @@ dependencies {
     testImplementation(libs.kotlin.test)
 }
 
-// AnkiQuest API: published to Maven Central as org.ankiquest.anki:api, signed, with the
+// AnkiQuest API: published to Maven Central as org.ankiquest:api, signed, with the
 // vanniktech plugin as in AnkiQuest's Anki-Android-Backend fork. The coordinates differ from
 // AnkiDroid's com.ichi2.anki:api so the two never resolve in place of each other; the packages
 // (com.ichi2.anki.api, com.ichi2.anki.FlashCardsContract) stay AnkiDroid's, so clients switch
