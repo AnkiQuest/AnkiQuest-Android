@@ -53,6 +53,9 @@ internal object AnkiquestApi {
 
     val json = "application/json".toMediaType()
 
+    /** Names the companions this app draws, so the server leaves out moments about others (docs/mobile-api.md). */
+    private const val COMPANION_ART_HEADER = "X-AnkiQuest-Companion-Art"
+
     private val base =
         AnkiquestHttp.client
             .newBuilder()
@@ -78,7 +81,7 @@ internal object AnkiquestApi {
             Timeout.TRANSFER -> transfer
         }
 
-    /** A request to [url] carrying [token], when there is one, and [language]. */
+    /** A request to [url] carrying [token], when there is one, [language] and the companions this app draws. */
     fun request(
         url: HttpUrl,
         token: String,
@@ -88,6 +91,7 @@ internal object AnkiquestApi {
             .Builder()
             .url(url)
             .header("Accept-Language", language)
+            .header(COMPANION_ART_HEADER, AnkiquestCompanion.drawn.joinToString(", "))
             .apply { if (token.isNotEmpty()) header("Authorization", "Bearer $token") }
 
     /** A request to [path] on [account]'s server, with its credentials and language. */
