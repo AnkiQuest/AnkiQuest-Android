@@ -24,6 +24,6 @@ test("upstream's labelling workflows are replaced by the shared ones", () => {
 
 test("the caller runs every shared labelling workflow", () => {
     const caller = fs.readFileSync(path.join(workflows, "ankiquest_labels.yml"), "utf8");
-    const called = [...caller.matchAll(/AnkiQuest-Dev\/\.github\/workflows\/(\S+\.yml)@master/g)].map((match) => match[1]);
+    const called = [...caller.matchAll(/AnkiQuest-Dev\/\.github\/workflows\/(\S+\.yml)@main/g)].map((match) => match[1]);
     assert.deepEqual(called.sort(), [...CALLED].sort());
 });
