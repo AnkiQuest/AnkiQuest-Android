@@ -8,7 +8,7 @@ outlined) are licensed under
 ([text](../../LICENSES/CC-BY-SA-4.0.txt)). Anki-tan is an unofficial
 character, not related to the official Anki project.
 
-The masters are in AnkiQuest/AnkiQuest-Desktop `static/anki-tan/`.
+The masters are in AnkiQuest/AnkiQuest-Server `static/anki-tan/`.
 
 ## Launcher icons
 

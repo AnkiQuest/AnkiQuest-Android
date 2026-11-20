@@ -31,7 +31,7 @@ class AnkiquestSocialTest {
         assertNull(owls.invite, "only owners see the code")
         assertTrue(club.owner)
         assertEquals("example-invite-1", club.invite)
-        assertEquals(listOf("Ana", "Hill"), club.members.map { it.display })
+        assertEquals(listOf("Ana", "hill"), club.members.map { it.display })
         assertTrue(overview.public)
     }
 
