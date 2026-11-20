@@ -30,6 +30,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter
@@ -100,15 +101,25 @@ class AnkiquestMomentsTest : RobolectricTest() {
     /** A screen that is not a resting one; it opens signed out, so it asks the server nothing. */
     private fun host() = hostController().get()
 
-    private fun hostController(): org.robolectric.android.controller.ActivityController<AnkiquestConquestActivity> {
-        every { AnkiquestHomeData.account(any()) } returns null
-        val controller =
+    private fun hostController(): ActivityController<AnkiquestConquestActivity> =
+        signedOut {
             startActivityControllerNormallyOpenCollectionWithIntent(
                 AnkiquestConquestActivity::class.java,
                 AnkiquestConquestActivity.intent(targetContext, "hill", 1),
             )
-        every { AnkiquestHomeData.account(any()) } returns identity
-        return controller
+        }
+
+    /**
+     * Runs [block] signed out. The conquest screen loads from the server whenever it sees a new
+     * account; that load runs off the main thread and could outlive the test's mocks.
+     */
+    private fun <T> signedOut(block: () -> T): T {
+        every { AnkiquestHomeData.account(any()) } returns null
+        try {
+            return block()
+        } finally {
+            every { AnkiquestHomeData.account(any()) } returns identity
+        }
     }
 
     @Test
@@ -124,11 +135,14 @@ class AnkiquestMomentsTest : RobolectricTest() {
 
         controller.pause()
         assertTrue(dialog.isShowing, "A pause must not discard a moment already consumed from the queue")
-        controller.resume()
+        signedOut { controller.resume() }
         AnkiquestMoments.present(host, prefs, resting = true)
         assertSame(dialog, ShadowDialog.getLatestDialog())
         dialog.dismiss()
         assertTrue(AnkiquestPostStudyPrompts.ready(host))
+
+        // Cancel the screen's coroutines before the mocks go.
+        controller.pause().stop().destroy()
     }
 
     @Test
