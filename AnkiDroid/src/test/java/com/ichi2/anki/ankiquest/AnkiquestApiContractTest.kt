@@ -125,7 +125,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(expected, AnkiquestGlobalHides.change(account, "ana", AnkiquestGlobalHides.Action.HIDE))
             assertTrue(
                 requests.containsAll(
-                    listOf("GET /api/capabilities", "GET /api/leaderboard/hidden/hill", "POST /api/leaderboard/hidden/hill"),
+                    listOf("GET /api/leaderboard/hidden/hill", "POST /api/leaderboard/hidden/hill"),
                 ),
             )
         }
