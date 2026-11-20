@@ -2,6 +2,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_countdowns">Contagens decrescentes</string>
+    <string name="ankiquest_countdowns_changed">As tuas contagens decrescentes mudaram. Verifica a lista e tenta novamente.</string>
     <string name="ankiquest_countdowns_empty">Adiciona um exame ou evento para contar os dias que faltam.</string>
     <string name="ankiquest_countdown_add">Adicionar contagem decrescente</string>
     <string name="ankiquest_countdown_edit">Editar contagem decrescente</string>

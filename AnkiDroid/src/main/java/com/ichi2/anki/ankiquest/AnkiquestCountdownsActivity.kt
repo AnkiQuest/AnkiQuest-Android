@@ -6,7 +6,6 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputFilter
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -87,6 +86,12 @@ class AnkiquestCountdownsActivity : AnkiActivity(R.layout.activity_ankiquest_cou
     /** The collection's day start hour; Anki's default until it is read. */
     private var rollover = DEFAULT_ROLLOVER
 
+    /** A row or form belongs to one account and one version of its list. */
+    private data class Snapshot(
+        val account: HomeAccount?,
+        val countdowns: Countdowns,
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) {
             return
@@ -136,17 +141,39 @@ class AnkiquestCountdownsActivity : AnkiActivity(R.layout.activity_ankiquest_cou
             rollover,
         )
 
-    private fun stored(): Countdowns = AnkiquestCountdowns.read(AnkiDroidApp.sharedPrefs())
+    private fun snapshot(): Snapshot {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val account = AnkiquestHomeData.account(prefs)
+        return Snapshot(account, AnkiquestCountdowns.read(prefs, account))
+    }
 
-    private fun save(events: List<Countdown>) {
-        AnkiquestCountdowns.write(AnkiDroidApp.sharedPrefs(), Countdowns(events))
+    private fun changed(before: Snapshot) {
+        val message =
+            if (AnkiquestHomeData.account()?.scope != before.account?.scope) {
+                R.string.ankiquest_account_changed
+            } else {
+                R.string.ankiquest_countdowns_changed
+            }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        render()
+    }
+
+    private fun save(
+        before: Snapshot,
+        events: List<Countdown>,
+    ) {
+        if (!AnkiquestSettingsSync.editCountdowns(AnkiDroidApp.sharedPrefs(), before.account, before.countdowns, Countdowns(events))) {
+            changed(before)
+            return
+        }
         render()
     }
 
     /** Rows by date; each keeps the index of its event in the stored list. */
     private fun render() {
         list.removeAllViews()
-        val events = stored().events
+        val before = snapshot()
+        val events = before.countdowns.events
         text(getString(R.string.ankiquest_countdowns_private), small = true)
         if (events.isEmpty()) {
             text(getString(R.string.ankiquest_countdowns_empty))
@@ -157,24 +184,32 @@ class AnkiquestCountdownsActivity : AnkiActivity(R.layout.activity_ankiquest_cou
             val event = events[index]
             val line = AnkiquestCountdownTexts.headline(this, event, AnkiquestCountdowns.days(today, event.date))
             val details = listOfNotNull(AnkiquestCountdowns.format(event.date), event.deck).joinToString(" · ")
-            row(line, details) { edit(index) }
+            row(line, details) { edit(before, index) }
         }
         findViewById<MaterialButton>(R.id.aq_countdowns_add).isEnabled = events.size < AnkiquestCountdowns.MAX_EVENTS
     }
 
     private fun add() {
-        if (stored().events.size >= AnkiquestCountdowns.MAX_EVENTS) {
+        val before = snapshot()
+        if (before.countdowns.events.size >= AnkiquestCountdowns.MAX_EVENTS) {
             Toast.makeText(this, R.string.ankiquest_countdowns_full, Toast.LENGTH_LONG).show()
             return
         }
-        form(R.string.ankiquest_countdown_add, null) { event -> save(stored().events + event) }
+        form(R.string.ankiquest_countdown_add, null) { event -> save(before, before.countdowns.events + event) }
     }
 
-    private fun edit(index: Int) {
-        val events = stored().events
+    private fun edit(
+        before: Snapshot,
+        index: Int,
+    ) {
+        if (snapshot() != before) {
+            changed(before)
+            return
+        }
+        val events = before.countdowns.events
         val event = events.getOrNull(index) ?: return
-        form(R.string.ankiquest_countdown_edit, event, delete = { save(events.filterIndexed { i, _ -> i != index }) }) { changed ->
-            save(events.mapIndexed { i, old -> if (i == index) changed else old })
+        form(R.string.ankiquest_countdown_edit, event, delete = { save(before, events.filterIndexed { i, _ -> i != index }) }) { changed ->
+            save(before, events.mapIndexed { i, old -> if (i == index) changed else old })
         }
     }
 
@@ -191,7 +226,7 @@ class AnkiquestCountdownsActivity : AnkiActivity(R.layout.activity_ankiquest_cou
             EditText(this).apply {
                 hint = getString(R.string.ankiquest_countdown_name)
                 setText(event?.name.orEmpty())
-                filters = arrayOf(InputFilter.LengthFilter(AnkiquestCountdowns.MAX_NAME_CHARS))
+                filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestCountdowns.MAX_NAME_CHARS))
             }
         layout.addView(name)
 

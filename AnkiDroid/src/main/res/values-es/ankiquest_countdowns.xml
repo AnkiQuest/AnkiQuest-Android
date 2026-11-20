@@ -2,6 +2,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_countdowns">Cuentas atrás</string>
+    <string name="ankiquest_countdowns_changed">Tus cuentas atrás han cambiado. Revisa la lista e inténtalo de nuevo.</string>
     <string name="ankiquest_countdowns_empty">Añade un examen o un evento para contar los días que faltan.</string>
     <string name="ankiquest_countdown_add">Añadir cuenta atrás</string>
     <string name="ankiquest_countdown_edit">Editar cuenta atrás</string>

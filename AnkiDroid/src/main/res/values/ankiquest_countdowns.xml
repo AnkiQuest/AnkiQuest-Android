@@ -17,6 +17,7 @@
     <string name="ankiquest_countdown_name_missing">Enter a name.</string>
     <string name="ankiquest_countdowns_full">You have the most countdowns you can keep. Delete one to add another.</string>
     <string name="ankiquest_countdowns_private">Only you see your countdowns.</string>
+    <string name="ankiquest_countdowns_changed">Your countdowns changed. Review the list and try again.</string>
     <string name="ankiquest_countdown_tomorrow">%1$s tomorrow</string>
     <string name="ankiquest_countdown_today">%1$s today</string>
     <string name="ankiquest_countdown_past">%1$s is over</string>

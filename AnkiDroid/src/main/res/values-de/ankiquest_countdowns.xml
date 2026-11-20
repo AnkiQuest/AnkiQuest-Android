@@ -2,6 +2,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_countdowns">Countdowns</string>
+    <string name="ankiquest_countdowns_changed">Deine Countdowns haben sich geändert. Prüfe die Liste und versuche es erneut.</string>
     <string name="ankiquest_countdowns_empty">Füge eine Prüfung oder ein Ereignis hinzu, um die Tage bis dahin zu zählen.</string>
     <string name="ankiquest_countdown_add">Countdown hinzufügen</string>
     <string name="ankiquest_countdown_edit">Countdown bearbeiten</string>

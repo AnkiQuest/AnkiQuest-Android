@@ -144,10 +144,19 @@ internal object AnkiquestCountdowns {
         return Countdown(name, date, deck)
     }
 
+    /** Private lists survive token renewal; a signed-out list stays on this device. */
+    fun preference(account: HomeAccount?): String {
+        val signedIn = account?.takeIf { it.token.isNotEmpty() } ?: return PREF
+        return scopedKey(PREF, sha256(signedIn.server, signedIn.user))
+    }
+
     /** The stored list; an unusable one counts as empty. */
-    fun read(prefs: SharedPreferences): Countdowns =
+    fun read(
+        prefs: SharedPreferences,
+        account: HomeAccount? = AnkiquestHomeData.account(prefs),
+    ): Countdowns =
         try {
-            parse(prefs.getString(PREF, null)) ?: Countdowns.EMPTY
+            parse(prefs.getString(preference(account), null)) ?: Countdowns.EMPTY
         } catch (_: ClassCastException) {
             Countdowns.EMPTY
         }
@@ -156,7 +165,8 @@ internal object AnkiquestCountdowns {
     fun write(
         prefs: SharedPreferences,
         countdowns: Countdowns,
-    ) = prefs.edit { putString(PREF, countdowns.toJson().toString()) }
+        account: HomeAccount? = AnkiquestHomeData.account(prefs),
+    ) = prefs.edit { putString(preference(account), countdowns.toJson().toString()) }
 
     /** The Anki day of local time [now]: its date once the day start hour is taken off. */
     fun ankiToday(

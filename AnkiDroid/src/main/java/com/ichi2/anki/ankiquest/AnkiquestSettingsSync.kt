@@ -106,13 +106,16 @@ internal object AnkiquestSettingsSync {
             }
 
         /** The value in [prefs]; one this app cannot use counts as the default. */
-        fun read(prefs: SharedPreferences): Any {
+        fun read(
+            prefs: SharedPreferences,
+            account: HomeAccount? = AnkiquestHomeData.account(prefs),
+        ): Any {
             val value =
                 try {
                     when (storage) {
                         Storage.BOOLEAN -> prefs.getBoolean(pref, default as Boolean)
                         Storage.NUMBER_TEXT -> prefs.getString(pref, null)?.toIntOrNull() ?: default
-                        Storage.COUNTDOWNS -> AnkiquestCountdowns.read(prefs)
+                        Storage.COUNTDOWNS -> AnkiquestCountdowns.read(prefs, account)
                     }
                 } catch (_: ClassCastException) {
                     default
@@ -123,11 +126,12 @@ internal object AnkiquestSettingsSync {
         fun write(
             editor: SharedPreferences.Editor,
             value: Any,
+            account: HomeAccount?,
         ) {
             when (storage) {
                 Storage.BOOLEAN -> editor.putBoolean(pref, value as Boolean)
                 Storage.NUMBER_TEXT -> editor.putString(pref, value.toString())
-                Storage.COUNTDOWNS -> editor.putString(pref, encode(value).toString())
+                Storage.COUNTDOWNS -> editor.putString(AnkiquestCountdowns.preference(account), encode(value).toString())
             }
         }
     }
@@ -177,7 +181,7 @@ internal object AnkiquestSettingsSync {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = Mutex()
     private val lock = Any()
-    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> changed(key) }
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key -> changed(prefs, key) }
 
     @Volatile
     private var app: Application? = null
@@ -204,6 +208,21 @@ internal object AnkiquestSettingsSync {
         try {
             prefs.getBoolean(PREF_SWITCH, true)
         } catch (_: ClassCastException) {
+            true
+        }
+
+    /** Compare and save an open form under the same lock used when a sync applies its answer. */
+    fun editCountdowns(
+        prefs: SharedPreferences,
+        account: HomeAccount?,
+        before: AnkiquestCountdowns.Countdowns,
+        after: AnkiquestCountdowns.Countdowns,
+    ): Boolean =
+        synchronized(lock) {
+            if (AnkiquestHomeData.account(prefs)?.scope != account?.scope || AnkiquestCountdowns.read(prefs, account) != before) {
+                return false
+            }
+            AnkiquestCountdowns.write(prefs, after, account)
             true
         }
 
@@ -270,7 +289,7 @@ internal object AnkiquestSettingsSync {
         // Merge every key this server keeps against what it has.
         val features = AnkiquestCapabilities.features(account)
         val synced = Setting.entries.filter { it.feature == null || it.feature in features }
-        val start = locals()
+        val start = locals(account)
         val remote = read(account) ?: return
         val merged =
             synced.associateWith { setting ->
@@ -315,14 +334,14 @@ internal object AnkiquestSettingsSync {
     }
 
     /** Each setting's value here and its change time; a change made while nothing listened counts as made now. */
-    private fun locals(): Map<Setting, Local> =
+    private fun locals(account: HomeAccount): Map<Setting, Local> =
         synchronized(lock) {
             val prefs = AnkiDroidApp.sharedPrefs()
-            val records = records(prefs)
+            val records = records(prefs, account)
             val now = TimeManager.time.intTimeMS()
             val result =
                 Setting.entries.associateWith { setting ->
-                    val value = setting.read(prefs)
+                    val value = setting.read(prefs, account)
                     val record = records[setting]
                     when {
                         record == null -> Local(value, 0)
@@ -331,7 +350,7 @@ internal object AnkiquestSettingsSync {
                     }
                 }
             if (result != records) {
-                save(prefs, result)
+                save(prefs, result, account)
             }
             result
         }
@@ -353,21 +372,21 @@ internal object AnkiquestSettingsSync {
             if (gate(account, prefs) != Gate.OPEN) {
                 return
             }
-            val records = records(prefs).toMutableMap()
+            val records = records(prefs, account).toMutableMap()
             prefs.edit {
                 for (setting in merged.keys) {
                     val before = start.getValue(setting)
-                    if (setting.read(prefs) != before.value || records[setting] != before) {
+                    if (setting.read(prefs, account) != before.value || records[setting] != before) {
                         continue
                     }
                     val value = merged.getValue(setting).value
                     records[setting] = Local(value, stamps.getValue(setting))
                     if (value != before.value) {
-                        setting.write(this, value)
+                        setting.write(this, value, account)
                         applied += setting
                     }
                 }
-                putString(PREF_CHANGED, encode(records))
+                writeRecords(this, records, account)
             }
         }
 
@@ -389,31 +408,42 @@ internal object AnkiquestSettingsSync {
         }
 
     /** Records the time of a change made here and syncs it. */
-    private fun changed(key: String?) {
+    private fun changed(
+        prefs: SharedPreferences,
+        key: String?,
+    ) {
         val context = app ?: return
         if (key == PREF_SWITCH) {
-            if (enabled()) {
+            if (enabled(prefs)) {
                 scope.launch { sync(context, Trigger.CHANGE) }
             }
             return
         }
-        val setting = Setting.entries.firstOrNull { it.pref == key } ?: return
-        if (note(setting) && enabled()) {
+        val account = AnkiquestHomeData.account(prefs)
+        val setting =
+            Setting.entries.firstOrNull {
+                val pref = if (it == Setting.COUNTDOWNS) AnkiquestCountdowns.preference(account) else it.pref
+                pref == key
+            } ?: return
+        if (note(setting, prefs) && enabled(prefs)) {
             scope.launch { sync(context, Trigger.CHANGE) }
         }
     }
 
     /** Stamps [setting] with the current time unless its value is the one last seen, as after a sync applied it. */
     @VisibleForTesting
-    internal fun note(setting: Setting): Boolean =
+    internal fun note(
+        setting: Setting,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Boolean =
         synchronized(lock) {
-            val prefs = AnkiDroidApp.sharedPrefs()
-            val value = setting.read(prefs)
-            val records = records(prefs)
+            val account = AnkiquestHomeData.account(prefs)
+            val value = setting.read(prefs, account)
+            val records = records(prefs, account)
             if (records[setting]?.value == value) {
                 return false
             }
-            save(prefs, records + (setting to Local(value, TimeManager.time.intTimeMS())))
+            save(prefs, records + (setting to Local(value, TimeManager.time.intTimeMS())), account)
             true
         }
 
@@ -472,18 +502,31 @@ internal object AnkiquestSettingsSync {
 
     private fun number(value: Any): Any = if (value is Long && value in Int.MIN_VALUE..Int.MAX_VALUE) value.toInt() else value
 
-    private fun records(prefs: SharedPreferences): Map<Setting, Local> {
-        val stored =
-            try {
-                JSONObject(prefs.getString(PREF_CHANGED, null) ?: return emptyMap())
-            } catch (_: JSONException) {
-                return emptyMap()
-            } catch (_: ClassCastException) {
-                return emptyMap()
-            }
+    /** Countdown change times belong to the same private account as their values. */
+    private fun changedPref(account: HomeAccount?): String = "${AnkiquestCountdowns.preference(account)}:changed"
+
+    private fun stored(
+        prefs: SharedPreferences,
+        key: String,
+    ): JSONObject =
+        try {
+            JSONObject(prefs.getString(key, null) ?: "{}")
+        } catch (_: JSONException) {
+            JSONObject()
+        } catch (_: ClassCastException) {
+            JSONObject()
+        }
+
+    private fun records(
+        prefs: SharedPreferences,
+        account: HomeAccount?,
+    ): Map<Setting, Local> {
+        val common = stored(prefs, PREF_CHANGED)
+        val scoped = stored(prefs, changedPref(account))
         return Setting.entries
             .mapNotNull { setting ->
-                val record = stored.optJSONObject(setting.key) ?: return@mapNotNull null
+                val source = if (setting == Setting.COUNTDOWNS) scoped else common
+                val record = source.optJSONObject(setting.key) ?: return@mapNotNull null
                 val at = record.optLong("at", -1)
                 if (at < 0 || !record.has("value")) {
                     return@mapNotNull null
@@ -495,7 +538,17 @@ internal object AnkiquestSettingsSync {
     private fun save(
         prefs: SharedPreferences,
         records: Map<Setting, Local>,
-    ) = prefs.edit { putString(PREF_CHANGED, encode(records)) }
+        account: HomeAccount?,
+    ) = prefs.edit { writeRecords(this, records, account) }
+
+    private fun writeRecords(
+        editor: SharedPreferences.Editor,
+        records: Map<Setting, Local>,
+        account: HomeAccount?,
+    ) {
+        editor.putString(PREF_CHANGED, encode(records - Setting.COUNTDOWNS))
+        editor.putString(changedPref(account), encode(records.filterKeys { it == Setting.COUNTDOWNS }))
+    }
 
     private fun encode(records: Map<Setting, Local>): String {
         val result = JSONObject()
