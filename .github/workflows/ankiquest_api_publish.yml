@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 name: ankiquest API publish
 
-# Publishes the api module to Maven Central as org.ankiquest:api, signed, with the vanniktech
+# Publishes the api module to Maven Central as org.ankiquest.anki:api, signed, with the vanniktech
 # plugin (see api/build.gradle.kts and docs/ankiquest-api.md). Runs only on a tag
 # api-v<version> or when dispatched; never on pull requests. The tag must name the version in
 # api/build.gradle.kts, such as api-v2.0.0-ankiquest.1.

@@ -71,7 +71,7 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 Apps that add notes or read cards through AnkiDroid's API library can use the AnkiQuest API instead and work with AnkiDroid, AnkiQuest and any other app offering AnkiDroid's flashcards provider. Same packages and classes; change one line:
 
 ```kotlin
-implementation("org.ankiquest:api:2.0.0-ankiquest.1") // instead of com.ichi2.anki:api
+implementation("org.ankiquest.anki:api:2.0.0-ankiquest.1") // instead of com.ichi2.anki:api
 ```
 
 See [docs/ankiquest-api.md](docs/ankiquest-api.md).

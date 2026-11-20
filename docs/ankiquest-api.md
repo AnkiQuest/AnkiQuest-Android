@@ -1,6 +1,6 @@
 # AnkiQuest API
 
-AnkiQuest API is AnkiDroid's API library (the `api` module) published as `org.ankiquest:api`. Apps that use it work with AnkiDroid, AnkiQuest and any other app offering AnkiDroid's flashcards provider ([`FlashCardsContract`](../api/src/main/java/com/ichi2/anki/FlashCardsContract.kt)).
+AnkiQuest API is AnkiDroid's API library (the `api` module) published as `org.ankiquest.anki:api`. Apps that use it work with AnkiDroid, AnkiQuest and any other app offering AnkiDroid's flashcards provider ([`FlashCardsContract`](../api/src/main/java/com/ichi2/anki/FlashCardsContract.kt)).
 
 ## Switching from AnkiDroid's library
 
@@ -8,7 +8,7 @@ The packages and classes are AnkiDroid's (`com.ichi2.anki.api.AddContentApi`, `c
 
 ```kotlin
 dependencies {
-    implementation("org.ankiquest:api:2.0.0-ankiquest.1") // instead of com.ichi2.anki:api
+    implementation("org.ankiquest.anki:api:2.0.0-ankiquest.1") // instead of com.ichi2.anki:api
 }
 ```
 
