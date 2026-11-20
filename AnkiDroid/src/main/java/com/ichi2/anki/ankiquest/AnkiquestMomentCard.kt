@@ -155,9 +155,11 @@ internal object AnkiquestMomentCard {
                 .create()
 
         private val accountListener =
-            SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 if (!ownsAccount()) {
                     abandon()
+                } else if (account != null && key == AnkiquestMoments.confirmationKey(account.notificationAccount)) {
+                    pages?.confirm()
                 }
             }
         private val observer =
@@ -532,6 +534,15 @@ internal object AnkiquestMomentCard {
             }
             away = Away.NONE
             refresh()
+        }
+
+        /** Refresh an already-bound local card when its server ids arrive. */
+        fun confirm() {
+            moments.forEachIndexed { position, moment ->
+                if (confirmed(moment) != moment) {
+                    changed(position)
+                }
+            }
         }
 
         private fun refresh() {

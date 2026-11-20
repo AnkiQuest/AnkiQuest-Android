@@ -270,7 +270,7 @@ internal object AnkiquestMoments {
         val recorded = recordedDay(prefs, account)?.takeIf { moment.at in it }
         if (recorded != null) {
             // The local card may be shown already; its server ids are kept either way, so Share can send it.
-            prefs.edit { putString("$PREF_MINIMUM_IDS:$account", moment.copy(key = recorded.key).json().toString()) }
+            prefs.edit { putString(confirmationKey(account), moment.copy(key = recorded.key).json().toString()) }
             val queue = pending(prefs, account)
             val local = queue.firstOrNull { it.key == recorded.key }
             if (local != null) {
@@ -303,7 +303,7 @@ internal object AnkiquestMoments {
         }
         val stored =
             try {
-                prefs.getString("$PREF_MINIMUM_IDS:$account", null)?.let { Moment.parse(JSONObject(it)) }
+                prefs.getString(confirmationKey(account), null)?.let { Moment.parse(JSONObject(it)) }
             } catch (_: JSONException) {
                 null
             }
@@ -312,6 +312,9 @@ internal object AnkiquestMoments {
         }
         return withServerIds(moment, stored)
     }
+
+    /** A displayed card listens only for confirmation of its own account's day. */
+    internal fun confirmationKey(account: String): String = "$PREF_MINIMUM_IDS:$account"
 
     private fun withServerIds(
         local: Moment,
