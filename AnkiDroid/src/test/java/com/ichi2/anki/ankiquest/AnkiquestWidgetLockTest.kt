@@ -68,7 +68,7 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         mockkObject(AnkiquestNotifier)
         coEvery { AnkiquestNotifier.onLeaderboard(any()) } just Runs
-        every { AnkiquestNotifier.onProfile(any(), any()) } just Runs
+        every { AnkiquestNotifier.onProfile(any(), any(), any()) } just Runs
         every { AnkiquestNotifier.onDeckCompletions(any(), any(), any(), any()) } just Runs
         AnkiquestWidget.forgetFresh()
 
