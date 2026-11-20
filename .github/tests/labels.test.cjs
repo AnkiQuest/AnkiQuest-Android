@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // .github/labels.json is the label set shared with AnkiQuest-Server and
 // AnkiQuest-Desktop. It must hold every label this repository's workflows,
 // labeler config and Dependabot apply, spelled the way they spell it. The

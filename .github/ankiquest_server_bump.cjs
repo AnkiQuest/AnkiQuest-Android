@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 const BRANCH = "bot/server-bump";
 const ISSUE = 203;
 const BEGIN = "<!-- ankiquest-server-bump:start -->";

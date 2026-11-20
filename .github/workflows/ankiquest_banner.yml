@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Regenerates the README banner (docs/graphics/logos/banner_readme.png) from the app's own
 # screens for every release, and proposes it to main as a pull request when it changed.
 # Pull requests touching the banner tooling render it without proposing anything.
