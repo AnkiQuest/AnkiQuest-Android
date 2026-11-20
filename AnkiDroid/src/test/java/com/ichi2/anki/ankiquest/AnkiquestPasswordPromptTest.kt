@@ -35,6 +35,29 @@ class AnkiquestPasswordPromptTest : RobolectricTest() {
     }
 
     @Test
+    fun pinnedSignInExamples() {
+        fun example(name: String): Methods =
+            Methods.parse(
+                JSONObject(
+                    checkNotNull(javaClass.classLoader?.getResource("ankiquest-api/$name.json")).readText(Charsets.UTF_8),
+                ),
+            )
+
+        val now = 1_800_000_000_000L
+        val before = example("sign_in_methods_token_only")
+        assertEquals(SignIn.TOKEN_ONLY, before.signIn)
+        assertFalse(before.account)
+        assertFalse(before.password)
+        assertTrue(AnkiquestPasswordPrompt.offered(before, snoozedAt = null, now = now))
+
+        val after = example("password_set_token_only")
+        assertEquals(SignIn.PASSWORD, after.signIn)
+        assertTrue(after.account)
+        assertTrue(after.password)
+        assertFalse(AnkiquestPasswordPrompt.offered(after, snoozedAt = null, now = now))
+    }
+
+    @Test
     fun `the card is offered to token-only players, hidden after Not now and offered again three days later`() {
         val now = 1_800_000_000_000L
         val snooze = AnkiquestPasswordPrompt.SNOOZE_MS
