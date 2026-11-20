@@ -28,8 +28,8 @@ import java.util.Locale
  * On earlier SDK levels, the #READ_WRITE_PERMISSION is currently only required for update/delete operations but
  * this may be extended to all operations at a later date.
  *
- * The API talks to AnkiDroid, or to another app offering the same provider if the user chose one,
- * see [chooseProvider].
+ * The API talks to AnkiDroid or any other app offering the same provider: the only one installed,
+ * or the one the user chose if several are, see [chooseProvider] and [getProvider].
  */
 @Suppress("unused")
 public class AddContentApi(
@@ -40,7 +40,7 @@ public class AddContentApi(
     private val selection = ProviderSelection(this.context)
 
     init {
-        // Without AnkiDroid, ask the user once whether to use another listed app
+        // With several providers installed and none chosen, ask the user once
         selection.offerChoice(context)
     }
 
@@ -870,8 +870,9 @@ public class AddContentApi(
          * only while the calling app is debuggable. Apps that use [FlashCardsContract] directly should
          * call this first, so they don't send data to another app.
          *
-         * If the user chose another app offering the same provider, this is that app. Without AnkiDroid,
-         * the user is asked once whether to use another listed app, and this returns null until they choose.
+         * Other apps offering the same provider count too: the only one installed, or the one the user
+         * chose. With several installed and none chosen, the user is asked once, and this returns null
+         * until they choose. See [getProvider] for the provider's authority and permission.
          *
          * @param context a Context that can be used to get the PackageManager
          * @return packageId of AnkiDroid if a supported version is installed, otherwise null
@@ -884,8 +885,10 @@ public class AddContentApi(
         }
 
         /**
-         * Installed apps offering the [FlashCardsContract] provider that AnkiDroid lists and that pass
-         * the certificate check: AnkiDroid first. Optional: the API picks one without it.
+         * Installed apps offering the [FlashCardsContract] provider: AnkiDroid, AnkiQuest and any app
+         * declaring [FlashCardsContract.PROVIDER_INTERFACE] whose permission this app declares.
+         * AnkiDroid and AnkiQuest count only if signed with their release keys. AnkiDroid first.
+         * Optional: the API picks one without it.
          * @param context a Context that can be used to get the PackageManager
          * @return the providers, empty if none is installed
          */
@@ -893,8 +896,17 @@ public class AddContentApi(
         public fun getProviders(context: Context): List<FlashCardsProvider> = ProviderSelection(context).installed()
 
         /**
-         * Lets the user choose which of [getProviders] this app talks to. Optional: without AnkiDroid,
-         * the API asks by itself. Picking an app asks for its permission through Android's dialog.
+         * The provider this app talks to: its package, authority and permission. Request
+         * [FlashCardsProvider.permission] at runtime before using the API.
+         * @param context a Context that can be used to get the PackageManager
+         * @return null if none is installed, or if several are and the user has yet to choose
+         */
+        @JvmStatic // required for API
+        public fun getProvider(context: Context): FlashCardsProvider? = ProviderSelection(context).inUse()
+
+        /**
+         * Lets the user choose which of [getProviders] this app talks to. Optional: with several
+         * installed, the API asks by itself. Picking an app asks for its permission through Android's dialog.
          * @param context the Context to open the chooser from, preferably an Activity
          */
         @JvmStatic // required for API
@@ -905,9 +917,8 @@ public class AddContentApi(
 }
 
 /**
- * The [ContentResolver] calls [AddContentApi] makes, which don't reach the provider if an app other than
- * the listed one holds the URI's authority, or if no app is listed for it. Blocked calls return null or 0,
- * as for a failed call.
+ * The [ContentResolver] calls [AddContentApi] makes, which reach only the provider in use, see
+ * [ProviderSelection]. Blocked calls return null or 0, as for a failed call.
  */
 private class TrustedResolver(
     private val context: Context,
@@ -915,8 +926,7 @@ private class TrustedResolver(
     private val resolver: ContentResolver = context.contentResolver
 
     private fun blocked(uri: Uri): Boolean {
-        val listed = KnownProviders.ALL.firstOrNull { it.authority == uri.authority } ?: return true
-        return AnkiDroidProvider.isImpostor(context, listed)
+        return ProviderSelection(context).inUse()?.authority != uri.authority
     }
 
     fun query(

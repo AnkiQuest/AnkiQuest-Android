@@ -5,8 +5,9 @@ package com.ichi2.anki.api
 import com.ichi2.anki.FlashCardsContract
 
 /**
- * Apps AnkiDroid's maintainers list as offering the [FlashCardsContract] provider.
- * The API only ever talks to these, and only after checking their signing certificate.
+ * Apps with a known release key offering the [FlashCardsContract] provider. Each is a candidate
+ * only if signed with its key, and no other package may hold its authority. Other apps are found
+ * by [ProviderDiscovery] and trusted through the user's pinned choice.
  *
  * To list an app, add it here and declare its permission and a `<queries>` entry in the
  * library's AndroidManifest.xml; KnownProvidersManifestTest checks both.

@@ -59,7 +59,7 @@ internal class RecordingProvider : ContentProvider() {
     ): Int = 0
 }
 
-/** [AddContentApi] with the listed fork [KnownProviders.ANKIQUEST], signed with its release key */
+/** [AddContentApi] with [KnownProviders.ANKIQUEST], signed with its release key */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.S_V2])
 internal class ProviderChoiceApiTest {
@@ -72,23 +72,28 @@ internal class ProviderChoiceApiTest {
         info.flags = info.flags and ApplicationInfo.FLAG_DEBUGGABLE.inv()
     }
 
+    /** The only provider installed is used without a choice */
     @Test
-    fun forkIsUnusedUntilChosen() {
+    fun onlyForkIsUsed() {
         installFork()
 
         assertEquals(listOf(FORK), AddContentApi.getProviders(context))
-        assertNull(AddContentApi.getAnkiDroidPackageName(context))
-        assertEquals(-1, AddContentApi(context).apiHostSpecVersion)
+        assertEquals(FORK.packageName, AddContentApi.getAnkiDroidPackageName(context))
+        assertEquals(FORK.permission, AddContentApi.getProvider(context)?.permission)
+        assertEquals(FORK_SPEC, AddContentApi(context).apiHostSpecVersion)
+        assertNull(shadowOf(context).nextStartedActivity)
     }
 
     @Test
     fun chosenForkIsUsed() {
         installFork()
+        AnkiDroidPackages.install(ANKIDROID.packageName, Signing.Current(AnkiDroidPackages.RELEASE))
         val recorder = Robolectric.buildContentProvider(RecordingProvider::class.java).create(FORK.authority).get()
 
         ProviderSelection(context).choose(FORK)
 
         assertEquals(FORK.packageName, AddContentApi.getAnkiDroidPackageName(context))
+        assertEquals(FORK.authority, AddContentApi.getProvider(context)?.authority)
         assertEquals(FORK_SPEC, AddContentApi(context).apiHostSpecVersion)
 
         // Every URI is built from the fork's authority
@@ -106,16 +111,18 @@ internal class ProviderChoiceApiTest {
         assertNull(AddContentApi.getAnkiDroidPackageName(context))
     }
 
+    /** With several providers, nothing is used until the user chooses */
     @Test
-    fun ankiDroidStaysDefault() {
+    fun severalNeedChoice() {
         installFork()
         AnkiDroidPackages.install(ANKIDROID.packageName, Signing.Current(AnkiDroidPackages.RELEASE))
 
         assertEquals(listOf(ANKIDROID, FORK), AddContentApi.getProviders(context))
-        assertEquals(ANKIDROID.packageName, AddContentApi.getAnkiDroidPackageName(context))
+        assertNull(AddContentApi.getProvider(context))
+        assertEquals(-1, AddContentApi(context).apiHostSpecVersion)
     }
 
-    /** Without AnkiDroid, the chooser opens by itself, once */
+    /** The chooser opens by itself, once */
     @Test
     fun chooserOpensOnce() {
         installFork()

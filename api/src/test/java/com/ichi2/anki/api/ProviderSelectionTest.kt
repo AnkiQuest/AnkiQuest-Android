@@ -15,15 +15,19 @@ import org.robolectric.annotation.Config
 import java.security.MessageDigest
 import java.util.Locale
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-/** Robolectric doesn't shadow the Tiramisu+ `resolveContentProvider`, see [AddContentApiTest] */
+/**
+ * Each transition of [Resolution]. Robolectric doesn't shadow the Tiramisu+
+ * `resolveContentProvider`, see [AddContentApiTest].
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.S_V2])
 internal class ProviderSelectionTest {
     private val context get() = RuntimeEnvironment.getApplication()
 
-    private fun selection() = ProviderSelection(context, listOf(ANKIDROID, FORK))
+    private fun selection() = ProviderSelection(context, { ProviderDiscovery.find(context, listOf(ANKIDROID, LISTED)) })
 
     private val stored get() = ChoiceStore(context).load()
 
@@ -35,13 +39,6 @@ internal class ProviderSelectionTest {
     }
 
     @Test
-    fun ankiDroidOnlyNeedsNoChoice() {
-        installAnkiDroid()
-
-        assertEquals(Resolution.Ready(ANKIDROID), selection().resolve())
-    }
-
-    @Test
     fun noneInstalled() {
         assertEquals(Resolution.NotInstalled, selection().resolve())
         assertEquals(emptyList(), selection().installed())
@@ -49,116 +46,191 @@ internal class ProviderSelectionTest {
     }
 
     @Test
-    fun forkOnlyNeedsChoice() {
-        installFork(Signing.Current(FORK_KEY))
+    fun ankiDroidOnlyIsUsed() {
+        installAnkiDroid()
 
-        assertEquals(Resolution.NeedsChoice(listOf(FORK)), selection().resolve())
+        assertEquals(Resolution.Only(ANKIDROID), selection().resolve())
+        assertEquals(ANKIDROID, selection().inUse())
+    }
+
+    /** Any app declaring FlashCardsContract.PROVIDER_INTERFACE is a candidate */
+    @Test
+    fun unlistedOnlyIsUsed() {
+        installUnlisted()
+
+        val resolution = selection().resolve()
+        assertEquals(Resolution.Only(UNLISTED), resolution)
+        val provider = (resolution as Resolution.Only).provider
+        assertEquals(UNLISTED_AUTHORITY, provider.authority)
+        assertEquals("$UNLISTED_PACKAGE.permission.READ_WRITE_DATABASE", provider.permission)
+    }
+
+    /** Android never grants a permission the client app does not declare */
+    @Test
+    fun undeclaredPermissionIsIgnored() {
+        installUnlisted(permission = PermissionRequest.NOT_REQUESTED)
+
+        assertEquals(Resolution.NotInstalled, selection().resolve())
+    }
+
+    @Test
+    fun severalNeedChoice() {
+        installUnlisted()
+        installAnkiDroid()
+
+        assertEquals(Resolution.NeedsChoice(listOf(ANKIDROID, UNLISTED)), selection().resolve())
         assertNull(selection().inUse())
     }
 
     @Test
-    fun ankiDroidIsDefaultWithBoth() {
-        installFork(Signing.Current(FORK_KEY))
+    fun choiceIsUsed() {
         installAnkiDroid()
+        installUnlisted()
 
-        assertEquals(listOf(ANKIDROID, FORK), selection().installed())
-        assertEquals(Resolution.Ready(ANKIDROID), selection().resolve())
+        selection().choose(UNLISTED)
+
+        assertEquals(Resolution.Chosen(UNLISTED), selection().resolve())
+        assertEquals(UNLISTED, selection().inUse())
     }
 
     @Test
-    fun chosenForkIsUsed() {
+    fun choosingAnkiDroidIsPinned() {
         installAnkiDroid()
-        installFork(Signing.Current(FORK_KEY))
-
-        selection().choose(FORK)
-
-        assertEquals(Resolution.Ready(FORK), selection().resolve())
-    }
-
-    @Test
-    fun choosingAnkiDroidClearsChoice() {
-        installAnkiDroid()
-        installFork(Signing.Current(FORK_KEY))
-        selection().choose(FORK)
+        installUnlisted()
 
         selection().choose(ANKIDROID)
 
-        assertNull(stored)
-        assertEquals(Resolution.Ready(ANKIDROID), selection().resolve())
+        assertEquals(Resolution.Chosen(ANKIDROID), selection().resolve())
+        assertEquals(ANKIDROID.packageName, assertNotNull(stored).packageName)
+    }
+
+    /** A new candidate does not ask again */
+    @Test
+    fun choiceHoldsWhenAnotherIsInstalled() {
+        installAnkiDroid()
+        installUnlisted()
+        selection().choose(UNLISTED)
+
+        installListed(Signing.Current(LISTED_KEY))
+
+        assertEquals(Resolution.Chosen(UNLISTED), selection().resolve())
     }
 
     @Test
-    fun uninstalledForkFallsBack() {
+    fun uninstalledChoiceIsDropped() {
         installAnkiDroid()
-        installFork(Signing.Current(FORK_KEY))
-        selection().choose(FORK)
+        installUnlisted()
+        selection().choose(UNLISTED)
 
-        shadowOf(context.packageManager).removePackage(FORK.packageName)
+        shadowOf(context.packageManager).removePackage(UNLISTED_PACKAGE)
 
-        assertEquals(Resolution.Ready(ANKIDROID), selection().resolve())
+        assertEquals(Resolution.Only(ANKIDROID), selection().resolve())
         assertNull(stored)
     }
 
-    /** The fork is re-signed with another listed key: still trusted, but the user has to choose again */
+    /** Re-signed with another key: the user has to choose again */
     @Test
     fun changedCertificateDropsChoice() {
-        installFork(Signing.Current(FORK_KEY))
-        selection().choose(FORK)
+        installAnkiDroid()
+        installUnlisted()
+        selection().choose(UNLISTED)
 
-        installFork(Signing.Rotated(past = FORK_KEY, current = FORK_NEW_KEY))
+        installUnlisted(Signing.Rotated(past = UNLISTED_KEY, current = UNLISTED_NEW_KEY))
 
-        assertEquals(Resolution.NeedsChoice(listOf(FORK)), selection().resolve())
+        assertEquals(Resolution.NeedsChoice(listOf(ANKIDROID, UNLISTED)), selection().resolve())
         assertNull(stored)
     }
 
     @Test
-    fun unlistedCertificateIsRejected() {
-        installFork(Signing.Current(UNKNOWN))
+    fun takenAuthorityDropsChoice() {
+        installAnkiDroid()
+        installUnlisted()
+        selection().choose(UNLISTED)
 
-        assertEquals(Resolution.NotInstalled, selection().resolve())
-    }
+        shadowOf(context.packageManager).removePackage(UNLISTED_PACKAGE)
+        installUnlisted(packageName = SQUATTER)
 
-    @Test
-    fun squattedAuthorityIsRejected() {
-        // Another package holds the fork's authority, signed with the fork's listed key
-        AnkiDroidPackages.install(SQUATTER, Signing.Current(FORK_KEY), authority = FORK.authority)
-
-        assertEquals(Resolution.NotInstalled, selection().resolve())
-    }
-
-    @Test
-    fun choiceOfSquattedForkIsDropped() {
-        installFork(Signing.Current(FORK_KEY))
-        selection().choose(FORK)
-
-        shadowOf(context.packageManager).removePackage(FORK.packageName)
-        AnkiDroidPackages.install(SQUATTER, Signing.Current(FORK_KEY), authority = FORK.authority)
-
-        assertEquals(Resolution.NotInstalled, selection().resolve())
+        val resolution = selection().resolve()
+        assertEquals(listOf(ANKIDROID.packageName, SQUATTER), (resolution as Resolution.NeedsChoice).providers.map { it.packageName })
         assertNull(stored)
+    }
+
+    @Test
+    fun listedWithUnknownKeyIsRejected() {
+        installListed(Signing.Current(UNKNOWN))
+
+        assertEquals(Resolution.NotInstalled, selection().resolve())
+    }
+
+    @Test
+    fun listedWithItsKeyIsUsed() {
+        installListed(Signing.Current(LISTED_KEY))
+
+        assertEquals(Resolution.Only(LISTED), selection().resolve())
+    }
+
+    /** Another package holds a listed authority, signed with the listed key */
+    @Test
+    fun squattedListedAuthorityIsRejected() {
+        AnkiDroidPackages.install(SQUATTER, Signing.Current(LISTED_KEY), authority = LISTED.authority, filter = ProviderInterface.DECLARED)
+
+        assertEquals(Resolution.NotInstalled, selection().resolve())
+    }
+
+    @Test
+    fun ankiDroidWithUnknownKeyIsRejected() {
+        AnkiDroidPackages.install(ANKIDROID.packageName, Signing.Current(UNKNOWN), filter = ProviderInterface.DECLARED)
+
+        assertEquals(Resolution.NotInstalled, selection().resolve())
     }
 
     private fun installAnkiDroid() {
-        AnkiDroidPackages.install(ANKIDROID.packageName, Signing.Current(AnkiDroidPackages.RELEASE))
+        AnkiDroidPackages.install(ANKIDROID.packageName, Signing.Current(AnkiDroidPackages.RELEASE), filter = ProviderInterface.DECLARED)
     }
 
-    private fun installFork(signing: Signing) {
-        AnkiDroidPackages.install(FORK.packageName, signing, authority = FORK.authority)
+    private fun installListed(signing: Signing) {
+        AnkiDroidPackages.install(LISTED.packageName, signing, authority = LISTED.authority)
+    }
+
+    private fun installUnlisted(
+        signing: Signing = Signing.Current(UNLISTED_KEY),
+        packageName: String = UNLISTED_PACKAGE,
+        permission: PermissionRequest = PermissionRequest.REQUESTED,
+    ) {
+        AnkiDroidPackages.install(
+            packageName,
+            signing,
+            authority = UNLISTED_AUTHORITY,
+            filter = ProviderInterface.DECLARED,
+            permission = permission,
+        )
     }
 
     private companion object {
         const val SQUATTER = "com.example.squatter"
-        val FORK_KEY = Signature(byteArrayOf(7, 8, 9))
-        val FORK_NEW_KEY = Signature(byteArrayOf(10, 11, 12))
+        const val UNLISTED_PACKAGE = "org.example.ankifork"
+        const val UNLISTED_AUTHORITY = "$UNLISTED_PACKAGE.flashcards"
+        val LISTED_KEY = Signature(byteArrayOf(7, 8, 9))
+        val UNLISTED_KEY = Signature(byteArrayOf(13, 14, 15))
+        val UNLISTED_NEW_KEY = Signature(byteArrayOf(10, 11, 12))
         val UNKNOWN = Signature(byteArrayOf(1, 2, 3))
 
         val ANKIDROID = KnownProviders.ANKIDROID
-        val FORK =
+        val LISTED =
             FlashCardsProvider(
-                packageName = "com.example.fork",
-                authority = "com.example.fork.flashcards",
-                permission = "com.example.fork.permission.READ_WRITE_DATABASE",
-                certificates = setOf(digest(FORK_KEY), digest(FORK_NEW_KEY)),
+                packageName = "com.example.listed",
+                authority = "com.example.listed.flashcards",
+                permission = "com.example.listed.permission.READ_WRITE_DATABASE",
+                certificates = setOf(digest(LISTED_KEY)),
+            )
+
+        /** Equal to any provider of [UNLISTED_PACKAGE], see [FlashCardsProvider.equals] */
+        val UNLISTED =
+            FlashCardsProvider(
+                packageName = UNLISTED_PACKAGE,
+                authority = UNLISTED_AUTHORITY,
+                permission = "$UNLISTED_PACKAGE.permission.READ_WRITE_DATABASE",
+                certificates = emptySet(),
             )
 
         fun digest(signature: Signature) =

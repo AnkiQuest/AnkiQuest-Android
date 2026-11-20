@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 package com.ichi2.anki.api
 
+import android.content.ComponentName
+import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.ProviderInfo
@@ -208,6 +210,12 @@ internal class AnkiDroidProviderTest {
     }
 }
 
+/** Whether a test provider declares [FlashCardsContract.PROVIDER_INTERFACE] */
+internal enum class ProviderInterface { DECLARED, NOT_DECLARED }
+
+/** Whether the client app declares a test provider's permission */
+internal enum class PermissionRequest { REQUESTED, NOT_REQUESTED }
+
 /** How a test package is signed */
 internal sealed interface Signing {
     /** Signed by [signers], without rotation */
@@ -320,6 +328,8 @@ internal object AnkiDroidPackages {
         signing: Signing,
         metaData: Bundle? = null,
         authority: String = FlashCardsContract.AUTHORITY,
+        filter: ProviderInterface = ProviderInterface.NOT_DECLARED,
+        permission: PermissionRequest = PermissionRequest.REQUESTED,
     ) {
         val manager = shadowOf(RuntimeEnvironment.getApplication().packageManager)
 
@@ -344,6 +354,30 @@ internal object AnkiDroidPackages {
                 this.metaData = metaData
             }
         manager.addOrUpdateProvider(provider)
+
+        // The client app declares the provider's permission, as it must to be granted it
+        if (permission == PermissionRequest.REQUESTED) {
+            request(FlashCardsContract.getPermission(packageName))
+        }
+
+        // Current builds declare FlashCardsContract.PROVIDER_INTERFACE on the provider
+        if (filter == ProviderInterface.DECLARED) {
+            manager.addIntentFilterForProvider(
+                ComponentName(packageName, provider.name),
+                IntentFilter(FlashCardsContract.PROVIDER_INTERFACE),
+            )
+        }
+    }
+
+    /** Adds [permission] to the client app's `<uses-permission>` list */
+    private fun request(permission: String) {
+        val context = RuntimeEnvironment.getApplication()
+        val info = shadowOf(context.packageManager).getInternalMutablePackageInfo(context.packageName)
+        val requested = info.requestedPermissions?.toList().orEmpty()
+        if (permission in requested) {
+            return
+        }
+        info.requestedPermissions = (requested + permission).toTypedArray()
     }
 
     private fun current(signing: Signing): Array<Signature> =

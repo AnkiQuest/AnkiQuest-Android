@@ -4,52 +4,64 @@ package com.ichi2.anki.api
 
 import android.content.Context
 
-/** Which provider the API talks to */
+/**
+ * Which provider the API talks to.
+ *
+ * Transitions, all in [ProviderSelection]:
+ * - no candidate: [NotInstalled]
+ * - one candidate and no valid choice: [Only]
+ * - several candidates and no valid choice: [NeedsChoice], until the user picks one ([ProviderSelection.choose])
+ * - a valid stored choice: [Chosen]. It is dropped, and the state computed again, when its app is
+ *   uninstalled, its certificate changes, or another package holds its authority
+ */
 internal sealed interface Resolution {
-    /** Talk to [provider]: AnkiDroid, or the provider the user chose */
-    data class Ready(
+    /** The only installed candidate; used once the client app holds its permission */
+    data class Only(
         val provider: FlashCardsProvider,
     ) : Resolution
 
-    /** AnkiDroid is not installed, but other [providers] are: the user has to choose one */
+    /** The provider the user chose, still installed with the pinned certificate and authority */
+    data class Chosen(
+        val provider: FlashCardsProvider,
+    ) : Resolution
+
+    /** Several candidates and no valid choice: the user has to choose one */
     data class NeedsChoice(
         val providers: List<FlashCardsProvider>,
     ) : Resolution
 
-    /** No listed provider is installed and verified */
+    /** No candidate is installed */
     data object NotInstalled : Resolution
 }
 
 /**
- * Picks the provider the API talks to, from the [known] providers that are installed and verified.
- * AnkiDroid, the first of [known], is used unless the user chose another provider.
+ * Picks the provider the API talks to from the [candidates] [ProviderDiscovery] finds.
+ * With one candidate it is used; with several the user chooses, and the choice is pinned to the
+ * app's package, authority and SHA-256 signing certificate.
  */
 internal class ProviderSelection(
     private val context: Context,
-    private val known: List<FlashCardsProvider> = KnownProviders.ALL,
+    private val candidates: () -> List<FlashCardsProvider> = { ProviderDiscovery.find(context) },
     private val store: ChoiceStore = ChoiceStore(context),
 ) {
-    private val default: FlashCardsProvider = known.first()
-
-    /** The known providers that are installed and verified, AnkiDroid first */
-    fun installed(): List<FlashCardsProvider> = known.filter { isVerified(it) }
+    /** The installed candidates, see [ProviderDiscovery.find] */
+    fun installed(): List<FlashCardsProvider> = candidates()
 
     fun resolve(): Resolution {
-        // The user's choice holds while its app is installed, verified and keeps its certificate
-        val chosen = chosen()
+        val installed = installed()
+
+        // The user's choice holds while its app keeps its authority and certificate
+        val chosen = chosen(installed)
         if (chosen != null) {
-            return Resolution.Ready(chosen)
+            return Resolution.Chosen(chosen)
         }
 
-        // Otherwise AnkiDroid, and a choice is only needed without it
-        val installed = installed()
-        if (default in installed) {
-            return Resolution.Ready(default)
+        // Otherwise the user chooses only between several candidates
+        return when (installed.size) {
+            0 -> Resolution.NotInstalled
+            1 -> Resolution.Only(installed.single())
+            else -> Resolution.NeedsChoice(installed)
         }
-        if (installed.isEmpty()) {
-            return Resolution.NotInstalled
-        }
-        return Resolution.NeedsChoice(installed)
     }
 
     /** Opens the chooser if the user has to choose, once per process, see [ChooserLauncher] */
@@ -61,28 +73,27 @@ internal class ProviderSelection(
     }
 
     /** The provider the API talks to, or null if none is installed or the user has yet to choose */
-    fun inUse(): FlashCardsProvider? = (resolve() as? Resolution.Ready)?.provider
+    fun inUse(): FlashCardsProvider? =
+        when (val resolution = resolve()) {
+            is Resolution.Only -> resolution.provider
+            is Resolution.Chosen -> resolution.provider
+            is Resolution.NeedsChoice, Resolution.NotInstalled -> null
+        }
 
     /** Stores the user's choice of [provider], pinned to its current certificate */
     fun choose(provider: FlashCardsProvider) {
-        // AnkiDroid is the default, so choosing it needs nothing stored
-        if (provider == default) {
-            store.clear()
-            return
-        }
-
         val certificate = AnkiDroidProvider.signer(context, provider.packageName) ?: return
-        store.save(Choice(provider.packageName, certificate))
+        store.save(Choice(provider.packageName, provider.authority, certificate))
     }
 
-    /** The stored choice if still valid; an invalid choice is dropped */
-    private fun chosen(): FlashCardsProvider? {
+    /** The stored choice if still valid; an invalid choice is dropped, so the user is asked again */
+    private fun chosen(installed: List<FlashCardsProvider>): FlashCardsProvider? {
         val choice = store.load() ?: return null
 
-        val provider = known.firstOrNull { it.packageName == choice.packageName }
+        val provider = installed.firstOrNull { it.packageName == choice.packageName }
         val valid =
             provider != null &&
-                isVerified(provider) &&
+                provider.authority == choice.authority &&
                 AnkiDroidProvider.signer(context, provider.packageName) == choice.certificate
         if (!valid) {
             store.clear()
@@ -90,7 +101,4 @@ internal class ProviderSelection(
         }
         return provider
     }
-
-    /** Whether [provider] is installed as listed, see [AnkiDroidProvider] */
-    private fun isVerified(provider: FlashCardsProvider): Boolean = AnkiDroidProvider.resolve(context, listed = provider) != null
 }

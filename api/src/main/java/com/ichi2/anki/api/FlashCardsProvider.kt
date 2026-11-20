@@ -5,11 +5,11 @@ package com.ichi2.anki.api
 import com.ichi2.anki.FlashCardsContract
 
 /**
- * An app offering the [FlashCardsContract] content provider: AnkiDroid, or another app
- * AnkiDroid's maintainers listed as offering the same provider.
+ * An app offering the [FlashCardsContract] content provider: AnkiDroid, AnkiQuest, or another
+ * app declaring [FlashCardsContract.PROVIDER_INTERFACE].
  *
- * [AddContentApi.getProviders] returns the installed ones. The user picks one with
- * [AddContentApi.chooseProvider]; AnkiDroid is used unless they pick another.
+ * [AddContentApi.getProviders] returns the installed ones. With one installed the API uses it;
+ * with several the user picks one with [AddContentApi.chooseProvider].
  *
  * @property packageName package of the app offering the provider
  * @property authority authority of the provider, used for every content URI
@@ -19,7 +19,10 @@ public class FlashCardsProvider internal constructor(
     public val packageName: String,
     public val authority: String,
     public val permission: String,
-    /** SHA-256 digests of the certificates the app may be signed with, as upper-case hex */
+    /**
+     * SHA-256 digests of the certificates the app may be signed with, as upper-case hex.
+     * Empty for an app not in [KnownProviders]: the user's choice pins its certificate.
+     */
     internal val certificates: Set<String>,
 ) {
     override fun equals(other: Any?): Boolean = other is FlashCardsProvider && other.packageName == packageName

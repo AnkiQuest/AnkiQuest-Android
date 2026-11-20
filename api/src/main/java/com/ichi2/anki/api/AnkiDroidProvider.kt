@@ -17,7 +17,8 @@ import java.util.Locale
 
 /**
  * Finds the app behind a [FlashCardsProvider]'s authority and checks that it is the listed app:
- * AnkiDroid ([FlashCardsContract.AUTHORITY]) by default, or another of [KnownProviders].
+ * AnkiDroid ([FlashCardsContract.AUTHORITY]) by default, another of [KnownProviders], or an
+ * app [ProviderDiscovery] found, whose key is pinned when the user chooses it.
  *
  * Any app can declare the authority while AnkiDroid is not installed, and would then receive
  * the notes that clients add. The provider is trusted only if its package is the listed one and
@@ -56,6 +57,9 @@ internal object AnkiDroidProvider {
         /** The listed package with another key, accepted because the calling app is debuggable */
         DEBUG_BUILD(trusted = true),
 
+        /** An app no key is listed for, trusted through the user's pinned choice, see [ProviderSelection] */
+        UNLISTED(trusted = true),
+
         /** Another package holds the authority */
         WRONG_PACKAGE(trusted = false),
 
@@ -80,14 +84,12 @@ internal object AnkiDroidProvider {
         return provider
     }
 
-    /** Whether an app other than the [listed] one holds its authority */
-    fun isImpostor(
+    /** Whether [provider] is the [listed] app, see [resolve] */
+    fun trusts(
         context: Context,
-        listed: FlashCardsProvider = KnownProviders.ANKIDROID,
-    ): Boolean {
-        val provider = find(context.packageManager, 0, listed.authority) ?: return false
-        return !check(context, listed, provider).trusted
-    }
+        listed: FlashCardsProvider,
+        provider: ProviderInfo,
+    ): Boolean = check(context, listed, provider).trusted
 
     /**
      * Digests of the certificates [packageName] is signed with now, without past ones,
@@ -122,7 +124,7 @@ internal object AnkiDroidProvider {
 
         // Say why the app counts as not installed, so developers can find the cause
         when (trust) {
-            Trust.GENUINE -> {}
+            Trust.GENUINE, Trust.UNLISTED -> {}
             Trust.DEBUG_BUILD -> Log.i(TAG, "Accepting ${provider.packageName} without a release key: this app is debuggable")
             Trust.WRONG_PACKAGE ->
                 Log.w(TAG, "${provider.packageName} holds ${listed.authority}: treating ${listed.packageName} as not installed")
@@ -140,6 +142,11 @@ internal object AnkiDroidProvider {
         // Only the listed package name can hold the listed authority
         if (packageName != listed.packageName) {
             return Trust.WRONG_PACKAGE
+        }
+
+        // No key is listed for apps found by FlashCardsContract.PROVIDER_INTERFACE alone
+        if (listed.certificates.isEmpty()) {
+            return Trust.UNLISTED
         }
 
         // A rotated key keeps its past certificates, so any match is the listed app
