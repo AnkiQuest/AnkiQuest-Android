@@ -68,10 +68,6 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Volatile
     private var noticedConquests = JSONArray()
 
-    /** What the server names at `/api/capabilities`. */
-    @Volatile
-    private var features = emptyList<String>()
-
     private enum class ReplyOwner { CURRENT, CHANGED }
 
     @Volatile
@@ -112,12 +108,10 @@ class AnkiquestUploadTest : RobolectricTest() {
                 configureAccount("other", "second-token")
             }
             val answering = path.startsWith("/api/reply/")
-            val capabilities = path == "/api/capabilities"
             val response =
                 when {
                     settings -> deckSettings()
                     answering -> JSONObject().put("sent_to", "Hill")
-                    capabilities -> JSONObject().put("version", 1).put("features", JSONArray(features))
                     else -> profile()
                 }
             val bytes = response.toString().toByteArray(Charsets.UTF_8)
@@ -126,7 +120,6 @@ class AnkiquestUploadTest : RobolectricTest() {
                 when {
                     settings -> settingsStatus
                     answering -> replyStatus
-                    capabilities -> 200
                     else -> reviewStatus
                 }
             exchange.sendResponseHeaders(status, bytes.size.toLong())
@@ -448,10 +441,11 @@ class AnkiquestUploadTest : RobolectricTest() {
             insertReview(old)
             assertEquals(AnkiquestEaseResend.State.PENDING, easeResend(), "the first upload went to a server without the button")
             requests.clear()
-            features = listOf(AnkiquestEaseResend.FEATURE)
+            cacheFeatures(AnkiquestEaseResend.FEATURE)
 
             Ankiquest.uploadAfterSync()
 
+            assertTrue(requests.none { it.path == "/api/capabilities" }, "the resend reads the cached capabilities")
             val resend = reviewUploads().single { old in ids(it) }
             assertEquals(listOf(old, mark), ids(resend))
             assertTrue(resend.getBoolean("silent"), "a resend announces nothing")
@@ -495,7 +489,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `a first upload to a server that stores the button needs no resend`() =
         runBlocking {
-            features = listOf(AnkiquestEaseResend.FEATURE)
+            cacheFeatures(AnkiquestEaseResend.FEATURE)
 
             Ankiquest.uploadPending()
 
@@ -767,6 +761,20 @@ class AnkiquestUploadTest : RobolectricTest() {
     private fun ids(upload: JSONObject): List<Long> {
         val reviews = upload.getJSONArray("reviews")
         return (0 until reviews.length()).map { reviews.getJSONObject(it).getLong("id") }
+    }
+
+    /** Stores [features] as the capabilities the current account's server last reported. */
+    private fun cacheFeatures(vararg features: String) {
+        val account = HomeAccount.current()!!
+        val cached =
+            JSONObject()
+                .put("features", JSONArray(features.toList()))
+                .put("at", TimeManager.time.intTimeMS())
+                .put("scope", account.scope)
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(scopedKey(AnkiquestCapabilities.PREF_CAPABILITIES, account.server), cached.toString())
+        }
+        AnkiquestCapabilities.forgetMemory()
     }
 
     private fun easeResend(): AnkiquestEaseResend.State =

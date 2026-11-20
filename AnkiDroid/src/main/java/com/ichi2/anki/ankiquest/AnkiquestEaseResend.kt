@@ -6,9 +6,10 @@ package com.ichi2.anki.ankiquest
  * One resend of the whole review history with the answer button (`ease`), so a server that counts
  * a lapse by the button corrects the reviews it stored without one (hill, 2026-11-19).
  *
- * The resend goes only to a server that names [FEATURE] at `/api/capabilities`: an older server
- * drops the button, and resending to it would use up the one resend. The state is kept per account
- * next to the upload mark. The desktop add-on does the same in `addon/ease_resend.py`.
+ * The resend goes only to a server whose cached `/api/capabilities` name [FEATURE]; the upload does
+ * not ask the server again. An older server drops the button, and resending to it would use up the
+ * one resend. The state is kept per account next to the upload mark. The desktop add-on does the
+ * same in `addon/ease_resend.py`.
  */
 internal object AnkiquestEaseResend {
     /** The capability of a server that stores the button of each review. */

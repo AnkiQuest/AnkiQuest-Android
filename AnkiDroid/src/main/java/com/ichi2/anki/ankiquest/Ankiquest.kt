@@ -783,7 +783,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     /**
      * Resends [owner]'s whole review history with the button, silently and in batches the server
-     * accepts, if its server names [AnkiquestEaseResend.FEATURE]. A failure is reported, never
+     * accepts, if its server last named [AnkiquestEaseResend.FEATURE]. A failure is reported, never
      * thrown, so the upload before it stands.
      */
     private suspend fun resendHistory(
@@ -792,7 +792,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     ): AnkiquestEaseResend.Check {
         try {
             // An older server drops the button, so the resend waits until it names the feature.
-            if (AnkiquestEaseResend.FEATURE !in AnkiquestCapabilities.refresh(owner)) {
+            // The cached capabilities decide: the upload asks the server for nothing more.
+            if (!AnkiquestCapabilities.has(owner, AnkiquestEaseResend.FEATURE)) {
                 return AnkiquestEaseResend.Check.UNSUPPORTED
             }
             if (covered) {
