@@ -41,7 +41,7 @@ jobs:
           ANKIQUEST_KEY_PASSWORD: ${{ secrets.ANKIQUEST_KEY_PASSWORD }}
         run: |
           test -n "$ANKIQUEST_KEYSTORE" || { echo "::error::ANKIQUEST_KEYSTORE is not set"; exit 1; }
-          gh release download --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --output base.apk
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern 'AnkiQuest.apk' --output base.apk
           echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           cp base.apk old.apk
