@@ -3,6 +3,9 @@ name: ankiquest API contract
 
 on:
   pull_request:
+  # Required check: the merge queue waits for it on its merge commit.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
   workflow_dispatch:
