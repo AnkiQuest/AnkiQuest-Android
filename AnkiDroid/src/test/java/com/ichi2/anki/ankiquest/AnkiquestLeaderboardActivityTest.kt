@@ -256,7 +256,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     private fun launchController() =
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
-            AnkiquestLeaderboardActivity.intent(targetContext),
+            AnkiquestFriendsSections.boardIntent(targetContext),
         ).also { controller ->
             advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         }
@@ -265,7 +265,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         period: String = AnkiquestBoards.Period.WEEK.query,
         account: String? = null,
     ): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext, period, account))
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext, period, account))
             .also { board ->
                 advanceRobolectricLooperUntil { board.isFinishing || !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             }

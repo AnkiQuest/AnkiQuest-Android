@@ -423,7 +423,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         assertNull(sent.actions)
         val open = shadowOf(sent.contentIntent).savedIntent
         assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
-        assertEquals(account.notificationAccount, open.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
+        assertEquals(account.notificationAccount, open.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
 
         AnkiquestNotifier.onReplyFailed(targetContext, data)
         val failed = shadowOf(manager).getNotification(5_140_007)
@@ -610,7 +610,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals("You passed hill.", posted.extras.getString(Notification.EXTRA_TEXT))
                 val open = shadowOf(posted.contentIntent).savedIntent
                 assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
-                assertEquals("week", open.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
+                assertEquals("week", open.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
                 manager.cancelAll()
 
                 change = JSONObject.NULL

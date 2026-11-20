@@ -128,7 +128,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     }
 
     private fun launch(): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext)).also(::awaitBoard)
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext)).also(::awaitBoard)
 
     private fun awaitBoard(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
