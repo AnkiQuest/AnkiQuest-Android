@@ -42,7 +42,6 @@ import kotlin.test.assertTrue
 
 private const val PREF_LEGACY_MARK = "ankiquestUploadedThrough"
 private const val PREF_LEGACY_RECENT = "ankiquestRecentUploads"
-private const val DAY_MS = 24 * 60 * 60 * 1000L
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
