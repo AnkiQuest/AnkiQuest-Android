@@ -22,6 +22,15 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
     @Test
+    fun `fixture ignores startup sync`() {
+        withServer { _, requests ->
+            // Startup can overlap a board request; the fixture must isolate that unrelated sync.
+            runBlocking { AnkiquestSettingsSync.sync(targetContext, AnkiquestSettingsSync.Trigger.START) }
+            assertTrue(requests.isEmpty(), "Startup settings sync must not use the leaderboard fixture")
+        }
+    }
+
+    @Test
     fun `Friends keeps its URL while explicit Group and Global include the requested period`() {
         withServer { account, requests ->
             runBlocking {
