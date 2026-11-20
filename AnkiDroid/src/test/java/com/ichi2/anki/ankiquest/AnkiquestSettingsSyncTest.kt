@@ -422,6 +422,62 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             assertTrue(sent.none { it.has("countdowns") })
         }
 
+    @Test
+    fun `private countdowns are not uploaded to the next account`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestCountdowns.write(prefs(), SPANISH)
+            AnkiquestSettingsSync.note(Setting.COUNTDOWNS)
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            sent.clear()
+
+            // The next account already has an older, empty list on the server.
+            stored.put("countdowns", entry(org.json.JSONArray(), NOW - 10_000))
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "another-player")
+                putString(Ankiquest.PREF_TOKEN, "another-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertTrue(sent.none { it.has("countdowns") }, "the previous player's event must not be sent with another token")
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+
+            // Signing back in with a refreshed token restores this account's local list.
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "cerro")
+                putString(Ankiquest.PREF_TOKEN, "refreshed-token")
+            }
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+        }
+
+    @Test
+    fun `signed out countdowns stay local and return after sign out`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            prefs().edit(commit = true) {
+                remove(Ankiquest.PREF_USER)
+                remove(Ankiquest.PREF_TOKEN)
+                remove("username")
+            }
+            AnkiquestCountdowns.write(prefs(), SPANISH)
+            AnkiquestSettingsSync.note(Setting.COUNTDOWNS)
+
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "cerro")
+                putString(Ankiquest.PREF_TOKEN, "new-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertTrue(sent.none { it.has("countdowns") }, "signing in does not publish the signed-out list")
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+            prefs().edit(commit = true) {
+                remove(Ankiquest.PREF_USER)
+                remove(Ankiquest.PREF_TOKEN)
+                remove("username")
+            }
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+        }
+
     private companion object {
         val SPANISH =
             AnkiquestCountdowns.Countdowns(
