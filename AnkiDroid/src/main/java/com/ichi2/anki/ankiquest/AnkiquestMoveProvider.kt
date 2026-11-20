@@ -7,7 +7,6 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import androidx.core.os.bundleOf
 import com.ichi2.anki.common.preferences.sharedPrefs
 import timber.log.Timber
 
@@ -38,7 +37,7 @@ internal class AnkiquestMoveProvider : ContentProvider() {
         }
         val payload = AnkiquestMovePayload.encode(context.sharedPrefs().all, AnkiquestMovePayload.Exclusions.of(context))
         Timber.i("ankiquest move: settings handed to the new app")
-        return bundleOf(AnkiquestMove.KEY_PAYLOAD to payload)
+        return Bundle().apply { putString(AnkiquestMove.KEY_PAYLOAD, payload) }
     }
 
     override fun query(
