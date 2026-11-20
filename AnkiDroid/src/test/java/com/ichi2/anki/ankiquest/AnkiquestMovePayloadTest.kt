@@ -66,6 +66,7 @@ class AnkiquestMovePayloadTest : RobolectricTest() {
     }
 
     @Test
+    // The new app's private path is fixture data, independent of the test host.
     @SuppressLint("SdCardPath")
     fun `applying fills the new app and keeps its own install settings`() {
         val prefs = targetContext.getSharedPreferences("ankiquest-move-target", Context.MODE_PRIVATE)
