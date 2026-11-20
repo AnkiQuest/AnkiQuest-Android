@@ -334,7 +334,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 }
             views.text(notice, line)
         }
-        AnkiquestBoards.closingLine(this, p.closingWeek, TimeManager.time.intTimeMS())?.let { line ->
+        AnkiquestBoards.ownWeekLine(this, p.ownWeek, TimeManager.time.intTimeMS())?.let { line ->
             views.text(views.card(content, tinted = true), line)
         }
         tiles(
