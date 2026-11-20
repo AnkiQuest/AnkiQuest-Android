@@ -43,7 +43,7 @@ class AnkiquestIconAliasTest {
     }
 
     @Test
-    fun eachCompanionHasOneLauncherEntryWithItsIcon() {
+    fun companionLauncherEntry() {
         // Companion, the alias the launcher should list, and the icon it should draw.
         val cases =
             listOf(
