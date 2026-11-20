@@ -27,4 +27,12 @@
         <item quantity="one">~%1$d cartão por dia para terminar %2$s até lá</item>
         <item quantity="other">~%1$d cartões por dia para terminar %2$s até lá</item>
     </plurals>
+    <string name="ankiquest_countdowns_import_one">Adicionar a %1$s a contagem decrescente que criaste sem sessão iniciada?</string>
+    <string name="ankiquest_countdowns_import_other">Adicionar as %1$d contagens decrescentes que criaste sem sessão iniciada a %2$s?</string>
+    <string name="ankiquest_countdowns_import_add">Adicionar à conta</string>
+    <string name="ankiquest_countdowns_import_keep">Manter neste dispositivo</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d contagem decrescente não coube e fica neste dispositivo.</item>
+        <item quantity="other">%1$d contagens decrescentes não couberam e ficam neste dispositivo.</item>
+    </plurals>
 </resources>

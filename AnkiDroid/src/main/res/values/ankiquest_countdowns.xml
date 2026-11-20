@@ -29,4 +29,12 @@
         <item quantity="one">~%1$d card a day to finish %2$s by then</item>
         <item quantity="other">~%1$d cards a day to finish %2$s by then</item>
     </plurals>
+    <string name="ankiquest_countdowns_import_one">Add the countdown you made while signed out to %1$s?</string>
+    <string name="ankiquest_countdowns_import_other">Add the %1$d countdowns you made while signed out to %2$s?</string>
+    <string name="ankiquest_countdowns_import_add">Add to account</string>
+    <string name="ankiquest_countdowns_import_keep">Keep on this device</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d countdown did not fit and stays on this device.</item>
+        <item quantity="other">%1$d countdowns did not fit and stay on this device.</item>
+    </plurals>
 </resources>

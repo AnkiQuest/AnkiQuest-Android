@@ -40,6 +40,21 @@ internal object AnkiquestSettingsSync {
     /** The regular poll syncs at most this often for one account. */
     private const val POLL_INTERVAL_MS = 60_000L
 
+    /** Whose private settings the preferences hold: an account's [HomeAccount.notificationAccount], or [SIGNED_OUT]. */
+    private const val PREF_OWNER = "ankiquestPrivateOwner"
+
+    /** Account -> shared key -> {value, at}: each account's private settings while another is signed in. */
+    private const val PREF_ACCOUNTS = "ankiquestPrivateAccounts"
+
+    /** Shared key -> {value, at}: what was made while signed out. It stays on this phone until added to an account. */
+    private const val PREF_SIGNED_OUT = "ankiquestPrivateSignedOut"
+
+    /** [PREF_OWNER] when no one is signed in. */
+    private const val SIGNED_OUT = ""
+
+    /** The preferences that say who is signed in. */
+    private val ACCOUNT_PREFS = setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)
+
     /** How a preference keeps its value on this phone. */
     private enum class Storage {
         BOOLEAN,
@@ -132,6 +147,20 @@ internal object AnkiquestSettingsSync {
         }
     }
 
+    /** Synced settings that belong to the account, not the phone: countdowns name the player's own exams and decks. */
+    private val PRIVATE = listOf(Setting.COUNTDOWNS)
+
+    /** The offer to add countdowns made while signed out to the account just signed into. */
+    enum class Offer {
+        NONE,
+
+        /** Signed in; wait until the account's settings have synced, so adding to its list keeps the server's. */
+        AFTER_SYNC,
+
+        /** The account's list is known; Home asks. */
+        READY,
+    }
+
     /** What starts a sync. */
     enum class Trigger {
         /** The app started; asks the server for its features when they are old. */
@@ -186,11 +215,147 @@ internal object AnkiquestSettingsSync {
     @Volatile
     private var last: Pair<String, Long>? = null
 
+    /** Where the offer of signed-out countdowns stands; reset by each sign-in and sign-out. */
+    @Volatile
+    var offer = Offer.NONE
+        private set
+
     /** Follows changes to synced preferences and syncs once for the app's start. */
     fun start(app: Application) {
         listen(app)
+        switchOwner()
         scope.launch { sync(app, Trigger.START) }
     }
+
+    /**
+     * Puts the private settings away with the account they belong to, or on this phone when signed
+     * out, and brings back those of whoever is signed in now; an account seen for the first time
+     * starts from the defaults, which a sync never sends. A new token for the same account keeps them.
+     * The first time, they belong to whoever is signed in.
+     */
+    fun switchOwner(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()) {
+        val now = AnkiquestHomeData.account(prefs)?.takeIf { it.token.isNotEmpty() }?.notificationAccount ?: SIGNED_OUT
+        synchronized(lock) {
+            val before = text(prefs, PREF_OWNER)
+            if (before == now) {
+                return
+            }
+            if (before == null) {
+                prefs.edit { putString(PREF_OWNER, now) }
+                return
+            }
+
+            // Put the old owner's values away.
+            val records = records(prefs).toMutableMap()
+            val outgoing = JSONObject()
+            for (setting in PRIVATE) {
+                val value = setting.read(prefs)
+                val at = records[setting]?.takeIf { it.value == value }?.changedAt ?: 0L
+                outgoing.put(setting.key, JSONObject().put("value", setting.encode(value)).put("at", at))
+            }
+            val accounts = json(prefs, PREF_ACCOUNTS)
+            val signedOut = if (before == SIGNED_OUT) outgoing else json(prefs, PREF_SIGNED_OUT)
+            if (before != SIGNED_OUT) {
+                accounts.put(before, outgoing)
+            }
+
+            // Bring the new owner's values back, or the defaults.
+            val saved = if (now == SIGNED_OUT) signedOut else accounts.optJSONObject(now) ?: JSONObject()
+            prefs.edit {
+                for (setting in PRIVATE) {
+                    val local = stored(setting, saved.optJSONObject(setting.key))
+                    setting.write(this, local.value)
+                    records[setting] = local
+                }
+                putString(PREF_CHANGED, encode(records))
+                putString(PREF_ACCOUNTS, accounts.toString())
+                putString(PREF_SIGNED_OUT, signedOut.toString())
+                putString(PREF_OWNER, now)
+            }
+        }
+
+        // Signing in offers what was made while signed out, after the poll that follows sign-in has
+        // synced; with the switch off this phone's list is the account's.
+        offer =
+            when {
+                now == SIGNED_OUT -> Offer.NONE
+                enabled(prefs) -> Offer.AFTER_SYNC
+                else -> Offer.READY
+            }
+    }
+
+    /** The value of private [setting] made while signed out; an unusable one counts as the default. */
+    fun signedOut(
+        setting: Setting,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Any = synchronized(lock) { stored(setting, json(prefs, PREF_SIGNED_OUT).optJSONObject(setting.key)).value }
+
+    /** Keeps [value] as private [setting]'s signed-out value, as after adding the rest to an account. */
+    fun keepSignedOut(
+        setting: Setting,
+        value: Any,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) = synchronized(lock) {
+        val signedOut = json(prefs, PREF_SIGNED_OUT)
+        val at = signedOut.optJSONObject(setting.key)?.optLong("at", 0L) ?: 0L
+        signedOut.put(setting.key, JSONObject().put("value", setting.encode(value)).put("at", at))
+        prefs.edit { putString(PREF_SIGNED_OUT, signedOut.toString()) }
+    }
+
+    /** Whether Home should ask now; asks once per sign-in. */
+    fun takeOffer(): Boolean {
+        if (offer != Offer.READY) {
+            return false
+        }
+        offer = Offer.NONE
+        return true
+    }
+
+    /** Asks again after the next sync, as when a list changed while the question was open. */
+    fun askAgain() {
+        offer = Offer.AFTER_SYNC
+    }
+
+    /** The offer may be made once the account's list is known. */
+    private fun ready() {
+        if (offer == Offer.AFTER_SYNC) {
+            offer = Offer.READY
+        }
+    }
+
+    /** A put-away `{value, at}`; an unusable value counts as the default, changed at 0. */
+    private fun stored(
+        setting: Setting,
+        entry: JSONObject?,
+    ): Local {
+        val found = entry?.takeIf { it.has("value") } ?: return Local(setting.default, 0)
+        val value = setting.decode(number(found.get("value")))
+        val at = found.optLong("at", -1)
+        if (!setting.usable(value) || at < 0) {
+            return Local(setting.default, 0)
+        }
+        return Local(value, at)
+    }
+
+    private fun text(
+        prefs: SharedPreferences,
+        key: String,
+    ): String? =
+        try {
+            prefs.getString(key, null)
+        } catch (_: ClassCastException) {
+            null
+        }
+
+    private fun json(
+        prefs: SharedPreferences,
+        key: String,
+    ): JSONObject =
+        try {
+            JSONObject(text(prefs, key) ?: "{}")
+        } catch (_: JSONException) {
+            JSONObject()
+        }
 
     /** Records the time of each change to a synced preference and syncs it. */
     @VisibleForTesting
@@ -262,7 +427,14 @@ internal object AnkiquestSettingsSync {
         trigger: Trigger,
     ) {
         val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return
-        if (gate(account) != Gate.OPEN || !supported(account, trigger) || throttled(account, trigger)) {
+
+        // With the switch off this phone's list is the account's, so the offer need not wait.
+        when (gate(account)) {
+            Gate.OPEN -> {}
+            Gate.SWITCHED_OFF -> return ready()
+            Gate.ACCOUNT_CHANGED -> return
+        }
+        if (!supported(account, trigger) || throttled(account, trigger)) {
             return
         }
         last = account.scope to TimeManager.time.intTimeMS()
@@ -371,6 +543,11 @@ internal object AnkiquestSettingsSync {
             }
         }
 
+        // The offer waits until the account's countdowns have synced.
+        if (Setting.COUNTDOWNS in merged) {
+            ready()
+        }
+
         // The launcher icon follows its setting at once, as it does when changed in settings.
         if (Setting.MOOD_ICON in applied) {
             AnkiquestIcon.refresh(context, TimeManager.time.intTimeMS())
@@ -391,6 +568,10 @@ internal object AnkiquestSettingsSync {
     /** Records the time of a change made here and syncs it. */
     private fun changed(key: String?) {
         val context = app ?: return
+        if (key in ACCOUNT_PREFS) {
+            switchOwner()
+            return
+        }
         if (key == PREF_SWITCH) {
             if (enabled()) {
                 scope.launch { sync(context, Trigger.CHANGE) }
