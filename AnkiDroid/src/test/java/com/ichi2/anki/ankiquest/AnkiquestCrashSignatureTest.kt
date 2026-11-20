@@ -6,13 +6,7 @@ import org.json.JSONObject
 import org.junit.Test
 import kotlin.test.assertEquals
 
-/**
- * Checks [AnkiquestCrashSignature] against the server's `tests/fixtures/crash_signatures.json`.
- *
- * Until the server snapshot (`ankiquest-server.sha`) includes that file, a copy from AnkiQuest-Server
- * commit e6b5b8a5debf8f823b87a9807ba6e9f63cabf3a8 lives in `ankiquest-server-pending/`. Once the
- * bump brings it into `ankiquest/`, the test reads that one; delete the pending copy then.
- */
+/** Checks [AnkiquestCrashSignature] against the pinned server's crash signature cases. */
 class AnkiquestCrashSignatureTest {
     @Test
     fun `signatures match the server's cases`() {
@@ -67,7 +61,7 @@ class AnkiquestCrashSignatureTest {
 
     private fun fixture(): JSONObject {
         val loader = checkNotNull(javaClass.classLoader)
-        val resource = loader.getResource(PINNED) ?: checkNotNull(loader.getResource(PENDING)) { "missing crash signatures" }
+        val resource = checkNotNull(loader.getResource(PINNED)) { "missing pinned crash signatures" }
         return JSONObject(resource.readText())
     }
 
@@ -108,6 +102,5 @@ class AnkiquestCrashSignatureTest {
 
     companion object {
         private const val PINNED = "ankiquest/crash_signatures.json"
-        private const val PENDING = "ankiquest-server-pending/crash_signatures.json"
     }
 }

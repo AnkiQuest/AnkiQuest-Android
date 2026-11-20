@@ -4,7 +4,6 @@ AnkiDroid/build/
 # Vendored server data must match the pinned commit byte for byte.
 AnkiDroid/src/test/resources/ankiquest/*.json
 AnkiDroid/src/test/resources/ankiquest-api/*.json
-AnkiDroid/src/test/resources/ankiquest-server-pending/*.json
 !AnkiDroid/src/test/resources/ankiquest-api/names.json
 # Shared labels must match AnkiQuest-Server master byte for byte.
 .github/labels.json

@@ -2,12 +2,32 @@
 
 package com.ichi2.anki.ankiquest
 
+import org.json.JSONObject
 import org.junit.Test
 import kotlin.test.assertEquals
 
 /** Crash report text loses server hosts and credentials, and keeps everything else (#216). */
 class AnkiquestRedactionTest {
     private val redaction = AnkiquestRedaction(listOf("Quest.Example.net"), listOf(STORED_TOKEN))
+
+    @Test
+    fun redactionsMatchServer() {
+        val resource = checkNotNull(javaClass.classLoader?.getResource("ankiquest/crash_redaction.json"))
+        val fixture = JSONObject(resource.readText())
+
+        // Read both the shared credential rule and the device-only host/secret cases from the pin.
+        for (group in listOf("tokens", "device")) {
+            val cases = fixture.getJSONArray(group)
+            for (index in 0 until cases.length()) {
+                val case = cases.getJSONObject(index)
+                val hosts = case.optJSONArray("hosts")?.let { List(it.length(), it::getString) }.orEmpty()
+                val secrets = if (case.has("token")) listOf(case.getString("token")) else emptyList()
+                val scrub = AnkiquestRedaction(hosts, secrets)
+
+                assertEquals(case.getString("expected"), scrub.text(case.getString("text")), case.getString("name"))
+            }
+        }
+    }
 
     @Test
     fun `a host is replaced wherever it stands alone`() {
@@ -29,7 +49,7 @@ class AnkiquestRedactionTest {
         assertEquals("[server]/api", redaction.text("quest.example.net/api"))
     }
 
-    /** The `preference_key` cases of AnkiQuest-Server#13's `crash_redaction.json`, until the snapshot has them (#360). */
+    /** Preference names need the same protection as their string values. */
     @Test
     fun `a host in a preference name is replaced`() {
         val account = "ankiquestUploadedThrough:https://quest.example.net/hill"
