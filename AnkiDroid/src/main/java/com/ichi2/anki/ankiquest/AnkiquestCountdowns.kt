@@ -133,11 +133,14 @@ internal object AnkiquestCountdowns {
         if (name.isBlank() || name.codePointCount(0, name.length) > MAX_NAME_CHARS) {
             return null
         }
+
+        // No deck is a missing key or JSON null; anything else must be a usable deck name.
+        val value = found.opt("deck")
         val deck =
-            when (val value = found.opt("deck")) {
-                null, JSONObject.NULL -> null
-                is String -> value.takeIf { it.isNotBlank() && it.codePointCount(0, it.length) <= MAX_DECK_CHARS } ?: return null
-                else -> return null
+            if (value == null || value == JSONObject.NULL) {
+                null
+            } else {
+                (value as? String)?.takeIf { it.isNotBlank() && it.codePointCount(0, it.length) <= MAX_DECK_CHARS } ?: return null
             }
         val date = date(found.opt("date") as? String) ?: return null
         return Countdown(name, date, deck)
