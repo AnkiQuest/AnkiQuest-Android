@@ -116,5 +116,4 @@
     <!-- The moment card for a conquered card: its front, from this phone, and a button to open it. -->
     <string name="aq_conquest_popup_card">“%1$s”</string>
     <string name="aq_conquest_popup_open">See the card</string>
-    <string name="aq_server_outdated">This needs a newer AnkiQuest server. Ask whoever runs yours to update it.</string>
 </resources>
