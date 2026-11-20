@@ -251,6 +251,24 @@ class AnkiquestDeckAlertsTest : RobolectricTest() {
     }
 
     @Test
+    fun oldAlertAfterUpgrade() {
+        val screen = launch().get()
+        // Recreate the persisted pre-module payload without using the current intent factory.
+        screen.intent =
+            Intent(targetContext, EmptyAnkiActivity::class.java)
+                .setAction("com.ichi2.anki.ankiquest.STOP_DECK_ALERTS")
+                .putExtra("ankiquest.profile_user", "cerro")
+                .putExtra("ankiquest.stop_deck_scope", identity.scope)
+                .putExtra("ankiquest.stop_deck_account", identity.notificationAccount)
+                .putExtra("ankiquest.stop_deck_notice", 31L)
+
+        AnkiquestDeckAlerts(screen)
+        idle()
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        assertNotNull(undo(screen))
+    }
+
+    @Test
     fun `a notification request is bound to its account and consumed across recreation`() {
         val controller = launch()
         val screen = controller.get()

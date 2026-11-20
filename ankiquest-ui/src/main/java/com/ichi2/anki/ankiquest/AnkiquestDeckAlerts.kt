@@ -275,7 +275,9 @@ class AnkiquestDeckAlerts(
         private const val EXTRA_SCOPE = "ankiquest.stop_deck_scope"
         private const val EXTRA_ACCOUNT = "ankiquest.stop_deck_account"
         private const val EXTRA_NOTICE = "ankiquest.stop_deck_notice"
-        private const val EXTRA_SENDER = "ankiquest.stop_deck_sender"
+
+        // Released notifications keep this extra when the app is upgraded.
+        private const val EXTRA_SENDER = "ankiquest.profile_user"
         private const val STATE_ENTRY = "ankiquest.stop_deck_entry"
 
         fun intent(
