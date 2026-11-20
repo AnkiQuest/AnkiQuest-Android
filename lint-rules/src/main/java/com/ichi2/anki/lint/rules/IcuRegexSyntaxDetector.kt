@@ -268,6 +268,7 @@ private object IcuRegex {
     private const val QUOTE_START = 'Q'
     private const val QUOTE_END = "\\E"
     private const val GROUP_START = '('
+    private const val GROUP_END = ')'
     private const val GROUP_EXTENSION = '?'
     private const val CLASS_START = '['
     private const val CLASS_END = ']'
@@ -296,6 +297,7 @@ private object IcuRegex {
         var index = 0
         var classDepth = 0
         var mode = syntax
+        val groups = ArrayDeque<Syntax>()
         while (index < pattern.length) {
             val char = pattern[index]
 
@@ -343,9 +345,21 @@ private object IcuRegex {
                     val group = flagGroup(pattern, index)
                     group?.problem()?.let { return it }
 
-                    // `(?x)` turns comments on and `(?-x)` off. A scoped `(?x:...)` is taken to
-                    // run to the end, which can only skip text, never report text wrongly.
-                    mode = group?.syntaxAfter(mode) ?: mode
+                    // A real group restores the surrounding flags when it closes. A standalone
+                    // flag change belongs to its enclosing group, so skip its own closing `)`.
+                    if (group == null || group.terminator == FLAGS_GROUP_END) {
+                        groups.addLast(mode)
+                    }
+                    if (group != null) {
+                        mode = group.syntaxAfter(mode)
+                        index = group.nextIndex
+                        continue
+                    }
+                }
+                GROUP_END -> {
+                    if (groups.isNotEmpty()) {
+                        mode = groups.removeLast()
+                    }
                 }
             }
             index++
@@ -402,13 +416,14 @@ private object IcuRegex {
         if (terminator != FLAGS_END && terminator != FLAGS_GROUP_END) {
             return null
         }
-        return FlagGroup(pattern.substring(start, end), terminator)
+        return FlagGroup(pattern.substring(start, end), terminator, end + 1)
     }
 
     /** An inline flag group: [flags] such as `i-x`, ended by `)` or `:` ([terminator]). */
     private class FlagGroup(
         val flags: String,
         val terminator: String,
+        val nextIndex: Int,
     ) {
         /** Reports flags ICU lacks, or null when ICU accepts them all. */
         fun problem(): String? {
