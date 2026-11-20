@@ -391,6 +391,65 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
+    fun `a streak card shown before the server confirms the day can still go to friends`() {
+        mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        coEvery { AnkiquestSharing.win(any(), any()) } returns null
+        every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestMomentShare.available(any(), any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(71), AnkiquestSharing.Audience.Circle, null) } returns
+            AnkiquestSharing.Sent(1, 71, null)
+        val controller = host()
+        try {
+            val host = controller.get()
+            val account = assertNotNull(AnkiquestHomeData.account())
+
+            // The app sees today's minimum reached before the server has the reviews.
+            val now = clock.intTimeMS()
+            val server = AnkiquestDay.Server(12, "pending", now + 3_600_000, 0, now - 3_600_000, 0, 0, 10)
+            val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(now, 600_000)), now))
+            assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, account, server, met, now))
+            finish(host)
+            val card = card()
+
+            // The upload lands and the server's notice for the same day arrives while the card is open.
+            val notice =
+                JSONObject()
+                    .put("id", 5)
+                    .put("kind", "celebration")
+                    .put("topic", "secured")
+                    .put("moment", "secured:9")
+                    .put("title", "Streak secured")
+                    .put("body", "")
+                    .put("created_at", now / 1000)
+                    .put("win", 71)
+                    .put("quiet", true)
+            AnkiquestMoments.route(prefs, account.notificationAccount, notice, foreground = true)
+
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooper()
+            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog(), "Share offers AnkiQuest friends")
+            assertNull(shadowOf(host).nextStartedActivity, "nothing leaves the app before a choice")
+
+            val everyone = host.getString(R.string.ankiquest_share_all_friends)
+            advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
+            views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
+            sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+
+            coVerify(exactly = 1) {
+                AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(71), AnkiquestSharing.Audience.Circle, null)
+            }
+        } finally {
+            controller.close()
+            unmockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        }
+    }
+
+    @Test
     fun `an offline conquest picture leaves unsaved card text private`() {
         val picture = conquestPicture(null)
         assertFalse((picture.body + picture.details.joinToString()).contains("PRIVATE UNSHARED FIELD"))
