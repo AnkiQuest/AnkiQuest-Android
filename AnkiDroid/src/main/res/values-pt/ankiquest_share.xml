@@ -41,4 +41,5 @@ Estudo com o AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_summary">Quando terminas um baralho por hoje, perguntar que amigos avisar</string>
     <string name="ankiquest_deck_moment_title">Baralho concluído</string>
     <string name="ankiquest_deck_moment_body">Terminei de estudar %1$s por hoje.</string>
+    <string name="ankiquest_share_uploading">A enviar o teu estudo…</string>
 </resources>

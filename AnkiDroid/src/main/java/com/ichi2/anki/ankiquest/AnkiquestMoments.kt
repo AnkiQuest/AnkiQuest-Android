@@ -298,7 +298,7 @@ internal object AnkiquestMoments {
         account: String,
         moment: Moment,
     ): Moment {
-        if (moment.kind != Kind.SECURED || moment.win != null || moment.notification != null) {
+        if (!unconfirmed(moment)) {
             return moment
         }
         val stored =
@@ -312,6 +312,9 @@ internal object AnkiquestMoments {
         }
         return withServerIds(moment, stored)
     }
+
+    /** The local streak card before the server's notice: it has no server ids to share it by yet. */
+    internal fun unconfirmed(moment: Moment): Boolean = moment.kind == Kind.SECURED && moment.win == null && moment.notification == null
 
     /** A displayed card listens only for confirmation of its own account's day. */
     internal fun confirmationKey(account: String): String = "$PREF_MINIMUM_IDS:$account"

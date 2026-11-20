@@ -456,6 +456,18 @@ internal object AnkiquestMomentCard {
         /** Conquered cards whose telling friends can still be taken back. */
         private val undoable = mutableSetOf<String>()
 
+        /** A share sheet opened on a streak card before the server confirmed its day. */
+        private sealed interface Waiting {
+            data object None : Waiting
+
+            data class Sheet(
+                val key: String,
+                val sheet: AnkiquestShareSheet,
+            ) : Waiting
+        }
+
+        private var waiting: Waiting = Waiting.None
+
         override fun getItemCount() = moments.size
 
         override fun onCreateViewHolder(
@@ -536,13 +548,21 @@ internal object AnkiquestMomentCard {
             refresh()
         }
 
-        /** Refresh an already-bound local card when its server ids arrive. */
+        /** Refresh an already-bound local card, and a share sheet waiting for it, when its server ids arrive. */
         fun confirm() {
             moments.forEachIndexed { position, moment ->
                 if (confirmed(moment) != moment) {
                     changed(position)
                 }
             }
+
+            // The waiting sheet's friends become choosable once there is a moment to send.
+            val open = waiting as? Waiting.Sheet ?: return
+            val moment = moments.firstOrNull { it.key == open.key }?.let(::confirmed) ?: return
+            val signedIn = current() ?: return
+            val ref = reference(moment)?.takeIf { AnkiquestMomentShare.available(signedIn, it) } ?: return
+            waiting = Waiting.None
+            open.sheet.confirm(ref)
         }
 
         private fun refresh() {
@@ -729,7 +749,8 @@ internal object AnkiquestMomentCard {
 
         /**
          * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
-         * chosen friends; Android's share sheet otherwise.
+         * chosen friends, or for a streak card it has not confirmed yet, whose friends wait for the
+         * upload (hill, 2026-11-20); Android's share sheet otherwise.
          */
         private fun share(
             shown: Moment,
@@ -738,22 +759,41 @@ internal object AnkiquestMomentCard {
             val moment = confirmed(shown)
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             val ref = reference(moment)
-            if (ref == null || !AnkiquestMomentShare.available(signedIn, ref)) {
-                elsewhere(moment)
-                return
+            val subject =
+                when {
+                    ref != null && AnkiquestMomentShare.available(signedIn, ref) -> AnkiquestShareSheet.Subject.Known(ref)
+                    ref == null && AnkiquestMoments.unconfirmed(moment) && AnkiquestMomentShare.available(signedIn) ->
+                        AnkiquestShareSheet.Subject.Uploading
+                    else -> {
+                        elsewhere(moment)
+                        return
+                    }
+                }
+            val sheet =
+                AnkiquestShareSheet(
+                    host,
+                    signedIn,
+                    subject,
+                    publicPicture(moment),
+                    elsewhere = { elsewhere(confirmed(moment)) },
+                    sent = {
+                        told += moment.key
+                        changed(position)
+                    },
+                    closed = { forget(moment.key) },
+                    root = root,
+                )
+            if (subject is AnkiquestShareSheet.Subject.Uploading) {
+                waiting = Waiting.Sheet(moment.key, sheet)
             }
-            AnkiquestShareSheet(
-                host,
-                signedIn,
-                ref,
-                publicPicture(moment),
-                elsewhere = { elsewhere(moment) },
-                sent = {
-                    told += moment.key
-                    changed(position)
-                },
-                root = root,
-            ).show()
+            sheet.show()
+        }
+
+        /** The sheet for [key] closed; a later confirmation has nothing to update. */
+        private fun forget(key: String) {
+            if ((waiting as? Waiting.Sheet)?.key == key) {
+                waiting = Waiting.None
+            }
         }
 
         /** Tell and Share resolve the same server-backed moment. */

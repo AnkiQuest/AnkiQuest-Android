@@ -41,4 +41,5 @@ Je révise avec AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_summary">Quand tu termines un paquet pour aujourd’hui, demander quels amis prévenir</string>
     <string name="ankiquest_deck_moment_title">Paquet terminé</string>
     <string name="ankiquest_deck_moment_body">J’ai terminé mes révisions de %1$s pour aujourd’hui.</string>
+    <string name="ankiquest_share_uploading">Envoi de tes révisions…</string>
 </resources>

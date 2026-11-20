@@ -413,7 +413,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             AnkiquestShareSheet(
                 screen,
                 account,
-                reference,
+                AnkiquestShareSheet.Subject.Known(reference),
                 card,
                 elsewhere = {
                     elsewhere++
