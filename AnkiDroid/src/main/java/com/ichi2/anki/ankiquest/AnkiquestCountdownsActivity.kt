@@ -60,6 +60,24 @@ internal object AnkiquestCountdownTexts {
             State.PAST -> context.getString(R.string.ankiquest_countdown_past, event.name)
         }
 
+    /** The offer to add [count] countdowns made while signed out to [user]'s account. */
+    fun importQuestion(
+        context: Context,
+        count: Int,
+        user: String,
+    ): String =
+        if (count == 1) {
+            context.getString(R.string.ankiquest_countdowns_import_one, user)
+        } else {
+            context.getString(R.string.ankiquest_countdowns_import_other, count, user)
+        }
+
+    /** What is said about [count] countdowns that did not fit and stay on this phone. */
+    fun left(
+        context: Context,
+        count: Int,
+    ): String = context.resources.getQuantityString(R.plurals.ankiquest_countdowns_left, count, count)
+
     /** The pace line, or null. */
     fun pace(
         context: Context,

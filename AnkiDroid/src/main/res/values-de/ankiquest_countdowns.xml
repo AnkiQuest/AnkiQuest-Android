@@ -27,4 +27,12 @@
         <item quantity="one">~%1$d Karte am Tag, um %2$s bis dahin abzuschließen</item>
         <item quantity="other">~%1$d Karten am Tag, um %2$s bis dahin abzuschließen</item>
     </plurals>
+    <string name="ankiquest_countdowns_import_one">Den Countdown, den du ohne Anmeldung erstellt hast, zu %1$s hinzufügen?</string>
+    <string name="ankiquest_countdowns_import_other">Die %1$d Countdowns, die du ohne Anmeldung erstellt hast, zu %2$s hinzufügen?</string>
+    <string name="ankiquest_countdowns_import_add">Zum Konto hinzufügen</string>
+    <string name="ankiquest_countdowns_import_keep">Auf diesem Gerät behalten</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d Countdown passte nicht mehr hinein und bleibt auf diesem Gerät.</item>
+        <item quantity="other">%1$d Countdowns passten nicht mehr hinein und bleiben auf diesem Gerät.</item>
+    </plurals>
 </resources>

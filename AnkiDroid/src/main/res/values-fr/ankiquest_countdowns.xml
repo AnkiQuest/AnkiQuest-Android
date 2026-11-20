@@ -27,4 +27,12 @@
         <item quantity="one">~%1$d carte par jour pour finir %2$s d’ici là</item>
         <item quantity="other">~%1$d cartes par jour pour finir %2$s d’ici là</item>
     </plurals>
+    <string name="ankiquest_countdowns_import_one">Ajouter à %1$s le compte à rebours créé sans connexion ?</string>
+    <string name="ankiquest_countdowns_import_other">Ajouter les %1$d comptes à rebours créés sans connexion à %2$s ?</string>
+    <string name="ankiquest_countdowns_import_add">Ajouter au compte</string>
+    <string name="ankiquest_countdowns_import_keep">Garder sur cet appareil</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d compte à rebours ne tenait plus et reste sur cet appareil.</item>
+        <item quantity="other">%1$d comptes à rebours ne tenaient plus et restent sur cet appareil.</item>
+    </plurals>
 </resources>

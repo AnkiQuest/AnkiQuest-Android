@@ -27,4 +27,12 @@
         <item quantity="one">~%1$d tarjeta al día para terminar %2$s a tiempo</item>
         <item quantity="other">~%1$d tarjetas al día para terminar %2$s a tiempo</item>
     </plurals>
+    <string name="ankiquest_countdowns_import_one">¿Añadir a %1$s la cuenta atrás que creaste sin iniciar sesión?</string>
+    <string name="ankiquest_countdowns_import_other">¿Añadir las %1$d cuentas atrás que creaste sin iniciar sesión a %2$s?</string>
+    <string name="ankiquest_countdowns_import_add">Añadir a la cuenta</string>
+    <string name="ankiquest_countdowns_import_keep">Mantener en este dispositivo</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d cuenta atrás no cabía y se queda en este dispositivo.</item>
+        <item quantity="other">%1$d cuentas atrás no cabían y se quedan en este dispositivo.</item>
+    </plurals>
 </resources>

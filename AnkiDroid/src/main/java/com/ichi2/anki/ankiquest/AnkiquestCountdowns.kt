@@ -70,6 +70,12 @@ internal object AnkiquestCountdowns {
         }
     }
 
+    /** An account's list with signed-out events added, and the signed-out events that did not fit. */
+    data class Imported(
+        val account: List<Countdown>,
+        val left: List<Countdown>,
+    )
+
     enum class State { UPCOMING, TOMORROW, TODAY, PAST }
 
     data class Days(
@@ -205,6 +211,29 @@ internal object AnkiquestCountdowns {
                 }
             }
         return "deck:\"$escaped\" -is:suspended (is:new OR is:learn OR prop:due<$days)"
+    }
+
+    /**
+     * [account] with the events of [device] added in order, skipping one with the same name and date
+     * as an event already in the list; what does not fit is left. Cases: `import`.
+     */
+    fun imported(
+        account: List<Countdown>,
+        device: List<Countdown>,
+    ): Imported {
+        val merged = account.toMutableList()
+        val left = mutableListOf<Countdown>()
+        for (event in device) {
+            if (merged.any { it.name == event.name && it.date == event.date }) {
+                continue
+            }
+            if (merged.size >= MAX_EVENTS) {
+                left += event
+                continue
+            }
+            merged += event
+        }
+        return Imported(merged, left)
     }
 
     /** Cards a day up to the day before the event; [remaining] is null without a usable deck. */

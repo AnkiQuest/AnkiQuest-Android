@@ -536,6 +536,49 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         }
 
     @Test
+    fun `a list changed while the question is open is left alone and asked about again`() =
+        runBlocking {
+            signInWithSignedOutList()
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            val pending = assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+
+            val both = AnkiquestCountdowns.Countdowns(SPANISH.events + DRIVING.events)
+            save(both)
+            assertFalse(AnkiquestCountdownImport.accept(prefs(), pending))
+
+            assertEquals(both, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+            assertEquals(AnkiquestSettingsSync.Offer.AFTER_SYNC, AnkiquestSettingsSync.offer)
+        }
+
+    @Test
+    fun `another account signed in while the question is open is not changed`() =
+        runBlocking {
+            signInWithSignedOutList()
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            val pending = assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+
+            signIn("second")
+            assertFalse(AnkiquestCountdownImport.accept(prefs(), pending))
+
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+        }
+
+    @Test
+    fun `no offer before the account's countdowns have synced`() =
+        runBlocking {
+            signInWithSignedOutList()
+            features = """["settings_sync"]"""
+            AnkiquestCapabilities.forgetMemory()
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertNull(AnkiquestCountdownImport.pending(prefs()))
+            assertEquals(AnkiquestSettingsSync.Offer.AFTER_SYNC, AnkiquestSettingsSync.offer)
+        }
+
+    @Test
     fun `a failed sync offers nothing yet`() =
         runBlocking {
             signInWithSignedOutList()
