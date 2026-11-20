@@ -66,14 +66,7 @@ jobs:
           fi
 
           # Released already: tagged, or on Maven Central
-          pom="https://repo1.maven.org/maven2/org/ankiquest/api/$version/api-$version.pom"
-          if git ls-remote --exit-code --tags origin "refs/tags/api-v$version" > /dev/null || curl -sfI "$pom" > /dev/null; then
-            echo "$version is released already"
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "$version is new: publishing"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
+          .github/ankiquest_api_released.sh "$version"
 
   publish:
     needs: version
@@ -82,28 +75,46 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write # for the release tag
+    # One release run per version at a time. A second run of the same version (a manual retry
+    # during a main push run) waits here instead of uploading too; runs of other versions are
+    # never cancelled.
+    concurrency:
+      group: ankiquest-api-publish-${{ needs.version.outputs.version }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The version job ran before this run waited; ask again now that no other run of this
+      # version is publishing, and skip the upload and the tag if it released meanwhile
+      - id: released
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: .github/ankiquest_api_released.sh "$VERSION"
+
       - name: Configure JDK
+        if: steps.released.outputs.publish == 'true'
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: "jetbrains"
           java-version: "21"
 
       - name: Setup Gradle
+        if: steps.released.outputs.publish == 'true'
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
           cache-read-only: true
 
       - name: Download Robolectric SDKs
+        if: steps.released.outputs.publish == 'true'
         run: ./gradlew robolectricSdkDownload
 
       - name: Test the api module
+        if: steps.released.outputs.publish == 'true'
         run: ./gradlew :api:testDebugUnitTest
 
       - name: Publish to Maven Central
+        if: steps.released.outputs.publish == 'true'
         env:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
@@ -112,6 +123,7 @@ jobs:
         run: ./gradlew :api:publishAllPublicationsToMavenCentral --no-configuration-cache
 
       - name: Tag the release
+        if: steps.released.outputs.publish == 'true'
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
