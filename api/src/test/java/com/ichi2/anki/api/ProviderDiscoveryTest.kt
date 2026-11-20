@@ -67,6 +67,18 @@ internal class ProviderDiscoveryTest {
         assertEquals(listOf(STOCK_PACKAGE, FORK_PACKAGE, LATER_FORK_PACKAGE), providers.map { it.packageName })
     }
 
+    /** AnkiQuest up to quest-23 installs as com.ichi2.anki.quest, without the intent filter */
+    @Test
+    fun findsReleasedQuest() {
+        AnkiDroidPackages.install(
+            RELEASED_QUEST_PACKAGE,
+            Signing.Current(AnkiDroidPackages.ANKIQUEST_RELEASE),
+            authority = "$RELEASED_QUEST_PACKAGE.flashcards",
+        )
+
+        assertEquals(listOf(RELEASED_QUEST_PACKAGE), providers.map { it.packageName })
+    }
+
     private fun installAnkiDroid(filter: ProviderInterface) {
         AnkiDroidPackages.install(STOCK_PACKAGE, Signing.Current(AnkiDroidPackages.RELEASE), filter = filter)
     }
@@ -86,6 +98,7 @@ internal class ProviderDiscoveryTest {
 
     companion object {
         private val STOCK_PACKAGE = BuildConfig.ANKI_PACKAGE_NAME
+        private const val RELEASED_QUEST_PACKAGE = "com.ichi2.anki.quest"
         private const val FORK_PACKAGE = "org.example.ankifork"
         private const val LATER_FORK_PACKAGE = "org.example.zfork"
         private const val FORK_AUTHORITY = "$FORK_PACKAGE.flashcards"

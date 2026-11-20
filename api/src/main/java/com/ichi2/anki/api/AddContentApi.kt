@@ -925,9 +925,7 @@ private class TrustedResolver(
 ) {
     private val resolver: ContentResolver = context.contentResolver
 
-    private fun blocked(uri: Uri): Boolean {
-        return ProviderSelection(context).inUse()?.authority != uri.authority
-    }
+    private fun blocked(uri: Uri): Boolean = ProviderSelection(context).inUse()?.authority != uri.authority
 
     fun query(
         uri: Uri,

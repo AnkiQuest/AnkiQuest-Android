@@ -44,7 +44,25 @@ internal class ProviderChooserActivity : Activity() {
         }
 
         chooser = ProviderChooser(providers, selection.inUse()) { permissionState(it) }
+
+        // Recreated while the permission dialog was open: Android delivers its result to this activity
+        val awaiting = savedInstanceState?.getString(STATE_AWAITING)
+        val restored = providers.firstOrNull { it.packageName == awaiting }
+        if (restored != null && chooser.resume(restored) is State.AwaitingPermission) {
+            return
+        }
         showList()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (!::chooser.isInitialized) {
+            return
+        }
+
+        // Only the provider awaiting its permission is kept; the list is shown again otherwise
+        val awaiting = chooser.state as? State.AwaitingPermission ?: return
+        outState.putString(STATE_AWAITING, awaiting.provider.packageName)
     }
 
     /** Shows the providers by app name and icon, the one in use checked */
@@ -137,6 +155,7 @@ internal class ProviderChooserActivity : Activity() {
 
     companion object {
         private const val PERMISSION_REQUEST = 1
+        private const val STATE_AWAITING = "awaiting_permission"
         private const val ICON_SIZE_DP = 32
 
         /** Opens the chooser from [context], in a new task if it is not an activity */

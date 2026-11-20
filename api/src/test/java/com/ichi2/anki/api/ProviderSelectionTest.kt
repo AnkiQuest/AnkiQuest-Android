@@ -10,7 +10,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.security.MessageDigest
 import java.util.Locale
@@ -122,7 +121,7 @@ internal class ProviderSelectionTest {
         installUnlisted()
         selection().choose(UNLISTED)
 
-        shadowOf(context.packageManager).removePackage(UNLISTED_PACKAGE)
+        AnkiDroidPackages.uninstall(UNLISTED_PACKAGE)
 
         assertEquals(Resolution.Only(ANKIDROID), selection().resolve())
         assertNull(stored)
@@ -147,7 +146,7 @@ internal class ProviderSelectionTest {
         installUnlisted()
         selection().choose(UNLISTED)
 
-        shadowOf(context.packageManager).removePackage(UNLISTED_PACKAGE)
+        AnkiDroidPackages.uninstall(UNLISTED_PACKAGE)
         installUnlisted(packageName = SQUATTER)
 
         val resolution = selection().resolve()

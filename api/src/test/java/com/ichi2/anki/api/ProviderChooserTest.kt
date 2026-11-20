@@ -33,6 +33,21 @@ internal class ProviderChooserTest {
     }
 
     @Test
+    fun resumeAwaitsPermission() {
+        val chooser = chooser()
+
+        assertEquals(State.AwaitingPermission(FORK), chooser.resume(FORK))
+        assertEquals(State.Chosen(FORK), chooser.onPermission(PermissionState.GRANTED))
+    }
+
+    @Test
+    fun resumeOfUninstalledKeepsList() {
+        val uninstalled = FlashCardsProvider("org.example.gone", "org.example.gone.flashcards", "org.example.gone.permission", emptySet())
+
+        assertEquals(State.Choosing(ANKIDROID), chooser().resume(uninstalled))
+    }
+
+    @Test
     fun pickWithoutPermissionAsksForIt() {
         val chooser = chooser()
 

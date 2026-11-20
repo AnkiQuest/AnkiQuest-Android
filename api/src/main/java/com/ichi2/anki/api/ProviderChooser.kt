@@ -58,6 +58,19 @@ internal class ProviderChooser(
         return state
     }
 
+    /**
+     * The activity was recreated while Android's permission dialog was open for [provider]:
+     * wait for its result again. A provider no longer installed leaves the list open.
+     */
+    fun resume(provider: FlashCardsProvider): State {
+        if (state !is State.Choosing || provider !in providers) {
+            return state
+        }
+
+        state = State.AwaitingPermission(provider)
+        return state
+    }
+
     /** Android's permission dialog closed: a denied permission returns to the list */
     fun onPermission(result: PermissionState): State {
         val awaiting = state as? State.AwaitingPermission ?: return state

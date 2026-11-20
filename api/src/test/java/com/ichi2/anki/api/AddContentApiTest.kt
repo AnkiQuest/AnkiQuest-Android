@@ -192,12 +192,15 @@ internal class AddContentApiTest {
         AnkiDroidPackages.install(BuildConfig.ANKI_PACKAGE_NAME, Signing.Current(AnkiDroidPackages.RELEASE), metaData)
     }
 
-    private fun installFakeCardProvider(): FakeCardContentProvider =
-        Robolectric
+    /** AnkiDroid installed with a fake provider; AddContentApi only reaches the provider in use */
+    private fun installFakeCardProvider(): FakeCardContentProvider {
+        installAnkiDroid(metaData = null)
+        return Robolectric
             .buildContentProvider(FakeCardContentProvider::class.java)
             .create(FlashCardsContract.AUTHORITY)
             .get()
             .apply { addNote(NOTE_ID, CARD_COUNT) }
+    }
 
     companion object {
         private const val NOTE_ID = 1L

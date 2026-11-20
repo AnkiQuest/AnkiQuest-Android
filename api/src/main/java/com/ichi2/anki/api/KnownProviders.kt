@@ -23,11 +23,24 @@ internal object KnownProviders {
         )
 
     /** AnkiQuest, a fork of AnkiDroid: https://github.com/AnkiQuest/AnkiQuest-Android */
-    val ANKIQUEST =
+    val ANKIQUEST = ankiQuest("org.ankiquest.anki")
+
+    /**
+     * AnkiQuest up to quest-23, installed as com.ichi2.anki.quest. Its provider predates the
+     * discovery intent filter, so it is found only by its authority. Listed until its users have
+     * moved to [ANKIQUEST].
+     */
+    val ANKIQUEST_OLD_PACKAGE = ankiQuest("com.ichi2.anki.quest")
+
+    /** AnkiDroid first, then AnkiQuest */
+    val ALL = listOf(ANKIDROID, ANKIQUEST, ANKIQUEST_OLD_PACKAGE)
+
+    /** AnkiQuest installed as [packageName]; every package is signed with the same keys */
+    private fun ankiQuest(packageName: String) =
         FlashCardsProvider(
-            packageName = "org.ankiquest.anki",
-            authority = "org.ankiquest.anki.flashcards",
-            permission = "org.ankiquest.anki.permission.READ_WRITE_DATABASE",
+            packageName = packageName,
+            authority = "$packageName.flashcards",
+            permission = "$packageName.permission.READ_WRITE_DATABASE",
             // Read from the APK signing block of AnkiQuest.apk in the quest-23 release on
             // https://github.com/AnkiQuest/AnkiQuest-Android/releases. Its v3 signature rotates
             // the key: API 28 and up see both certificates in the signing history, older
@@ -40,7 +53,4 @@ internal object KnownProviders {
                     "B397A61ECFAF0FE354DA611772515E683CCB6FD0E952D477B8B3BCA49E6C490D",
                 ),
         )
-
-    /** AnkiDroid first */
-    val ALL = listOf(ANKIDROID, ANKIQUEST)
 }

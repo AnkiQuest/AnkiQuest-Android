@@ -232,6 +232,8 @@ internal sealed interface Signing {
 
 /** Installs packages that hold [FlashCardsContract.AUTHORITY], or another [authority] */
 internal object AnkiDroidPackages {
+    private const val PROVIDER_CLASS = "com.ichi2.anki.provider.CardContentProvider"
+
     /**
      * AnkiDroid's release certificate, from the APK signing block of AnkiDroid-2.25.3-arm64-v8a.apk
      * on GitHub. SHA-256: 2071534F0F4B5E54AE952DD275D70DA6E3459EE69909D2AB1B4843C4C5B21A45
@@ -350,7 +352,7 @@ internal object AnkiDroidPackages {
             ProviderInfo().apply {
                 this.authority = authority
                 this.packageName = packageName
-                name = "com.ichi2.anki.provider.CardContentProvider"
+                name = PROVIDER_CLASS
                 this.metaData = metaData
             }
         manager.addOrUpdateProvider(provider)
@@ -367,6 +369,16 @@ internal object AnkiDroidPackages {
                 IntentFilter(FlashCardsContract.ACTION_FLASHCARDS_PROVIDER),
             )
         }
+    }
+
+    /**
+     * Removes [packageName] installed by [install]. Robolectric keeps a provider's intent filters
+     * after its package is removed, and then fails to query them.
+     */
+    fun uninstall(packageName: String) {
+        val manager = shadowOf(RuntimeEnvironment.getApplication().packageManager)
+        manager.clearIntentFilterForProvider(ComponentName(packageName, PROVIDER_CLASS))
+        manager.removePackage(packageName)
     }
 
     /** Adds [permission] to the client app's `<uses-permission>` list */
