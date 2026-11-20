@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Preserve art the app does not show yet: the planned Anki-tan chibi, and the asleep
-     exports of Aki and Ankilope (the app still shows their identical *_sleeping copies). -->
+     exports of Aki and Ankilope. The app still shows their identical *_sleeping copies
+     because the pinned streak_moods.json names them; the rename and the asleep entries
+     here go when the server pin moves past the pose-name fixtures (#430). -->
 <resources xmlns:tools="http://schemas.android.com/tools"
     tools:keep="@drawable/anki_tan_chibi_frozen,@drawable/aki_asleep,@drawable/ankilope_asleep" />
