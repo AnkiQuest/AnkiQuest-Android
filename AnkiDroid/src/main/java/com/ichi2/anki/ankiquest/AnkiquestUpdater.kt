@@ -126,7 +126,8 @@ object AnkiquestUpdater {
 
     /**
      * The APK to download from [names]: the one built for the device's primary ABI, else the
-     * universal one. Staying on one ABI keeps updates from lowering the version code.
+     * universal one. An ABI install never gets the universal APK: its version code lacks the
+     * ABI digit, so Android would refuse it as a downgrade.
      */
     internal fun pickApk(
         names: Collection<String>,
@@ -136,6 +137,11 @@ object AnkiquestUpdater {
         val own = primaryAbi?.let { "AnkiQuest-$it.apk" }
         if (own != null && own in names) {
             return own
+        }
+
+        // An installed ABI build (version code at or above one ABI step) can only take ABI APKs.
+        if (installedCode >= ABI_CODE_STEP) {
+            return null
         }
         return UNIVERSAL_APK.takeIf { it in names }
     }
