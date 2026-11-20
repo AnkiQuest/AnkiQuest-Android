@@ -414,6 +414,11 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             finish(host)
             val card = card()
 
+            // Bind the streak page before confirmation, as when the player is already reading it.
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooper()
+            assertFalse(assertNotNull(card.findViewById<View>(R.id.aq_moment_tell)).isVisible)
+
             // The upload lands and the server's notice for the same day arrives while the card is open.
             val notice =
                 JSONObject()
@@ -430,6 +435,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
 
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
+            assertTrue(assertNotNull(card.findViewById<View>(R.id.aq_moment_tell)).isVisible, "Tell appears on the already-bound card")
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
             val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog(), "Share offers AnkiQuest friends")
             assertNull(shadowOf(host).nextStartedActivity, "nothing leaves the app before a choice")
