@@ -53,25 +53,19 @@ class AnkiquestSocialTest {
         // The server's social_invitation.json and group_invite.json examples.
         val invitee =
             AnkiquestSocial.parse(
-                JSONObject(
-                    """{"friends":[{"display":"Hill","user":"hill"}],"groups":[],"incoming":[],"muted":[],"outgoing":[],
-                    "public":true,"invitations":[{"from":{"display":"Hill","user":"hill"},"group":1,"members":1,
-                    "name":"Spanish club"},{"group":0,"name":"x","from":{"user":"a"}},{"group":2,"name":"y"}]}""",
-                ),
+                JSONObject(example("social_invitation")).apply {
+                    // Keep malformed-row coverage alongside the canonical valid invitation.
+                    getJSONArray("invitations")
+                        .put(JSONObject("""{"group":0,"name":"x","from":{"user":"a"}}"""))
+                        .put(JSONObject("""{"group":2,"name":"y"}"""))
+                },
             )
         assertEquals(
-            listOf(AnkiquestSocial.Invitation(1, "Spanish club", 1, AnkiquestSocial.Person("hill", "Hill"))),
+            listOf(AnkiquestSocial.Invitation(1, "Spanish club", 1, AnkiquestSocial.Person("hill", "hill"))),
             invitee.invitations,
             "rows without a group or a sender are skipped",
         )
-        val owner =
-            AnkiquestSocial.parse(
-                JSONObject(
-                    """{"friends":[{"display":"Cerro","user":"cerro"}],"groups":[{"id":1,"invite":"example-invite-1",
-                    "invited":[{"display":"Cerro","user":"cerro"}],"members":[{"display":"Hill","user":"hill"}],
-                    "name":"Spanish club","owner":true}],"incoming":[],"muted":[],"outgoing":[],"public":true}""",
-                ),
-            )
+        val owner = AnkiquestSocial.parse(JSONObject(example("group_invite")))
         assertEquals(
             listOf("cerro"),
             owner.groups
@@ -90,6 +84,18 @@ class AnkiquestSocialTest {
         val linkless = owner.copy(groups = owner.groups.map { it.copy(invite = null) })
         assertEquals(listOf("Spanish club"), linkless.invitable("ana", AnkiquestSocial.InviteMode.DIRECT).map { it.name })
         assertEquals(emptyList(), linkless.invitable("ana", AnkiquestSocial.InviteMode.LINK))
+    }
+
+    @Test
+    fun `accepting the recorded invitation returns membership without an invite link`() {
+        val accepted = AnkiquestSocial.parse(JSONObject(example("group_invite_accept")))
+        val group = accepted.groups.single()
+        assertEquals(1L, group.id)
+        assertEquals("Spanish club", group.name)
+        assertEquals(setOf("cerro", "hill"), group.members.map { it.user }.toSet())
+        assertEquals(false, group.owner)
+        assertNull(group.invite)
+        assertEquals(emptyList(), accepted.invitations)
     }
 
     @Test

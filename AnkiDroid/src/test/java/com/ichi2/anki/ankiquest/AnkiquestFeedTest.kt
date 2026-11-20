@@ -225,7 +225,7 @@ class AnkiquestFeedTest : RobolectricTest() {
     fun `a message goes to a friend through the owner's endpoint, cleaned as the server accepts it`() =
         runBlocking {
             answer = { seen ->
-                if (seen.path == "/api/messages/member%20name") Answer(200, """{"sent_to":"Cerro"}""") else Answer(404, "")
+                if (seen.path == "/api/messages/member%20name") Answer(200, example("message")) else Answer(404, "")
             }
             assertEquals(AnkiquestMessages.Outcome.SENT, AnkiquestMessages.send(account, "cerro", "  Want to do\nthe verbs together?  "))
             val seen = requests.single()
@@ -288,19 +288,13 @@ class AnkiquestFeedTest : RobolectricTest() {
     }
 
     companion object {
+        private fun example(name: String): String =
+            checkNotNull(AnkiquestFeedTest::class.java.classLoader?.getResource("ankiquest-api/$name.json")) {
+                "missing API example $name"
+            }.readText(Charsets.UTF_8)
+
         /** `GET /api/activity/{user}?category=messages` as the server's activity_messages.json example answers it. */
-        val MESSAGES =
-            """
-            {"action_count":1,"attention":[{"action_required":true,"body":"Hill invited you to Spanish club.","challenge_id":null,
-            "created_at":1793183400,"day":20754,"group":1,"id":1,"kind":"group_invite","read_at":null,"replied":false,"route":null,
-            "sender":"hill","title":"Group invitation"}],
-            "items":[{"action_required":false,"body":"Want to do the verbs together?","challenge_id":null,"created_at":1793183400,
-            "day":20754,"id":2,"kind":"message","read_at":null,"replied":false,"route":null,"sender":"hill","title":"\uD83D\uDCAC Hill"},
-            {"action_required":true,"body":"Hill invited you to Spanish club.","challenge_id":null,"created_at":1793183400,
-            "day":20754,"group":1,"id":1,"kind":"group_invite","read_at":null,"replied":false,"route":null,"sender":"hill",
-            "title":"Group invitation"}],
-            "latest_id":2,"next_before":null,"retention_days":90,"unread_count":2,"window_days":90}
-            """.trimIndent()
+        val MESSAGES = example("activity_messages")
 
         /** The documented page shape (docs/mobile-api.md), with rows as the server's examples record them. */
         val PAGE =
