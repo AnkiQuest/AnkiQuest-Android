@@ -2,8 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.app.Activity
 import android.graphics.Rect
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
+import com.google.android.material.button.MaterialButton
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import io.mockk.every
@@ -59,12 +62,39 @@ class AnkiquestChangelogScreenshotTest : ScreenshotTest() {
             val bounds = Rect()
             assertTrue(button.getGlobalVisibleRect(bounds), "${button.text} must be on screen")
             assertEquals(button.width, bounds.width(), "${button.text} must not be cut off")
+            assertEquals(button.height, bounds.height(), "${button.text} must be fully visible")
             assertFullLabel(button)
         }
+        assertReadableActions(screen)
+    }
+
+    private fun assertReadableActions(screen: Activity) {
+        // Check the active theme's resolved colors, including the filled button's tint.
+        val background = screen.getColor(R.color.aq_home_background)
+        val notes = screen.findViewById<TextView>(R.id.aq_changelog_notes)
+        val linkColor = notes.linkTextColors.getColorForState(notes.drawableState, notes.linkTextColors.defaultColor)
+        assertTextContrast(linkColor, background, "Release-note links")
+
+        val releases = screen.findViewById<TextView>(R.id.aq_changelog_releases)
+        assertTextContrast(releases.currentTextColor, background, "All releases")
+
+        val rate = screen.findViewById<MaterialButton>(R.id.aq_changelog_rate)
+        val tint = assertNotNull(rate.backgroundTintList)
+        assertTextContrast(rate.currentTextColor, tint.getColorForState(rate.drawableState, tint.defaultColor), "Rate AnkiQuest")
+    }
+
+    private fun assertTextContrast(
+        ink: Int,
+        paper: Int,
+        label: String,
+    ) {
+        val contrast = ColorUtils.calculateContrast(ink, paper)
+        assertTrue(contrast >= MIN_TEXT_CONTRAST, "$label contrast is $contrast:1, below $MIN_TEXT_CONTRAST:1")
     }
 
     private fun assertFullLabel(label: TextView) {
         val layout = assertNotNull(label.layout)
+        assertEquals(1, layout.lineCount, "${label.text} must fit on one readable line")
         val width = label.width - label.compoundPaddingLeft - label.compoundPaddingRight
         for (line in 0 until layout.lineCount) {
             assertEquals(0, layout.getEllipsisCount(line), "${label.text} must not be ellipsized")
@@ -77,6 +107,7 @@ class AnkiquestChangelogScreenshotTest : ScreenshotTest() {
     }
 
     private companion object {
+        const val MIN_TEXT_CONTRAST = 4.5
         const val NOTES =
             "AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): study, shared goals, " +
                 "and progress in one place.\n\n" +

@@ -66,30 +66,42 @@
                     android:textSize="15sp"
                     android:lineSpacingMultiplier="1.15"
                     android:textColor="@color/aq_home_text"
-                    android:textColorLink="?attr/colorAccent" />
+                    android:textColorLink="@color/aq_home_text" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="end"
-            android:orientation="horizontal"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
             android:paddingBottom="8dp">
+            <!-- Keep whole labels together; stack the buttons when large text needs more room. -->
+            <androidx.constraintlayout.helper.widget.Flow
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:constraint_referenced_ids="aq_changelog_releases,aq_changelog_rate"
+                app:flow_wrapMode="chain"
+                app:flow_horizontalStyle="packed"
+                app:flow_horizontalBias="1"
+                app:flow_horizontalGap="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/aq_changelog_releases"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ankiquest_all_releases"
-                android:textColor="?attr/colorAccent" />
+                android:textColor="@color/aq_home_text" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/aq_changelog_rate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/ankiquest_rate" />
-        </LinearLayout>
+                android:text="@string/ankiquest_rate"
+                android:textColor="@color/aq_home_primary_text"
+                app:backgroundTint="@color/aq_home_primary" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
