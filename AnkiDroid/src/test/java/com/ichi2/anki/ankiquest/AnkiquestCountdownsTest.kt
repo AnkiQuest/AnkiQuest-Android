@@ -142,6 +142,30 @@ class AnkiquestCountdownsTest : RobolectricTest() {
     }
 
     @Test
+    fun `imports follow the shared cases`() {
+        for (case in cases("import")) {
+            val found = AnkiquestCountdowns.imported(events(case.getJSONArray("account")), events(case.getJSONArray("device")))
+            val expected = case.getJSONObject("expected")
+            assertEquals(events(expected.getJSONArray("account")), found.account, case.getString("name"))
+            assertEquals(events(expected.getJSONArray("left")), found.left, case.getString("name"))
+        }
+    }
+
+    @Test
+    fun `the import wording is the shared English`() {
+        fun text(
+            key: String,
+            count: Int,
+        ) = wording.getString(key).replace("{count}", count.toString()).replace("{user}", "hill")
+        assertEquals(text("import_one", 1), AnkiquestCountdownTexts.importQuestion(targetContext, 1, "hill"))
+        assertEquals(text("import_other", 3), AnkiquestCountdownTexts.importQuestion(targetContext, 3, "hill"))
+        assertEquals(text("left_one", 1), AnkiquestCountdownTexts.left(targetContext, 1))
+        assertEquals(text("left_other", 2), AnkiquestCountdownTexts.left(targetContext, 2))
+        assertEquals(wording.getString("import_add"), targetContext.getString(R.string.ankiquest_countdowns_import_add))
+        assertEquals(wording.getString("import_keep"), targetContext.getString(R.string.ankiquest_countdowns_import_keep))
+    }
+
+    @Test
     fun `the wording is the shared English`() {
         val spanish = Countdown("Spanish exam", LocalDate.of(2026, 12, 1), "Spanish::A1")
 
