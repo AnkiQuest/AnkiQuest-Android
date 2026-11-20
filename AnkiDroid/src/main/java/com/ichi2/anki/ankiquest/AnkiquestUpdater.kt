@@ -131,6 +131,7 @@ object AnkiquestUpdater {
     internal fun pickApk(
         names: Collection<String>,
         primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): String? {
         val own = primaryAbi?.let { "AnkiQuest-$it.apk" }
         if (own != null && own in names) {
@@ -270,6 +271,7 @@ object AnkiquestUpdater {
     internal fun parseNightly(
         json: JSONObject,
         primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): Release? {
         val number = json.optInt("release")
         val versionCode = json.optLong("version_code")
@@ -282,7 +284,7 @@ object AnkiquestUpdater {
                 ?.objects()
                 ?.associate { it.getString("name") to it.optLong("size") }
                 ?: mapOf(UNIVERSAL_APK to json.optLong("size"))
-        val apk = pickApk(sizes.keys, primaryAbi) ?: return null
+        val apk = pickApk(sizes.keys, primaryAbi, installedCode) ?: return null
         return Release(
             number = number,
             name = "Nightly $TAG_PREFIX$number+${json.optInt("nightly")} (${json.optString("commit").take(7)})",
@@ -311,11 +313,12 @@ object AnkiquestUpdater {
     internal fun parseLatest(
         json: JSONObject,
         primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): Release? {
         val tag = json.getString("tag_name")
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
         val assets = json.getJSONArray("assets").objects().associateBy { it.getString("name") }
-        val apk = pickApk(assets.keys, primaryAbi)?.let(assets::getValue) ?: return null
+        val apk = pickApk(assets.keys, primaryAbi, installedCode)?.let(assets::getValue) ?: return null
         return Release(
             number = number,
             name = json.optString("name").ifEmpty { tag },
