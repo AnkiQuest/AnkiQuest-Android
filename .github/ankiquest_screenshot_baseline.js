@@ -12,10 +12,8 @@ module.exports = async function waitForScreenshotBaseline({
     core,
     sleep = delay => new Promise(resolve => setTimeout(resolve, delay)),
 }) {
-    const base = context.payload.pull_request?.base || {
-        sha: context.sha,
-        ref: context.ref.replace(/^refs\/heads\//, ""),
-    };
+    const base = await baseOf({ github, context });
+    core.setOutput("sha", base.sha);
 
     // Store jobs can overlap or outlive the branch tip. Only this commit's artifact is safe.
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
@@ -58,3 +56,17 @@ module.exports = async function waitForScreenshotBaseline({
             `Run ${WORKFLOW} on a branch at that commit, then rerun this check.`,
     );
 };
+
+// The commit the checked-out tree was built on. A pull request runs on GitHub's merge commit, whose
+// first parent is the base it merged into; the event's base.sha can be older when the base branch
+// moved without a push to the pull request.
+async function baseOf({ github, context }) {
+    const pullRequest = context.payload.pull_request;
+    if (!pullRequest) {
+        return { sha: context.sha, ref: context.ref.replace(/^refs\/heads\//, "") };
+    }
+    const {
+        data: { parents },
+    } = await github.rest.repos.getCommit({ ...context.repo, ref: context.sha });
+    return { sha: parents[0].sha, ref: pullRequest.base.ref };
+}

@@ -20,13 +20,19 @@ function run(id, options = {}) {
 }
 
 function harness(batches = [[run(42)]], artifacts = {}) {
-  const queries = [], artifactQueries = [], waits = [], messages = [];
+  const queries = [], artifactQueries = [], waits = [], messages = [], outputs = {};
   const context = {
     repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
     payload: { pull_request: { base: { sha: 'base-sha', ref: 'main' } } },
   };
-  const github = { rest: { actions: {
+  const github = { rest: {
+    // GitHub builds refs/pull/N/merge with the base it merged into as the first parent.
+    repos: { async getCommit({ ref }) {
+      assert.equal(ref, 'merge-sha');
+      return { data: { parents: [{ sha: 'base-sha' }, { sha: 'head-sha' }] } };
+    } },
+    actions: {
     async listWorkflowRuns(query) {
       queries.push(query);
       return { data: { workflow_runs: batches[Math.min(queries.length - 1, batches.length - 1)] } };
@@ -36,9 +42,9 @@ function harness(batches = [[run(42)]], artifacts = {}) {
       return { data: { artifacts: artifacts[query.run_id] ?? [{ name: 'screenshot', expired: false }] } };
     },
   } } };
-  const core = { info: message => messages.push(message) };
+  const core = { info: message => messages.push(message), setOutput: (name, value) => { outputs[name] = value; } };
   return {
-    github, context, core, queries, artifactQueries, waits, messages,
+    github, context, core, queries, artifactQueries, waits, messages, outputs,
     sleep: async delay => { waits.push(delay); },
   };
 }
@@ -103,6 +109,21 @@ test('the pushed commit is used when there is no pull request', async () => {
   fixture.context.ref = 'refs/heads/main';
   assert.equal(await waitForBaseline(fixture), 43);
   assert.equal(fixture.queries[0].head_sha, 'push-sha');
+});
+
+test('a PR waits for the base its merge commit was built on, not a stale event base', async () => {
+  // The event's base.sha can lag the base branch; the checked-out merge commit cannot.
+  const fixture = harness([[run(7)]]);
+  fixture.context.payload.pull_request.base.sha = 'stale-sha';
+  assert.equal(await waitForBaseline(fixture), 7);
+  assert.ok(fixture.queries.every(query => query.head_sha === 'base-sha'));
+  assert.equal(fixture.outputs.sha, 'base-sha');
+});
+
+test('the unavailable baseline message names the commit that was waited for', () => {
+  const explain = step('Explain unavailable baseline');
+  assert.match(explain, /BASE_SHA: \$\{\{ steps\.source\.outputs\.sha \}\}/);
+  assert.doesNotMatch(explain, /pull_request\.base\.sha/);
 });
 
 test('stacked PRs wait for their exact base commit instead of falling back to main', async () => {

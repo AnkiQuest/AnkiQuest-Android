@@ -79,7 +79,7 @@ jobs:
       - name: Explain unavailable baseline
         if: ${{ failure() && (steps.source.outcome == 'failure' || steps.baseline.outcome == 'failure') }}
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          BASE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           echo "::error::Screenshot comparison did not run: no downloadable baseline for ${BASE_SHA}. Run ankiquest Screenshots: Store Baseline on a branch at that commit, then rerun this check."
           echo "Screenshot comparison needs a successful, unexpired baseline for commit ${BASE_SHA}. Run **ankiquest Screenshots: Store Baseline** on a branch at that commit, then rerun this check. A different commit is never used as a fallback." >> "$GITHUB_STEP_SUMMARY"
