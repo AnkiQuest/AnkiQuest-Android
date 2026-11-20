@@ -19,6 +19,8 @@
     <string name="ankiquest_today">%1$s heute</string>
     <string name="aq_board_closing_xp">%1$s XP zählen noch für letzte Woche</string>
     <string name="aq_closing_week">Letzte Woche zählt noch: %1$s XP · endet um %2$s</string>
+    <string name="aq_board_next_xp">%1$s XP zählen schon für nächste Woche</string>
+    <string name="aq_next_week">Nächste Woche zählt schon: %1$s XP · die Rangliste wechselt um %2$s</string>
     <string name="aq_board_row_description">Platz %1$d: %2$s, Level %3$d, %4$s XP</string>
     <string name="aq_board_my_profile">Dein Profil</string>
     <string name="aq_board_offline">Keine Verbindung. Prüfe deine Verbindung und aktualisiere.</string>

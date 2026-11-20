@@ -51,8 +51,7 @@ import java.io.IOException
 
 /**
  * The daily study surface is native and local, like every other AnkiQuest screen: activity
- * ([AnkiquestFeedActivity]), friends, progress, study history ([AnkiquestHistoryActivity]) and
- * records ([AnkiquestRecordsActivity]).
+ * and friends ([AnkiquestFriendsActivity]), progress, study history and records ([AnkiquestProfileActivity]).
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private enum class GoalSetup { READY, SAVING, FAILED }
@@ -123,7 +122,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         scroll = findViewById(R.id.aq_home_scroll)
         findViewById<MaterialButton>(R.id.aq_home_activity).apply {
             setTextColor(getColor(R.color.aq_home_text))
-            setOnClickListener { startActivity(AnkiquestFeedActivity.intent(this@AnkiquestHomeActivity)) }
+            setOnClickListener { startActivity(AnkiquestFriendsSections.feedIntent(this@AnkiquestHomeActivity)) }
         }
         findViewById<View>(R.id.aq_home_account).apply {
             setOnClickListener { startActivity(AnkiquestProfileActivity.intent(this@AnkiquestHomeActivity)) }
@@ -363,7 +362,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         content.addView(AnkiquestAki.encouragement(this, AnkiquestAki.mood(local, profile)))
         profile?.let {
             text(content, getString(R.string.aq_home_streak_level, it.optInt("streak"), it.optInt("level")), small = true)
-            AnkiquestBoards.closingLine(this, AnkiquestBoards.parseClosingWeek(it), TimeManager.time.intTimeMS())?.let { line ->
+            AnkiquestBoards.ownWeekLine(this, AnkiquestBoards.parseOwnWeek(it), TimeManager.time.intTimeMS())?.let { line ->
                 text(card(tinted = true), line)
             }
         }
@@ -430,8 +429,14 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
         }
         if (account != null) {
-            button(content, R.string.aq_history_title) { startActivity(AnkiquestHistoryActivity.intent(this)) }
-            button(content, R.string.aq_records_title) { startActivity(AnkiquestRecordsActivity.intent(this)) }
+            button(
+                content,
+                R.string.aq_history_title,
+            ) { startActivity(AnkiquestMeSections.intent(this, AnkiquestMeSections.Destination.HISTORY)) }
+            button(
+                content,
+                R.string.aq_records_title,
+            ) { startActivity(AnkiquestMeSections.intent(this, AnkiquestMeSections.Destination.RECORDS)) }
         }
         profileFailure?.let { failure ->
             text(content, getString(failure), small = true)
