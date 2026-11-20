@@ -24,7 +24,7 @@ import java.util.TimeZone
  */
 internal object AnkiquestReviewOffsets {
     const val PREF_JOURNAL = "ankiquestReviewOffsets"
-    const val KEEP_MS = 30 * 24 * 60 * 60 * 1000L
+    const val KEEP_MS = 30 * DAY_MS
 
     /** How far back an answer's revlog row may be when the reviewer's change arrives. */
     const val ANSWER_WINDOW_MS = 60 * 1000L
