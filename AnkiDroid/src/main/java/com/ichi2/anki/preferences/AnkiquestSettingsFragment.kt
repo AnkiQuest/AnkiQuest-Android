@@ -35,6 +35,7 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AndroidRwkvRam
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
@@ -53,6 +54,7 @@ import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
@@ -60,6 +62,7 @@ import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.servicelayer.DebugInfoService
@@ -573,6 +576,27 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         requirePreference<Preference>(R.string.aq_privacy_key).setOnPreferenceClickListener {
             openPrivacyNotice()
             true
+        }
+        bindRwkv()
+    }
+
+    /** The RWKV switch saves itself; its summary shows what the checks found (#433). */
+    private fun bindRwkv() {
+        requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_rwkv_key).setOnPreferenceChangeListener { _, enabled ->
+            showRwkv(if (enabled == true) RwkvSwitch.ON else RwkvSwitch.OFF)
+            true
+        }
+        showRwkv(AnkiquestRwkv.switch())
+    }
+
+    private fun showRwkv(switch: RwkvSwitch) {
+        val ram = AndroidRwkvRam(requireContext().applicationContext)
+        launchCatchingTask {
+            val state = AnkiquestRwkv.state(switch, ram)
+            if (!isAdded) {
+                return@launchCatchingTask
+            }
+            findPreference<Preference>(getString(R.string.ankiquest_rwkv_key))?.setSummary(AnkiquestRwkv.summary(state))
         }
     }
 

@@ -32,10 +32,12 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
+import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.ankiquest.SubscriptionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -285,6 +287,25 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
         assertFalse(switch.isChecked)
         coVerify(exactly = 1) { Ankiquest.setNotificationSwitch(field, false) }
+    }
+
+    @Test
+    fun `RWKV switch is off by default and says why it cannot run`() {
+        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        assertFalse(rwkv.isChecked)
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
+
+        // This build has no engine, so turning it on only explains that.
+        rwkv.performClick()
+        idle()
+        assertTrue(rwkv.isChecked)
+        assertEquals(RwkvSwitch.ON, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+
+        rwkv.performClick()
+        idle()
+        assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
     }
 
     @Test
