@@ -951,6 +951,8 @@ dependencies {
     androidTestImplementation(libs.kotlin.test)
     androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.androidx.fragment.testing)
+    // AnkiquestDeviceTest runs the poll worker on the emulator
+    androidTestImplementation(libs.androidx.work.testing)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)

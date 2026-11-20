@@ -23,7 +23,8 @@ jobs:
   art:
     name: App art matches the server's exporter
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The byte check (AnkiQuest/AnkiQuest-Server#56) encodes every drawable.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,7 +38,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: AnkiQuest/AnkiQuest-Desktop
+          repository: AnkiQuest/AnkiQuest-Server
           ref: ${{ steps.server-ref.outputs.ref }}
           path: server
           persist-credentials: false
