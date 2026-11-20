@@ -290,22 +290,28 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     }
 
     @Test
-    fun `RWKV switch is off by default and says why it cannot run`() {
+    fun `RWKV switch is off by default and refuses to turn on without an engine`() {
         val rwkv = open().switch(R.string.ankiquest_rwkv_key)
         assertFalse(rwkv.isChecked)
         assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
 
-        // This build has no engine, so turning it on only explains that.
+        // This build has no engine: the switch stays off and says why.
         rwkv.performClick()
         idle()
-        assertTrue(rwkv.isChecked)
-        assertEquals(RwkvSwitch.ON, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
-
-        rwkv.performClick()
-        idle()
+        assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+    }
+
+    @Test
+    fun `a saved RWKV switch that is now blocked opens off`() {
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestRwkv.PREF_ENABLED, true) }
+
+        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        idle()
+        assertFalse(rwkv.isChecked)
+        assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test

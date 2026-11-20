@@ -27,37 +27,51 @@ internal enum class RwkvSwitch {
 }
 
 /**
- * The RWKV scheduler on this phone. Only [Ready] may change scheduling; [Off] and [Unavailable]
- * leave Anki's own scheduler (FSRS or SM-2) in charge. With [NoRwkvEngine] the state never reaches
- * [Ready].
+ * The RWKV scheduler on this phone. Only [Ready] may change scheduling; [Off] and [Refused] leave
+ * Anki's own scheduler (FSRS or SM-2) in charge. With [NoRwkvEngine] the state never reaches [Ready].
+ *
+ * hill decided (#442) that a blocked scheduler is refused rather than left on: turning it on while
+ * a check fails keeps the switch off and reports why.
  */
 internal sealed interface RwkvState {
-    /** The player has not turned it on. */
-    data object Off : RwkvState
+    /** The switch this state shows and saves. */
+    val switch: RwkvSwitch
 
-    /** Turned on, but [reason] stops it from running. */
-    data class Unavailable(
+    /** The player has not turned it on, or turned it off. */
+    data object Off : RwkvState {
+        override val switch = RwkvSwitch.OFF
+    }
+
+    /** Off: the last attempt to turn it on, or a check of a saved "on", failed because of [reason]. */
+    data class Refused(
         val reason: RwkvBlocker,
-    ) : RwkvState
+    ) : RwkvState {
+        override val switch = RwkvSwitch.OFF
+    }
 
-    /** Turned on and every check passed. */
-    data object Ready : RwkvState
+    /** On, and every check passed. */
+    data object Ready : RwkvState {
+        override val switch = RwkvSwitch.ON
+    }
 
-    /** The player turns it on: the checks decide whether it can run. */
+    /** The player turns it on: [Ready] if every check passes, otherwise [Refused] with the first failure. */
     fun enable(checks: RwkvChecks): RwkvState = checks.verdict()
 
     /** The player turns it off. */
     fun disable(): RwkvState = Off
 
-    /** Runs the checks again, as when the settings open or a model is chosen. [Off] stays off. */
+    /**
+     * Runs the checks again, as when the settings open or the collection grows. A [Ready] scheduler
+     * that now fails a check is refused; the off states stay as they are.
+     */
     fun recheck(checks: RwkvChecks): RwkvState =
         when (this) {
-            Off -> Off
-            is Unavailable, Ready -> checks.verdict()
+            Off, is Refused -> this
+            Ready -> checks.verdict()
         }
 
     companion object {
-        /** The state for the saved [switch], as when the app or the settings screen starts. */
+        /** The state for the saved [switch], as when the settings screen opens. A saved "on" that is now blocked is refused. */
         fun restore(
             switch: RwkvSwitch,
             checks: RwkvChecks,
@@ -77,10 +91,10 @@ internal data class RwkvChecks(
     val cards: Int,
     val model: RwkvModel?,
 ) {
-    /** [RwkvState.Ready], or [RwkvState.Unavailable] with the first check that fails. */
+    /** [RwkvState.Ready], or [RwkvState.Refused] with the first check that fails. */
     fun verdict(): RwkvState {
         val reason = blocker() ?: return RwkvState.Ready
-        return RwkvState.Unavailable(reason)
+        return RwkvState.Refused(reason)
     }
 
     private fun blocker(): RwkvBlocker? {
@@ -118,11 +132,11 @@ internal object RwkvMemory {
     const val BYTES_PER_CARD = (MEASURED_BYTES + MEASURED_CARDS - 1) / MEASURED_CARDS
 
     /**
-     * The scheduler may use at most this fraction (1/n) of the phone's RAM. Not measured: Android
-     * kills background apps and then the foreground app as free memory runs out, and Anki and the
-     * reviewer need room beside the model. An eighth keeps 22,000 cards off 4 GB phones.
+     * The scheduler may use at most this fraction (1/n) of the phone's RAM: a quarter, as hill
+     * decided (#442). Not measured; Anki and the reviewer need room beside the model state. A
+     * quarter allows kuma3's 22,000 cards on a 4 GB phone but not on a 2 GB one.
      */
-    const val RAM_SHARE = 8L
+    const val RAM_SHARE = 4L
 
     /** Estimated RAM for a collection of [cards]. */
     fun needed(cards: Int): Long = cards.coerceAtLeast(0) * BYTES_PER_CARD

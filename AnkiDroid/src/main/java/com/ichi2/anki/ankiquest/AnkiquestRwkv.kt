@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import androidx.annotation.StringRes
+import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
@@ -31,8 +32,9 @@ internal class AndroidRwkvRam(
 
 /**
  * The optional RWKV scheduler's Android side (#433): the saved switch, the checks read from this
- * phone, and the settings text for each state. Nothing reads the state to schedule cards yet, so
- * the switch changes no scheduling.
+ * phone, and the settings text for each state. Each transition saves the switch its state shows,
+ * so a refused scheduler is saved as off. Nothing reads the state to schedule cards yet, so the
+ * switch changes no scheduling.
  */
 internal object AnkiquestRwkv {
     const val PREF_ENABLED = "ankiquestRwkv"
@@ -43,11 +45,28 @@ internal object AnkiquestRwkv {
     fun switch(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): RwkvSwitch =
         if (prefs.getBoolean(PREF_ENABLED, false)) RwkvSwitch.ON else RwkvSwitch.OFF
 
-    /** The state for [switch] on this phone. */
-    suspend fun state(
-        switch: RwkvSwitch,
+    /** The player turns it on; refused if a check fails. */
+    suspend fun enable(
         ram: RwkvRam,
-    ): RwkvState = RwkvState.restore(switch, checks(ram))
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): RwkvState = save(RwkvState.Off.enable(checks(ram)), prefs)
+
+    /** The player turns it off. */
+    fun disable(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): RwkvState = save(RwkvState.Off.disable(), prefs)
+
+    /** The state for the saved switch, as when the settings open; a saved "on" that is now blocked is refused. */
+    suspend fun restore(
+        ram: RwkvRam,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): RwkvState = save(RwkvState.restore(switch(prefs), checks(ram)), prefs)
+
+    private fun save(
+        state: RwkvState,
+        prefs: SharedPreferences,
+    ): RwkvState {
+        prefs.edit { putBoolean(PREF_ENABLED, state.switch == RwkvSwitch.ON) }
+        return state
+    }
 
     private suspend fun checks(ram: RwkvRam): RwkvChecks {
         // The collection is read only when an engine could use it.
@@ -71,7 +90,7 @@ internal object AnkiquestRwkv {
         when (state) {
             RwkvState.Off -> R.string.ankiquest_rwkv_off
             RwkvState.Ready -> R.string.ankiquest_rwkv_ready
-            is RwkvState.Unavailable -> reason(state.reason)
+            is RwkvState.Refused -> reason(state.reason)
         }
 
     @StringRes

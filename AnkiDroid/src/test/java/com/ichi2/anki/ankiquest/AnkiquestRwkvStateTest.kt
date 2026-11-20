@@ -34,57 +34,71 @@ class AnkiquestRwkvStateTest {
         model: RwkvModel? = this.model,
     ) = RwkvChecks(engine, abis, ram, cards, model)
 
-    private fun unavailable(reason: RwkvBlocker) = RwkvState.Unavailable(reason)
+    private fun refused(reason: RwkvBlocker) = RwkvState.Refused(reason)
 
     @Test
-    fun `enabling with every check passing is ready`() {
-        assertEquals(RwkvState.Ready, RwkvState.Off.enable(checks()))
+    fun `enabling with every check passing is ready and on`() {
+        val state = RwkvState.Off.enable(checks())
+        assertEquals(RwkvState.Ready, state)
+        assertEquals(RwkvSwitch.ON, state.switch)
     }
 
     @Test
-    fun `enabling without an engine is unavailable and checks nothing else`() {
+    fun `enabling without an engine is refused and checks nothing else`() {
         // No ABI, RAM or model either: the engine check comes first.
         val none = checks(engine = NoRwkvEngine, abis = emptyList(), ram = 0, model = null)
-        assertEquals(unavailable(RwkvBlocker.NO_ENGINE), RwkvState.Off.enable(none))
+        assertEquals(refused(RwkvBlocker.NO_ENGINE), RwkvState.Off.enable(none))
     }
 
     @Test
-    fun `enabling on an unsupported ABI is unavailable`() {
-        assertEquals(unavailable(RwkvBlocker.UNSUPPORTED_ABI), RwkvState.Off.enable(checks(abis = listOf("x86"))))
+    fun `enabling on an unsupported ABI is refused`() {
+        assertEquals(refused(RwkvBlocker.UNSUPPORTED_ABI), RwkvState.Off.enable(checks(abis = listOf("x86"))))
     }
 
     @Test
-    fun `enabling with too little memory is unavailable`() {
-        assertEquals(unavailable(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = 3 * gib)))
+    fun `enabling with too little memory is refused`() {
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = 1_900_000_000L)))
     }
 
     @Test
-    fun `enabling without a model is unavailable`() {
-        assertEquals(unavailable(RwkvBlocker.NO_MODEL), RwkvState.Off.enable(checks(model = null)))
+    fun `enabling without a model is refused`() {
+        assertEquals(refused(RwkvBlocker.NO_MODEL), RwkvState.Off.enable(checks(model = null)))
+    }
+
+    @Test
+    fun `a refused scheduler stays off`() {
+        assertEquals(RwkvSwitch.OFF, refused(RwkvBlocker.NO_ENGINE).switch)
+        assertEquals(RwkvSwitch.OFF, RwkvState.Off.switch)
+    }
+
+    @Test
+    fun `enabling again after a refusal is ready once the blocker is gone`() {
+        val refused = RwkvState.Off.enable(checks(model = null))
+        assertEquals(RwkvState.Ready, refused.enable(checks()))
     }
 
     @Test
     fun `disabling goes off from every state`() {
-        for (state in listOf(RwkvState.Off, RwkvState.Ready, unavailable(RwkvBlocker.NO_ENGINE))) {
+        for (state in listOf(RwkvState.Off, RwkvState.Ready, refused(RwkvBlocker.NO_ENGINE))) {
             assertEquals(RwkvState.Off, state.disable())
         }
     }
 
     @Test
-    fun `rechecking keeps off off`() {
+    fun `rechecking keeps the off states as they are`() {
         assertEquals(RwkvState.Off, RwkvState.Off.recheck(checks()))
+        // A refusal does not turn itself on when the blocker goes away; the player turns it on.
+        assertEquals(refused(RwkvBlocker.NO_MODEL), refused(RwkvBlocker.NO_MODEL).recheck(checks()))
     }
 
     @Test
-    fun `rechecking an unavailable state becomes ready once a model is chosen`() {
-        val waiting = RwkvState.Off.enable(checks(model = null))
-        assertEquals(RwkvState.Ready, waiting.recheck(checks()))
+    fun `rechecking a ready state keeps it ready while the checks pass`() {
+        assertEquals(RwkvState.Ready, RwkvState.Ready.recheck(checks()))
     }
 
     @Test
-    fun `rechecking a ready state becomes unavailable when the collection outgrows memory`() {
-        val ready = RwkvState.Off.enable(checks())
-        assertEquals(unavailable(RwkvBlocker.NOT_ENOUGH_MEMORY), ready.recheck(checks(cards = 100_000)))
+    fun `rechecking a ready state refuses it when the collection outgrows memory`() {
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Ready.recheck(checks(cards = 100_000)))
     }
 
     @Test
@@ -94,8 +108,15 @@ class AnkiquestRwkvStateTest {
     }
 
     @Test
-    fun `the app has no engine yet so turning it on never makes it ready`() {
-        assertEquals(unavailable(RwkvBlocker.NO_ENGINE), RwkvState.restore(RwkvSwitch.ON, checks(engine = NoRwkvEngine)))
+    fun `restoring a saved on that is now blocked is refused and off`() {
+        val state = RwkvState.restore(RwkvSwitch.ON, checks(model = null))
+        assertEquals(refused(RwkvBlocker.NO_MODEL), state)
+        assertEquals(RwkvSwitch.OFF, state.switch)
+    }
+
+    @Test
+    fun `the app has no engine yet so turning it on is always refused`() {
+        assertEquals(refused(RwkvBlocker.NO_ENGINE), RwkvState.Off.enable(checks(engine = NoRwkvEngine)))
         assertEquals(RwkvEngine.Availability.ABSENT, NoRwkvEngine.availability)
         assertEquals(null, NoRwkvModel.chosen())
     }
@@ -110,13 +131,15 @@ class AnkiquestRwkvStateTest {
     }
 
     @Test
-    fun `memory check allows an eighth of RAM`() {
-        // kuma3's measurement phone (Pixel 8a, 8 GB) fits its own collection.
-        assertTrue(RwkvMemory.fits(8 * gib, 22_000))
+    fun `memory check allows a quarter of RAM`() {
+        assertEquals(4L, RwkvMemory.RAM_SHARE)
 
-        // A 4 GB phone reports a little under 4 GiB and does not.
-        assertFalse(RwkvMemory.fits(3_800_000_000L, 22_000))
-        assertTrue(RwkvMemory.fits(3_800_000_000L, 10_000))
+        // A 4 GB phone reports a little under 4 GiB and fits kuma3's collection.
+        assertTrue(RwkvMemory.fits(3_800_000_000L, 22_000))
+
+        // A 2 GB phone does not, but fits a smaller one.
+        assertFalse(RwkvMemory.fits(1_900_000_000L, 22_000))
+        assertTrue(RwkvMemory.fits(1_900_000_000L, 10_000))
 
         // The boundary is inclusive.
         val needed = RwkvMemory.needed(1_000) * RwkvMemory.RAM_SHARE

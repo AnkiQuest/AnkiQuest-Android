@@ -62,6 +62,8 @@ import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.RwkvRam
+import com.ichi2.anki.ankiquest.RwkvState
 import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.launchCatchingTask
@@ -580,24 +582,47 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         bindRwkv()
     }
 
-    /** The RWKV switch saves itself; its summary shows what the checks found (#433). */
+    /**
+     * Turning the RWKV switch on runs the checks first: it stays on only if they pass, otherwise
+     * it stays off and says why (#433; hill's decision in #442). [AnkiquestRwkv] saves the switch,
+     * so the listener never lets the preference change itself.
+     */
     private fun bindRwkv() {
         requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_rwkv_key).setOnPreferenceChangeListener { _, enabled ->
-            showRwkv(if (enabled == true) RwkvSwitch.ON else RwkvSwitch.OFF)
-            true
+            if (enabled == true) {
+                runRwkv({ AnkiquestRwkv.enable(it) }) { state ->
+                    if (state is RwkvState.Refused) {
+                        showSnackbar(AnkiquestRwkv.summary(state))
+                    }
+                }
+            } else {
+                showRwkv(AnkiquestRwkv.disable())
+            }
+            false
         }
-        showRwkv(AnkiquestRwkv.switch())
+        runRwkv({ AnkiquestRwkv.restore(it) }) { }
     }
 
-    private fun showRwkv(switch: RwkvSwitch) {
+    /** Runs a transition that reads the phone and collection, then shows its state. */
+    private fun runRwkv(
+        transition: suspend (RwkvRam) -> RwkvState,
+        after: (RwkvState) -> Unit,
+    ) {
         val ram = AndroidRwkvRam(requireContext().applicationContext)
         launchCatchingTask {
-            val state = AnkiquestRwkv.state(switch, ram)
+            val state = transition(ram)
             if (!isAdded) {
                 return@launchCatchingTask
             }
-            findPreference<Preference>(getString(R.string.ankiquest_rwkv_key))?.setSummary(AnkiquestRwkv.summary(state))
+            showRwkv(state)
+            after(state)
         }
+    }
+
+    private fun showRwkv(state: RwkvState) {
+        val rwkv = findPreference<SwitchPreferenceCompat>(getString(R.string.ankiquest_rwkv_key)) ?: return
+        rwkv.isChecked = state.switch == RwkvSwitch.ON
+        rwkv.setSummary(AnkiquestRwkv.summary(state))
     }
 
     /**
