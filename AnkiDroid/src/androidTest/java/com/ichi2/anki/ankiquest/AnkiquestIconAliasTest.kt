@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -49,7 +50,7 @@ class AnkiquestIconAliasTest {
             listOf(
                 Triple("ankilope", "AnkiquestIconAnkilopeDefault", "ankilope_launcher"),
                 Triple("cow", "AnkiquestIconBlumaDefault", "cow_launcher"),
-                Triple("none", "AnkiquestIconPlain", "ic_launcher"),
+                Triple("none", "AnkiquestIconPlain", plainIcon()),
                 Triple(AKI, "AnkiquestIconDefault", "ankiquest_launcher"),
             )
         for ((companion, alias, icon) in cases) {
@@ -69,9 +70,22 @@ class AnkiquestIconAliasTest {
         }
     }
 
+    // Android selects roundIcon during package parsing on devices that enable this framework flag.
+    // The flag is not part of the public R class, so the device test looks it up by name.
+    @SuppressLint("DiscouragedApi")
+    private fun plainIcon(): String {
+        val system = Resources.getSystem()
+        val flag = system.getIdentifier("config_useRoundIcon", "bool", "android")
+        return if (flag != 0 && system.getBoolean(flag)) "ic_launcher_round" else "ic_launcher"
+    }
+
     // The quest icons are not in the other builds' R, which compile this test too.
     @SuppressLint("DiscouragedApi")
-    private fun mipmap(name: String): Int = context.resources.getIdentifier(name, "mipmap", context.packageName)
+    private fun mipmap(name: String): Int {
+        val resource = context.resources.getIdentifier(name, "mipmap", context.packageName)
+        assertTrue(resource != 0, "the quest build must contain mipmap/$name")
+        return resource
+    }
 
     private companion object {
         const val AKI = "aki"
