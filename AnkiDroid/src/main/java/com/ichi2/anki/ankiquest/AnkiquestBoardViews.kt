@@ -61,7 +61,8 @@ internal class AnkiquestBoardViews(
         THIN(height = 6, top = 2, bottom = 6),
     }
 
-    private val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
+    // Lazy: activities build this in a field initializer, before the app has started.
+    private val numbers by lazy { NumberFormat.getIntegerInstance(AnkiquestLanguage.locale()) }
 
     fun number(value: Long): String = numbers.format(value)
 
