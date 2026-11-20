@@ -18,7 +18,6 @@
     <string name="ankiquest_countdowns_full">You have the most countdowns you can keep. Delete one to add another.</string>
     <string name="ankiquest_countdowns_private">Only you see your countdowns.</string>
     <string name="ankiquest_countdown_tomorrow">%1$s tomorrow</string>
-    <string name="ankiquest_countdown_today">%1$s today</string>
     <string name="ankiquest_countdown_past">%1$s is over</string>
     <string name="ankiquest_countdown_done">Nothing left in %1$s before then</string>
     <plurals name="ankiquest_countdown_upcoming">

@@ -16,7 +16,6 @@
     <string name="ankiquest_countdowns_full">Ya tienes el máximo de cuentas atrás. Elimina una para añadir otra.</string>
     <string name="ankiquest_countdowns_private">Solo tú ves tus cuentas atrás.</string>
     <string name="ankiquest_countdown_tomorrow">%1$s mañana</string>
-    <string name="ankiquest_countdown_today">%1$s hoy</string>
     <string name="ankiquest_countdown_past">%1$s ya pasó</string>
     <string name="ankiquest_countdown_done">No queda nada en %1$s antes de esa fecha</string>
     <plurals name="ankiquest_countdown_upcoming">

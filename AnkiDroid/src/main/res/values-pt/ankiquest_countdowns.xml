@@ -16,7 +16,6 @@
     <string name="ankiquest_countdowns_full">Já tens o máximo de contagens decrescentes. Elimina uma para adicionar outra.</string>
     <string name="ankiquest_countdowns_private">Só tu vês as tuas contagens decrescentes.</string>
     <string name="ankiquest_countdown_tomorrow">%1$s amanhã</string>
-    <string name="ankiquest_countdown_today">%1$s hoje</string>
     <string name="ankiquest_countdown_past">%1$s já passou</string>
     <string name="ankiquest_countdown_done">Não falta nada em %1$s até lá</string>
     <plurals name="ankiquest_countdown_upcoming">

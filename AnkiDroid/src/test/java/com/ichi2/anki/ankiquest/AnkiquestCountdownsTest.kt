@@ -115,7 +115,7 @@ class AnkiquestCountdownsTest : RobolectricTest() {
         assertEquals(row.getInt("max_events"), AnkiquestCountdowns.MAX_EVENTS)
         assertEquals(row.getInt("max_name_chars"), AnkiquestCountdowns.MAX_NAME_CHARS)
         assertEquals(row.getInt("max_deck_chars"), AnkiquestCountdowns.MAX_DECK_CHARS)
-        assertEquals(row.getString("android"), AnkiquestCountdowns.PREF)
+        assertEquals(row.getString("android"), AnkiquestCountdowns.PREF_COUNTDOWNS)
     }
 
     @Test

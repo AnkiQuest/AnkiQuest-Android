@@ -1687,7 +1687,7 @@ private class LeaderboardSection(
             ViewCompat.setAccessibilityHeading(this, false)
         }
         if (row.hasToday) {
-            views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
+            views.text(score, getString(R.string.ankiquest_today, views.number(row.todayReviews)), small = true).gravity = alignment
         }
         val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
         closing?.let { xp ->

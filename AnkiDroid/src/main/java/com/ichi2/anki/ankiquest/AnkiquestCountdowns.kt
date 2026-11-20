@@ -23,7 +23,7 @@ import java.time.format.ResolverStyle
  */
 internal object AnkiquestCountdowns {
     /** The preference holding the list as JSON; the synced setting's Android name. */
-    const val PREF = "ankiquestCountdowns"
+    const val PREF_COUNTDOWNS = "ankiquestCountdowns"
 
     /** Servers that keep the list; an older one refuses an unknown value over 1024 bytes. */
     const val FEATURE = "countdowns"
@@ -155,7 +155,7 @@ internal object AnkiquestCountdowns {
     /** The stored list; an unusable one counts as empty. */
     fun read(prefs: SharedPreferences): Countdowns =
         try {
-            parse(prefs.getString(PREF, null)) ?: Countdowns.EMPTY
+            parse(prefs.getString(PREF_COUNTDOWNS, null)) ?: Countdowns.EMPTY
         } catch (_: ClassCastException) {
             Countdowns.EMPTY
         }
@@ -164,7 +164,7 @@ internal object AnkiquestCountdowns {
     fun write(
         prefs: SharedPreferences,
         countdowns: Countdowns,
-    ) = prefs.edit { putString(PREF, countdowns.toJson().toString()) }
+    ) = prefs.edit { putString(PREF_COUNTDOWNS, countdowns.toJson().toString()) }
 
     /** The Anki day of local time [now]: its date once the day start hour is taken off. */
     fun ankiToday(

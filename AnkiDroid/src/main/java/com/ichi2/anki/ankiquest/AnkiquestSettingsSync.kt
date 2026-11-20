@@ -91,7 +91,7 @@ internal object AnkiquestSettingsSync {
         STREAK_CUE("streak_cue", AnkiquestStreakCue.PREF_ENABLED, true, Storage.BOOLEAN),
         COUNTDOWNS(
             "countdowns",
-            AnkiquestCountdowns.PREF,
+            AnkiquestCountdowns.PREF_COUNTDOWNS,
             AnkiquestCountdowns.Countdowns.EMPTY,
             Storage.COUNTDOWNS,
             feature = AnkiquestCountdowns.FEATURE,

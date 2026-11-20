@@ -16,7 +16,6 @@
     <string name="ankiquest_countdowns_full">Tu as déjà le nombre maximal de comptes à rebours. Supprimes-en un pour en ajouter un autre.</string>
     <string name="ankiquest_countdowns_private">Tes comptes à rebours ne sont visibles que par toi.</string>
     <string name="ankiquest_countdown_tomorrow">%1$s demain</string>
-    <string name="ankiquest_countdown_today">%1$s aujourd’hui</string>
     <string name="ankiquest_countdown_past">%1$s : terminé</string>
     <string name="ankiquest_countdown_done">Plus rien à faire dans %1$s d’ici là</string>
     <plurals name="ankiquest_countdown_upcoming">

@@ -14,7 +14,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -32,6 +31,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCountdowns.Days
 import com.ichi2.anki.ankiquest.AnkiquestCountdowns.Pace
 import com.ichi2.anki.ankiquest.AnkiquestCountdowns.State
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -56,7 +56,7 @@ internal object AnkiquestCountdownTexts {
                     days.days.toInt(),
                 )
             State.TOMORROW -> context.getString(R.string.ankiquest_countdown_tomorrow, event.name)
-            State.TODAY -> context.getString(R.string.ankiquest_countdown_today, event.name)
+            State.TODAY -> context.getString(R.string.ankiquest_today, event.name)
             State.PAST -> context.getString(R.string.ankiquest_countdown_past, event.name)
         }
 
@@ -182,7 +182,7 @@ class AnkiquestCountdownsActivity : AnkiActivity(R.layout.activity_ankiquest_cou
 
     private fun add() {
         if (stored().events.size >= AnkiquestCountdowns.MAX_EVENTS) {
-            Toast.makeText(this, R.string.ankiquest_countdowns_full, Toast.LENGTH_LONG).show()
+            showThemedToast(this, R.string.ankiquest_countdowns_full, shortLength = false)
             return
         }
         form(R.string.ankiquest_countdown_add, null) { event -> save(stored().events + event) }
