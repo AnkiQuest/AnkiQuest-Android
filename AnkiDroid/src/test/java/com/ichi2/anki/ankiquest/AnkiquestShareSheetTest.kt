@@ -58,10 +58,10 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
 class AnkiquestShareSheetTest : RobolectricTest() {
-    private var account = HomeAccount("https://quest.example.test", "hill", "synthetic-token")
+    private var account = HomeAccount("https://quest.example.test", "aldanita", "synthetic-token")
     private val moment = MomentRef.Win(17)
     private val card = AnkiquestShare.Card("Level 54", "I reached level 54.")
-    private val members = listOf(AnkiquestSocial.Person("hill", "Hill"), AnkiquestSocial.Person("ana", "Ana"))
+    private val members = listOf(AnkiquestSocial.Person("aldanita", "Aldana"), AnkiquestSocial.Person("ana", "Ana"))
     private var overview =
         AnkiquestSocial.Overview(
             friends = listOf(AnkiquestSocial.Person("ana", "Ana"), AnkiquestSocial.Person("cerro", "Cerro")),
@@ -196,7 +196,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val delivered = ConcurrentHashMap<String, Long>()
         val requests = CopyOnWriteArrayList<String>()
-        server.createContext("/api/share/hill") { exchange ->
+        server.createContext("/api/share/aldanita") { exchange ->
             requests += "${exchange.requestMethod} ${exchange.requestURI}"
             val answer =
                 if (exchange.requestMethod == "POST") {
@@ -242,7 +242,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             advanceRobolectricLooperUntil { ShadowToast.getTextOfLatestToast() != null }
 
             assertEquals(setOf("cerro"), delivered.keys.toSet(), "the earlier send must survive")
-            assertEquals("DELETE /api/share/hill/17?until=${NOW + DAY + 1}", requests.last())
+            assertEquals("DELETE /api/share/aldanita/17?until=${NOW + DAY + 1}", requests.last())
         } finally {
             server.stop(0)
             unmockkObject(AnkiquestCapabilities)

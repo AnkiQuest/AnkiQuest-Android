@@ -111,7 +111,7 @@ class AnkiquestUploadTest : RobolectricTest() {
             val response =
                 when {
                     settings -> deckSettings()
-                    answering -> JSONObject().put("sent_to", "Hill")
+                    answering -> JSONObject().put("sent_to", "Aldana")
                     else -> profile()
                 }
             val bytes = response.toString().toByteArray(Charsets.UTF_8)
@@ -148,7 +148,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `a reply carries the message to the server and names who heard it`() =
         runBlocking {
             val account = AnkiquestHomeData.account()!!
-            assertEquals("Hill", Ankiquest.reply(7, "Good job!", account.notificationAccount, account.scope))
+            assertEquals("Aldana", Ankiquest.reply(7, "Good job!", account.notificationAccount, account.scope))
 
             val sent = requests.single { it.path == "/api/reply/cerro" }
             assertEquals("POST", sent.method)
