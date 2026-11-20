@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest.heatmap
 
+import com.ichi2.anki.ankiquest.DAY_MS
 import com.ichi2.anki.libanki.Collection
 import org.json.JSONObject
 import java.time.Instant
@@ -98,7 +99,6 @@ object ReviewHeatmap {
         }
 
     const val FORECAST_DAYS = 90L
-    private const val DAY_MILLIS = 86_400_000L
 
     /** Call inside CollectionManager.withCol, away from the main thread. */
     fun load(col: Collection): ReviewHeatmapData {
@@ -112,7 +112,7 @@ object ReviewHeatmap {
         // Do not join cards: retained reviews of deleted cards still represent study.
         col.db
             .query(
-                "select (? - 1 - id) / $DAY_MILLIS, count(*) from revlog " +
+                "select (? - 1 - id) / $DAY_MS, count(*) from revlog " +
                     "where id >= 0 and id < ? and ease > 0 and type < 4 group by 1",
                 cutoffMillis,
                 cutoffMillis,
