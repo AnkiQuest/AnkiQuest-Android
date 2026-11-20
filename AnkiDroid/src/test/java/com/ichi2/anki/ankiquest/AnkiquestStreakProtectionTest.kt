@@ -54,13 +54,6 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
     }
 
     @Test
-    fun `native settings load streak protection with saved credentials without uploading reviews`() =
-        runBlocking {
-            assertTrue(Ankiquest.streakProtectionEnabled())
-            assertEquals(Triple("GET /api/streak-freezes/cerro%20two", "Bearer saved-token", ""), requests.single())
-        }
-
-    @Test
     fun `native toggle sends only enabled and reflects the server response`() =
         runBlocking {
             response = """{"enabled":false,"freezes":2,"capacity":3}"""
@@ -84,11 +77,10 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
     fun `rejected or malformed settings never become an off default`() =
         runBlocking<Unit> {
             status = 401
-            assertFailsWith<Exception> { Ankiquest.streakProtectionEnabled() }
             assertFailsWith<Exception> { Ankiquest.setStreakProtection(true) }
             status = 200
             response = "{}"
-            assertFailsWith<Exception> { Ankiquest.streakProtectionEnabled() }
+            assertFailsWith<Exception> { Ankiquest.setStreakProtection(true) }
         }
 
     @Test

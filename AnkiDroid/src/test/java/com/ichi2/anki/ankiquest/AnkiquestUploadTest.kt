@@ -40,7 +40,6 @@ import kotlin.test.assertTrue
 
 private const val PREF_LEGACY_MARK = "ankiquestUploadedThrough"
 private const val PREF_LEGACY_RECENT = "ankiquestRecentUploads"
-private const val DAY_MS = 24 * 60 * 60 * 1000L
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
@@ -101,7 +100,7 @@ class AnkiquestUploadTest : RobolectricTest() {
                 val response =
                     when {
                         settings -> deckSettings()
-                        answering -> JSONObject().put("sent_to", "Hill")
+                        answering -> JSONObject().put("sent_to", "Aldana")
                         else -> profile()
                     }
                 val status =
@@ -136,7 +135,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `a reply carries the message to the server and names who heard it`() =
         runBlocking {
             val account = AnkiquestHomeData.account()!!
-            assertEquals("Hill", Ankiquest.reply(7, "Good job!", account.notificationAccount, account.scope))
+            assertEquals("Aldana", Ankiquest.reply(7, "Good job!", account.notificationAccount, account.scope))
 
             val sent = requests.single { it.path == "/api/reply/cerro" }
             assertEquals("POST", sent.method)

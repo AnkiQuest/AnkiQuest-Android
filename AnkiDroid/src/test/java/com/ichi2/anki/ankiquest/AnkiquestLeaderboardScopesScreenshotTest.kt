@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
-    private val identity = HomeAccount("https://anki.example.test", "hill", "screenshot-token")
+    private val identity = HomeAccount("https://anki.example.test", "aldanita", "screenshot-token")
     private val overview =
         AnkiquestSocial.parse(JSONObject("""{"groups":[{"id":7,"name":"Study group","members":[]}]}"""))
 
@@ -48,7 +48,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
                 JSONArray(
                     """[
                     {"user":"ana","display":"Ana","rank":3,"level":4,"xp":900,"streak":7},
-                    {"user":"hill","display":"Hill","rank":103,"level":2,"xp":40,"streak":3,"me":true,"shown":false,
+                    {"user":"aldanita","display":"Aldana","rank":103,"level":2,"xp":40,"streak":3,"me":true,"shown":false,
                      "today_reviews":12,"today_minutes":10,"streak_minutes":10,"streak_state":"studied","day_ends_at":4102444800000}
                     ]""",
                 ),
@@ -127,7 +127,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     }
 
     private fun launch(): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext)).also { it.awaitBoard() }
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext)).also { it.awaitBoard() }
 
     private fun click(
         screen: AnkiquestFriendsActivity,

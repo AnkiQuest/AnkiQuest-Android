@@ -53,7 +53,7 @@ internal object AnkiquestMoments {
     private const val SHOWN_LIMIT = 300
 
     /** The server lists conquests for longer, but only announces them this long; neither does this. */
-    private const val FRESH_MS = 2 * 24 * 60 * 60 * 1000L
+    private const val FRESH_MS = 2 * DAY_MS
 
     /** What a moment is about, most important first when several wait. */
     enum class Kind(
