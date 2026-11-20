@@ -292,6 +292,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     @Test
     fun `RWKV switch is off by default and refuses to turn on without an engine`() {
         val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        assertFalse(rwkv.isVisible, "An unavailable scheduler must stay out of settings")
         assertFalse(rwkv.isChecked)
         assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
 
@@ -309,6 +310,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
         val rwkv = open().switch(R.string.ankiquest_rwkv_key)
         idle()
+        assertFalse(rwkv.isVisible, "A saved switch must not expose an unavailable scheduler")
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
         assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
