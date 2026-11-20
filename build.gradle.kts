@@ -37,6 +37,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") apply false
     alias(libs.plugins.ktlint.gradle.plugin) apply false
     alias(libs.plugins.keeper) apply false
+    alias(libs.plugins.vanniktech.maven.publish) apply false
 }
 
 registerJacocoLibraryVariants()

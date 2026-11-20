@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: ankiquest API publish
+
+# Publishes the api module to Maven Central as org.ankiquest:api, signed, with the vanniktech
+# plugin (see api/build.gradle.kts and docs/ankiquest-api.md). Runs only on a tag
+# api-v<version> or when dispatched; never on pull requests. The tag must name the version in
+# api/build.gradle.kts, such as api-v2.0.0-ankiquest.1.
+#
+# Secrets: MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD (a Central Portal user token for
+# the org.ankiquest namespace), SIGNING_PRIVATE_KEY and SIGNING_PASSWORD (the GPG key that
+# signs the artefacts), as in AnkiQuest's Anki-Android-Backend fork.
+on:
+  push:
+    tags:
+      - "api-v*-ankiquest.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Releases queue; one never cancels another
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A tag must match the version Gradle publishes, so the two never disagree
+      - name: Check the tag against the api version
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' api/build.gradle.kts)
+          if [ "$TAG" != "api-v$version" ]; then
+            echo "::error::Tag $TAG does not match api version $version"
+            exit 1
+          fi
+
+      - name: Configure JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: "jetbrains"
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: true
+
+      - name: Download Robolectric SDKs
+        run: ./gradlew robolectricSdkDownload
+
+      - name: Test the api module
+        run: ./gradlew :api:testDebugUnitTest
+
+      - name: Publish to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: ./gradlew :api:publishAllPublicationsToMavenCentral --no-configuration-cache

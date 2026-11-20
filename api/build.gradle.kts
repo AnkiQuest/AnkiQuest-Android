@@ -1,13 +1,13 @@
 import com.android.build.api.dsl.LibraryExtension
-import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {
     id("ankidroid.android.api")
-    id("maven-publish")
+    alias(libs.plugins.vanniktech.maven.publish)
 }
 
-group = "com.ichi2.anki"
-version = "2.0.0"
+// <AnkiDroid's api version>-ankiquest.<n>; the publish workflow checks the tag against it
+group = "org.ankiquest"
+version = "2.0.0-ankiquest.1"
 
 configure<LibraryExtension> {
     namespace = "com.ichi2.anki.api"
@@ -32,13 +32,6 @@ configure<LibraryExtension> {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-
-    publishing {
-        singleVariant("release") {
-            withJavadocJar()
-            withSourcesJar()
-        }
-    }
 }
 
 dependencies {
@@ -51,68 +44,40 @@ dependencies {
     testImplementation(libs.kotlin.test)
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            register<MavenPublication>("release") {
-                version = version
-                groupId = group.toString()
-                artifactId = "api"
+// AnkiQuest API: published to Maven Central as org.ankiquest:api, signed, with the
+// vanniktech plugin as in AnkiQuest's Anki-Android-Backend fork. The coordinates differ from
+// AnkiDroid's com.ichi2.anki:api so the two never resolve in place of each other; the packages
+// (com.ichi2.anki.api, com.ichi2.anki.FlashCardsContract) stay AnkiDroid's, so clients switch
+// by changing the dependency line. See docs/ankiquest-api.md.
+mavenPublishing {
+    coordinates(group.toString(), "api", version.toString())
+    publishToMavenCentral(true) // "true": release automatically once validated
+    signAllPublications()
 
-                pom {
-                    name = "AnkiDroid API"
-                    description = "A programmatic API exported by AnkiDroid"
-                    url = "https://github.com/ankidroid/Anki-Android/tree/main/api"
-                    licenses {
-                        license {
-                            name = "GNU LESSER GENERAL PUBLIC LICENSE, v3"
-                            url =
-                                "https://github.com/ankidroid/Anki-Android/blob/main/api/COPYING.LESSER"
-                        }
-                    }
-                    scm {
-                        connection = "scm:git:git://github.com/ankidroid/Anki-Android.git"
-                        url = "https://github.com/ankidroid/Anki-Android"
-                    }
-                }
-
-                afterEvaluate {
-                    from(components["release"])
-                }
+    pom {
+        name = "AnkiQuest API"
+        description =
+            "AnkiDroid's API library for AnkiDroid, AnkiQuest and any app offering AnkiDroid's flashcards provider"
+        url = "https://github.com/AnkiQuest/AnkiQuest-Android/tree/main/api"
+        inceptionYear = "2015"
+        licenses {
+            license {
+                name = "GNU LESSER GENERAL PUBLIC LICENSE, v3"
+                url = "https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/api/COPYING.LESSER"
+                distribution = "repo"
             }
         }
-        repositories {
-            maven {
-                // change URLs to point to your repos, e.g. http://my.org/repo
-                val releasesRepoUrl = layout.buildDirectory.dir("repos/releases")
-                val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
-                url =
-                    uri(
-                        if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl,
-                    )
+        developers {
+            developer {
+                id = "float3"
+                name = "hill"
+                url = "https://github.com/float3"
             }
+        }
+        scm {
+            url = "https://github.com/AnkiQuest/AnkiQuest-Android"
+            connection = "scm:git:git://github.com/AnkiQuest/AnkiQuest-Android.git"
+            developerConnection = "scm:git:ssh://git@github.com/AnkiQuest/AnkiQuest-Android.git"
         }
     }
 }
-
-val zipReleaseProvider =
-    tasks.register("zipRelease", Zip::class) {
-        from(layout.buildDirectory.dir("repos/releases"))
-        destinationDirectory = layout.buildDirectory
-        archiveFileName = "${layout.buildDirectory.get()}/release-${archiveVersion.get()}.zip"
-    }
-
-// Use this task to make a release you can send to someone
-// You may like `./gradlew :api:publishToMavenLocal for development
-val generateRelease: TaskProvider<Task> =
-    tasks.register("generateRelease") {
-        doLast {
-            println("Release $version can be found at ${layout.buildDirectory.get()}/repos/releases/")
-            println("Release $version zipped can be found ${layout.buildDirectory.get()}/release-$version.zip")
-        }
-    }
-
-// tasks.named("publishMavenJavaPublicationToMavenRepository").dependsOn(tasks.named("assemble"))
-// tasks.named("publish").dependsOn(tasks.named("assemble"))
-generateRelease.dependsOn(tasks.named("publish"))
-generateRelease.dependsOn(zipReleaseProvider)
