@@ -4,17 +4,17 @@ name: ankiquest art check
 # Runs the server's art exporter against the app's drawables, at the server commit pinned in
 # ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests and
 # pushes, never on a schedule or by hand: a manual server ref would run arbitrary code with the
-# Rust cache shared with main.
+# Rust cache shared with master.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # Check against the pinned server commit (#203), so a server merge cannot turn main red;
+      # Check against the pinned server commit (#203), so a server merge cannot turn master red;
       # the bump PR brings exporter changes in.
       - name: Read the immutable server pin
         id: server-ref

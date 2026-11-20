@@ -22,7 +22,7 @@ name: "ankiquest Screenshots: Compare"  # do not rename - referenced by ankiques
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 permissions: {}

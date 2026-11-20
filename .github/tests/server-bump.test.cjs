@@ -25,7 +25,7 @@ function api({ pulls = [pr], checks = [], history = [] } = {}) {
             pulls: {
                 list: async args => {
                     assert.equal(args.head, "AnkiQuest:bot/server-bump");
-                    assert.equal(args.base, "main");
+                    assert.equal(args.base, "master");
                     return { data: pulls };
                 },
                 listCommits() {},
@@ -175,7 +175,7 @@ test("a new PR names the snapshot and source commits without notifying commit-ti
         commits: [{ sha: "d".repeat(40), subject: "Add an example @someone <note>" }],
     });
     assert.equal(client.creates[0].head, "bot/server-bump");
-    assert.equal(client.creates[0].base, "main");
+    assert.equal(client.creates[0].base, "master");
     assert.equal(client.creates[0].title, "Bump server to bbbbbbb");
     assert.match(client.creates[0].body, /\/commit\/dddddddd/);
     assert.match(client.creates[0].body, /&#64;someone &lt;note&gt;/);
@@ -202,7 +202,7 @@ test("updates preserve the reviewers notes outside the generated body", async ()
     assert.doesNotMatch(client.edits[0].body, />old</);
 });
 
-test("the scheduled job only pushes the bump branch and keeps trusted helpers from main", () => {
+test("the scheduled job only pushes the bump branch and keeps trusted helpers from master", () => {
     const workflow = fs.readFileSync(
         path.join(__dirname, "../workflows/ankiquest_bump_server.yml"),
         "utf8",
