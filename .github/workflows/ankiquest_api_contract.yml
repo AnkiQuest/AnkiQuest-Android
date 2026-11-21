@@ -7,7 +7,7 @@ on:
   merge_group:
     types: [checks_requested]
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
     inputs:
       server_ref:
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -105,7 +105,7 @@ jobs:
         timeout-minutes: 10
         with:
           cache-provider: basic
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache

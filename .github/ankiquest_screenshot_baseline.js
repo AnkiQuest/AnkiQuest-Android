@@ -6,7 +6,7 @@ const WORKFLOW = "ankiquest_screenshot_store.yml";
 const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
 
-// The commit whose baseline a run compares against: a pull request's base, the main commit a
+// The commit whose baseline a run compares against: a pull request's base, the master commit a
 // merge queue group was built on, or the pushed commit itself.
 async function baseCommit({ github, context }) {
     if (context.payload.pull_request) {

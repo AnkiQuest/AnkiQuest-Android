@@ -6,7 +6,7 @@ const test = require("node:test");
 
 const workflows = path.join(__dirname, "../workflows");
 
-// Workflows that produce main's required checks. The merge queue waits for
+// Workflows that produce master's required checks. The merge queue waits for
 // each of them on its merge commit, so each must run on merge_group.
 const REQUIRED = [
     "ankiquest_api_contract.yml",

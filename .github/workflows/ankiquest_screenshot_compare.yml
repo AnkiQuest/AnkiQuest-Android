@@ -22,10 +22,10 @@ name: "ankiquest Screenshots: Compare"  # do not rename - referenced by ankiques
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
   # Required check: the merge queue waits for it on its merge commit, which is compared
-  # against the baseline of the main commit the queue built it on.
+  # against the baseline of the master commit the queue built it on.
   merge_group:
     types: [checks_requested]
 
@@ -133,7 +133,7 @@ jobs:
         if: ${{ always() }}
         env:
           # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-merge-group"
-          # in the merge queue, "screenshot-diff-main" on push)
+          # in the merge queue, "screenshot-diff-master" on push)
           SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || github.event_name == 'merge_group' && 'screenshot-diff-merge-group' || format('screenshot-diff-{0}', github.ref_name) }}
         run: |
           # Preserve module paths so identically named tests cannot overwrite one another.
