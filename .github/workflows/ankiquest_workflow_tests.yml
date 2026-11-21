@@ -14,6 +14,13 @@ on:
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
+      # ankiquest-names.test.cjs checks the names the app publishes and AnkiQuest's packages.
+      - "**/*.kt"
+      - "**/*.java"
+      - "**/*.kts"
+      - "**/*.xml"
+      - "**/*.pro"
+      - "**/META-INF/services/**"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
     branches: [master]
@@ -27,6 +34,13 @@ on:
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
+      # ankiquest-names.test.cjs checks the names the app publishes and AnkiQuest's packages.
+      - "**/*.kt"
+      - "**/*.java"
+      - "**/*.kts"
+      - "**/*.xml"
+      - "**/*.pro"
+      - "**/META-INF/services/**"
 
 permissions:
   contents: read
