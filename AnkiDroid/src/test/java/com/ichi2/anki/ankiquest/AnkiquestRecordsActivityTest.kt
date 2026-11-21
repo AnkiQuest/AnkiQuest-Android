@@ -54,7 +54,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     fun `every board shows its record holder and whoever came closest`() {
         val records = launch()
         for (kind in AnkiquestRecords.Kind.entries) {
-            assertTrue(records.hasText(records.getString(AnkiquestRecordsActivity.label(kind))), kind.name)
+            assertTrue(records.hasText(records.getString(AnkiquestMeSections.recordLabel(kind))), kind.name)
         }
         assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "hill")), "the player's own name says so")
         assertTrue(records.hasText("Cerro"))
@@ -167,7 +167,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     }
 
     private fun launch(): AnkiquestProfileActivity =
-        startRegularActivity<AnkiquestProfileActivity>(AnkiquestRecordsActivity.intent(targetContext))
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS))
             .also { records -> advanceRobolectricLooperUntil { !records.findViewById<View>(R.id.aq_me_records_loading).isVisible } }
 
     private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =
