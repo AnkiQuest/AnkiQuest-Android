@@ -2,8 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -246,24 +244,11 @@ internal object AnkiquestSharing {
         return call(account, "DELETE", "api/share/${account.encodedUser}/${sent.win}$selector").optInt("retracted")
     }
 
-    /** One request for the captured [account], which must still be the signed-in one when it is sent and when it answers. */
+    /** One request for the captured [account], which must still be the signed-in one and have a token when it is sent and when it answers. */
     private suspend fun call(
         account: HomeAccount,
         method: String,
         path: String,
         body: JSONObject? = null,
-    ): JSONObject =
-        withContext(Dispatchers.IO) {
-            val request =
-                AnkiquestApi
-                    .request(account, path)
-                    .method(method, body?.let(AnkiquestApi::body))
-                    .build()
-            AnkiquestApi.call(request, check = { requireCurrent(account) }) { AnkiquestApi.jsonObject(it) }
-        }
-
-    private fun requireCurrent(account: HomeAccount) {
-        AnkiquestApi.requireCurrent(account)
-        if (account.token.isEmpty()) throw AnkiquestHttpException(401)
-    }
+    ): JSONObject = AnkiquestApi.call(account, method, path, body, AnkiquestApi.Token.REQUIRED)
 }
