@@ -7,7 +7,7 @@ edges so neighboring targets do not overlap. The focusable calendar host also
 has the localized Review heatmap label.
 
 The new target-size and host-label regressions were observed failing before
-the fix. The complete `com.ichi2.anki.ankiquest.heatmap.*` unit-test package then
+the fix. The complete `org.ankiquest.heatmap.*` unit-test package then
 passed locally. Coverage includes all 366 leap-year targets, pairwise
 non-overlap, selection from a visual gap, accessible day selection, keyboard
 navigation, scrolling, and existing calendar state behavior.

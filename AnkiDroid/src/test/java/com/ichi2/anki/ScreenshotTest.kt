@@ -21,11 +21,11 @@ import com.github.takahirom.roborazzi.checkRoboAccessibility
 import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
-import com.ichi2.anki.ankiquest.heatmap.FixedHeatmapRule
 import com.ichi2.anki.settings.PrefsRepository
 import com.ichi2.anki.settings.enums.AppTheme
 import com.ichi2.anki.settings.enums.DayTheme
 import com.ichi2.anki.settings.enums.NightTheme
+import org.ankiquest.heatmap.FixedHeatmapRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.experimental.categories.Category

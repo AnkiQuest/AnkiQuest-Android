@@ -32,7 +32,7 @@ All ten captures were visually reviewed for clipping and readable labels.
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestPictureScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestPictureScreenshotTest' \
   -Pscreenshot -Ptheme=light,dark -Proborazzi.test.record=true
 ```
 

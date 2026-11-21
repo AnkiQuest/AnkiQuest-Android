@@ -23,8 +23,8 @@ Reproduce on an Android SDK/JDK setup:
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestStreakScreenshotTest' \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestStreakDetailsScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestStreakScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestStreakDetailsScreenshotTest' \
   -Pscreenshot -Ptheme=light,dark -Proborazzi.test.record=true -PtestMaxParallelForks=1
 ```
 

@@ -18,7 +18,6 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.ankiActivity
-import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.analytics.AnalyticsEvent.LinkClicked
 import com.ichi2.anki.common.analytics.LinkAction
@@ -35,6 +34,7 @@ import com.ichi2.utils.createAndApply
 import com.ichi2.utils.customView
 import com.ichi2.utils.title
 import dev.androidbroadcast.vbpd.viewBinding
+import org.ankiquest.AnkiquestLinks
 import com.ichi2.anki.common.android.R as CommonR
 
 /**

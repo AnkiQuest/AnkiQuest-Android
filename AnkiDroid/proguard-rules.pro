@@ -45,7 +45,7 @@
 
 # AnkiQuest keeps its class names: crash reports stay readable, and AnkiquestDeviceTest finds the
 # package's classes in the release APK to check that each one initialises on ART
--keepnames class com.ichi2.anki.ankiquest.**
+-keepnames class org.ankiquest.**
 
 # Ignore unused packages
 -dontwarn javax.naming.**

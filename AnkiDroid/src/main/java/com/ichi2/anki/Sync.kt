@@ -13,7 +13,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CollectionManager.withColExclusive
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.dialogs.SyncErrorDialog
 import com.ichi2.anki.observability.ChangeManager.notifySubscribersAllValuesChanged
@@ -41,6 +40,7 @@ import kotlinx.coroutines.withContext
 import net.ankiweb.rsdroid.Backend
 import net.ankiweb.rsdroid.exceptions.BackendInterruptedException
 import net.ankiweb.rsdroid.exceptions.BackendSyncException
+import org.ankiquest.Ankiquest
 import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 

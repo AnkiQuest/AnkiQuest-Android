@@ -16,7 +16,7 @@ Regenerate from the Android repository root:
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestClearStreakScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestClearStreakScreenshotTest' \
   -Pscreenshot -Ptheme=light,dark -Proborazzi.test.record=true \
   -PtestMaxParallelForks=1
 ```

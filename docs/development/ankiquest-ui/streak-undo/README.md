@@ -23,7 +23,7 @@ Reproduce with:
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestProtectionScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestProtectionScreenshotTest' \
   -PtestMaxParallelForks=1 -Pscreenshot -Ptheme=light,dark \
   -Proborazzi.test.record=true
 ```

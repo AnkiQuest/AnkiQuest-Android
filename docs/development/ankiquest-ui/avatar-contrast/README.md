@@ -13,11 +13,11 @@ All 16 Home/Me light and dark renders completed, including 200% text. The seven 
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests com.ichi2.anki.ankiquest.AnkiquestAvatarContrastTest
+  --tests org.ankiquest.AnkiquestAvatarContrastTest
 
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests com.ichi2.anki.ankiquest.AnkiquestHomeScreenshotTest \
-  --tests com.ichi2.anki.ankiquest.AnkiquestMeScreenshotTest \
+  --tests org.ankiquest.AnkiquestHomeScreenshotTest \
+  --tests org.ankiquest.AnkiquestMeScreenshotTest \
   -Pscreenshot -PaccessibilityScan -Ptheme=light,dark \
   -Proborazzi.test.record=true -PtestMaxParallelForks=1
 ```

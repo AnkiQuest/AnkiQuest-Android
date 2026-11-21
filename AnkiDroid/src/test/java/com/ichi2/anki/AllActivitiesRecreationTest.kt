@@ -8,13 +8,6 @@ import androidx.core.content.edit
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.account.AccountActivity
-import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
-import com.ichi2.anki.ankiquest.AnkiquestGalleryActivity
-import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
-import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
-import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
-import com.ichi2.anki.ankiquest.AnkiquestShareActivity
-import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.multimedia.MultimediaActivity
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -27,6 +20,13 @@ import com.ichi2.testutils.grantWritePermissions
 import com.ichi2.testutils.skipTest
 import com.ichi2.widget.cardanalysis.CardAnalysisWidgetConfig
 import com.ichi2.widget.deckpicker.DeckPickerWidgetConfig
+import org.ankiquest.AnkiquestFeedActivity
+import org.ankiquest.AnkiquestGalleryActivity
+import org.ankiquest.AnkiquestHistoryActivity
+import org.ankiquest.AnkiquestLeaderboardActivity
+import org.ankiquest.AnkiquestRecordsActivity
+import org.ankiquest.AnkiquestShareActivity
+import org.ankiquest.AnkiquestWidgetConfig
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.Before

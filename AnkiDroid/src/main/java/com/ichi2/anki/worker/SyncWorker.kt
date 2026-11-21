@@ -26,7 +26,6 @@ import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.NotificationChannel
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.cancelSync
 import com.ichi2.anki.common.permissions.canPostNotifications
 import com.ichi2.anki.libanki.Collection
@@ -45,6 +44,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import org.ankiquest.Ankiquest
 import timber.log.Timber
 import kotlin.coroutines.cancellation.CancellationException
 

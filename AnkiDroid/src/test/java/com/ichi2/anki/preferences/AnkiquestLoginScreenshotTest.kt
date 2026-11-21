@@ -8,13 +8,13 @@ import androidx.preference.Preference
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
-import com.ichi2.anki.ankiquest.Ankiquest
-import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
-import com.ichi2.anki.ankiquest.AnkiquestPoll
-import com.ichi2.anki.ankiquest.HomeAccount
 import io.mockk.justRun
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import org.ankiquest.Ankiquest
+import org.ankiquest.AnkiquestAccountSettings
+import org.ankiquest.AnkiquestPoll
+import org.ankiquest.HomeAccount
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

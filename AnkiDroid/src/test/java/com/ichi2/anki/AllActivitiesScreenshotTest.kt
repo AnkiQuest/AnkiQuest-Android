@@ -143,11 +143,11 @@ class AllActivitiesScreenshotTest : ScreenshotTest() {
                     // NoteTypeFieldEditorScreenshotTest
                     NoteTypeFieldEditor::class.java,
                     // AnkiquestMeScreenshotTest covers the sections these legacy entry points now open.
-                    com.ichi2.anki.ankiquest.AnkiquestRecordsActivity::class.java,
-                    com.ichi2.anki.ankiquest.AnkiquestHistoryActivity::class.java,
+                    org.ankiquest.AnkiquestRecordsActivity::class.java,
+                    org.ankiquest.AnkiquestHistoryActivity::class.java,
                     // Friends/Feed screenshot tests cover the sections these legacy entry points now open.
-                    com.ichi2.anki.ankiquest.AnkiquestFeedActivity::class.java,
-                    com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity::class.java,
+                    org.ankiquest.AnkiquestFeedActivity::class.java,
+                    org.ankiquest.AnkiquestLeaderboardActivity::class.java,
                 )
             return ActivityList
                 .allActivitiesAndIntents()

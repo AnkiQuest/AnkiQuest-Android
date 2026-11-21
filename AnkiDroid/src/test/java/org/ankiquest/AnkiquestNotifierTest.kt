@@ -1,0 +1,782 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package org.ankiquest
+
+import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.RemoteInput
+import android.content.Intent
+import android.os.Bundle
+import android.provider.Settings
+import androidx.core.app.NotificationCompat
+import androidx.core.content.edit
+import androidx.core.content.getSystemService
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.work.Data
+import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.time.TimeManager
+import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import java.net.InetSocketAddress
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [32])
+class AnkiquestNotifierTest : RobolectricTest() {
+    @Test
+    fun `daily minimum posts a silent notification once`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val secured =
+            message(1, 30)
+                .put("kind", "celebration")
+                .put("topic", "secured")
+                .put("moment", "secured:9")
+                .put("quiet", true)
+                .put("title", "Streak secured!")
+        val inbox = JSONArray().put(secured)
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, inbox, account.scope)
+        val posted = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(NotificationCompat.GROUP_ALERT_SUMMARY, NotificationCompat.getGroupAlertBehavior(posted))
+        val intent = shadowOf(posted.contentIntent).savedIntent
+        assertEquals(AnkiquestHomeActivity::class.java.name, intent.component?.className)
+
+        manager.cancel(5_140_001)
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, inbox, account.scope)
+        assertNull(shadowOf(manager).getNotification(5_140_001))
+    }
+
+    @Test
+    fun `a reply alert shows the message it answers`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val reply =
+            message(1, 30)
+                .put("sender", "cerro")
+                .put("kind", "reply")
+                .put("body", "Good job!")
+                .put("reply_to", JSONObject().put("title", "Deck complete").put("body", "Cerro finished Spanish."))
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, JSONArray().put(reply), account.scope)
+        val posted = shadowOf(manager).getNotification(5_140_001)
+        val shown = posted.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
+        assertTrue(shown.contains("Cerro finished Spanish."))
+        assertTrue(shown.contains("Good job!"))
+    }
+
+    @Test
+    fun `the weekly recap shows every line of its report`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val report = "340 reviews in 95 minutes over 5 study days, 500 XP.\nYou finished 2nd of 6.\nYour streak is 12 days."
+        val recap = message(1, 30).put("kind", "reminder_weekly_recap").put("title", "Your week").put("body", report)
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, JSONArray().put(recap), account.scope)
+        val posted = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(Notification.BigTextStyle::class.java.name, posted.extras.getString(Notification.EXTRA_TEMPLATE))
+        assertEquals(report, posted.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString())
+    }
+
+    @Test
+    fun `a celebration can be shared and a friend's completion can be answered`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val level =
+            message(1, 30)
+                .put("kind", "celebration")
+                .put("title", "Level 54")
+                .put("body", "You reached level 54 with 90000 XP.")
+                .put("share_title", "Level 54")
+                .put("share_body", "I reached level 54 with 90000 XP.")
+        val completion = message(2, 30).put("sender", "cerro").put("kind", "completion")
+        val secured =
+            message(
+                3,
+                30,
+            ).put("kind", "celebration").put("title", "Streak secured!").put("body", "Today counts toward your 5-day streak.")
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            account.notificationAccount,
+            JSONArray().put(level).put(completion).put(secured),
+            account.scope,
+        )
+        val celebration = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(listOf("Share"), celebration.actions.map { it.title.toString() })
+        assertEquals("You reached level 54 with 90000 XP.", celebration.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        val shared = shadowOf(celebration.actions.single().actionIntent).savedIntent
+        assertEquals("Level 54", shared.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+        assertEquals(
+            "I reached level 54 with 90000 XP.",
+            shared.getStringExtra(AnkiquestShare.EXTRA_BODY),
+            "others hear it from the player",
+        )
+        val older =
+            shadowOf(
+                shadowOf(manager)
+                    .getNotification(5_140_003)
+                    .actions
+                    .single()
+                    .actionIntent,
+            ).savedIntent
+        assertEquals(
+            "Today counts toward your 5-day streak.",
+            older.getStringExtra(AnkiquestShare.EXTRA_BODY),
+            "servers without share words",
+        )
+        val reply = shadowOf(manager).getNotification(5_140_002)
+        assertFalse(reply.actions.any { it.title.toString() == "Share" })
+    }
+
+    @Test
+    fun `Spanish contextual replies follow the Anki language and retain notification kind`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        AnkiDroidApp.sharedPrefs().edit { putString("language", "es-ES") }
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            account.notificationAccount,
+            JSONArray().put(message(1, 30).put("sender", "cerro").put("kind", "reply")),
+            account.scope,
+        )
+        val posted = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(listOf("Responder"), posted.actions.map { it.title.toString() })
+        assertEquals(listOf("¡Gracias!", "¡Me alegraste el día!", "¡Te lo agradezco!"), choices(posted))
+        val intent = chose(posted, "¡Gracias!")
+        val data = AnkiquestReply.data(intent, AnkiquestReply.message(intent))
+        assertEquals("reply", data.getString("kind"))
+        assertEquals("¡Gracias!", data.getString(AnkiquestReply.EXTRA_MESSAGE))
+        AnkiquestNotifier.onReplyFailed(targetContext, data)
+        assertEquals(
+            listOf("¡Gracias!", "¡Me alegraste el día!", "¡Te lo agradezco!"),
+            choices(shadowOf(manager).getNotification(5_140_001)),
+        )
+    }
+
+    @Test
+    fun `reply and nudge actions match the conversation and survive a failed retry`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            account.notificationAccount,
+            JSONArray()
+                .put(message(1, 30).put("sender", "cerro").put("kind", "reply"))
+                .put(message(2, 30).put("sender", "cerro").put("kind", "nudge"))
+                .put(message(3, 30).put("sender", "cerro").put("kind", "message")),
+            account.scope,
+        )
+        for ((id, kind, suggestions) in listOf(
+            Triple(1, "reply", listOf("Thanks!", "You made my day!", "I appreciate it!")),
+            Triple(2, "nudge", listOf("On it!", "Starting now", "I will study later")),
+            Triple(3, "message", emptyList()),
+        )) {
+            val posted = shadowOf(manager).getNotification(5_140_000 + id)
+            assertEquals(listOf("Reply"), posted.actions.map { it.title.toString() })
+            assertEquals(suggestions, choices(posted))
+            assertFalse(posted.actions.single().allowGeneratedReplies)
+            val intent = chose(posted, suggestions.firstOrNull() ?: "Hello!")
+            val data = AnkiquestReply.data(intent, AnkiquestReply.message(intent))
+            assertEquals(kind, data.getString("kind"))
+            AnkiquestNotifier.onReplyFailed(targetContext, data)
+            val failed = shadowOf(manager).getNotification(5_140_000 + id)
+            assertEquals(listOf("Reply"), failed.actions.map { it.title.toString() })
+            assertEquals(suggestions, choices(failed))
+        }
+    }
+
+    private fun choices(notification: Notification): List<String> =
+        notification.actions
+            .single { it.remoteInputs?.isNotEmpty() == true }
+            .remoteInputs
+            .single()
+            .choices
+            .orEmpty()
+            .map { it.toString() }
+
+    private fun chose(
+        notification: Notification,
+        text: String,
+    ) = shadowOf(notification.actions.single { it.remoteInputs?.isNotEmpty() == true }.actionIntent).savedIntent.also {
+        RemoteInput.addResultsToIntent(
+            notification.actions.single { it.remoteInputs?.isNotEmpty() == true }.remoteInputs,
+            it,
+            Bundle().apply { putCharSequence(AnkiquestReply.EXTRA_MESSAGE, text) },
+        )
+    }
+
+    private fun replyAccount(): HomeAccount {
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://server.test")
+            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_TOKEN, "hill-token")
+        }
+        return AnkiquestHomeData.account()!!
+    }
+
+    @Test
+    fun `a moment the server withheld for missing art is shown once after an update adds it`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val cow = message(1, 30).put("kind", "celebration").put("topic", "companion").put("moment", "companion:cow")
+        val completion = message(2, 30)
+
+        // Without the cow's art the server leaves out its unlock (id 1); the next row moves the cursor past it.
+        val withoutCow = AnkiquestCompanion.drawn - "cow"
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(completion), drawn = withoutCow)
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        // The update adds the art; the server now sends the older unlock, which is shown once.
+        val inbox = JSONArray().put(cow).put(completion)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertTrue(shadowOf(manager).getNotification(5_140_001) != null, "the revealed unlock is shown")
+        assertNull(shadowOf(manager).getNotification(5_140_002), "the completion is not shown again")
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(0, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `first poll delivers fresh completion and discards stale backlog`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(1, 90_000)).put(message(2, 30)))
+        assertEquals(1, shadowOf(manager).size())
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        manager.cancelAll()
+
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(2, 30)))
+        assertEquals(0, shadowOf(manager).size())
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/other", JSONArray().put(message(2, 30)))
+        assertEquals(1, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `disabled notifications do not consume a fresh inbox entry`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        shadowOf(manager).setNotificationsEnabled(false)
+        val inbox = JSONArray().put(message(1, 30))
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(0L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+        shadowOf(manager).setNotificationsEnabled(true)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(1, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `an established inbox delivers messages missed for more than a day`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(1, 30)))
+        manager.cancelAll()
+        val missed = message(2, 0)
+        collectionTime.addD(2)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(missed))
+        assertEquals(1, shadowOf(manager).size())
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+    }
+
+    @Test
+    fun `messages do not expire while waiting for phone notification permission`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val inbox = JSONArray().put(message(1, 30))
+        shadowOf(manager).setNotificationsEnabled(false)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        collectionTime.addD(2)
+        shadowOf(manager).setNotificationsEnabled(true)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(1, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `a successful empty inbox starts the delivery window`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray())
+        val missed = message(1, 0)
+        collectionTime.addD(2)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(missed))
+        assertEquals(1, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `an existing installation keeps unseen retained messages after updating`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiDroidApp.sharedPrefs().edit(commit = true) { putLong("ankiquestCompletionCursor:server/cerro", 1L) }
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(2, 90_000)))
+        assertEquals(1, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `a completion can be answered until it has been`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            account.notificationAccount,
+            JSONArray()
+                .put(message(1, 30).put("sender", "cerro"))
+                .put(message(2, 30).put("sender", "cerro").put("replied", true))
+                .put(message(3, 30)),
+            account.scope,
+        )
+        val posted = (1..3).map { shadowOf(manager).getNotification(5_140_000 + it) }
+        assertEquals(3, shadowOf(manager).size())
+        assertEquals(listOf("Reply", "Stop deck alerts from cerro"), posted[0].actions.map { it.title.toString() })
+        assertEquals(listOf("Good job!", "Nice one \uD83D\uDD25", "Keep it up!"), choices(posted[0]), "the cheer is the first suggestion")
+        assertTrue(
+            posted[0]
+                .actions[0]
+                .remoteInputs
+                .single()
+                .allowFreeFormInput,
+            "an unanswered completion also takes free text",
+        )
+        assertEquals(
+            listOf("Stop deck alerts from cerro"),
+            posted[1].actions.map {
+                it.title.toString()
+            },
+            "an answered completion still lets its recipient stop deck alerts",
+        )
+        assertNull(posted[2].actions, "a notification without a sender has nobody to answer")
+
+        val cheer = chose(posted[0], "Good job!")
+        assertEquals("Good job!", AnkiquestReply.message(cheer))
+        val data = AnkiquestReply.data(cheer, AnkiquestReply.message(cheer))
+        assertEquals(1L, data.getLong(AnkiquestReply.EXTRA_NOTIFICATION, 0))
+        assertEquals("Deck complete", data.getString(AnkiquestReply.EXTRA_TITLE))
+        assertEquals(account.scope, data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE))
+        assertEquals(account.notificationAccount, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        assertEquals("cerro", data.getString(AnkiquestReply.EXTRA_SENDER))
+
+        AnkiquestNotifier.onReplySent(targetContext, data, "Cerro")
+        assertEquals(
+            listOf("Stop deck alerts from cerro"),
+            shadowOf(manager).getNotification(5_140_001).actions.map { it.title.toString() },
+        )
+        AnkiquestNotifier.onReplyFailed(targetContext, data)
+        assertEquals(
+            listOf("Reply", "Stop deck alerts from cerro"),
+            shadowOf(manager).getNotification(5_140_001).actions.map {
+                it.title.toString()
+            },
+        )
+
+        val typed =
+            chose(posted[0], "  proud of you  ")
+        assertEquals("proud of you", AnkiquestReply.message(typed))
+    }
+
+    @Test
+    fun `suggested replies do not duplicate the quick cheer on incoming or failed notifications`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            account.notificationAccount,
+            JSONArray().put(message(1, 30).put("sender", "cerro")),
+            account.scope,
+        )
+        val incoming = shadowOf(manager).getNotification(5_140_001)
+        val cheer = chose(incoming, "Good job!")
+        val data = AnkiquestReply.data(cheer, AnkiquestReply.message(cheer))
+        assertEquals(account.notificationAccount, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        assertEquals(account.scope, data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE))
+        AnkiquestNotifier.onReplyFailed(targetContext, data)
+        val failed = shadowOf(manager).getNotification(5_140_001)
+
+        for (notification in listOf(incoming, failed)) {
+            val reply = notification.actions.single { it.remoteInputs?.isNotEmpty() == true }
+            val input = reply.remoteInputs.single()
+            val choices = input.choices.map { it.toString() }
+            val labels = notification.actions.map { it.title.toString() } + choices
+            assertEquals(1, labels.count { it == "Good job!" }, "offer the quick cheer only once")
+            assertEquals(listOf("Good job!", "Nice one \uD83D\uDD25", "Keep it up!"), choices)
+            assertTrue(input.allowFreeFormInput, "custom replies remain available")
+            assertFalse(reply.allowGeneratedReplies, "Android must not add another quick cheer suggestion")
+        }
+    }
+
+    @Test
+    fun `reply suggestions are limited to the choices supplied by the app`() {
+        val account = replyAccount()
+        val reply =
+            AnkiquestReply
+                .actions(
+                    targetContext,
+                    1,
+                    5_140_001,
+                    "Deck complete",
+                    "Completed Spanish",
+                    account.notificationAccount,
+                    account.scope,
+                ).last()
+        assertFalse(reply.allowGeneratedReplies, "Android must not add another quick cheer suggestion")
+    }
+
+    @Test
+    fun `a sent reply replaces the buttons and a failed one keeps them`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val data =
+            Data
+                .Builder()
+                .putLong(AnkiquestReply.EXTRA_NOTIFICATION, 7)
+                .putInt(AnkiquestReply.EXTRA_TAG, 5_140_007)
+                .putString(AnkiquestReply.EXTRA_TITLE, "Deck complete")
+                .putString(AnkiquestReply.EXTRA_BODY, "Cerro has finished Spanish for today.")
+                .putString(AnkiquestReply.EXTRA_MESSAGE, "Good job!")
+                .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, account.notificationAccount)
+                .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, account.scope)
+                .build()
+
+        AnkiquestNotifier.onReplySent(targetContext, data, "Cerro")
+        assertEquals(1, shadowOf(manager).size())
+        val sent = shadowOf(manager).getNotification(5_140_007)
+        assertEquals("Sent to Cerro: Good job!", sent.extras.getString(Notification.EXTRA_TEXT))
+        assertNull(sent.actions)
+        val open = shadowOf(sent.contentIntent).savedIntent
+        assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
+        assertEquals(account.notificationAccount, open.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
+
+        AnkiquestNotifier.onReplyFailed(targetContext, data)
+        val failed = shadowOf(manager).getNotification(5_140_007)
+        assertEquals(1, shadowOf(manager).size(), "the same notification is updated in place")
+        assertEquals("Could not send \u201cGood job!\u201d. Tap a button to try again.", failed.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals(listOf("Reply"), failed.actions.map { it.title.toString() })
+    }
+
+    @Test
+    @Config(sdk = [25])
+    @Suppress("DEPRECATION") // pre-O alerts are configured on the notification itself
+    fun `reply acknowledgements stay silent when incoming notifications become alerts`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val data =
+            Data
+                .Builder()
+                .putInt(AnkiquestReply.EXTRA_TAG, 5_140_007)
+                .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, account.notificationAccount)
+                .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, account.scope)
+                .build()
+        AnkiquestNotifier.onReplySent(targetContext, data, "Cerro")
+        val posted = shadowOf(manager).getNotification(5_140_007)
+        assertNull(posted.vibrate)
+        assertNull(posted.sound)
+        assertEquals(0, posted.defaults and (Notification.DEFAULT_SOUND or Notification.DEFAULT_VIBRATE))
+        AnkiquestNotifier.onReplyFailed(targetContext, data)
+        val failed = shadowOf(manager).getNotification(5_140_007)
+        assertNull(failed.vibrate)
+        assertNull(failed.sound)
+        assertEquals(0, failed.defaults and (Notification.DEFAULT_SOUND or Notification.DEFAULT_VIBRATE))
+    }
+
+    @Test
+    @SuppressLint("NewApi") // channels require O, guaranteed by @Config
+    fun `new general and nudge channels vibrate and request heads up alerts`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            "server/cerro",
+            JSONArray()
+                .put(message(1, 30).put("kind", "completion"))
+                .put(message(2, 30).put("kind", "nudge").put("title", "Keep going")),
+        )
+
+        assertEquals("ankiquest", shadowOf(manager).getNotification(5_140_001).channelId)
+        assertEquals("ankiquestNudges", shadowOf(manager).getNotification(5_140_002).channelId)
+        assertTrue(manager.getNotificationChannel("ankiquestNudges").shouldVibrate())
+        assertTrue(manager.getNotificationChannel("ankiquest").shouldVibrate())
+        assertEquals(NotificationManager.IMPORTANCE_HIGH, manager.getNotificationChannel("ankiquest").importance)
+        assertEquals(NotificationManager.IMPORTANCE_HIGH, manager.getNotificationChannel("ankiquestNudges").importance)
+    }
+
+    @Test
+    @Config(sdk = [25])
+    @Suppress("DEPRECATION") // Notification.vibrate is how a pre-O phone buzzes
+    fun `all incoming alerts request sound buzz and heads up before channels existed`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            "server/cerro",
+            JSONArray()
+                .put(message(1, 30).put("kind", "completion"))
+                .put(message(2, 30).put("kind", "nudge")),
+        )
+
+        for (id in 1..2) {
+            val notification = shadowOf(manager).getNotification(5_140_000 + id)
+            assertEquals(listOf(0L, 250L, 150L, 250L), notification.vibrate?.toList())
+            assertEquals(Notification.PRIORITY_HIGH, notification.priority)
+            assertTrue(notification.defaults and Notification.DEFAULT_SOUND != 0)
+        }
+    }
+
+    @Test
+    @SuppressLint("NewApi") // channels require O, guaranteed by @Config
+    fun `a muted nudge does not block later server messages`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        manager.createNotificationChannel(NotificationChannel("ankiquestNudges", "Nudges", NotificationManager.IMPORTANCE_NONE))
+        val inbox = JSONArray().put(message(1, 30).put("kind", "nudge")).put(message(2, 30).put("kind", "message"))
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", inbox)
+        assertEquals(1, shadowOf(manager).size())
+        assertNull(shadowOf(manager).getNotification(5_140_001))
+        assertEquals("Deck complete", shadowOf(manager).getNotification(5_140_002).extras.getString(Notification.EXTRA_TITLE))
+        assertEquals(2L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:server/cerro", 0))
+    }
+
+    @Test
+    @SuppressLint("NewApi") // channels require O, guaranteed by @Config
+    fun `muted general messages do not block a later nudge`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        manager.createNotificationChannel(NotificationChannel("ankiquest", "ankiquest", NotificationManager.IMPORTANCE_NONE))
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            "server/cerro",
+            JSONArray().put(message(1, 30)).put(message(2, 30).put("kind", "nudge")),
+        )
+        assertEquals(1, shadowOf(manager).size())
+        assertEquals("ankiquestNudges", shadowOf(manager).getNotification(5_140_002).channelId)
+        assertEquals(NotificationManager.IMPORTANCE_NONE, manager.getNotificationChannel("ankiquest").importance)
+    }
+
+    @Test
+    @SuppressLint("NewApi") // channels require O, guaranteed by @Config
+    fun `existing quiet channel choices are not replaced or upgraded`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val channel =
+            NotificationChannel("ankiquest", "My quiet alerts", NotificationManager.IMPORTANCE_LOW).apply {
+                enableVibration(false)
+                setSound(null, null)
+            }
+        manager.createNotificationChannel(channel)
+        AnkiquestNotifier.onDeckCompletions(targetContext, "server/cerro", JSONArray().put(message(1, 30)))
+        val saved = manager.getNotificationChannel("ankiquest")
+        assertEquals(NotificationManager.IMPORTANCE_LOW, saved.importance)
+        assertFalse(saved.shouldVibrate())
+        assertNull(saved.sound)
+        assertEquals(listOf("ankiquest"), manager.notificationChannels.map { it.id }.filter { it.startsWith("ankiquest") })
+    }
+
+    @Test
+    fun `a denied streak reminder can be delivered once notifications are enabled`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "24") }
+        val profile = atRisk(dayEndsIn = 3 * HOUR_MS)
+        shadowOf(manager).setNotificationsEnabled(false)
+        AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
+        assertTrue(
+            AnkiDroidApp
+                .sharedPrefs()
+                .all.keys
+                .none { it.startsWith(AnkiquestNotifier.PREF_STREAK_DAY) },
+        )
+        shadowOf(manager).setNotificationsEnabled(true)
+        AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
+        assertEquals(1, shadowOf(manager).size())
+        manager.cancelAll()
+        AnkiquestNotifier.onProfile(targetContext, profile, StreakDelivery.ALLOW)
+        assertEquals(0, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `the streak reminder shows the server warning once per study day`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val today = atRisk(dayEndsIn = 90 * 60 * 1000L)
+        AnkiquestNotifier.onProfile(targetContext, today, StreakDelivery.ALLOW)
+        val posted = shadowOf(manager).getNotification(5_130_002)
+        assertEquals("🔥 Your 12 day streak ends in 2h", posted.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("A freeze is available if you need a break.", posted.extras.getString(Notification.EXTRA_TEXT))
+        manager.cancelAll()
+
+        AnkiquestNotifier.onProfile(targetContext, today, StreakDelivery.ALLOW)
+        assertEquals(0, shadowOf(manager).size())
+        AnkiquestNotifier.onProfile(targetContext, today.put("day_ends_at", today.getLong("day_ends_at") + 1), StreakDelivery.ALLOW)
+        assertEquals(1, shadowOf(manager).size(), "a new study day has a new end")
+    }
+
+    @Test
+    fun `the streak reminder waits for the chosen hours and needs a server warning`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = 3 * HOUR_MS), StreakDelivery.ALLOW)
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS).put("streak_warning", JSONObject.NULL), StreakDelivery.ALLOW)
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = -HOUR_MS), StreakDelivery.ALLOW)
+        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "0") }
+        AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS), StreakDelivery.ALLOW)
+        assertEquals(0, shadowOf(manager).size())
+    }
+
+    @Test
+    fun `rank changes are judged by the server from the order this device saw`() =
+        runBlocking {
+            val manager = targetContext.getSystemService<NotificationManager>()!!
+            val bodies = CopyOnWriteArrayList<JSONObject>()
+            var change: Any = JSONObject().put("title", "▲ You're now #1").put("body", "You passed hill.")
+            val server =
+                rankServer { body ->
+                    bodies += body
+                    JSONObject().put("order", JSONArray(listOf("cerro", "hill"))).put("change", change)
+                }
+            try {
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                val posted = shadowOf(manager).getNotification(5_130_001)
+                assertEquals("▲ You're now #1", posted.extras.getString(Notification.EXTRA_TITLE))
+                assertEquals("You passed hill.", posted.extras.getString(Notification.EXTRA_TEXT))
+                val open = shadowOf(posted.contentIntent).savedIntent
+                assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
+                assertEquals("week", open.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
+                manager.cancelAll()
+
+                change = JSONObject.NULL
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                assertEquals(0, shadowOf(manager).size())
+
+                change = JSONObject().put("title", "▼ hill passed you").put("body", "You're now #2.")
+                AnkiDroidApp.sharedPrefs().edit(commit = true) { putBoolean(AnkiquestNotifier.PREF_RANK, false) }
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                assertEquals(0, shadowOf(manager).size(), "rank notifications can be turned off")
+
+                assertEquals(3, bodies.size)
+                assertEquals(0, bodies[0].getJSONArray("previous").length(), "a new device has seen no order yet")
+                assertEquals(listOf("cerro", "hill"), bodies[1].getJSONArray("previous").let { (0 until it.length()).map(it::getString) })
+            } finally {
+                server.stop(0)
+            }
+        }
+
+    @Test
+    fun `a shared climb is told in the player's own words`() =
+        runBlocking {
+            val manager = targetContext.getSystemService<NotificationManager>()!!
+            var order = listOf("hill", "cerro")
+            var change: Any = JSONObject.NULL
+            val server = rankServer { JSONObject().put("order", JSONArray(order)).put("change", change) }
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "cerro-token") }
+
+            suspend fun climb(): Intent {
+                order = order.reversed()
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                val posted = shadowOf(manager).getNotification(5_130_001)
+                assertEquals("👑 You took the crown", posted.extras.getString(Notification.EXTRA_TITLE))
+                val share = shadowOf(posted.actions.single().actionIntent).savedIntent
+                assertEquals(1, share.getIntExtra(AnkiquestShare.EXTRA_PLACE, 0))
+                manager.cancelAll()
+                return share
+            }
+            try {
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                change =
+                    JSONObject()
+                        .put("title", "👑 You took the crown")
+                        .put("body", "You passed hill.")
+                        .put("share_title", "👑 I took the crown")
+                        .put("share_body", "I passed hill.")
+                val shared = climb()
+                assertEquals("👑 I took the crown", shared.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+                assertEquals("I passed hill.", shared.getStringExtra(AnkiquestShare.EXTRA_BODY))
+
+                order = order.reversed()
+                change = JSONObject.NULL
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                change = JSONObject().put("title", "👑 You took the crown").put("body", "You passed hill.")
+                val older = climb()
+                assertEquals("👑 You took the crown", older.getStringExtra(AnkiquestShare.EXTRA_TITLE), "older servers send no share text")
+                assertEquals("You passed hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
+            } finally {
+                server.stop(0)
+            }
+        }
+
+    @Test
+    fun `another account never compares against the order seen by the previous one`() =
+        runBlocking {
+            val bodies = CopyOnWriteArrayList<JSONObject>()
+            val server =
+                rankServer { body ->
+                    bodies += body
+                    JSONObject().put("order", JSONArray(listOf("hill", "cerro"))).put("change", JSONObject.NULL)
+                }
+            try {
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "another-credential") }
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                assertEquals(0, bodies[1].getJSONArray("previous").length(), "a switched account has seen no order yet")
+            } finally {
+                server.stop(0)
+            }
+        }
+
+    private fun rankServer(respond: (JSONObject) -> JSONObject): HttpServer {
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/api/rank/cerro") { exchange ->
+            val body = JSONObject(exchange.requestBody.bufferedReader().use { it.readText() })
+            val bytes = respond(body).toString().toByteArray(Charsets.UTF_8)
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.sendResponseHeaders(if (exchange.requestMethod == "POST") 200 else 405, bytes.size.toLong())
+            exchange.responseBody.use { it.write(bytes) }
+        }
+        server.start()
+        AnkiDroidApp.sharedPrefs().edit(commit = true) {
+            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_USER, "cerro")
+        }
+        return server
+    }
+
+    private fun atRisk(dayEndsIn: Long): JSONObject =
+        JSONObject()
+            .put("at_risk", true)
+            .put("day_ends_at", TimeManager.time.intTimeMS() + dayEndsIn)
+            .put(
+                "streak_warning",
+                JSONObject()
+                    .put("title", "🔥 Your 12 day streak ends in 2h")
+                    .put("body", "A freeze is available if you need a break."),
+            )
+
+    @Test
+    @SuppressLint("NewApi") // channels require O, guaranteed by @Config
+    fun `alert settings open the selected existing Android channel`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        for ((nudge, id) in listOf(false to "ankiquest", true to "ankiquestNudges")) {
+            val intent = AnkiquestNotifier.alertSettingsIntent(targetContext, nudge)
+            assertEquals(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS, intent.action)
+            assertEquals(targetContext.packageName, intent.getStringExtra(Settings.EXTRA_APP_PACKAGE))
+            assertEquals(id, intent.getStringExtra(Settings.EXTRA_CHANNEL_ID))
+            assertEquals(NotificationManager.IMPORTANCE_HIGH, manager.getNotificationChannel(id).importance)
+            assertTrue(manager.getNotificationChannel(id).shouldVibrate())
+        }
+    }
+
+    @Test
+    @Config(sdk = [25])
+    fun `alert settings open app details on phones without channels`() {
+        val intent = AnkiquestNotifier.alertSettingsIntent(targetContext, false)
+        assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, intent.action)
+        assertEquals("package:${targetContext.packageName}", intent.data.toString())
+    }
+
+    private fun message(
+        id: Long,
+        ageSeconds: Long,
+    ): JSONObject =
+        JSONObject()
+            .put("id", id)
+            .put("created_at", TimeManager.time.intTimeMS() / 1000 - ageSeconds)
+            .put("title", "Deck complete")
+            .put("body", "Cerro has finished Spanish for today.")
+
+    private companion object {
+        const val HOUR_MS = 60 * 60 * 1000L
+    }
+}

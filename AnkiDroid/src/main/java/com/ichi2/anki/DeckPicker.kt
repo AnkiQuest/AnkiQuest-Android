@@ -99,10 +99,6 @@ import com.ichi2.anki.android.back.exitViaDoubleTapBackCallback
 import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.android.view.locationInWindow
-import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
-import com.ichi2.anki.ankiquest.AnkiquestDeckShare
-import com.ichi2.anki.ankiquest.AnkiquestNavigation
-import com.ichi2.anki.ankiquest.AnkiquestStudySession
 import com.ichi2.anki.common.android.AdaptionUtil
 import com.ichi2.anki.common.android.animationDisabled
 import com.ichi2.anki.common.android.appContext
@@ -241,6 +237,10 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import net.ankiweb.rsdroid.Translations
+import org.ankiquest.AnkiquestDeckPickerHooks
+import org.ankiquest.AnkiquestDeckShare
+import org.ankiquest.AnkiquestNavigation
+import org.ankiquest.AnkiquestStudySession
 import timber.log.Timber
 import java.io.File
 import com.ichi2.anki.common.android.R as CommonR

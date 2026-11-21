@@ -1,0 +1,214 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package org.ankiquest
+
+import android.content.ComponentName
+import android.content.Intent
+import android.content.SharedPreferences
+import androidx.core.content.edit
+import androidx.preference.PreferenceManager
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.R
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
+import io.mockk.every
+import io.mockk.mockk
+import org.json.JSONObject
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [33])
+class AnkiquestMobileNavigationTest : RobolectricTest() {
+    @Before
+    fun configure() {
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://anki.example.test")
+            putString(Ankiquest.PREF_USER, "member name")
+            putString(Ankiquest.PREF_TOKEN, "member-token")
+        }
+    }
+
+    @Test
+    fun `launcher opens decks by default without an extra Today screen`() {
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestNavigation.PREF_OPEN_TODAY) }
+        assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
+    }
+
+    @Test
+    fun `initializing settings keeps Decks as the default opening screen`() {
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestNavigation.PREF_OPEN_TODAY) }
+        PreferenceManager.setDefaultValues(targetContext, R.xml.preferences_ankiquest, true)
+        assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
+    }
+
+    @Test
+    fun `only a normal launcher entry opens Today`() {
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
+        assertTrue(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
+        assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_VIEW)))
+        assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN).putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)))
+        assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN).putExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK, 1L)))
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, false) }
+        assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
+    }
+
+    @Test
+    fun `changing credentials invalidates the presentation identity`() {
+        val before = AnkiquestNavigation.accountFingerprint()
+        assertFalse(before.contains("member-token"))
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement-token") }
+        assertNotEquals(before, AnkiquestNavigation.accountFingerprint())
+    }
+
+    @Test
+    fun `presentation identity captures fallback member in the same settings snapshot`() {
+        val preferences = AnkiDroidApp.sharedPrefs()
+        preferences.edit {
+            remove(Ankiquest.PREF_USER)
+            putString("username", "original-member")
+        }
+        val before = AnkiquestNavigation.accountFingerprint()
+        val changingPreferences = mockk<SharedPreferences>()
+        every { changingPreferences.all } answers {
+            val snapshot = preferences.all
+            preferences.edit { putString("username", "different-member") }
+            snapshot
+        }
+        val previousOverride = SharedPreferencesTestHook.override
+        try {
+            SharedPreferencesTestHook.override = changingPreferences
+            assertEquals(before, AnkiquestNavigation.accountFingerprint())
+        } finally {
+            SharedPreferencesTestHook.override = previousOverride
+        }
+        assertNotEquals(before, AnkiquestNavigation.accountFingerprint())
+    }
+
+    @Test
+    fun `notifications open the native goal or the native activity feed for their owning account`() {
+        val owner = "https://anki.example.test/member%20name"
+        val goal = JSONObject().put("id", 71).put("challenge_id", 42).put("route", "https://untrusted.test/")
+        val intent = AnkiquestNotifier.notificationIntent(targetContext, goal, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestChallengesActivity::class.java), intent.component)
+        assertEquals(42L, intent.getLongExtra(AnkiquestChallengesActivity.EXTRA_CHALLENGE, 0))
+        assertEquals(owner, intent.getStringExtra(AnkiquestChallengesActivity.EXTRA_ACCOUNT))
+        assertTrue((intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+        assertEquals(null, intent.data)
+
+        val invite = AnkiquestNotifier.notificationIntent(targetContext, JSONObject().put("id", 70).put("kind", "challenge_invite"), owner)
+        assertEquals(ComponentName(targetContext, AnkiquestChallengesActivity::class.java), invite.component)
+        assertFalse(invite.hasExtra(AnkiquestChallengesActivity.EXTRA_CHALLENGE), "no id opens the list")
+        assertEquals(owner, invite.getStringExtra(AnkiquestChallengesActivity.EXTRA_ACCOUNT))
+
+        val message = AnkiquestNotifier.notificationIntent(targetContext, JSONObject().put("id", 72), owner)
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), message.component)
+        assertEquals(owner, message.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
+        assertTrue((message.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+        assertEquals(null, message.data)
+    }
+
+    @Test
+    fun `each notification kind opens what it is about`() {
+        val today = AnkiquestNavigation.Destination.Today()
+        val quests = AnkiquestNavigation.Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
+        val week = AnkiquestNavigation.Destination.Leaderboard("week")
+        val feed = AnkiquestNavigation.Destination.Activity
+        val challenges = AnkiquestNavigation.Destination.Challenges()
+        val goal = AnkiquestNavigation.Destination.Challenges(42)
+        val cases =
+            listOf(
+                Triple("reminder_daily", null, 0L) to today,
+                Triple("reminder_urgent", null, 0L) to today,
+                Triple("reminder_milestone", null, 0L) to today,
+                Triple("reminder_freeze_used", null, 0L) to today,
+                Triple("reminder_freeze_refill", null, 0L) to quests,
+                Triple("reminder_weekly_recap", "place:2", 0L) to week,
+                Triple("reminder_weekly_recap", null, 0L) to week,
+                Triple("reminder_weekly_closing", null, 0L) to week,
+                Triple("celebration", "goal", 0L) to today,
+                Triple("celebration", "secured", 0L) to today,
+                Triple("celebration", "streak", 0L) to today,
+                Triple("celebration", "level", 0L) to today,
+                Triple("event", "quest", 0L) to quests,
+                Triple("event", null, 0L) to today,
+                Triple("risk", null, 0L) to today,
+                Triple("nudge", null, 0L) to today,
+                Triple("challenge_invite", null, 42L) to goal,
+                Triple("challenge_accepted", null, 42L) to goal,
+                Triple("challenge_complete", null, 42L) to goal,
+                Triple("challenge_invite", null, 0L) to challenges,
+                Triple("share", "streak", 0L) to feed,
+                Triple("reaction", null, 0L) to feed,
+                Triple("completion", null, 0L) to feed,
+                Triple("conquest", null, 0L) to feed,
+                Triple("message", null, 0L) to feed,
+                Triple("reply", null, 0L) to feed,
+                Triple("friend_request", null, 0L) to AnkiquestNavigation.Destination.Friends,
+                Triple("group_joined", null, 0L) to AnkiquestNavigation.Destination.Friends,
+                Triple("something_new", null, 0L) to today,
+                Triple("", null, 0L) to today,
+            )
+        for ((input, expected) in cases) {
+            val (kind, topic, challenge) = input
+            assertEquals(expected, AnkiquestNavigation.notificationDestination(kind, topic, challenge), "$kind $topic $challenge")
+        }
+    }
+
+    @Test
+    fun `study notifications open the native Today screen and the freeze quest reminder its quests`() {
+        val owner = "https://anki.example.test/member%20name"
+        val freezeEntry = JSONObject().put("id", 73).put("kind", "reminder_freeze_refill")
+        val freeze = AnkiquestNotifier.notificationIntent(targetContext, freezeEntry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), freeze.component)
+        assertEquals(AnkiquestHomeActivity.FOCUS_QUESTS, freeze.getStringExtra(AnkiquestHomeActivity.EXTRA_FOCUS))
+        assertTrue((freeze.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+
+        val dailyEntry =
+            JSONObject()
+                .put("id", 74)
+                .put("kind", "reminder_daily")
+                .put("topic", JSONObject.NULL)
+                .put("route", "https://untrusted.test/")
+        val daily = AnkiquestNotifier.notificationIntent(targetContext, dailyEntry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), daily.component)
+        assertFalse(daily.hasExtra(AnkiquestHomeActivity.EXTRA_FOCUS))
+        assertEquals(null, daily.data)
+
+        val recapEntry = JSONObject().put("id", 75).put("kind", "reminder_weekly_recap")
+        val recap = AnkiquestNotifier.notificationIntent(targetContext, recapEntry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), recap.component)
+        assertEquals("week", recap.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
+        assertEquals(owner, recap.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT))
+        assertTrue((recap.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+    }
+
+    @Test
+    fun `deck list navigation opens Today, Friends and progress natively`() {
+        val today = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_today)!!
+        assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), today.component)
+        val friends = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_friends)!!
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), friends.component)
+        val progress = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_progress)!!
+        assertEquals(ComponentName(targetContext, AnkiquestProfileActivity::class.java), progress.component)
+        assertEquals(null, progress.getStringExtra(AnkiquestProfileActivity.EXTRA_USER), "the player's own profile")
+        assertEquals(null, AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_decks))
+    }
+
+    @Test
+    fun `friend and group notifications open the native friends for their account`() {
+        val owner = "https://anki.example.test/member%20name"
+        val entry = JSONObject().put("id", 76).put("kind", "friend_request")
+        val opened = AnkiquestNotifier.notificationIntent(targetContext, entry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), opened.component)
+        assertEquals(owner, opened.getStringExtra(AnkiquestFriendsActivity.EXTRA_ACCOUNT))
+        assertTrue((opened.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+    }
+}

@@ -13,8 +13,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.databinding.FragmentAboutBinding
+import org.ankiquest.AnkiquestChangelogActivity
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric

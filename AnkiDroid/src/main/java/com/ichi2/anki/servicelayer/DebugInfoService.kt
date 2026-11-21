@@ -7,7 +7,6 @@ import android.os.Build
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.ankiquest.AnkiquestDiagnostics
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.utils.ext.fsrsEnabled
 import com.ichi2.utils.LanguageUtil
@@ -19,6 +18,7 @@ import com.ichi2.utils.getWebViewInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.acra.util.Installation
+import org.ankiquest.AnkiquestDiagnostics
 import timber.log.Timber
 import net.ankiweb.rsdroid.BuildConfig as BackendBuildConfig
 

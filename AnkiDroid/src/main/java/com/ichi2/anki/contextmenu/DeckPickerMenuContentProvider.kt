@@ -7,12 +7,12 @@ import android.view.Menu
 import android.view.MenuItem
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.ankiquest.AnkiquestDeckShare
 import com.ichi2.anki.dialogs.DeckPickerContextMenu
 import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.settings.Prefs
+import org.ankiquest.AnkiquestDeckShare
 
 /**
  * MenuContentProvider implementation for DeckPicker for providing deck specific context menu items.

@@ -12,7 +12,7 @@ on:
     paths:
       - '.github/workflows/ankiquest_banner.yml'
       - 'tools/ankiquest-banner/**'
-      - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
+      - 'AnkiDroid/src/test/java/org/ankiquest/AnkiquestBannerScreenshots.kt'
 
 permissions: {}
 

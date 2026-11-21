@@ -7,9 +7,9 @@ import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.AnkiquestAnalyticsExclusions
 import com.ichi2.anki.preferences.PreferenceTestUtils
 import com.ichi2.testutils.EmptyApplication
+import org.ankiquest.AnkiquestAnalyticsExclusions
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import org.junit.experimental.categories.Category

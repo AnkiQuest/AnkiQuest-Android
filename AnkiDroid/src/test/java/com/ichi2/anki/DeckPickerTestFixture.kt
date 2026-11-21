@@ -6,7 +6,6 @@ import android.content.Intent
 import androidx.core.content.edit
 import androidx.core.view.isVisible
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooperUntil
-import com.ichi2.anki.ankiquest.deckRowsAdapter
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
 import com.ichi2.anki.deckpicker.DeckPickerViewModel.StartupResponse
@@ -15,6 +14,7 @@ import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.testutils.BackupManagerTestUtilities
+import org.ankiquest.deckRowsAdapter
 
 // TODO: move to testFixtures once RobolectricTest is moved
 
