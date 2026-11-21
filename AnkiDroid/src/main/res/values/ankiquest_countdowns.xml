@@ -7,7 +7,7 @@
     <string name="ankiquest_countdowns_empty">Add an exam or event to count down to it.</string>
     <string name="ankiquest_countdown_add">Add countdown</string>
     <string name="ankiquest_countdown_edit">Edit countdown</string>
-    <string name="ankiquest_countdowns_manage">Edit countdowns</string>
+    <string name="ankiquest_countdowns_manage" maxLength="41">Edit countdowns</string>
     <string name="ankiquest_countdown_name">Name</string>
     <string name="ankiquest_countdown_date">Date</string>
     <string name="ankiquest_countdown_deck">Deck (optional)</string>
