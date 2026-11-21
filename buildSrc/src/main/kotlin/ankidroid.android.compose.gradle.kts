@@ -34,10 +34,10 @@ dependencies {
 
 // The Compose Gradle plugin's produce<Variant>ComposeMapping task reads class directories in
 // file system order, so two builds of one commit write the ComposeStackTrace block of
-// mapping.txt and the AAB's proguard.map in different orders (Kotlin YouTrack report pending).
-// Sort the block once its worker has finished, before merge<Variant>ComposeMapping hashes and
-// appends it. The lines stay the same, so retrace is unaffected. Remove this when Kotlin
-// sorts its inputs.
+// mapping.txt and the AAB's proguard.map in different orders
+// (https://youtrack.jetbrains.com/issue/KT-91927). Sort the block once its worker has finished,
+// before merge<Variant>ComposeMapping hashes and appends it. The lines stay the same, so retrace
+// is unaffected. Remove this when a Kotlin release fixes KT-91927.
 tasks.named { it.startsWith("produce") && it.endsWith("ComposeMapping") }.configureEach {
     val mappings = outputs.files.filter { it.name == "compose-mapping.txt" }
     doLast {
