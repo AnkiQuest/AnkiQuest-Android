@@ -167,7 +167,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     }
 
     private fun launch(): AnkiquestProfileActivity =
-        startRegularActivity<AnkiquestProfileActivity>(AnkiquestRecordsActivity.intent(targetContext))
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS))
             .also { records -> advanceRobolectricLooperUntil { !records.findViewById<View>(R.id.aq_me_records_loading).isVisible } }
 
     private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =

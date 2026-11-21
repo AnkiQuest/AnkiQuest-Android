@@ -108,6 +108,27 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `rows show XP already counting for next week until the board switches`() {
+        val next =
+            AnkiquestBoards.parseLeaderboard(
+                JSONArray()
+                    .put(AnkiquestBoardsTest.row("ana", week = 0, hour = 0).put("next_xp", 1234))
+                    .put(AnkiquestBoardsTest.row("bo", week = 5, hour = 0)),
+                AnkiquestBoards.Period.WEEK,
+            )
+        coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK) } returns AnkiquestBoards.Leaderboard(next)
+        val board = launch()
+        val line = board.getString(R.string.aq_board_next_xp, "1,234")
+        assertTrue(board.hasText(line))
+        assertTrue(board.views<View>().any { it.contentDescription?.contains(line) == true })
+
+        // Once /api/week says the board has switched, the row's next week is this week.
+        coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW - 1
+        val switched = launch()
+        assertFalse(switched.hasText(line))
+    }
+
+    @Test
     fun `choosing a period loads its board`() {
         val day =
             AnkiquestBoards.parseLeaderboard(
@@ -257,7 +278,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     private fun launchController() =
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
-            AnkiquestFriendsSections.leaderboard(targetContext),
+            AnkiquestFriendsSections.boardIntent(targetContext),
         ).also { controller ->
             advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         }
@@ -266,7 +287,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         period: String = AnkiquestBoards.Period.WEEK.query,
         account: String? = null,
     ): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.leaderboard(targetContext, period, account))
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext, period, account))
             .also { board ->
                 advanceRobolectricLooperUntil { board.isFinishing || !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             }

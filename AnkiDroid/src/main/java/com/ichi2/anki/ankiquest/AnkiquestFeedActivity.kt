@@ -5,11 +5,14 @@ package com.ichi2.anki.ankiquest
 import android.os.Bundle
 import com.ichi2.anki.AnkiActivity
 
-/** Redirects old explicit links to their section within Friends, retaining notification context. */
+/**
+ * Forwards old explicit links to the feed within Friends, keeping the notification's account.
+ * Released apps (quest-22) posted notifications that target this class, so it stays.
+ */
 class AnkiquestFeedActivity : AnkiActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startActivity(AnkiquestFriendsSections.feed(this, intent.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT)))
+        startActivity(AnkiquestFriendsSections.feedIntent(this, intent.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT)))
         finish()
     }
 }

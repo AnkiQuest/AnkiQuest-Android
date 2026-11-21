@@ -66,6 +66,8 @@ object AnkiquestBoards {
         val closingXp: Long? = null,
         /** When this row's day ends (Unix ms), and with it [closingXp]; 0 when the server does not say. */
         val dayEndsAt: Long = 0,
+        /** XP already counting toward the week the board switches to next, while this player's Monday runs before the switch; see [NextWeek]. */
+        val nextXp: Long? = null,
         /** Global ranks include omitted rows, so the visible list cannot be renumbered. */
         val rank: Int? = null,
         /** Only the viewer's Global row says whether others can see it. */
@@ -75,19 +77,50 @@ object AnkiquestBoards {
     ) {
         /** [closingXp] while it still counts at [now]. */
         fun closingXp(now: Long): Long? = closingXp?.takeIf { dayEndsAt > now }
+
+        /** [nextXp] until the board switches at [weekEnds], from `GET /api/week`; null when that is unknown. */
+        fun nextXp(
+            now: Long,
+            weekEnds: Long?,
+        ): Long? = nextXp?.takeIf { weekEnds != null && weekEnds > now }
     }
 
     /**
-     * The week the board has already reset but that still counts the player's current day: an Anki
-     * day counts toward the week its start falls in, so after the shared reset a player further
-     * west keeps adding to the closing week until their day ends at [endsAt] (Unix ms).
-     * The server sends it as `closing_week` only while that lasts; older servers never do.
+     * The week the player's current Anki day counts toward when it is not the one the board shows.
+     * The board switches weeks at one instant (Monday 12:00 UTC on current servers, from
+     * `GET /api/week`), but an Anki day counts toward the week of its own date on the player's
+     * clock, so around the switch it can count for the week before or after the board's. The
+     * server sends at most one of the two, and only while it lasts; older servers send neither.
+     */
+    sealed interface OwnWeek {
+        val xp: Long
+
+        /** When the day stops counting outside the board's week (Unix ms). */
+        val until: Long
+
+        fun counting(now: Long): Boolean = until > now
+    }
+
+    /**
+     * `closing_week`: the board has switched, but a player further west is still on their Sunday,
+     * which counts for last week until their Monday starts at [endsAt] (Unix ms).
      */
     data class ClosingWeek(
-        val xp: Long,
+        override val xp: Long,
         val endsAt: Long,
-    ) {
-        fun counting(now: Long): Boolean = endsAt > now
+    ) : OwnWeek {
+        override val until: Long get() = endsAt
+    }
+
+    /**
+     * `next_week`: the player's Monday has begun before the board switches, so today counts for
+     * next week, which the board shows from [startsAt] (Unix ms).
+     */
+    data class NextWeek(
+        override val xp: Long,
+        val startsAt: Long,
+    ) : OwnWeek {
+        override val until: Long get() = startsAt
     }
 
     data class Quest(
@@ -158,7 +191,8 @@ object AnkiquestBoards {
         val achievements: List<Achievement>,
         val conquests: List<Conquest>,
         val records: Map<Period, Best>,
-        val closingWeek: ClosingWeek? = null,
+        /** Where today counts when not in the board's week; null most of the week. */
+        val ownWeek: OwnWeek? = null,
         /** When today ends for the player; the today counts mean nothing after it. 0 from servers that do not say. */
         val dayEndsAt: Long = 0,
     ) {
@@ -333,8 +367,9 @@ object AnkiquestBoards {
                     todayReviews = row.optLong("today_reviews"),
                     todayMinutes = row.optLong("today_minutes"),
                     streakMinutes = row.optLong("streak_minutes"),
-                    closingXp = row.takeIf { it.has("closing_xp") && !it.isNull("closing_xp") }?.optLong("closing_xp"),
+                    closingXp = row.optionalLong("closing_xp"),
                     dayEndsAt = row.optLong("day_ends_at"),
+                    nextXp = row.optionalLong("next_xp"),
                     rank = row.optInt("rank").takeIf { it > 0 },
                     shown = row.takeIf { it.has("shown") && !it.isNull("shown") }?.optBoolean("shown"),
                     hasToday = row.has("today_reviews") && !row.isNull("today_reviews"),
@@ -352,11 +387,19 @@ object AnkiquestBoards {
      */
     fun streakState(row: JSONObject): AnkiquestDay.State = AnkiquestDay.label(AnkiquestDay.Server.row(row), TimeManager.time.intTimeMS())
 
-    /** A profile's `closing_week`, or null when it has none or is malformed. */
-    fun parseClosingWeek(json: JSONObject?): ClosingWeek? {
-        val closing = json?.optJSONObject("closing_week") ?: return null
-        val endsAt = closing.optLong("ends_at").takeIf { it > 0 } ?: return null
-        return ClosingWeek(xp = closing.optLong("xp").coerceAtLeast(0), endsAt = endsAt)
+    /** A profile's `closing_week` or `next_week`, or null when it has neither or they are malformed. */
+    fun parseOwnWeek(json: JSONObject?): OwnWeek? {
+        json ?: return null
+
+        // The server sends at most one; a closing week is read first, as the website does.
+        json.optJSONObject("closing_week")?.let { closing ->
+            closing.optLong("ends_at").takeIf { it > 0 }?.let { endsAt ->
+                return ClosingWeek(xp = closing.optLong("xp").coerceAtLeast(0), endsAt = endsAt)
+            }
+        }
+        val next = json.optJSONObject("next_week") ?: return null
+        val startsAt = next.optLong("starts_at").takeIf { it > 0 } ?: return null
+        return NextWeek(xp = next.optLong("xp").coerceAtLeast(0), startsAt = startsAt)
     }
 
     fun parseWeekEnds(json: JSONObject): Long? = json.optLong("ends_at").takeIf { it > 0 }
@@ -427,7 +470,7 @@ object AnkiquestBoards {
                     .mapNotNull { period ->
                         records?.optJSONObject(period.query)?.let { period to Best(it.optLong("xp"), it.optLong("reviews")) }
                     }.toMap(),
-            closingWeek = parseClosingWeek(json),
+            ownWeek = parseOwnWeek(json),
         )
     }
 
@@ -454,4 +497,6 @@ object AnkiquestBoards {
     private fun encode(user: String): String = URLEncoder.encode(user, "UTF-8").replace("+", "%20")
 
     private fun JSONObject.text(key: String): String = if (isNull(key)) "" else optString(key)
+
+    private fun JSONObject.optionalLong(key: String): Long? = takeIf { it.has(key) && !it.isNull(key) }?.optLong(key)
 }

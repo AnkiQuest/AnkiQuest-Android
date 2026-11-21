@@ -675,7 +675,7 @@ class AnkiquestFriendsActivity : AnkiActivity(AnkiDroidR.layout.activity_ankique
             }
         }
         return TextView(this).apply {
-            text = initials(person.display)
+            text = AnkiquestAvatars.initials(person.display)
             gravity = Gravity.CENTER
             textSize = 15f
             typeface = Typeface.DEFAULT_BOLD
@@ -824,23 +824,6 @@ class AnkiquestFriendsActivity : AnkiActivity(AnkiDroidR.layout.activity_ankique
                 account?.let { putExtra(EXTRA_ACCOUNT, it) }
                 invite?.let { putExtra(EXTRA_INVITE, it) }
             }
-
-        /** One or two letters for [display], as the website's avatars show. */
-        internal fun initials(display: String): String =
-            display
-                .trim()
-                .split(Regex("\\s+"))
-                .filter { it.isNotEmpty() }
-                .take(2)
-                .joinToString("") {
-                    it
-                        .codePoints()
-                        .findFirst()
-                        .orElse('?'.code)
-                        .let(Character::toChars)
-                        .concatToString()
-                }.uppercase()
-                .ifEmpty { "?" }
 
         /** The website's hue for [user]: a 31-based hash of its characters. */
         internal fun hue(user: String): Float {

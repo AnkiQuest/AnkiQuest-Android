@@ -70,7 +70,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         // Logo secret
         binding.appLogo.setOnClickListener(DeveloperOptionsSecretClickListener(this))
 
-        // Contributors text
+        // Contributors text: this app, the server and the desktop add-on each have a repository
         val repository = AnkiquestLinks.REPOSITORY
         binding.contributorsDescription.apply {
             text =
@@ -78,7 +78,8 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
                     R.string.ankiquest_about_credits,
                     getString(R.string.link_contributors),
                     repository,
-                    getString(R.string.ankiquest_link_server_source),
+                    AnkiquestLinks.SERVER_REPOSITORY,
+                    AnkiquestLinks.DESKTOP_REPOSITORY,
                 ).parseAsHtml()
             movementMethod = LinkMovementMethod.getInstance()
         }

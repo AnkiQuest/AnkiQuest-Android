@@ -83,13 +83,13 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
 
     @Test
     fun leaderboard() {
-        captureFriends("friends_leaderboard", AnkiquestFriendsSections.leaderboard(targetContext))
+        captureFriends("friends_leaderboard", AnkiquestFriendsSections.boardIntent(targetContext))
     }
 
     @Test
     fun leaderboardLargeText() {
         RuntimeEnvironment.setFontScale(2f)
-        val screen = captureFriends("friends_leaderboard_200percent", AnkiquestFriendsSections.leaderboard(targetContext))
+        val screen = captureFriends("friends_leaderboard_200percent", AnkiquestFriendsSections.boardIntent(targetContext))
         val status = screen.getString(R.string.ankiquest_streak_studied)
         val labels =
             screen.window.decorView.allViews
@@ -113,7 +113,7 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
     fun offline() {
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } throws IOException("offline")
-        captureFriends("friends_offline", AnkiquestFriendsSections.feed(targetContext))
+        captureFriends("friends_offline", AnkiquestFriendsSections.feedIntent(targetContext))
     }
 
     private fun captureFriends(

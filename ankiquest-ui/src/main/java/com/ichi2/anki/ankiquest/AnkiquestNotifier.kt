@@ -24,6 +24,7 @@ import androidx.work.Data
 import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 /** Leaderboard position and streak notifications. */
@@ -95,7 +96,8 @@ object AnkiquestNotifier {
 
     /**
      * Posts new inbox messages for [account]. Only the first contact discards an old backlog; unseen
-     * messages never age out while offline or waiting for notification permission.
+     * messages never age out while offline or waiting for notification permission. [drawn] are the
+     * companions this app has art for, as the companion-art header names them.
      */
     @Synchronized
     fun onDeckCompletions(
@@ -103,11 +105,13 @@ object AnkiquestNotifier {
         account: String,
         notifications: JSONArray,
         scope: String? = null,
+        drawn: Collection<String> = AnkiquestCompanion.drawn,
     ) {
         if (scope != null && HomeAccount.current()?.scope != scope) return
         val prefs = AnkiquestStore.preferences()
         val key = "ankiquestCompletionCursor:$account"
         val firstPollKey = "ankiquestCompletionFirstPollAt:$account"
+        val artKey = "ankiquestCompletionArt:$account"
         val entries = notifications.objects().sortedBy { it.getLong("id") }
         var previous = prefs.getLong(key, 0L)
         val language by lazy { AnkiquestLanguage.context(context) }
@@ -119,19 +123,28 @@ object AnkiquestNotifier {
                 prefs.edit { putLong(firstPollKey, start) }
                 start
             }
+        // The server leaves out unlocks of companions missing from the art header. Once an update adds
+        // their art, those come back with ids below the cursor: consider them once.
+        val revealed = revealed(prefs.getString(artKey, null), drawn)
         var queued = false
+        var stopped = false
         for (entry in entries) {
             if (scope != null && HomeAccount.current()?.scope != scope) {
+                stopped = true
                 break
             }
             val id = entry.getLong("id")
-            if (id <= previous) continue
+            if (id <= previous && !unlocks(entry, revealed)) continue
             val fresh = AnkiquestCompletionPolicy.freshNotification(entry.optLong("created_at"), firstPoll)
             val minimum = if (fresh) AnkiquestMoments.fromNotice(entry)?.takeIf { it.kind == AnkiquestMoments.Kind.SECURED } else null
             if (minimum != null) {
-                val route = deliverMinimum(context, prefs, account, entry, minimum) ?: break
+                val route = deliverMinimum(context, prefs, account, entry, minimum)
+                if (route == null) {
+                    stopped = true
+                    break
+                }
                 queued = queued || route == AnkiquestMoments.Route.QUEUED
-                previous = id
+                previous = maxOf(previous, id)
                 prefs.edit { putLong(key, previous) }
                 continue
             }
@@ -144,7 +157,7 @@ object AnkiquestNotifier {
                 }
             if (route != AnkiquestMoments.Route.NOTIFY) {
                 queued = queued || route == AnkiquestMoments.Route.QUEUED
-                previous = id
+                previous = maxOf(previous, id)
                 prefs.edit { putLong(key, previous) }
                 continue
             }
@@ -164,6 +177,7 @@ object AnkiquestNotifier {
             val picture = card?.let { AnkiquestShare.picture(it) }
             // The image request can finish after sign-out. Leave this entry and the rest for its owner.
             if (scope != null && HomeAccount.current()?.scope != scope) {
+                stopped = true
                 break
             }
             if (fresh &&
@@ -212,13 +226,51 @@ object AnkiquestNotifier {
                     art = AnkiquestArt.forNotice(kind, entry.optString("topic").ifEmpty { null }),
                 ) == Delivery.DISABLED
             ) {
+                stopped = true
                 break
             }
             if (fresh) AnkiquestMoments.fromNotice(entry)?.let { AnkiquestMoments.markShown(prefs, account, listOf(it.key)) }
-            previous = id
+            previous = maxOf(previous, id)
             prefs.edit { putLong(key, previous) }
         }
+
+        // Rows left for later may still hold revealed unlocks, so keep the old art until all were seen.
+        if (!stopped) {
+            prefs.edit { putString(artKey, JSONArray(drawn.toList()).toString()) }
+        }
         if (queued) AnkiquestHost.current.presentMomentsSoon()
+    }
+
+    /**
+     * The companions in [drawn] that the art header named in [stored] (a JSON array) did not. None
+     * when nothing was stored: apps before the header got every unlock.
+     */
+    private fun revealed(
+        stored: String?,
+        drawn: Collection<String>,
+    ): Set<String> {
+        if (stored == null) {
+            return emptySet()
+        }
+        val before =
+            try {
+                JSONArray(stored).let { array -> (0 until array.length()).map { array.getString(it) } }
+            } catch (_: JSONException) {
+                return emptySet()
+            }
+        return drawn.toSet() - before.toSet()
+    }
+
+    /** Whether [entry] announces one of the [companions]. */
+    private fun unlocks(
+        entry: JSONObject,
+        companions: Set<String>,
+    ): Boolean {
+        if (companions.isEmpty()) {
+            return false
+        }
+        val moment = AnkiquestMoments.fromNotice(entry) ?: return false
+        return AnkiquestMoments.companion(moment) in companions
     }
 
     /** Reserve the daily moment through delivery so a local crossing cannot also queue it. */
@@ -292,7 +344,7 @@ object AnkiquestNotifier {
             if (account != null && moment != null) {
                 AnkiquestMoments.noticeIntent(context, account, moment)
             } else {
-                AnkiquestFriendsSections.leaderboard(context, account = account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                AnkiquestFriendsSections.boardIntent(context, account = account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
@@ -445,7 +497,7 @@ object AnkiquestNotifier {
         data: Data,
     ): Intent =
         AnkiquestFriendsSections
-            .feed(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+            .feedIntent(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** IDs and kinds become known screens; server-supplied URLs never become arbitrary app destinations. */
@@ -464,10 +516,10 @@ object AnkiquestNotifier {
         val open =
             when (destination) {
                 is Destination.Today -> AnkiquestHost.current.intent(context, AnkiquestScreen.Today(destination.focus))
-                Destination.Activity -> AnkiquestFriendsSections.feed(context, account)
+                Destination.Activity -> AnkiquestFriendsSections.feedIntent(context, account)
                 Destination.Friends -> AnkiquestHost.current.intent(context, AnkiquestScreen.Friends(account))
                 is Destination.Challenges -> AnkiquestHost.current.intent(context, AnkiquestScreen.Challenges(destination.id, account))
-                is Destination.Leaderboard -> AnkiquestFriendsSections.leaderboard(context, destination.period, account)
+                is Destination.Leaderboard -> AnkiquestFriendsSections.boardIntent(context, destination.period, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

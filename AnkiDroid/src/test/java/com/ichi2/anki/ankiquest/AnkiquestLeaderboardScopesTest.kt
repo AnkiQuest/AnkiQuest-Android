@@ -266,7 +266,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         val controller =
             startActivityControllerNormallyOpenCollectionWithIntent(
                 AnkiquestFriendsActivity::class.java,
-                AnkiquestFriendsSections.leaderboard(targetContext, "month"),
+                AnkiquestFriendsSections.boardIntent(targetContext, "month"),
             )
         try {
             val next = identity.copy(user = "other", token = "other-token")
@@ -298,7 +298,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
     private fun launch() =
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
-            AnkiquestFriendsSections.leaderboard(targetContext),
+            AnkiquestFriendsSections.boardIntent(targetContext),
         ).also { controller ->
             awaitBoard(controller.get())
         }

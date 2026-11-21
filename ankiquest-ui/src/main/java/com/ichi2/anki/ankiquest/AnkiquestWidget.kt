@@ -797,7 +797,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 views.setTextViewText(R.id.ankiquest_widget_name, entry.getString("display"))
                 val photo = AnkiquestAvatars.bitmap(entry.getString("user"))
                 val display = entry.getString("display").trim().ifEmpty { entry.getString("user") }
-                val initial = display.take(display.offsetByCodePoints(0, minOf(1, display.codePointCount(0, display.length)))).uppercase()
+                val initial = AnkiquestAvatars.initials(display, letters = 1)
                 views.setTextViewText(R.id.ankiquest_widget_initial, initial)
                 views.setViewVisibility(R.id.ankiquest_widget_initial, if (photo == null) View.VISIBLE else View.GONE)
                 views.setViewVisibility(R.id.ankiquest_widget_avatar, if (photo == null) View.GONE else View.VISIBLE)

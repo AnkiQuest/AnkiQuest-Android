@@ -36,7 +36,7 @@ internal class RevlogSource(
         // Do not join cards: retained reviews of deleted cards still represent study.
         col.db
             .query(
-                "select (? - 1 - id) / $DAY_MILLIS, count(*) from revlog " +
+                "select (? - 1 - id) / $DAY_MS, count(*) from revlog " +
                     "where id >= 0 and id < ? and $UPLOADED_REVIEWS group by 1",
                 cutoffMillis,
                 cutoffMillis,
@@ -73,7 +73,5 @@ internal class RevlogSource(
     companion object {
         /** Revlog rows the upload sends: answers, not manual rescheduling. */
         const val UPLOADED_REVIEWS = "ease > 0 and type < 4"
-
-        private const val DAY_MILLIS = 86_400_000L
     }
 }

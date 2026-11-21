@@ -354,7 +354,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     }
 
     private fun launch(account: String? = null): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.feed(targetContext, account))
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.feedIntent(targetContext, account))
             .also { feed -> advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_friends_feed_loading).isVisible } }
 
     private inline fun <reified T : View> AnkiquestFriendsActivity.views(): List<T> =

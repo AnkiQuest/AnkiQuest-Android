@@ -2,7 +2,9 @@
 
 package com.ichi2.anki.ankiquest
 
+import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.sun.net.httpserver.HttpServer
 import io.mockk.every
@@ -21,6 +23,15 @@ import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
+    @Test
+    fun `fixture ignores startup sync`() {
+        withServer { _, requests ->
+            // Startup can overlap a board request; the fixture must isolate that unrelated sync.
+            runBlocking { AnkiquestSettingsSync.sync(targetContext, AnkiquestSettingsSync.Trigger.START) }
+            assertTrue(requests.isEmpty(), "Startup settings sync must not use the leaderboard fixture")
+        }
+    }
+
     @Test
     fun `Friends keeps its URL while explicit Group and Global include the requested period`() {
         withServer { account, requests ->
@@ -93,14 +104,28 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
             exchange.responseBody.use { it.write(bytes) }
         }
         server.start()
-        mockkObject(AnkiquestHomeData, HomeAccount.Companion)
-        val account = HomeAccount("http://127.0.0.1:${server.address.port}", "hill", "test-token")
-        every { HomeAccount.current(any()) } returns account
+
+        // Startup sync must not borrow the fixture's account and add unrelated requests.
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val previousSync = prefs.all[AnkiquestSettingsSync.PREF_SWITCH] as Boolean?
+        prefs.edit(commit = true) { putBoolean(AnkiquestSettingsSync.PREF_SWITCH, false) }
         try {
+            mockkObject(AnkiquestHomeData, HomeAccount.Companion)
+            val account = HomeAccount("http://127.0.0.1:${server.address.port}", "hill", "test-token")
+            every { HomeAccount.current(any()) } returns account
             block(account, requests)
         } finally {
             unmockkObject(AnkiquestHomeData, HomeAccount.Companion)
             server.stop(0)
+
+            // Restore the preference only after the fake account is no longer visible.
+            prefs.edit(commit = true) {
+                if (previousSync == null) {
+                    remove(AnkiquestSettingsSync.PREF_SWITCH)
+                } else {
+                    putBoolean(AnkiquestSettingsSync.PREF_SWITCH, previousSync)
+                }
+            }
         }
     }
 }

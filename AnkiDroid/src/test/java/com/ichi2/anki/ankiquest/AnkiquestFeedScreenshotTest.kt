@@ -87,7 +87,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
         val screen =
             startActivityNormallyOpenCollectionWithIntent(
                 AnkiquestFriendsActivity::class.java,
-                AnkiquestFriendsSections.feed(targetContext),
+                AnkiquestFriendsSections.feedIntent(targetContext),
             )
         // Both requests can rerender Friends; capture their finished fixture, not a loading frame.
         advanceRobolectricLooperUntil {

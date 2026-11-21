@@ -2,20 +2,14 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import com.ichi2.anki.AnkiActivity
 
-/** Keeps old explicit activity links working after the section moved into Me. */
+/** Forwards old explicit links to records within Me; released apps may still hold such links. */
 class AnkiquestRecordsActivity : AnkiActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startActivity(intent(this))
+        startActivity(AnkiquestMeSections.intent(this, AnkiquestMeSections.Destination.RECORDS))
         finish()
-    }
-
-    companion object {
-        fun intent(context: Context): Intent = AnkiquestMeSections.intent(context, AnkiquestMeSections.Destination.RECORDS)
     }
 }

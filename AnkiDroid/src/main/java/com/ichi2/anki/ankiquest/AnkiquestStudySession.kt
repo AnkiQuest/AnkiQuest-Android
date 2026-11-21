@@ -12,7 +12,7 @@ import org.json.JSONObject
 object AnkiquestStudySession {
     private const val PREF_ACTIVE_SESSION = "ankiquestActiveStudySession"
     private const val PREF_LATEST_SESSION = "ankiquestLastStudySession"
-    private const val MAX_DURATION = 24 * 60 * 60 * 1000L
+    private const val MAX_DURATION = DAY_MS
 
     fun start() {
         if (!AnkiquestNavigation.enabled()) return

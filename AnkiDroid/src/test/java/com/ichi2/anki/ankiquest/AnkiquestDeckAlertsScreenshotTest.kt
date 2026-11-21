@@ -93,7 +93,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
         val screen =
             startActivityNormallyOpenCollectionWithIntent(
                 AnkiquestFriendsActivity::class.java,
-                AnkiquestFriendsSections.feed(targetContext),
+                AnkiquestFriendsSections.feedIntent(targetContext),
             )
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&

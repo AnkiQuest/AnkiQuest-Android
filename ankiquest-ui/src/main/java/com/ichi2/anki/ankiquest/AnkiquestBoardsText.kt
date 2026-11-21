@@ -6,10 +6,12 @@ import android.content.Context
 import android.text.format.DateFormat
 import androidx.annotation.StringRes
 import com.ichi2.anki.ankiquest.AnkiquestBoards.ClosingWeek
+import com.ichi2.anki.ankiquest.AnkiquestBoards.NextWeek
+import com.ichi2.anki.ankiquest.AnkiquestBoards.OwnWeek
 import com.ichi2.anki.ankiquest.AnkiquestBoards.Period
 import com.ichi2.anki.ankiquest.ui.R
 
-// How the app words AnkiquestBoards from :ankiquest-core: the period tabs and the closing week.
+// How the app words AnkiquestBoards from :ankiquest-core: the period tabs and the week today counts toward.
 
 /** The tab title of this period, in the order the website's tabs show them. */
 @get:StringRes
@@ -24,19 +26,25 @@ val Period.label: Int
             Period.ALL -> R.string.aq_board_all
         }
 
-/** "Last week still counting: 1,234 XP · closes at 04:00", or null once [closing] has closed at [now]. */
-fun AnkiquestBoards.closingLine(
+/**
+ * "Last week still counting: 1,234 XP · closes at 04:00" or "Next week already counting:
+ * 1,234 XP · the board switches at 13:00", or null once [week] has stopped counting at [now].
+ */
+fun AnkiquestBoards.ownWeekLine(
     context: Context,
-    closing: ClosingWeek?,
+    week: OwnWeek?,
     now: Long,
 ): String? {
-    if (closing == null || !closing.counting(now)) return null
-    val at = DateFormat.getTimeFormat(context).format(java.util.Date(closing.endsAt))
-    return context.getString(
-        R.string.aq_closing_week,
+    if (week == null || !week.counting(now)) return null
+    val at = DateFormat.getTimeFormat(context).format(java.util.Date(week.until))
+    val xp =
         java.text.NumberFormat
             .getIntegerInstance(AnkiquestLanguage.locale())
-            .format(closing.xp),
-        at,
-    )
+            .format(week.xp)
+    val line =
+        when (week) {
+            is ClosingWeek -> R.string.aq_closing_week
+            is NextWeek -> R.string.aq_next_week
+        }
+    return context.getString(line, xp, at)
 }

@@ -183,7 +183,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * DAY
         val board =
             startRegularActivity<AnkiquestFriendsActivity>(
-                AnkiquestFriendsSections.leaderboard(targetContext, AnkiquestBoards.Period.WEEK.query, null),
+                AnkiquestFriendsSections.boardIntent(targetContext, AnkiquestBoards.Period.WEEK.query, null),
             )
         advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         captureScreen("4_leaderboard")

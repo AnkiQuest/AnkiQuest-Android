@@ -204,8 +204,8 @@ class AnkiquestTabBarTest : RobolectricTest() {
                 AnkiquestHomeActivity.intent(targetContext),
             )
         val friends = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
-        val feed = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.feed(targetContext))
-        val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.leaderboard(targetContext))
+        val feed = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.feedIntent(targetContext))
+        val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext))
         for (tab in listOf(home, friends, feed, board)) {
             val name = tab::class.java.simpleName
             assertTrue(backControls(tab).isEmpty(), "$name shows no back arrow")

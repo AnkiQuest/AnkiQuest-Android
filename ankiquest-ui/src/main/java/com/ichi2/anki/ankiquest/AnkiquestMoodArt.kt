@@ -14,8 +14,6 @@ import com.ichi2.anki.ankiquest.ui.R
 // How the app draws and words AnkiquestMood's rules: the companion's art, the heat colours and the
 // lines under the streak number. The rules themselves are in :ankiquest-core.
 
-private const val DAY_MS = 86_400_000L
-
 /**
  * The top of the share picture's and moment card's gradient for this heat. White text on both
  * gradient ends meets WCAG AA (4.5:1); the gold number meets the large-text ratio (3:1).

@@ -276,10 +276,7 @@ internal object AnkiquestDeckShare {
             if (asked(prefs, account.scope, deck, day)) {
                 return
             }
-            val settings =
-                withContext(Dispatchers.IO) {
-                    AnkiquestApi.json(account, AnkiquestApi.request(account, "api/decks/${account.encodedUser}").build())
-                }
+            val settings = AnkiquestApi.call(account, "GET", "api/decks/${account.encodedUser}")
             val prompt = prompt(deck, name, settings) ?: return
             withContext(Dispatchers.Main) {
                 if (!AnkiquestPostStudyPrompts.ready(context) || HomeAccount.current()?.scope != account.scope) {

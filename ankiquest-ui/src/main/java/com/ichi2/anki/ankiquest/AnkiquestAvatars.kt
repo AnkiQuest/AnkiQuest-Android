@@ -44,6 +44,22 @@ object AnkiquestAvatars {
     private val revisionFormat = Regex("[0-9]{1,20}")
     private var nextDownload = 0
 
+    /**
+     * Up to [letters] initials of [name], the first character of each word, as the website's
+     * avatars show. They keep the name's own case: hill shows "h". "?" when the name is blank.
+     */
+    internal fun initials(
+        name: String,
+        letters: Int = 2,
+    ): String =
+        name
+            .trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
+            .take(letters)
+            .joinToString("") { it.substring(0, it.offsetByCodePoints(0, 1)) }
+            .ifEmpty { "?" }
+
     data class Account(
         val base: HttpUrl,
         val user: String,

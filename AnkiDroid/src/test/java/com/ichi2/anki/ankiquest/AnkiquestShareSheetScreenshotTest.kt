@@ -26,8 +26,8 @@ import java.time.Duration
 
 /** The share sheet with friends and a group to pick, one picked and a note, at normal and 200% text. */
 class AnkiquestShareSheetScreenshotTest : ScreenshotTest() {
-    private val identity = HomeAccount("https://anki.example.test", "hill", "screenshot-token")
-    private val members = listOf(AnkiquestSocial.Person("hill", "Hill"), AnkiquestSocial.Person("ana", "Ana"))
+    private val identity = HomeAccount("https://anki.example.test", "aldanita", "screenshot-token")
+    private val members = listOf(AnkiquestSocial.Person("aldanita", "Aldana"), AnkiquestSocial.Person("ana", "Ana"))
     private val overview =
         AnkiquestSocial.Overview(
             friends = listOf(AnkiquestSocial.Person("ana", "Ana"), AnkiquestSocial.Person("cerro", "Cerro")),

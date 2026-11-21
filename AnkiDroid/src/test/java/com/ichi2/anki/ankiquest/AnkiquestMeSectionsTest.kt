@@ -75,7 +75,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Test
     fun `sections retain their filters and selected day through refresh collapse and rotation`() {
-        val controller = launch(AnkiquestRecordsActivity.intent(targetContext))
+        val controller = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS))
         val me = controller.get()
         awaitSections(me)
         me.click("Spanish club")
@@ -107,7 +107,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
     fun `switching accounts resets history and ignores a late old record response`() {
         val oldRecords = CompletableDeferred<AnkiquestRecords.Records>()
         coEvery { AnkiquestRecords.records(identity, any()) } coAnswers { withContext(NonCancellable) { oldRecords.await() } }
-        val controller = launch(AnkiquestRecordsActivity.intent(targetContext))
+        val controller = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS))
         try {
             val me = controller.get()
             assertTrue(me.findViewById<View>(R.id.aq_me_records_loading).isVisible)
@@ -136,7 +136,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Test
     fun `signing out clears expanded data and asks to connect`() {
-        val controller = launch(AnkiquestRecordsActivity.intent(targetContext))
+        val controller = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS))
         val me = controller.get()
         awaitSections(me)
         account = null
@@ -152,7 +152,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Test
     fun `rotation after an account switch does not restore the old account's collapsed filters`() {
-        val controller = launch(AnkiquestRecordsActivity.intent(targetContext))
+        val controller = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS))
         val me = controller.get()
         awaitSections(me)
         me.click("Spanish club")
@@ -175,7 +175,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Test
     fun `the final partial row of daily history statistics remains visible`() {
-        val me = launch(AnkiquestHistoryActivity.intent(targetContext)).get()
+        val me = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.HISTORY)).get()
         awaitSections(me)
         me.layoutPhone()
         for (label in listOf(R.string.aq_history_new_cards, R.string.aq_profile_streak)) {
@@ -187,7 +187,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
     @Test
     fun `large text gives history captions room for whole words`() {
         RuntimeEnvironment.setFontScale(2f)
-        val me = launch(AnkiquestHistoryActivity.intent(targetContext)).get()
+        val me = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.HISTORY)).get()
         awaitSections(me)
         me.layoutPhone()
         val caption = me.views<TextView>().single { it.text == me.getString(R.string.aq_history_year_reviews, 2026) }
@@ -208,13 +208,19 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
                 Intent(targetContext, AnkiquestRecordsActivity::class.java).putExtra("unrelated_launch_payload", ByteArray(300_000)),
             )
         assertTrue(records.isFinishing)
-        assertEquals(AnkiquestRecordsActivity.intent(targetContext).toUri(0), shadowOf(records).nextStartedActivity.toUri(0))
+        assertEquals(
+            AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS).toUri(0),
+            shadowOf(records).nextStartedActivity.toUri(0),
+        )
         val history =
             startRegularActivity<AnkiquestHistoryActivity>(
                 Intent(targetContext, AnkiquestHistoryActivity::class.java).putExtra("unrelated_launch_payload", ByteArray(300_000)),
             )
         assertTrue(history.isFinishing)
-        assertEquals(AnkiquestHistoryActivity.intent(targetContext).toUri(0), shadowOf(history).nextStartedActivity.toUri(0))
+        assertEquals(
+            AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.HISTORY).toUri(0),
+            shadowOf(history).nextStartedActivity.toUri(0),
+        )
     }
 
     private fun launch(intent: Intent) =
