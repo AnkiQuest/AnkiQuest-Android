@@ -58,6 +58,9 @@ object AnkiquestUpdater {
     /** An ABI APK adds its ABI's number times this to the universal version code (build.gradle.kts). */
     private const val ABI_CODE_STEP = 100_000_000L
 
+    /** The ABI digit of each ABI build's version code, as AnkiDroid/build.gradle.kts sets it. */
+    private val ABI_DIGITS = mapOf("armeabi-v7a" to 1L, "x86" to 2L, "arm64-v8a" to 3L, "x86_64" to 4L)
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client =
         AnkiquestHttp.client
@@ -126,22 +129,28 @@ object AnkiquestUpdater {
     private fun baseCode(code: Long): Long = code % ABI_CODE_STEP
 
     /**
-     * The APK to download from [names]: the one built for the device's primary ABI, else the
-     * universal one. An ABI install never gets the universal APK: its version code lacks the
-     * ABI digit, so Android would refuse it as a downgrade.
+     * The APK to download from [names]: the one built for the first of [abis] (the device's
+     * ABIs, most preferred first) that has one, else the universal one. An ABI install never
+     * gets an APK with a lower ABI digit, the universal one included: Android would refuse it
+     * as a downgrade.
      */
     internal fun pickApk(
         names: Collection<String>,
-        primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+        abis: List<String> = Build.SUPPORTED_ABIS.toList(),
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): String? {
-        val own = primaryAbi?.let { "AnkiQuest-$it.apk" }
-        if (own != null && own in names) {
-            return own
+        // An installed ABI build carries its ABI digit; a universal install has digit 0.
+        val installedDigit = installedCode / ABI_CODE_STEP
+        val abi =
+            abis.firstOrNull {
+                "AnkiQuest-$it.apk" in names && (ABI_DIGITS[it] ?: 0) >= installedDigit
+            }
+        if (abi != null) {
+            return "AnkiQuest-$abi.apk"
         }
 
-        // An installed ABI build (version code at or above one ABI step) can only take ABI APKs.
-        if (installedCode >= ABI_CODE_STEP) {
+        // Only a universal install can take the universal APK.
+        if (installedDigit > 0) {
             return null
         }
         return UNIVERSAL_APK.takeIf { it in names }
@@ -277,7 +286,7 @@ object AnkiquestUpdater {
 
     internal fun parseNightly(
         json: JSONObject,
-        primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+        abis: List<String> = Build.SUPPORTED_ABIS.toList(),
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): Release? {
         val number = json.optInt("release")
@@ -291,7 +300,7 @@ object AnkiquestUpdater {
                 ?.objects()
                 ?.associate { it.getString("name") to it.optLong("size") }
                 ?: mapOf(UNIVERSAL_APK to json.optLong("size"))
-        val apk = pickApk(sizes.keys, primaryAbi, installedCode) ?: return null
+        val apk = pickApk(sizes.keys, abis, installedCode) ?: return null
         return Release(
             number = number,
             name = "Nightly $TAG_PREFIX$number+${json.optInt("nightly")} (${json.optString("commit").take(7)})",
@@ -319,13 +328,13 @@ object AnkiquestUpdater {
 
     internal fun parseLatest(
         json: JSONObject,
-        primaryAbi: String? = Build.SUPPORTED_ABIS.firstOrNull(),
+        abis: List<String> = Build.SUPPORTED_ABIS.toList(),
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): Release? {
         val tag = json.getString("tag_name")
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
         val assets = json.getJSONArray("assets").objects().associateBy { it.getString("name") }
-        val apk = pickApk(assets.keys, primaryAbi, installedCode)?.let(assets::getValue) ?: return null
+        val apk = pickApk(assets.keys, abis, installedCode)?.let(assets::getValue) ?: return null
         return Release(
             number = number,
             name = json.optString("name").ifEmpty { tag },

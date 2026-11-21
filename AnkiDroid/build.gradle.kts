@@ -206,9 +206,9 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode = 22600114
+        versionCode = 22600115
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName = "2.26.0alpha14"
+        versionName = "2.26.0alpha15"
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "com.ichi2.testutils.NewCollectionPathTestRunner"
@@ -983,6 +983,8 @@ dependencies {
     androidTestImplementation(libs.kotlin.test)
     androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.androidx.fragment.testing)
+    // AnkiquestDeviceTest runs the poll worker on the emulator
+    androidTestImplementation(libs.androidx.work.testing)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)

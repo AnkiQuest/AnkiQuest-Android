@@ -76,9 +76,12 @@ import net.ankiweb.rsdroid.BackendException.BackendDbException.BackendDbCorruptE
 import net.ankiweb.rsdroid.exceptions.BackendInterruptedException
 import net.ankiweb.rsdroid.exceptions.BackendInvalidInputException
 import net.ankiweb.rsdroid.exceptions.BackendNetworkException
+import net.ankiweb.rsdroid.exceptions.BackendNotFoundException
 import net.ankiweb.rsdroid.exceptions.BackendSyncException
 import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.resume
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -98,8 +101,13 @@ interface OnErrorListener {
     val onError: Channel<Exception>
 }
 
-fun <T, U> T.launchCatchingIO(block: suspend T.() -> U): Job where T : ViewModel, T : OnErrorListener =
-    viewModelScope.launch(ioDispatcher) {
+fun <T, U> T.launchCatchingIO(block: suspend T.() -> U): Job where T : ViewModel, T : OnErrorListener = launchCatching(ioDispatcher, block)
+
+fun <T, U> T.launchCatching(
+    context: CoroutineContext = EmptyCoroutineContext,
+    block: suspend T.() -> U,
+): Job where T : ViewModel, T : OnErrorListener =
+    viewModelScope.launch(context) {
         try {
             block()
         } catch (e: Exception) {
@@ -742,6 +750,7 @@ data class CrashReportData(
 
     fun shouldReportException(): Boolean {
         if (!reportableException) return false
+        if (exception is BackendNotFoundException) return false
         if (exception.isInvalidFsrsParametersException()) return false
         if (exception.isDeckNotFoundInLimitsMapException()) return false
         if (exception is BackendInvalidInputException && exception.message == "missing template") return false
@@ -837,6 +846,7 @@ data class CrashReportData(
                 if (e is CollectionLockedException) return OpenAdvancedSettings
                 if (e.isInvalidFsrsParametersException()) return OpenDeckOptions
                 if (e.isDeckNotFoundInLimitsMapException()) return OpenCheckDatabase
+                if (e is BackendNotFoundException) return OpenCheckDatabase
 
                 return null
             }

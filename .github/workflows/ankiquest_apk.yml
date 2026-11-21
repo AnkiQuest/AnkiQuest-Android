@@ -3,7 +3,7 @@ name: ankiquest APK
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     tags: ["quest-*"]
   workflow_dispatch:
 
@@ -169,6 +169,7 @@ jobs:
       - name: Assets
         run: |
           # Released updaters still request this name. Copy after signing so the bytes match.
+          # quest-2 to quest-19 take the release's first .apk by name, so it must sort first.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
           files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk
             AnkiQuest-ankidroid-compatible.apk AnkiQuest.aab AnkiDroid-Quest.apk)
@@ -209,7 +210,7 @@ jobs:
             --notes-file notes.md
 
       - name: Publish nightly
-        if: github.ref == 'refs/heads/main' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
+        if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}

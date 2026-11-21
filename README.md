@@ -11,10 +11,10 @@
 </p>
 
 <a href="https://github.com/AnkiQuest/AnkiQuest-Android/releases"><img src="https://img.shields.io/github/v/release/AnkiQuest/AnkiQuest-Android" alt="release"/></a>
-<a href="https://github.com/AnkiQuest/AnkiQuest-Android/actions"><img src="https://img.shields.io/github/checks-status/AnkiQuest/AnkiQuest-Android/main?label=build" alt="build"/></a>
-<a href="https://github.com/AnkiQuest/AnkiQuest-Android/commits/main"><img src="https://img.shields.io/github/commit-activity/m/AnkiQuest/AnkiQuest-Android" alt="commit-activity"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/actions"><img src="https://img.shields.io/github/checks-status/AnkiQuest/AnkiQuest-Android/master?label=build" alt="build"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/commits/master"><img src="https://img.shields.io/github/commit-activity/m/AnkiQuest/AnkiQuest-Android" alt="commit-activity"/></a>
 <a href="https://github.com/AnkiQuest/AnkiQuest-Android/graphs/contributors"><img src="https://img.shields.io/github/contributors/AnkiQuest/AnkiQuest-Android" alt="contributors"/></a>
-<a href="https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/COPYING"><img src="https://img.shields.io/github/license/AnkiQuest/AnkiQuest-Android" alt="license"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING"><img src="https://img.shields.io/github/license/AnkiQuest/AnkiQuest-Android" alt="license"/></a>
 
 # AnkiQuest-Android
 
@@ -76,6 +76,25 @@ Some apps (Garmanki, for example) talk only to AnkiDroid's package `com.ichi2.an
 
 Use `AnkiQuest.apk` or an ABI APK unless an app needs AnkiDroid's package.
 
+### Verify the APK
+
+Signing certificate fingerprints of the AnkiQuest release key (`CN=AnkiQuest, O=float3`):
+
+```
+SHA-256: B3:97:A6:1E:CF:AF:0F:E3:54:DA:61:17:72:51:5E:68:3C:CB:6F:D0:E9:52:D4:77:B8:B3:BC:A4:9E:6C:49:0D
+SHA-1:   74:A5:0A:AA:20:37:2D:88:B2:B7:42:64:66:34:7B:9F:7C:28:31:E9
+```
+
+Compare the fingerprint with one of:
+
+- [AppVerifier](https://github.com/soupslurpr/AppVerifier) or [Obtainium](https://github.com/ImranR98/Obtainium), which show the installed app's signing certificate.
+- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. Look for `CN=AnkiQuest, O=float3`, the v3 signer for Android 9 and newer. Recent build-tools label it `V3.0 Signer`.
+
+Releases and nightlies are signed with the same key, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml). The key replaced a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`, SHA-256 `0A:8E:BE:EA:…:E4:2A`) through key rotation, which Android supports from 9 on. That key's password is public, so its fingerprint proves nothing:
+
+- On Android 7 and 8, and in the v1/v2 signatures `keytool -printcert -jarfile` reads, the APK shows only the test key.
+- Builds without the release key (forks, workflow runs without the signing secret) are signed with the test key only. Don't install them as AnkiQuest.
+
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 
 ## Development
@@ -106,8 +125,8 @@ Thanks to our 1400 translators, for allowing us to be available, partially or to
 
 ## License
 
-* [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
-* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/LICENSES/AGPL-3.0-only.txt) for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-only`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
+* [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
+* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-only.txt) for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-only`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
-* [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
-* [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/api/COPYING.LESSER) for the AnkiDroid API
+* [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
+* [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/COPYING.LESSER) for the AnkiDroid API
