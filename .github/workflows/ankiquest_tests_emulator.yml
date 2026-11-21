@@ -321,12 +321,11 @@ jobs:
           pre-emulator-launch-script: ${{ env.EMULATOR_PRE_LAUNCH_SCRIPT }}
           sdcard-path-or-size: 100M
           disable-animations: true
-          script: >-
-            bash .github/with_emulator_log.sh adb-log.txt ./gradlew :AnkiDroid:connectedPlayDebugAndroidTest
-            -PcustomSuffix=quest
-            -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.ankiquest.AnkiquestIconAliasTest
-            -Pandroid.testInstrumentationRunnerArguments.ankiquestQuestBuild=true
-            --daemon
+          # The run above leaves its release-signed test APK installed for coverage; a debug-signed one
+          # cannot replace it (INSTALL_FAILED_UPDATE_INCOMPATIBLE), so remove it first.
+          script: |
+            ./gradlew :AnkiDroid:uninstallAll --daemon
+            bash .github/with_emulator_log.sh adb-log.txt ./gradlew :AnkiDroid:connectedPlayDebugAndroidTest -PcustomSuffix=quest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.ankiquest.AnkiquestIconAliasTest -Pandroid.testInstrumentationRunnerArguments.ankiquestQuestBuild=true --daemon
 
       - name: Report Quest Launcher Icon Test Results
         if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/debug/**/TEST-*.xml') != ''
