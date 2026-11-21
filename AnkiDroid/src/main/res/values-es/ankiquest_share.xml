@@ -59,4 +59,5 @@ Estudio con AnkiQuest.</string>
     <string name="ankiquest_share_targets_failed">No se pudieron cargar tus amigos. Revisa tu conexión o compártelo con otra aplicación.</string>
     <string name="ankiquest_share_invite">Invitar a un amigo</string>
     <string name="ankiquest_share_lonely">Añade amigos en AnkiQuest para enviarles tus momentos.</string>
+    <string name="ankiquest_share_uploading">Subiendo tu estudio…</string>
 </resources>
