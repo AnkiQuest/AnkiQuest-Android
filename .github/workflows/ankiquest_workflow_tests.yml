@@ -14,6 +14,11 @@ on:
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
+      # upstream-backend.test.cjs: files that could name a backend artifact
+      - "gradle/**"
+      - "**/*.gradle.kts"
+      - "buildSrc/**"
+      - "**/*.md"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
     branches: [master]
@@ -27,6 +32,11 @@ on:
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
+      # upstream-backend.test.cjs: files that could name a backend artifact
+      - "gradle/**"
+      - "**/*.gradle.kts"
+      - "buildSrc/**"
+      - "**/*.md"
 
 permissions:
   contents: read
