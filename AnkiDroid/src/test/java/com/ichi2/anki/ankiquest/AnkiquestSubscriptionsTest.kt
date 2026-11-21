@@ -6,7 +6,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -19,7 +18,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -32,11 +30,11 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestSubscriptionsTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
 
     @Volatile private lateinit var account: HomeAccount
     private lateinit var repository: SubscriptionRepository
-    private val requests = CopyOnWriteArrayList<Triple<String, String, String?>>()
+    private val requests get() = server.requests.map { Triple(it.method, it.uri.toString(), it.authorization) }
     private val writes = CopyOnWriteArrayList<JSONObject>()
 
     @Volatile private var settings = ""
@@ -57,48 +55,48 @@ class AnkiquestSubscriptionsTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        account = HomeAccount("http://127.0.0.1:${server.address.port}/quest", "member name", "secret")
+        server = AnkiquestTestServer(::answer)
+        account = HomeAccount("${server.url}/quest", "member name", "secret")
         repository = SubscriptionRepository { account }
         settings =
             """{"enabled":true,"muted_senders":["old"],"unsubscribed_senders":[],"sharing_senders":["friend"],"senders":[{"user":"friend","display":"Friend"},{"user":"old","display":"Former player"},{"user":"unrelated","display":"Another member"}]}"""
-        server.createContext("/") { exchange ->
-            requests += Triple(exchange.requestMethod, exchange.requestURI.toString(), exchange.requestHeaders.getFirst("Authorization"))
-            if (exchange.requestMethod == "GET" && pauseNextGet) {
-                pauseNextGet = false
-                getStarted.countDown()
-                check(releaseGet.await(10, TimeUnit.SECONDS)) { "The test did not release its paused request" }
-            }
-            val responseStatus = if (exchange.requestMethod == "POST") postStatus else status
-            if (exchange.requestMethod == "POST") {
-                val update = JSONObject(exchange.requestBody.bufferedReader().use { it.readText() })
-                writes += update
-                if (responseStatus == 200) {
-                    settings =
-                        JSONObject(settings)
-                            .put("enabled", update.getBoolean("enabled"))
-                            .put(
-                                "muted_senders",
-                                org.json.JSONArray(),
-                            ).put("unsubscribed_senders", update.getJSONArray("unsubscribed_senders"))
-                            .toString()
-                }
-            }
-            if (changeAccountDuringRequest) account = account.copy(token = "new-account-token")
-            if (changeAccountDuringWrite && exchange.requestMethod == "POST") account = account.copy(user = "another-player")
-            val bytes = settings.toByteArray()
-            redirect?.let { exchange.responseHeaders.add("Location", it) }
-            exchange.sendResponseHeaders(responseStatus, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-            exchange.close()
+    }
+
+    /** The subscription settings: read, written, paused or redirected as the test set up. */
+    private fun answer(request: TestRequest): TestResponse {
+        if (request.method == "GET" && pauseNextGet) {
+            pauseNextGet = false
+            getStarted.countDown()
+            check(releaseGet.await(10, TimeUnit.SECONDS)) { "The test did not release its paused request" }
         }
-        server.start()
+        val responseStatus = if (request.method == "POST") postStatus else status
+        if (request.method == "POST") {
+            val update = JSONObject(request.body)
+            writes += update
+            if (responseStatus == 200) {
+                settings =
+                    JSONObject(settings)
+                        .put("enabled", update.getBoolean("enabled"))
+                        .put(
+                            "muted_senders",
+                            org.json.JSONArray(),
+                        ).put("unsubscribed_senders", update.getJSONArray("unsubscribed_senders"))
+                        .toString()
+            }
+        }
+        if (changeAccountDuringRequest) {
+            account = account.copy(token = "new-account-token")
+        }
+        if (changeAccountDuringWrite && request.method == "POST") {
+            account = account.copy(user = "another-player")
+        }
+        return TestResponse(responseStatus, settings.toByteArray(), redirect?.let { mapOf("Location" to it) }.orEmpty())
     }
 
     @After
     fun stop() {
         releaseGet.countDown()
-        server.stop(0)
+        server.close()
     }
 
     @Test
@@ -224,7 +222,7 @@ class AnkiquestSubscriptionsTest : RobolectricTest() {
     fun `redirect is reported without forwarding credentials to its target`() =
         runBlocking {
             status = 302
-            redirect = "http://127.0.0.1:${server.address.port}/redirect-target"
+            redirect = "${server.url}/redirect-target"
             val error = assertFailsWith<AnkiquestHttpException> { repository.load(account) }
             assertEquals(302, error.code)
             assertEquals(1, requests.size)

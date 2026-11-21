@@ -5,7 +5,6 @@ package com.ichi2.anki.ankiquest
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
-import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -170,7 +169,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
             coVerify(exactly = 1) { AnkiquestGlobalHides.change(identity, "ana", AnkiquestGlobalHides.Action.HIDE) }
             hidden = listOf(AnkiquestGlobalHides.Player("ana", "Ana"))
             waiting.complete(hidden)
-            awaitBoard(screen)
+            screen.awaitBoard()
             assertFalse("Ana" in labels(screen))
             coVerify(atLeast = 2) { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.MONTH, AnkiquestBoards.Source.Global) }
         } finally {
@@ -237,7 +236,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
                 .stop()
                 .start()
                 .resume()
-            awaitBoard(screen)
+            screen.awaitBoard()
             waiting.complete(listOf(AnkiquestGlobalHides.Player("old", "Previous account")))
             advanceRobolectricLooper()
             click(screen, "Global")
@@ -267,7 +266,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
                 .stop()
                 .start()
                 .resume()
-            awaitBoard(screen)
+            screen.awaitBoard()
             waiting.complete(listOf(AnkiquestGlobalHides.Player("ana", "Ana")))
             advanceRobolectricLooper()
             assertFalse(screen.getString(R.string.aq_board_hidden_saved) in labels(screen))
@@ -284,15 +283,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
             AnkiquestFriendsSections.boardIntent(targetContext),
-        ).also { awaitBoard(it.get()) }
-
-    private fun awaitBoard(screen: AnkiquestFriendsActivity) {
-        advanceRobolectricLooperUntil {
-            !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
-        }
-        advanceRobolectricLooper()
-    }
+        ).also { it.get().awaitBoard() }
 
     private fun labels(screen: AnkiquestFriendsActivity): List<String> =
         screen
@@ -307,7 +298,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
         label: String,
     ) {
         control(screen, label).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
     }
 
     private fun control(
