@@ -21,7 +21,7 @@ on:
       - ".github/dependabot.yml"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - ".github/workflows/ankiquest_*.yml"
       - ".github/tests/*.test.cjs"
