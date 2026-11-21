@@ -486,7 +486,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         views.button(content, getString(R.string.aq_profile_leaderboard)) {
-            startActivity(AnkiquestLeaderboardActivity.intent(this))
+            startActivity(AnkiquestFriendsSections.boardIntent(this))
         }
         scroll.post { scroll.scrollTo(0, position) }
         if (!loading) {
@@ -524,7 +524,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 }
             views.text(notice, line)
         }
-        AnkiquestBoards.closingLine(this, p.closingWeek, TimeManager.time.intTimeMS())?.let { line ->
+        AnkiquestBoards.ownWeekLine(this, p.ownWeek, TimeManager.time.intTimeMS())?.let { line ->
             views.text(views.card(content, tinted = true), line)
         }
         tiles(
@@ -611,7 +611,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (page.own) {
             sections.attach(content)
         } else {
-            views.button(content, getString(R.string.aq_records_title)) { startActivity(AnkiquestRecordsActivity.intent(this)) }
+            views.button(content, getString(R.string.aq_records_title)) {
+                startActivity(AnkiquestMeSections.intent(this, AnkiquestMeSections.Destination.RECORDS))
+            }
         }
         views.section(content, getString(R.string.aq_profile_lifetime))
         tiles(
