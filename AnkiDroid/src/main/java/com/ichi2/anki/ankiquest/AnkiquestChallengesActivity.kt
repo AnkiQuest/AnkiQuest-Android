@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
@@ -23,7 +22,6 @@ import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
-import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
@@ -32,7 +30,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.ankiquest.ui.R
@@ -56,6 +53,7 @@ import com.ichi2.anki.R as AnkiDroidR
 class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiquest_feed) {
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
+    private val views = AnkiquestBoardViews(this)
     private var account: HomeAccount? = null
     private var overview: AnkiquestChallenges.Overview? = null
     private var loading = false
@@ -262,27 +260,27 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
         content.removeAllViews()
         findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible = loading
         status?.let { line ->
-            text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
+            views.text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         }
         val current = account
         if (current == null) {
-            val panel = card(content)
-            text(panel, getString(R.string.aq_challenges_connect))
-            button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_challenges_connect))
+            views.button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
             return
         }
         failure?.let { problem ->
-            text(content, getString(problem), small = true)
-            if (problem == R.string.aq_home_auth) button(content, getString(R.string.aq_home_settings)) { settings() }
+            views.text(content, getString(problem), small = true)
+            if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         val shown = overview
         if (shown == null) {
-            if (loading) text(content, getString(R.string.aq_challenges_loading), small = true)
+            if (loading) views.text(content, getString(R.string.aq_challenges_loading), small = true)
             return
         }
 
         // Other members' progress reads 0 until the player's first upload.
-        shown.lock?.let { text(content, getString(it.text), small = true) }
+        shown.lock?.let { views.text(content, getString(it.text), small = true) }
         val goal = selected
         if (goal != null) renderDetail(shown, goal, current.user) else renderList(shown, current.user)
         scroll.post { scroll.scrollTo(0, position) }
@@ -294,7 +292,7 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
     ) {
         val now = now()
         val others = shown.recipients.filter { it.user != user }
-        button(content, getString(R.string.aq_challenges_start), primary = true, enabled = !busy && others.isNotEmpty()) {
+        views.button(content, getString(R.string.aq_challenges_start), primary = true, enabled = !busy && others.isNotEmpty()) {
             askNewGoal(others)
         }
         shown.suggestion?.let { renderSuggestion(it) }
@@ -302,21 +300,21 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
         val active = shown.challenges.filter { !it.ended(now) && it !in invited }
         val ended = shown.challenges.filter { it.ended(now) }
         if (invited.isNotEmpty()) {
-            section(getString(R.string.aq_challenges_invitations), getString(R.string.aq_challenges_invitations_hint))
+            views.section(content, getString(R.string.aq_challenges_invitations), getString(R.string.aq_challenges_invitations_hint))
             invited.forEach { renderChallenge(it, user, detail = false) }
         }
         if (active.isNotEmpty()) {
-            section(getString(R.string.aq_challenges_active), getString(R.string.aq_challenges_active_hint))
+            views.section(content, getString(R.string.aq_challenges_active), getString(R.string.aq_challenges_active_hint))
             active.forEach { renderChallenge(it, user, detail = false) }
         }
         if (invited.isEmpty() && active.isEmpty() && !loading) {
             content.addView(
                 AnkiquestAki.image(this, R.drawable.aki_challenge, 72).apply {
-                    (layoutParams as LinearLayout.LayoutParams).topMargin = dp(16)
+                    (layoutParams as LinearLayout.LayoutParams).topMargin = views.dp(16)
                 },
             )
-            text(content, getString(R.string.aq_challenges_empty), heading = true)
-            text(content, getString(R.string.aq_challenges_empty_hint), small = true)
+            views.text(content, getString(R.string.aq_challenges_empty), heading = true)
+            views.text(content, getString(R.string.aq_challenges_empty_hint), small = true)
         }
         if (ended.isNotEmpty()) {
             val label =
@@ -327,7 +325,7 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
                 } else {
                     getString(R.string.aq_challenges_history, ended.size)
                 }
-            button(content, label) {
+            views.button(content, label) {
                 showHistory = !showHistory
                 render()
             }
@@ -336,28 +334,28 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
     }
 
     private fun renderSuggestion(suggestion: AnkiquestChallenges.Suggestion) {
-        val panel = card(content, tinted = suggestion.challengeId == null && !suggestion.dismissed)
-        text(panel, getString(R.string.aq_challenges_weekly), heading = true)
+        val panel = views.card(content, tinted = suggestion.challengeId == null && !suggestion.dismissed)
+        views.text(panel, getString(R.string.aq_challenges_weekly), heading = true)
         val goal = suggestion.challengeId
         when {
             goal != null -> {
-                text(panel, getString(R.string.aq_challenges_weekly_sent))
-                button(panel, getString(R.string.aq_challenges_weekly_view)) { open(goal) }
+                views.text(panel, getString(R.string.aq_challenges_weekly_sent))
+                views.button(panel, getString(R.string.aq_challenges_weekly_view)) { open(goal) }
             }
-            suggestion.dismissed -> text(panel, getString(R.string.aq_challenges_weekly_dismissed))
+            suggestion.dismissed -> views.text(panel, getString(R.string.aq_challenges_weekly_dismissed))
             else -> {
-                text(panel, suggestion.friend.display, heading = true)
-                text(panel, getString(R.string.aq_challenges_explain_weekly))
-                text(panel, getString(R.string.aq_challenges_explain_waiting_weekly), small = true)
-                text(panel, getString(R.string.aq_challenges_reply_by, dateTime(suggestion.expiresAt)), small = true)
-                button(panel, getString(R.string.aq_challenges_weekly_invite), primary = true, enabled = !busy) {
+                views.text(panel, suggestion.friend.display, heading = true)
+                views.text(panel, getString(R.string.aq_challenges_explain_weekly))
+                views.text(panel, getString(R.string.aq_challenges_explain_waiting_weekly), small = true)
+                views.text(panel, getString(R.string.aq_challenges_reply_by, dateTime(suggestion.expiresAt)), small = true)
+                views.button(panel, getString(R.string.aq_challenges_weekly_invite), primary = true, enabled = !busy) {
                     change(
                         R.string.aq_challenges_create_failed,
                         { getString(R.string.aq_challenges_weekly_sent) },
                         { AnkiquestChallenges.weekly(it, suggestion, "invite") },
                     )
                 }
-                button(panel, getString(R.string.aq_challenges_weekly_dismiss), enabled = !busy) {
+                views.button(panel, getString(R.string.aq_challenges_weekly_dismiss), enabled = !busy) {
                     change(
                         R.string.aq_challenges_action_failed,
                         { getString(R.string.aq_challenges_weekly_dismissed) },
@@ -366,7 +364,7 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
                 }
             }
         }
-        text(panel, getString(R.string.aq_challenges_weekly_next, dateTime(suggestion.expiresAt)), small = true)
+        views.text(panel, getString(R.string.aq_challenges_weekly_next, dateTime(suggestion.expiresAt)), small = true)
     }
 
     private fun renderDetail(
@@ -374,21 +372,21 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
         goal: Long,
         user: String,
     ) {
-        button(content, getString(R.string.aq_challenges_all)) { showList() }
+        views.button(content, getString(R.string.aq_challenges_all)) { showList() }
         val challenge = shown.challenges.firstOrNull { it.id == goal }
         if (challenge == null) {
             if (loading) return
-            val panel = card(content)
-            text(panel, getString(R.string.aq_challenges_missing), heading = true)
-            text(panel, getString(R.string.aq_challenges_missing_hint), small = true)
-            button(panel, getString(R.string.aq_challenges_refresh)) {
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_challenges_missing), heading = true)
+            views.text(panel, getString(R.string.aq_challenges_missing_hint), small = true)
+            views.button(panel, getString(R.string.aq_challenges_refresh)) {
                 status = null
                 reload()
             }
             return
         }
         val art = if (challenge.status == "complete") R.drawable.aki_challenge_won else R.drawable.aki_challenge
-        content.addView(AnkiquestAki.image(this, art, 72).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(12) })
+        content.addView(AnkiquestAki.image(this, art, 72).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = views.dp(12) })
         renderChallenge(challenge, user, detail = true)
     }
 
@@ -402,16 +400,16 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
         val ended = challenge.ended(now)
         val invited = challenge.invites(user, now)
         val waiting = !challenge.started
-        val panel = card(content, tinted = invited)
-        text(panel, title(challenge), heading = true)
-        text(panel, getString(statusLabel(challenge, invited, ended)), small = true).apply {
+        val panel = views.card(content, tinted = invited)
+        views.text(panel, title(challenge), heading = true)
+        views.text(panel, getString(statusLabel(challenge, invited, ended)), small = true).apply {
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(getColor(if (challenge.status == "complete" || invited) R.color.aq_home_primary else R.color.aq_home_muted))
         }
         val mode = getString(if (challenge.cooperative) R.string.aq_challenges_shared else R.string.aq_challenges_individual)
-        text(panel, "$mode · ${timing(challenge, waiting, ended)}", small = true)
-        text(panel, getString(explanation(challenge, waiting)), small = true)
-        if (invited) text(panel, getString(R.string.aq_challenges_invited_by, display(challenge, challenge.creator)))
+        views.text(panel, "$mode · ${timing(challenge, waiting, ended)}", small = true)
+        views.text(panel, getString(explanation(challenge, waiting)), small = true)
+        if (invited) views.text(panel, getString(R.string.aq_challenges_invited_by, display(challenge, challenge.creator)))
         if (!waiting && (challenge.cooperative || me?.status == "accepted")) {
             val done = challenge.progressFor(user)
             val line =
@@ -427,13 +425,13 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
                     progressTintList = ColorStateList.valueOf(getColor(R.color.aq_home_primary))
                     contentDescription = line
                 },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(10)).apply { topMargin = dp(6) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, views.dp(10)).apply { topMargin = views.dp(6) },
             )
-            text(panel, line, small = true)
+            views.text(panel, line, small = true)
         }
         for (member in challenge.members) {
             val name = if (member.user == user) getString(R.string.aq_challenges_you, member.display) else member.display
-            text(panel, getString(R.string.aq_challenges_member, name, memberState(challenge, member, waiting)), small = !detail)
+            views.text(panel, getString(R.string.aq_challenges_member, name, memberState(challenge, member, waiting)), small = !detail)
         }
         if (detail) {
             val rule = if (challenge.reviews) R.string.aq_challenges_rule_reviews else R.string.aq_challenges_rule_days
@@ -443,23 +441,23 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
                 } else {
                     getString(R.string.aq_challenges_dates, dateTime(challenge.startAt), dateTime(challenge.endAt))
                 }
-            text(panel, "$dates ${getString(rule)}", small = true)
+            views.text(panel, "$dates ${getString(rule)}", small = true)
         }
         if (invited) {
-            button(panel, getString(R.string.aq_challenges_accept), primary = true, enabled = !busy) { act(challenge, "accept") }
-            button(panel, getString(R.string.aq_challenges_decline), enabled = !busy) { act(challenge, "decline") }
+            views.button(panel, getString(R.string.aq_challenges_accept), primary = true, enabled = !busy) { act(challenge, "accept") }
+            views.button(panel, getString(R.string.aq_challenges_decline), enabled = !busy) { act(challenge, "decline") }
         }
         if (detail && me?.status == "accepted" && !ended && challenge.creator != user) {
-            button(panel, getString(R.string.aq_challenges_leave), enabled = !busy) {
+            views.button(panel, getString(R.string.aq_challenges_leave), enabled = !busy) {
                 confirm(R.string.aq_challenges_leave_confirm, R.string.aq_challenges_leave) { act(challenge, "leave") }
             }
         }
         if (detail && challenge.creator == user && !ended) {
-            button(panel, getString(R.string.aq_challenges_cancel), enabled = !busy) {
+            views.button(panel, getString(R.string.aq_challenges_cancel), enabled = !busy) {
                 confirm(R.string.aq_challenges_cancel_confirm, R.string.aq_challenges_cancel) { act(challenge, "cancel") }
             }
         }
-        if (!detail) button(panel, getString(R.string.aq_challenges_details)) { open(challenge.id) }
+        if (!detail) views.button(panel, getString(R.string.aq_challenges_details)) { open(challenge.id) }
     }
 
     private fun act(
@@ -497,7 +495,7 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
         val form =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(24), dp(8), dp(24), 0)
+                setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
             }
         label(form, R.string.aq_challenges_create_invite)
         val boxes =
@@ -529,7 +527,7 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
                 setText(R.string.aq_challenges_create_when_ready)
                 form.addView(this)
             }
-        val problem = text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
+        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
         val dialog =
             MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.aq_challenges_start)
@@ -671,19 +669,11 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
 
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
 
-    private fun section(
-        title: String,
-        hint: String,
-    ) {
-        text(content, title, heading = true).setPadding(0, dp(16), 0, 0)
-        text(content, hint, small = true)
-    }
-
     private fun label(
         parent: LinearLayout,
         @StringRes value: Int,
     ) {
-        text(parent, getString(value), small = true).setPadding(0, dp(12), 0, 0)
+        views.text(parent, getString(value), small = true).setPadding(0, views.dp(12), 0, 0)
     }
 
     private fun field(
@@ -714,86 +704,6 @@ class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_anki
             check(getChildAt(0).id)
             parent.addView(this)
         }
-
-    private fun card(
-        parent: LinearLayout,
-        tinted: Boolean = false,
-    ): LinearLayout =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            background = shape(if (tinted) R.color.aq_home_tint else R.color.aq_home_surface)
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(10)
-                },
-            )
-        }
-
-    private fun text(
-        parent: LinearLayout,
-        value: String,
-        heading: Boolean = false,
-        small: Boolean = false,
-    ): TextView =
-        TextView(this).apply {
-            text = value
-            textSize =
-                when {
-                    heading -> 17f
-                    small -> 14f
-                    else -> 16f
-                }
-            setTextColor(getColor(if (small) R.color.aq_home_muted else R.color.aq_home_text))
-            if (heading) {
-                typeface = Typeface.DEFAULT_BOLD
-                ViewCompat.setAccessibilityHeading(this, true)
-            }
-            setPadding(0, dp(3), 0, dp(3))
-            parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun button(
-        parent: LinearLayout,
-        label: String,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): MaterialButton =
-        MaterialButton(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 16f
-            minHeight = dp(48)
-            minimumHeight = dp(48)
-            cornerRadius = dp(12)
-            isEnabled = enabled
-            setTextColor(getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
-            backgroundTintList = ColorStateList.valueOf(getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
-            if (!primary) {
-                strokeWidth = dp(1)
-                strokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            }
-            setOnClickListener { click() }
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin =
-                        dp(8)
-                },
-            )
-        }
-
-    private fun shape(
-        @ColorRes color: Int,
-    ): GradientDrawable =
-        GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
-            setColor(getColor(color))
-        }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's goal does not open. */

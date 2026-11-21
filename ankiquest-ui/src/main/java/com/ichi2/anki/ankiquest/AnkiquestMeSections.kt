@@ -113,7 +113,7 @@ private abstract class MeSection(
     saved: Bundle?,
     initial: AnkiquestMeSections.Destination?,
 ) : ContextWrapper(activity) {
-    protected val views = AnkiquestRecordViews(activity)
+    protected val views = AnkiquestBoardViews(activity)
     protected val scroll: NestedScrollView = activity.findViewById(R.id.aq_board_scroll)
     protected val lifecycleScope get() = activity.lifecycleScope
     val root = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -245,7 +245,7 @@ private class RecordsSection(
             lifecycleScope.launch {
                 var gone = false
                 val problem =
-                    AnkiquestRecordViews.attempt(R.string.aq_challenges_offline, R.string.aq_records_server_error) {
+                    boardAttempt(R.string.aq_challenges_offline, R.string.aq_records_server_error) {
                         val choices = scopes ?: optionalScopes(current)
                         val asked = choices.firstOrNull { it.value == scope }
                         try {
@@ -377,7 +377,7 @@ private class RecordsSection(
                     small = true,
                 )
             }
-            views.bar(panel, if (best.value > 0) (holder.value * 100 / best.value).toInt() else 0)
+            views.bar(panel, if (best.value > 0) (holder.value * 100 / best.value).toInt() else 0, AnkiquestBoardViews.Bar.THIN)
         }
     }
 
@@ -491,7 +491,7 @@ private class HistorySection(
             lifecycleScope.launch {
                 var gone = false
                 val problem =
-                    AnkiquestRecordViews.attempt(R.string.aq_challenges_offline, R.string.aq_history_server_error) {
+                    boardAttempt(R.string.aq_challenges_offline, R.string.aq_history_server_error) {
                         try {
                             val history = AnkiquestRecords.study(current, asked)
                             if (turn == generation) {

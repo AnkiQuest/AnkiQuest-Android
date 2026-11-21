@@ -5,5 +5,3 @@ AnkiDroid/build/
 ankiquest-core/src/test/resources/ankiquest/*.json
 ankiquest-core/src/test/resources/ankiquest-api/*.json
 !ankiquest-core/src/test/resources/ankiquest-api/names.json
-# Shared labels must match AnkiQuest-Server master byte for byte.
-.github/labels.json

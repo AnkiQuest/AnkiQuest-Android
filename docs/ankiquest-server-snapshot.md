@@ -2,11 +2,11 @@
 
 `ankiquest-core/src/test/resources/ankiquest-server.sha` names the exact server
 commit used by Android's committed API examples and shared fixtures.
-Normal PR and main builds test those committed files. A cheap isolated job
+Normal PR and master builds test those committed files. A cheap isolated job
 checks them against that SHA; it never substitutes server master or runs
 server code. The art check runs the exporter from that pinned
 server commit, not from master, and takes no manual `server_ref`: it runs
-server code with a Rust cache shared with main. The Gradle contract job receives no server checkout or new data
+server code with a Rust cache shared with master. The Gradle contract job receives no server checkout or new data
 unless a manual `server_ref` is explicitly supplied.
 
 `ankiquest-api/names.json` assigns every example to exactly one group:
@@ -29,8 +29,8 @@ normal repository formatting.
 `ankiquest_bump_server.yml` runs daily and on dispatch. It copies server
 master's `docs/api/examples/*.json` and `tests/fixtures/*.json`, records the
 commit, and pushes only `bot/server-bump`. It opens or updates a PR whose body
-lists the server commits since Android main's pin. Existing review fixes and
-notes survive updates. The workflow merges main into an existing bump
+lists the server commits since Android master's pin. Existing review fixes and
+notes survive updates. The workflow merges master into an existing bump
 branch; it never force-pushes. Resolve any merge conflict on that branch.
 
 If a new example fails the ownership test, fix the bump PR itself. Classify
@@ -44,7 +44,7 @@ The bot uses the existing `UPSTREAM_SYNC_TOKEN` so its pushes start normal PR
 CI. The repository owner must grant that token **Contents**, **Pull requests**
 and **Issues** read/write on this repository. No token value belongs in the
 repository. Scheduled automation is restricted to `AnkiQuest/AnkiQuest-Android`.
-It executes reviewed helpers from main, retained outside the bump checkout;
+It executes reviewed helpers from master, retained outside the bump checkout;
 server data and unmerged changes on the bump branch are never executed by
 the privileged updater.
 
@@ -66,7 +66,7 @@ has identical data or a small follow-up.
 The API-contract, shared-fixtures and art-check workflows accept an optional
 `server_ref` on manual dispatch. Blank means the committed pin. An explicit
 ref tests its API examples, compares its data with the committed snapshot or
-checks the app art against its exporter; it does not change main. Missing/empty server examples fail clearly.
+checks the app art against its exporter; it does not change master. Missing/empty server examples fail clearly.
 
 The server's `android-contract` check rejects removal or changed JSON types
 for Android's consumed examples; additive changes remain allowed. Server

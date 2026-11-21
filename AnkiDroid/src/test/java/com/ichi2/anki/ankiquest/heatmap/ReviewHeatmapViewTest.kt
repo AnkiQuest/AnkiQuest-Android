@@ -118,6 +118,38 @@ class ReviewHeatmapViewTest {
     }
 
     @Test
+    fun `today goes back to today's year and selects today`() {
+        val today = LocalDate.of(2024, 6, 1)
+        val view = ReviewHeatmapView(context)
+        view.setData(ReviewHeatmap.summarize(today, mapOf(LocalDate.of(2022, 5, 1) to 1), emptyMap()))
+        val todayButton = view.findViewById<View>(R.id.review_heatmap_today)
+        val grid = view.findViewById<ReviewHeatmapGrid>(R.id.review_heatmap_grid)
+        assertFalse(todayButton.isEnabled)
+
+        view.findViewById<View>(R.id.review_heatmap_previous_year).performClick()
+        view.findViewById<View>(R.id.review_heatmap_previous_year).performClick()
+        assertEquals("2022", view.findViewById<TextView>(R.id.review_heatmap_year).text.toString())
+        assertTrue(todayButton.isEnabled)
+
+        todayButton.performClick()
+        assertEquals("2024", view.findViewById<TextView>(R.id.review_heatmap_year).text.toString())
+        assertEquals(today, grid.selectedDate)
+        assertFalse(todayButton.isEnabled)
+    }
+
+    @Test
+    fun `the share of days studied shows once there are reviews`() {
+        val today = LocalDate.of(2024, 3, 1)
+        val share = { data: ReviewHeatmapData ->
+            ReviewHeatmapView(context).apply { setData(data) }.findViewById<TextView>(R.id.review_heatmap_share)
+        }
+        val studied = share(ReviewHeatmap.summarize(today, mapOf(today.minusDays(2) to 1, today to 1), emptyMap()))
+        assertEquals(View.VISIBLE, studied.visibility)
+        assertEquals("You studied on 66% of the days since your first review", studied.text.toString())
+        assertEquals(View.GONE, share(ReviewHeatmap.summarize(today, emptyMap(), emptyMap())).visibility)
+    }
+
+    @Test
     fun `accessible days announce review counts and forecast estimates and can be selected`() {
         val today = LocalDate.of(2024, 2, 28)
         val leapDay = today.plusDays(1)
