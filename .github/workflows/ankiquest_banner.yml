@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Regenerates the README banner (docs/graphics/logos/banner_readme.png) from the app's own
-# screens for every release, and proposes it to master as a pull request when it changed.
-# Pull requests touching the banner or its tooling render it and fail unless the committed
-# banner has the same pixels; the render is uploaded so it can be committed.
+# The README banner (docs/graphics/logos/banner_readme.png) and the social preview, drawn by
+# AnkiQuest-Dev's shared ankiquest-banner from docs/graphics/banner.toml: the five screens
+# AnkiquestBannerScreenshots records and the duo master at the pinned server commit.
+#
+# A pull request touching them or their inputs fails unless the committed images have the drawn
+# pixels; the drawings are uploaded as the `banner` artifact. A release tag proposes new images to
+# master as a pull request; a manual run proposes them to the branch it ran on.
 name: ankiquest README banner
 
 on:
@@ -12,10 +15,11 @@ on:
   pull_request:
     paths:
       - '.github/workflows/ankiquest_banner.yml'
-      - 'tools/ankiquest-banner/**'
       - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
-      - 'AnkiDroid/src/main/res/drawable-nodpi/duo_friends.webp'
+      - 'AnkiDroid/src/test/resources/ankiquest-server.sha'
+      - 'docs/graphics/banner.toml'
       - 'docs/graphics/logos/banner_readme.png'
+      - 'docs/graphics/logos/social_preview.png'
 
 permissions: {}
 
@@ -30,13 +34,12 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
-  render:
+  # The screens are not committed: Roborazzi records them here and passes them on.
+  record:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-    outputs:
-      changed: ${{ steps.compare.outputs.changed }}
     steps:
       # Work around Ubuntu 26.04's RAM-backed /tmp until the image fix rolls out.
       # https://github.com/actions/runner-images/pull/14814
@@ -48,6 +51,8 @@ jobs:
           fi
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -61,14 +66,6 @@ jobs:
           cache-provider: basic
           gradle-version: wrapper
 
-      # The runner image ships rustup; install a minimal stable toolchain explicitly.
-      - name: Set up Rust
-        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
-
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: tools/ankiquest-banner
-
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache
 
@@ -80,47 +77,32 @@ jobs:
           max_attempts: 3
           command: ./gradlew robolectricSdkDownload compileScreenshotTests -Pscreenshot --daemon
 
-      # The documented command: records the screens with Gradle, then composes the banner.
-      - name: Record the screens and compose the banner
-        run: cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml -- --record
-
-      # Compare pixels, not bytes: PNG encoders differ between platforms. A pull request is
-      # compared with its own committed banner, a release with master's.
-      - name: Compare with the committed banner
-        id: compare
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT" = pull_request ]; then
-            ref=HEAD
-          else
-            git fetch --depth=1 origin master
-            ref=FETCH_HEAD
-          fi
-          git show "$ref:docs/graphics/logos/banner_readme.png" > "$RUNNER_TEMP/committed_banner.png"
-          result=$(cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml -- \
-            --compare docs/graphics/logos/banner_readme.png "$RUNNER_TEMP/committed_banner.png")
-          echo "The banner is $result from the committed one."
-          if [ "$result" = different ]; then changed=true; else changed=false; fi
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+      # The record command in docs/graphics/banner.toml.
+      - name: Record the screens
+        run: ./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot -PreadmeBanner --tests '*AnkiquestBannerScreenshots*'
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: banner
-          path: |
-            docs/graphics/logos/banner_readme.png
-            AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/*.png
+          name: banner-screens
+          path: AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/*.png
           if-no-files-found: error
 
-      - name: Fail when the committed banner is stale
-        if: github.event_name == 'pull_request' && steps.compare.outputs.changed == 'true'
-        run: |
-          echo "::error::docs/graphics/logos/banner_readme.png is stale. Run tools/ankiquest-banner with --record, or commit the banner artifact of this run."
-          exit 1
+  # Draws both images from the screens and compares them with the committed ones. Pull requests
+  # fail when an image is stale; releases and manual runs report it to the propose job.
+  banner:
+    needs: record
+    permissions:
+      contents: read
+    uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/banner.yml@master
+    with:
+      server-sha-file: AnkiDroid/src/test/resources/ankiquest-server.sha
+      screens-artifact: banner-screens
+      screens-path: AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots
+      on-stale: ${{ github.event_name == 'pull_request' && 'fail' || 'report' }}
 
   propose:
-    needs: render
-    if: github.event_name != 'pull_request' && needs.render.outputs.changed == 'true'
+    needs: banner
+    if: github.event_name != 'pull_request' && needs.banner.outputs.stale == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Writes go through UPSTREAM_SYNC_TOKEN: a pull request opened or pushed with GITHUB_TOKEN
@@ -137,9 +119,19 @@ jobs:
             exit 1
           fi
 
+      # A release proposes to master, a manual run to the branch it ran on.
+      - name: Choose the base branch
+        id: base
+        env:
+          EVENT: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then base="$BRANCH"; else base=master; fi
+          echo "branch=$base" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: master
+          ref: ${{ steps.base.outputs.branch }}
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -148,28 +140,29 @@ jobs:
           path: ${{ runner.temp }}/banner
 
       # Push the banner branch, then open its pull request unless one is already open. Any
-      # failure fails the job, so a banner that never reaches master is visible (#270).
+      # failure fails the job, so a banner that never reaches its base is visible (#270).
       - name: Open a pull request
         env:
           GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+          BASE: ${{ steps.base.outputs.branch }}
           SOURCE: ${{ github.ref_name }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          cp "$RUNNER_TEMP/banner/docs/graphics/logos/banner_readme.png" docs/graphics/logos/banner_readme.png
+          cp "$RUNNER_TEMP/banner/banner_readme.png" "$RUNNER_TEMP/banner/social_preview.png" docs/graphics/logos/
           if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then branch="banner-$SOURCE"; else branch="banner-run-$RUN_ID"; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git commit -m "README banner for $SOURCE" -- docs/graphics/logos/banner_readme.png
+          git commit -m "README banner for $SOURCE" -- docs/graphics/logos/banner_readme.png docs/graphics/logos/social_preview.png
           git push --force origin "$branch"
 
-          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --base master --head "$branch" --state open \
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --base "$BASE" --head "$branch" --state open \
             --json number --jq '.[0].number // empty')
           if [ -n "$open" ]; then
             echo "Pull request #$open already proposes $branch"
             exit 0
           fi
 
-          body="The README banner rendered from $SOURCE by tools/ankiquest-banner ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID))."
-          gh pr create --repo "$GITHUB_REPOSITORY" --base master --head "$branch" \
+          body="The README banner and social preview drawn from $SOURCE by AnkiQuest-Dev's ankiquest-banner ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID))."
+          gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE" --head "$branch" \
             --title "README banner for $SOURCE" --body "$body"
