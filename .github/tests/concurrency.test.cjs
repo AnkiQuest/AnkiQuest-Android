@@ -25,7 +25,7 @@ function concurrency(text) {
 const files = fs.readdirSync(workflows).filter(name => /^ankiquest_.*\.yml$/.test(name));
 
 for (const name of files) {
-    test(`${name}: a later run never cancels a main push run`, () => {
+    test(`${name}: a later run never cancels a master push run`, () => {
         const settings = concurrency(fs.readFileSync(path.join(workflows, name), "utf8"));
 
         // Workflows that only queue (cancel-in-progress: false) keep their own group.
