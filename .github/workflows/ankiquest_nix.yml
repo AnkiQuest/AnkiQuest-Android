@@ -49,7 +49,8 @@ jobs:
       timeout-minutes: 90
       # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's
       # rate limit lasts longer than that, so try 7 times with doubling waits from 2s (about
-      # 2 minutes).
+      # 2 minutes). Append: the dev shell's GRADLE_OPTS holds the aapt2 override that
+      # makes aapt2 run without a /lib64 loader.
       run: |
-        export GRADLE_OPTS="-Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000"
+        export GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000"
         ./gradlew --no-daemon assemblePlayDebug
