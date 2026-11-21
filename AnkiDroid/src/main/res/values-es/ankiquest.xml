@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_dashboard_title">Clasificación</string>
     <string name="ankiquest_streak_protection_summary">Activada inicialmente. Completa las tres misiones diarias mientras la protección esté activada para ganar un protector por día de Anki, hasta 3. Se usa uno automáticamente por cada día terminado sin repasos. Desactivarla pausa su obtención y uso; conservas los protectores guardados.</string>
