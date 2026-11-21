@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_move_title">Pasar desde el AnkiQuest anterior</string>
+    <string name="ankiquest_move_message">¿Traer tus ajustes y tu inicio de sesión del AnkiQuest anterior?</string>
+    <string name="ankiquest_move_accept">Traer</string>
+    <string name="ankiquest_move_decline">No</string>
+    <string name="ankiquest_move_done_sync">Ajustes e inicio de sesión traídos. Tu colección llega desde AnkiWeb con la primera sincronización, que empieza ahora.</string>
+    <string name="ankiquest_move_done_export">Ajustes e inicio de sesión traídos. Tu colección sigue en el AnkiQuest anterior: usa allí «Exportar colección» e importa el archivo aquí.</string>
+    <string name="ankiquest_move_failed">El AnkiQuest anterior no entregó sus ajustes. Configura esta aplicación como siempre.</string>
+    <string name="ankiquest_move_loading">Transfiriendo tus ajustes e inicio de sesión…</string>
+</resources>
