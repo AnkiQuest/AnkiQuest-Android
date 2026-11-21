@@ -159,6 +159,7 @@ jobs:
       - name: Assets
         run: |
           # Released updaters still request this name. Copy after signing so the bytes match.
+          # quest-2 to quest-19 take the release's first .apk by name, so it must sort first.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
           files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab AnkiDroid-Quest.apk)
           for file in "${files[@]}"; do

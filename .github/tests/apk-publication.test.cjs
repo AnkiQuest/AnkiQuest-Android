@@ -20,23 +20,29 @@ function stepScript(name) {
     return script[1].split("\n").map(line => line.slice(10)).join("\n");
 }
 
+// A temporary directory with synthetic signed outputs and a gh stand-in that records its arguments.
+function fakeBuild(t) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ankiquest-apk-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const bin = path.join(dir, "bin");
+    fs.mkdirSync(bin);
+    fs.writeFileSync(path.join(bin, "gh"), "#!/bin/sh\nprintf '%s\\0' \"$@\" >> \"$GH_CAPTURE\"\n", { mode: 0o755 });
+    const apk = Buffer.from("synthetic signed universal APK");
+    fs.writeFileSync(path.join(dir, "AnkiQuest.apk"), apk);
+    for (const abi of ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]) {
+        fs.writeFileSync(path.join(dir, "AnkiQuest-" + abi + ".apk"), "synthetic signed ABI APK");
+    }
+    fs.writeFileSync(path.join(dir, "AnkiQuest.aab"), "synthetic app bundle");
+    const notes = path.join(dir, "AnkiDroid/src/main/assets/ankiquest");
+    fs.mkdirSync(notes, { recursive: true });
+    fs.writeFileSync(path.join(notes, "release-notes.md"), "Test release notes\n");
+    return { dir, apk };
+}
+
 for (const channel of ["release", "nightly"]) {
     test(channel + " keeps the APK downloaded by older released apps", (t) => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ankiquest-apk-"));
-        t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+        const { dir, apk } = fakeBuild(t);
         const bin = path.join(dir, "bin");
-        fs.mkdirSync(bin);
-        fs.writeFileSync(path.join(bin, "gh"), "#!/bin/sh\nprintf '%s\\0' \"$@\" >> \"$GH_CAPTURE\"\n", { mode: 0o755 });
-        const apk = Buffer.from("synthetic signed universal APK");
-        fs.writeFileSync(path.join(dir, "AnkiQuest.apk"), apk);
-        for (const abi of ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]) {
-            fs.writeFileSync(path.join(dir, "AnkiQuest-" + abi + ".apk"), "synthetic signed ABI APK");
-        }
-        fs.writeFileSync(path.join(dir, "AnkiQuest.aab"), "synthetic app bundle");
-        const notes = path.join(dir, "AnkiDroid/src/main/assets/ankiquest");
-        fs.mkdirSync(notes, { recursive: true });
-        fs.writeFileSync(path.join(notes, "release-notes.md"), "Test release notes\n");
-
         const capture = path.join(dir, "published");
         const options = {
             cwd: dir,
@@ -65,3 +71,14 @@ for (const channel of ["release", "nightly"]) {
         assert.ok(args.slice(create).includes(legacyApk), "The legacy APK must be attached to the release");
     });
 }
+
+// quest-2 to quest-19 download the first .apk of the release's asset list, which GitHub sorts by
+// name. The legacy alias, the universal APK, must sort before the ABI APKs, which some devices
+// cannot install.
+test("older released apps find the universal APK first", (t) => {
+    const { dir } = fakeBuild(t);
+    execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Assets")], { cwd: dir, encoding: "utf8" });
+    const names = JSON.parse(fs.readFileSync(path.join(dir, "assets.json"), "utf8")).map(asset => asset.name);
+    const apks = names.filter(name => name.endsWith(".apk")).sort();
+    assert.equal(apks[0], legacyApk);
+});
