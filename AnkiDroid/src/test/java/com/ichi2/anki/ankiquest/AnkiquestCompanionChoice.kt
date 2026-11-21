@@ -30,3 +30,18 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
     )
+
+/**
+ * Anki-tan's pose for each streak mood but fire, which burns by streak: her streak pose, and her
+ * crown from 100 days. Frozen 2 and 3 have no art of their own yet (AnkiQuest-Server#57).
+ */
+internal val ankiTanMoodPoses =
+    mapOf(
+        AnkiquestMood.Mood.UNKNOWN to R.drawable.anki_tan_face,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.anki_tan_asleep,
+        AnkiquestMood.Mood.SAD to R.drawable.anki_tan_sad,
+        AnkiquestMood.Mood.FROZEN_1 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.FROZEN_2 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.FROZEN_3 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.HOPEFUL to R.drawable.anki_tan_hopeful,
+    )

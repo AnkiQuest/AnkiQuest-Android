@@ -207,23 +207,23 @@ class AnkiquestMomentsTest : RobolectricTest() {
     @Test
     fun `a moment about a companion this app cannot draw waits for its art`() {
         // A planned companion has no art here; shown now, it would show as the chosen one.
-        val tan = celebration(1, "companion", moment = "companion:anki_tan")
-        assertEquals(Route.WAITING, AnkiquestMoments.route(prefs, account, tan, foreground = false))
-        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, tan, foreground = true))
+        val chan = celebration(1, "companion", moment = "companion:quest_chan")
+        assertEquals(Route.WAITING, AnkiquestMoments.route(prefs, account, chan, foreground = false))
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, chan, foreground = true))
 
         // It is kept unseen, so an update that adds the art can still show it.
-        assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.pending(prefs, account).map { it.key })
+        assertEquals(listOf("companion:quest_chan"), AnkiquestMoments.pending(prefs, account).map { it.key })
         assertEquals(emptyList(), AnkiquestMoments.take(prefs, account))
-        assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.pending(prefs, account).map { it.key })
+        assertEquals(listOf("companion:quest_chan"), AnkiquestMoments.pending(prefs, account).map { it.key })
 
         // Other moments are taken while it waits; an app that draws the companion shows it once.
         val level = celebration(2, "level", moment = "level:4")
         assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, level, foreground = true))
         assertEquals(listOf("level:4"), AnkiquestMoments.take(prefs, account).map { it.key })
-        val updated = AnkiquestCompanion.drawn + "anki_tan"
-        assertEquals(listOf("companion:anki_tan"), AnkiquestMoments.take(prefs, account, updated).map { it.key })
+        val updated = AnkiquestCompanion.drawn + "quest_chan"
+        assertEquals(listOf("companion:quest_chan"), AnkiquestMoments.take(prefs, account, updated).map { it.key })
         assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
-        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, tan, foreground = true))
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, chan, foreground = true))
     }
 
     @Test
@@ -240,7 +240,7 @@ class AnkiquestMomentsTest : RobolectricTest() {
     @Test
     fun `every request names the companions this app draws`() {
         val request = AnkiquestApi.request(identity, "api/notifications/hill").build()
-        assertEquals("aki, ankilope, cow", request.header("X-AnkiQuest-Companion-Art"))
+        assertEquals("aki, ankilope, cow, anki_tan", request.header("X-AnkiQuest-Companion-Art"))
     }
 
     private fun example(name: String): String =
@@ -252,8 +252,10 @@ class AnkiquestMomentsTest : RobolectricTest() {
         assertEquals(AnkiquestCompanion.Choice.ANKILOPE, AnkiquestMoments.joined(moment("companion:ankilope", Kind.COMPANION)))
         assertEquals(R.drawable.aki_celebrate, AnkiquestMomentCard.art(moment("companion:cow", Kind.COMPANION)))
 
+        assertEquals(AnkiquestCompanion.Choice.ANKI_TAN, AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
+
         // A companion this app does not know, or another kind of moment, names none.
-        assertNull(AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
+        assertNull(AnkiquestMoments.joined(moment("companion:anki_tan_chibi", Kind.COMPANION)))
         assertNull(AnkiquestMoments.joined(moment("companion:none", Kind.COMPANION)))
         assertNull(AnkiquestMoments.joined(moment("level:4", Kind.LEVEL)))
     }

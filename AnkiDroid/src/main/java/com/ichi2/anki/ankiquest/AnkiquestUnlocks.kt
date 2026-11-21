@@ -9,9 +9,9 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * Companions earned at milestones: Ankilope at a level, the cow (Bluma) by hours of study. The
- * server decides and keeps every unlock per account (`GET /api/unlocks/{user}`); the app shows
- * what it last answered. They are not settings: the settings-sync switch does not apply. The
+ * Companions earned at milestones: Ankilope at a level, the cow (Bluma) by hours of study, Anki-tan
+ * by a streak. The server decides and keeps every unlock per account (`GET /api/unlocks/{user}`);
+ * the app shows what it last answered. They are not settings: the settings-sync switch does not apply. The
  * conditions are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
  */
 internal object AnkiquestUnlocks {
@@ -19,7 +19,7 @@ internal object AnkiquestUnlocks {
     private const val PREF_UNLOCKS = "ankiquestUnlocks"
 
     /** Companions earned at a milestone. */
-    private val EARNED = setOf(Choice.ANKILOPE, Choice.COW)
+    private val EARNED = setOf(Choice.ANKILOPE, Choice.COW, Choice.ANKI_TAN)
 
     /**
      * Earned companions every player could choose before milestones. A server from then lists no
@@ -33,6 +33,9 @@ internal object AnkiquestUnlocks {
     ) {
         LEVEL("level"),
         STUDY_HOURS("study_hours"),
+
+        /** Days in a row, as the player's streak stands now. */
+        STREAK("streak"),
         ;
 
         companion object {
