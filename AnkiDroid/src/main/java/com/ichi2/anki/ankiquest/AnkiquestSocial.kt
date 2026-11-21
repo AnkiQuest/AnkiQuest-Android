@@ -126,23 +126,12 @@ internal object AnkiquestSocial {
     private const val MAX_INVITE = 128
     private val inviteFormat = Regex("[A-Za-z0-9_-]{1,$MAX_INVITE}")
 
-    suspend fun overview(account: HomeAccount): Overview =
-        withContext(Dispatchers.IO) {
-            parse(AnkiquestApi.json(account, AnkiquestApi.request(account, "api/social/${account.encodedUser}").build()))
-        }
+    suspend fun overview(account: HomeAccount): Overview = parse(AnkiquestApi.call(account, "GET", "api/social/${account.encodedUser}"))
 
     suspend fun change(
         account: HomeAccount,
         change: Change,
-    ): Overview =
-        withContext(Dispatchers.IO) {
-            val request =
-                AnkiquestApi
-                    .request(account, "api/social/${account.encodedUser}")
-                    .post(AnkiquestApi.body(change.body()))
-                    .build()
-            parse(AnkiquestApi.json(account, request))
-        }
+    ): Overview = parse(AnkiquestApi.call(account, "POST", "api/social/${account.encodedUser}", change.body()))
 
     /** The group behind [code], to show before joining; a code that is not valid any more is `404`. */
     suspend fun invite(
