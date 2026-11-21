@@ -58,7 +58,8 @@ class ManifestThemeTest : AndroidTest {
 
         val violations =
             activities
-                .filter { it.name.startsWith("com.ichi2") }
+                // AnkiQuest's activities are in org.ankiquest (#461)
+                .filter { it.name.startsWith("com.ichi2") || it.name.startsWith("org.ankiquest.") }
                 // an <activity-alias> takes its theme from its target
                 .filter { it.targetActivity == null }
                 .filter { it.theme != (allowedThemes[it.name] ?: 0) }

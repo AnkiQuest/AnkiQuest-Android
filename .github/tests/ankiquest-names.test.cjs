@@ -84,7 +84,9 @@ test("nothing names the old AnkiQuest package except lines kept for installed ap
         read(file)
             .split("\n")
             .forEach((line, index) => {
-                if (line.includes(OLD_PACKAGE) || line.includes(OLD_DIRECTORY)) {
+                // Without backslashes, regex spellings such as com\\.ichi2 count too.
+                const plain = line.replaceAll("\\", "");
+                if (plain.includes(OLD_PACKAGE) || plain.includes(OLD_DIRECTORY)) {
                     assert.ok(line.includes(KEEP_MARKER), `${file}:${index + 1}: ${line.trim()}`);
                 }
             });
