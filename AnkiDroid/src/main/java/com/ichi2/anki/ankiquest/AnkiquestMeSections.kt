@@ -88,6 +88,19 @@ internal class AnkiquestMeSections(
             context: Context,
             destination: Destination,
         ): Intent = AnkiquestProfileActivity.intent(context).putExtra(EXTRA_SECTION, destination.name)
+
+        /** The heading of a records board of [kind]. */
+        @StringRes
+        internal fun recordLabel(kind: AnkiquestRecords.Kind): Int =
+            when (kind) {
+                AnkiquestRecords.Kind.HOUR -> R.string.aq_profile_best_hour
+                AnkiquestRecords.Kind.DAY -> R.string.aq_profile_best_day
+                AnkiquestRecords.Kind.WEEK -> R.string.aq_profile_best_week
+                AnkiquestRecords.Kind.MONTH -> R.string.aq_profile_best_month
+                AnkiquestRecords.Kind.YEAR -> R.string.aq_profile_best_year
+                AnkiquestRecords.Kind.STREAK -> R.string.review_heatmap_longest_streak
+                AnkiquestRecords.Kind.DAYS -> R.string.review_heatmap_days_studied
+            }
     }
 }
 
@@ -335,7 +348,7 @@ private class RecordsSection(
     ) {
         val best = board.holders.first()
         val panel = views.card(content, tinted = best.user == me)
-        views.text(panel, getString(AnkiquestRecordsActivity.label(board.kind)), heading = true)
+        views.text(panel, getString(AnkiquestMeSections.recordLabel(board.kind)), heading = true)
         views.text(panel, whenSet(board.kind, best), small = true)
         board.holders.forEachIndexed { index, holder ->
             val lead = index == 0

@@ -82,13 +82,13 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `feed and leaderboard links target Friends and preserve their notification context`() {
-        val feed = AnkiquestFeedActivity.intent(targetContext, "old-account")
+        val feed = AnkiquestFriendsSections.feedIntent(targetContext, "old-account")
         assertEquals(AnkiquestFriendsActivity::class.java.name, feed.component?.className)
-        assertEquals("old-account", feed.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
-        val board = AnkiquestLeaderboardActivity.intent(targetContext, "month", "old-account")
+        assertEquals("old-account", feed.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
+        val board = AnkiquestFriendsSections.boardIntent(targetContext, "month", "old-account")
         assertEquals(AnkiquestFriendsActivity::class.java.name, board.component?.className)
-        assertEquals("month", board.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
-        assertEquals("old-account", board.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT))
+        assertEquals("month", board.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
+        assertEquals("old-account", board.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT))
     }
 
     @Test
@@ -109,7 +109,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `the selected leaderboard period survives refresh collapse and rotation`() {
-        val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
+        val controller = launch(AnkiquestFriendsSections.boardIntent(targetContext, "month"))
         val screen = controller.get()
         awaitSections(screen)
         screen.click(R.string.ankiquest_dashboard_title)
@@ -128,7 +128,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
     fun `switching accounts clears an expanded board and ignores its late old response`() {
         val pending = CompletableDeferred<AnkiquestBoards.Leaderboard>()
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } coAnswers { withContext(NonCancellable) { pending.await() } }
-        val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
+        val controller = launch(AnkiquestFriendsSections.boardIntent(targetContext, "month"))
         try {
             val screen = controller.get()
             assertTrue(assertNotNull(screen.findViewById<View>(R.id.aq_friends_board_loading)).isVisible)
@@ -159,7 +159,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `feed filters survive a parent refresh collapse and rotation`() {
-        val controller = launch(AnkiquestFeedActivity.intent(targetContext))
+        val controller = launch(AnkiquestFriendsSections.feedIntent(targetContext))
         val screen = controller.get()
         awaitSections(screen)
         screen.click(R.string.aq_feed_messages)
@@ -187,7 +187,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
     @Test
     fun `sent messages remain selected after recreation`() {
         coEvery { AnkiquestFeed.sent(any(), any()) } returns AnkiquestFeed.SentPage(emptyList(), null)
-        val controller = launch(AnkiquestFeedActivity.intent(targetContext))
+        val controller = launch(AnkiquestFriendsSections.feedIntent(targetContext))
         awaitSections(controller.get())
         controller.get().click(R.string.aq_feed_sent)
         controller.recreate()
@@ -198,7 +198,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `recreation after an account switch does not restore the old launch period`() {
-        val controller = launch(AnkiquestLeaderboardActivity.intent(targetContext, "month"))
+        val controller = launch(AnkiquestFriendsSections.boardIntent(targetContext, "month"))
         awaitSections(controller.get())
         val next = identity.copy(user = "other", token = "other-token")
         account = next
@@ -210,7 +210,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Test
     fun `a late old feed cannot replace the new account and its default filters`() {
-        val controller = launch(AnkiquestFeedActivity.intent(targetContext))
+        val controller = launch(AnkiquestFriendsSections.feedIntent(targetContext))
         val screen = controller.get()
         awaitSections(screen)
         screen.click(R.string.aq_feed_messages)
@@ -248,23 +248,24 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
     @Test
     fun `legacy explicit screens redirect without losing the addressed account or period`() {
         val feedIntent =
-            Intent(
-                targetContext,
-                AnkiquestFeedActivity::class.java,
-            ).putExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT, "old-account")
+            Intent(targetContext, AnkiquestFeedActivity::class.java)
+                .putExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT, "old-account")
                 .putExtra("unrelated_payload", ByteArray(300_000))
         val feed = startRegularActivity<AnkiquestFeedActivity>(feedIntent)
         assertTrue(feed.isFinishing)
-        assertEquals(AnkiquestFeedActivity.intent(targetContext, "old-account").toUri(0), shadowOf(feed).nextStartedActivity.toUri(0))
+        assertEquals(
+            AnkiquestFriendsSections.feedIntent(targetContext, "old-account").toUri(0),
+            shadowOf(feed).nextStartedActivity.toUri(0),
+        )
         val boardIntent =
             Intent(targetContext, AnkiquestLeaderboardActivity::class.java)
-                .putExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD, "month")
-                .putExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT, "old-account")
+                .putExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD, "month")
+                .putExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT, "old-account")
                 .putExtra("unrelated_payload", ByteArray(300_000))
         val board = startRegularActivity<AnkiquestLeaderboardActivity>(boardIntent)
         assertTrue(board.isFinishing)
         assertEquals(
-            AnkiquestLeaderboardActivity.intent(targetContext, "month", "old-account").toUri(0),
+            AnkiquestFriendsSections.boardIntent(targetContext, "month", "old-account").toUri(0),
             shadowOf(board).nextStartedActivity.toUri(0),
         )
     }

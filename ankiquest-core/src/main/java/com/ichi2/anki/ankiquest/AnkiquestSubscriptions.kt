@@ -20,7 +20,6 @@ data class IncomingSubscriptions(
     val enabled: Boolean,
     val unsubscribedSenders: Set<String>,
     val senders: List<IncomingSender>,
-    val legacyMutes: Boolean = false,
 ) {
     companion object {
         /** Roster entries alone are not listed: being in the roster does not mean sharing a deck with this recipient. */
@@ -41,7 +40,6 @@ data class IncomingSubscriptions(
                     .filter { it.user in visible }
                     .distinctBy { it.user }
                     .sortedWith(compareBy<IncomingSender, String>(String.CASE_INSENSITIVE_ORDER) { it.display }.thenBy { it.user }),
-                strings("muted_senders").isNotEmpty(),
             )
         }
     }

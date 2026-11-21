@@ -6,6 +6,9 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import org.json.JSONObject
 
+/** One day of 24 hours in milliseconds, for day arithmetic in AnkiQuest. */
+const val DAY_MS = 86_400_000L
+
 /**
  * Today's streak verdict, worked out one way for every screen.
  *
@@ -24,7 +27,6 @@ object AnkiquestDay {
     private const val PREF_SERVER_DAY = "ankiquestServerToday"
     private const val PREF_LOCAL_DAY = "ankiquestLocalToday"
     private const val MINUTE_MS = 60_000L
-    private const val DAY_MS = 86_400_000L
 
     enum class State { STUDIED, PROTECTED, SHORT, PENDING, UNKNOWN }
 

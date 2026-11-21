@@ -2,8 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -115,10 +113,7 @@ object AnkiquestChallenges {
     const val MAX_RECIPIENTS = 30
 
     /** [account]'s friend goals. A server without them answers `404`, an [AnkiquestHttpException]. */
-    suspend fun overview(account: HomeAccount): Overview =
-        withContext(Dispatchers.IO) {
-            parse(AnkiquestApi.json(account, AnkiquestApi.request(account, path(account)).build()))
-        }
+    suspend fun overview(account: HomeAccount): Overview = parse(AnkiquestApi.call(account, "GET", path(account)))
 
     /** Starts [goal]; a retry of the same goal reuses [requestId], so it is never created twice. */
     suspend fun create(
@@ -150,10 +145,7 @@ object AnkiquestChallenges {
         account: HomeAccount,
         path: String,
         body: JSONObject,
-    ): Overview =
-        withContext(Dispatchers.IO) {
-            parse(AnkiquestApi.json(account, AnkiquestApi.request(account, path).post(AnkiquestApi.body(body)).build()))
-        }
+    ): Overview = parse(AnkiquestApi.call(account, "POST", path, body))
 
     private fun path(account: HomeAccount) = "api/community/challenges/${account.encodedUser}"
 
