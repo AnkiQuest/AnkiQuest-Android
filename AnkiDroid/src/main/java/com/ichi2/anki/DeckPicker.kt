@@ -529,7 +529,7 @@ open class DeckPicker :
 
         // handle the first load: display the app introduction
         // This screen is currently better equipped to handle errors than IntroductionActivity
-        if (!hasShownAppIntro() && AnkiDroidApp.fatalError == null) {
+        if (!hasShownAppIntro() && !AnkiDroidApp.startupErrors.hasFatalError()) {
             Timber.i("Displaying app intro")
             val appIntro = Intent(this, IntroductionActivity::class.java)
             appIntro.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1954,7 +1954,7 @@ open class DeckPicker :
     ) {
         if (!BackupManager.enoughDiscSpace(CollectionHelper.getCurrentAnkiDroidDirectory(this))) {
             Timber.i("Not enough space to do backup")
-            showDialogFragment(DeckPickerNoSpaceLeftDialog.newInstance())
+            DeckPickerNoSpaceLeftDialog.show(this)
         } else if (preferences.getBoolean("noSpaceLeft", false)) {
             Timber.i("No space left")
             showDialogFragment(DeckPickerBackupNoSpaceLeftDialog.newInstance())

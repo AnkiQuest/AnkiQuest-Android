@@ -31,10 +31,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
             android:text="@string/ankiquest_screen_title"
-            android:shadowColor="#B3000000"
-            android:shadowDy="1"
-            android:shadowRadius="3"
-            android:textColor="@color/ankiquest_widget_clear_text"
+            style="@style/AnkiquestWidgetClearText"
             android:textSize="15sp" />
 
         <TextView
@@ -48,20 +45,14 @@
             android:ellipsize="end"
             android:singleLine="true"
             android:text="@string/ankiquest_period_week"
-            android:shadowColor="#B3000000"
-            android:shadowDy="1"
-            android:shadowRadius="3"
-            android:textColor="@color/ankiquest_widget_clear_text_dim"
+            style="@style/AnkiquestWidgetClearText.Dim"
             android:textSize="12sp" />
 
         <TextView
             android:id="@+id/ankiquest_widget_updated"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:shadowColor="#B3000000"
-            android:shadowDy="1"
-            android:shadowRadius="3"
-            android:textColor="@color/ankiquest_widget_clear_text_dim"
+            style="@style/AnkiquestWidgetClearText.Dim"
             android:textSize="11sp" />
 
         <ImageView
@@ -80,10 +71,7 @@
         android:layout_height="wrap_content"
         android:paddingStart="4dp"
         android:paddingTop="6dp"
-        android:shadowColor="#B3000000"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/ankiquest_widget_clear_text"
+        style="@style/AnkiquestWidgetClearText"
         android:textSize="13sp"
         android:visibility="gone" />
 

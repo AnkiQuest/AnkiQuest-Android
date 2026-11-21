@@ -114,8 +114,14 @@ internal class AnkiquestBoardViews(
             minHeight = dp(48)
             minimumHeight = dp(48)
             cornerRadius = dp(12)
-            setTextColor(context.getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
-            backgroundTintList = ColorStateList.valueOf(context.getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
+            // A disabled button is drawn grey, so a tap that does nothing is not mistaken for a broken one.
+            setTextColor(states(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text, R.color.aq_home_muted))
+            backgroundTintList =
+                if (primary) {
+                    states(R.color.aq_home_primary, R.color.aq_home_outline)
+                } else {
+                    states(R.color.aq_home_surface, R.color.aq_home_surface)
+                }
             if (!primary) {
                 strokeWidth = dp(1)
                 strokeColor = ColorStateList.valueOf(context.getColor(R.color.aq_home_outline))
@@ -129,6 +135,16 @@ internal class AnkiquestBoardViews(
                 },
             )
         }
+
+    /** [enabled] normally, [disabled] while the view is disabled. */
+    private fun states(
+        @ColorRes enabled: Int,
+        @ColorRes disabled: Int,
+    ): ColorStateList =
+        ColorStateList(
+            arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
+            intArrayOf(context.getColor(disabled), context.getColor(enabled)),
+        )
 
     /** A single-choice row of chips, scrolling sideways when it does not fit. */
     fun <T> choices(
@@ -229,7 +245,7 @@ internal class AnkiquestBoardViews(
                 }
             } else {
                 val name = display.trim().ifEmpty { user }
-                val initial = name.take(name.offsetByCodePoints(0, minOf(1, name.codePointCount(0, name.length)))).uppercase()
+                val initial = AnkiquestAvatars.initials(name, letters = 1)
                 FrameLayout(context).apply {
                     background =
                         GradientDrawable().apply {

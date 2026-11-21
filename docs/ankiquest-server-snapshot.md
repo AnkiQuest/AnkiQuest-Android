@@ -54,8 +54,8 @@ An Android PR can pin a commit on a server feature branch. In a local clean
 server checkout at that commit, run from the Android repository:
 
 ```sh
-node .github/ankiquest_server_snapshot.cjs copy ../ankiquest
-node .github/ankiquest_server_snapshot.cjs verify ../ankiquest
+node .github/ankiquest_server_snapshot.cjs copy ../AnkiQuest-Server
+node .github/ankiquest_server_snapshot.cjs verify ../AnkiQuest-Server
 ./gradlew :AnkiDroid:testFullDebugUnitTest --tests 'com.ichi2.anki.ankiquest.AnkiquestApiContractTest'
 ```
 
@@ -75,7 +75,7 @@ by bump PR".
 
 ## Owner settings
 
-Require PRs and required checks on Android `main` and server `master`, including
+Require PRs and required checks on Android `master` and server `master`, including
 for administrators. Make the server's `android-contract` check required.
 These are repository administration settings; this change cannot enforce
 them from code. Neither this workflow nor agents should push default

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Regenerates the README banner (docs/graphics/logos/banner_readme.png) from the app's own
-# screens for every release, and proposes it to main as a pull request when it changed.
+# screens for every release, and proposes it to master as a pull request when it changed.
 # Pull requests touching the banner tooling render it without proposing anything.
 name: ankiquest README banner
 
@@ -85,15 +85,15 @@ jobs:
       - name: Compose the banner
         run: cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml
 
-      # Compare pixels, not bytes, with main's banner: PNG encoders differ between platforms.
-      - name: Compare with main
+      # Compare pixels, not bytes, with master's banner: PNG encoders differ between platforms.
+      - name: Compare with master
         id: compare
         run: |
-          git fetch --depth=1 origin main
+          git fetch --depth=1 origin master
           git show FETCH_HEAD:docs/graphics/logos/banner_readme.png > "$RUNNER_TEMP/main_banner.png"
           result=$(cargo run --release --manifest-path tools/ankiquest-banner/Cargo.toml -- \
             --compare docs/graphics/logos/banner_readme.png "$RUNNER_TEMP/main_banner.png")
-          echo "The banner is $result from main's."
+          echo "The banner is $result from master's."
           if [ "$result" = different ]; then changed=true; else changed=false; fi
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
 
@@ -126,7 +126,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: master
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -135,7 +135,7 @@ jobs:
           path: ${{ runner.temp }}/banner
 
       # Push the banner branch, then open its pull request unless one is already open. Any
-      # failure fails the job, so a banner that never reaches main is visible (#270).
+      # failure fails the job, so a banner that never reaches master is visible (#270).
       - name: Open a pull request
         env:
           GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
@@ -150,7 +150,7 @@ jobs:
           git commit -m "README banner for $SOURCE" -- docs/graphics/logos/banner_readme.png
           git push --force origin "$branch"
 
-          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --state open \
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --base master --head "$branch" --state open \
             --json number --jq '.[0].number // empty')
           if [ -n "$open" ]; then
             echo "Pull request #$open already proposes $branch"
@@ -158,5 +158,5 @@ jobs:
           fi
 
           body="The README banner rendered from $SOURCE by tools/ankiquest-banner ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID))."
-          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+          gh pr create --repo "$GITHUB_REPOSITORY" --base master --head "$branch" \
             --title "README banner for $SOURCE" --body "$body"

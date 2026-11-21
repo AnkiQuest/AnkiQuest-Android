@@ -5,14 +5,14 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - master
   merge_group:
 
 permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -47,10 +47,10 @@ jobs:
         with:
           # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
           cache-provider: basic
-          # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
-          # Builds on other branches will only read from main branch cache writes
+          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
+          # Builds on other branches will only read from master branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
       - name: Test build logic
         run: ./gradlew -p buildSrc test --daemon
