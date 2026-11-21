@@ -85,6 +85,16 @@ Releases and nightlies are signed with the same key, in [ankiquest_apk.yml](.git
 
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 
+## AnkiQuest API
+
+Apps that add notes or read cards through AnkiDroid's API library can use the AnkiQuest API instead and work with AnkiDroid, AnkiQuest and any other app offering AnkiDroid's flashcards provider. Same packages and classes; change one line:
+
+```kotlin
+implementation("org.ankiquest:api:2.0.0-ankiquest.1") // instead of com.ichi2.anki:api
+```
+
+See [docs/ankiquest-api.md](docs/ankiquest-api.md).
+
 ## Development
 
 ```sh

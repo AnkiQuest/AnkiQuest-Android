@@ -47,6 +47,9 @@
                 android:description="@string/read_write_permission_description"
                 android:protectionLevel="dangerous"
                 />
+    <!-- The API library declares the providers its clients talk to. AnkiDroid is a provider, not a client -->
+    <uses-permission android:name="org.ankiquest.anki.permission.READ_WRITE_DATABASE" tools:node="remove" />
+    <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE" tools:node="remove" />
 
     <supports-screens
         android:anyDensity="true"
@@ -686,6 +689,10 @@
             tools:ignore="ExportedContentProvider"
             >
             <meta-data android:name="com.ichi2.anki.provider.spec" android:value="2" />
+            <!-- FlashCardsContract.ACTION_FLASHCARDS_PROVIDER: lets API clients find parallel builds -->
+            <intent-filter>
+                <action android:name="com.ichi2.anki.action.FLASHCARDS_PROVIDER" />
+            </intent-filter>
         </provider>
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -697,6 +704,8 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
         </provider>
+        <!-- The API library's provider chooser is for its clients -->
+        <activity android:name="com.ichi2.anki.api.ProviderChooserActivity" tools:node="remove" />
     </application>
 
 </manifest>
