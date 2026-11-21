@@ -504,7 +504,11 @@ private class FeedSection(
                         primary = true,
                         enabled = !waiting,
                     ) { answer(item, group, Answer.JOIN) }
-                    views.button(panel, getString(R.string.aq_challenges_decline), enabled = !waiting) { answer(item, group, Answer.DECLINE) }
+                    views.button(
+                        panel,
+                        getString(R.string.aq_challenges_decline),
+                        enabled = !waiting,
+                    ) { answer(item, group, Answer.DECLINE) }
                 }
             }
             if (current.actionCount > attention.size) {
@@ -589,8 +593,17 @@ private class FeedSection(
             views.chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
         }
         item.invitation?.let { group ->
-            views.chip(actions, getString(R.string.aq_friends_join), primary = true, enabled = !waiting) { answer(item, group, Answer.JOIN) }
-            views.chip(actions, getString(R.string.aq_challenges_decline), enabled = !waiting) { answer(item, group, Answer.DECLINE) }
+            views.chip(
+                actions,
+                getString(R.string.aq_friends_join),
+                primary = true,
+                enabled = !waiting,
+            ) { answer(item, group, Answer.JOIN) }
+            views.chip(
+                actions,
+                getString(R.string.aq_challenges_decline),
+                enabled = !waiting,
+            ) { answer(item, group, Answer.DECLINE) }
         }
         if (item.answerable) {
             quickReply(item.kind)?.let { words ->
