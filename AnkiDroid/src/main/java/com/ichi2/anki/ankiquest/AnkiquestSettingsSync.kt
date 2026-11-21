@@ -206,7 +206,7 @@ internal object AnkiquestSettingsSync {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = Mutex()
     private val lock = Any()
-    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> changed(key) }
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key -> changed(prefs, key) }
 
     @Volatile
     private var app: Application? = null
@@ -234,8 +234,8 @@ internal object AnkiquestSettingsSync {
      * The first time, they belong to whoever is signed in.
      */
     fun switchOwner(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()) {
-        val now = AnkiquestHomeData.account(prefs)?.takeIf { it.token.isNotEmpty() }?.notificationAccount ?: SIGNED_OUT
         synchronized(lock) {
+            val now = AnkiquestHomeData.account(prefs)?.takeIf { it.token.isNotEmpty() }?.notificationAccount ?: SIGNED_OUT
             val before = text(prefs, PREF_OWNER)
             if (before == now) {
                 return
@@ -272,16 +272,16 @@ internal object AnkiquestSettingsSync {
                 putString(PREF_SIGNED_OUT, signedOut.toString())
                 putString(PREF_OWNER, now)
             }
-        }
 
-        // Signing in offers what was made while signed out, after the poll that follows sign-in has
-        // synced; with the switch off this phone's list is the account's.
-        offer =
-            when {
-                now == SIGNED_OUT -> Offer.NONE
-                enabled(prefs) -> Offer.AFTER_SYNC
-                else -> Offer.READY
-            }
+            // Signing in offers what was made while signed out, after the poll that follows sign-in has
+            // synced; with the switch off this phone's list is the account's.
+            offer =
+                when {
+                    now == SIGNED_OUT -> Offer.NONE
+                    enabled(prefs) -> Offer.AFTER_SYNC
+                    else -> Offer.READY
+                }
+        }
     }
 
     /** The value of private [setting] made while signed out; an unusable one counts as the default. */
@@ -301,6 +301,26 @@ internal object AnkiquestSettingsSync {
         signedOut.put(setting.key, JSONObject().put("value", setting.encode(value)).put("at", at))
         prefs.edit { putString(PREF_SIGNED_OUT, signedOut.toString()) }
     }
+
+    /**
+     * Saves [after] in place of [before], the list a form was opened on, for [account]. Under the
+     * lock a sync applies its answer with, so nothing is written when the account or the list
+     * changed meanwhile. Returns whether it was saved.
+     */
+    fun editCountdowns(
+        prefs: SharedPreferences,
+        account: HomeAccount?,
+        before: AnkiquestCountdowns.Countdowns,
+        after: AnkiquestCountdowns.Countdowns,
+    ): Boolean =
+        synchronized(lock) {
+            switchOwner(prefs)
+            if (AnkiquestHomeData.account(prefs)?.scope != account?.scope || AnkiquestCountdowns.read(prefs) != before) {
+                return false
+            }
+            AnkiquestCountdowns.write(prefs, after)
+            true
+        }
 
     /** Whether Home should ask now; asks once per sign-in. */
     fun takeOffer(): Boolean {
@@ -442,7 +462,7 @@ internal object AnkiquestSettingsSync {
         // Merge every key this server keeps against what it has.
         val features = AnkiquestCapabilities.features(account)
         val synced = Setting.entries.filter { it.feature == null || it.feature in features }
-        val start = locals()
+        val start = locals(account) ?: return
         val remote = read(account) ?: return
         val merged =
             synced.associateWith { setting ->
@@ -486,10 +506,18 @@ internal object AnkiquestSettingsSync {
         return lastScope == account.scope && TimeManager.time.intTimeMS() - at in 0 until POLL_INTERVAL_MS
     }
 
-    /** Each setting's value here and its change time; a change made while nothing listened counts as made now. */
-    private fun locals(): Map<Setting, Local> =
+    /**
+     * Each setting's value here and its change time; a change made while nothing listened counts as
+     * made now. Null when [account] is no longer the one signed in. The private settings are switched
+     * to the signed-in account first, so a sync never reads the previous player's.
+     */
+    private fun locals(account: HomeAccount): Map<Setting, Local>? =
         synchronized(lock) {
             val prefs = AnkiDroidApp.sharedPrefs()
+            switchOwner(prefs)
+            if (gate(account, prefs) != Gate.OPEN) {
+                return null
+            }
             val records = records(prefs)
             val now = TimeManager.time.intTimeMS()
             val result =
@@ -565,30 +593,37 @@ internal object AnkiquestSettingsSync {
             else -> Gate.OPEN
         }
 
-    /** Records the time of a change made here and syncs it. */
-    private fun changed(key: String?) {
+    /** Records the time of a change made here and syncs it; [prefs] are the ones that changed. */
+    private fun changed(
+        prefs: SharedPreferences,
+        key: String?,
+    ) {
         val context = app ?: return
         if (key in ACCOUNT_PREFS) {
-            switchOwner()
+            switchOwner(prefs)
             return
         }
         if (key == PREF_SWITCH) {
-            if (enabled()) {
+            if (enabled(prefs)) {
                 scope.launch { sync(context, Trigger.CHANGE) }
             }
             return
         }
         val setting = Setting.entries.firstOrNull { it.pref == key } ?: return
-        if (note(setting) && enabled()) {
+        if (note(setting, prefs) && enabled(prefs)) {
             scope.launch { sync(context, Trigger.CHANGE) }
         }
     }
 
     /** Stamps [setting] with the current time unless its value is the one last seen, as after a sync applied it. */
     @VisibleForTesting
-    internal fun note(setting: Setting): Boolean =
+    internal fun note(
+        setting: Setting,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Boolean =
         synchronized(lock) {
-            val prefs = AnkiDroidApp.sharedPrefs()
+            // A change is the signed-in account's; put the previous one's away first.
+            switchOwner(prefs)
             val value = setting.read(prefs)
             val records = records(prefs)
             if (records[setting]?.value == value) {

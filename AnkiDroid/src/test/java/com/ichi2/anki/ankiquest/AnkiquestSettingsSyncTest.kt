@@ -527,6 +527,56 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
     }
 
     @Test
+    fun `private countdowns are not uploaded to the next account`() =
+        runBlocking {
+            // Aldana's regression from the review of #419: the sync must not wait for the
+            // preference listener to put the previous player's list away.
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestSettingsSync.switchOwner(prefs())
+            save(SPANISH)
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            sent.clear()
+
+            // The next account already has an older, empty list on the server.
+            stored.put("countdowns", entry(JSONArray(), NOW - 10_000))
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "another-player")
+                putString(Ankiquest.PREF_TOKEN, "another-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertTrue(sent.none { it.has("countdowns") }, "the previous player's event must not be sent with another token")
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+
+            // Signing back in with a refreshed token restores this account's list.
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "cerro")
+                putString(Ankiquest.PREF_TOKEN, "refreshed-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+        }
+
+    @Test
+    fun `signing in does not publish the signed-out list`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestSettingsSync.switchOwner(prefs())
+            signOut()
+            save(DRIVING)
+
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "cerro")
+                putString(Ankiquest.PREF_TOKEN, "new-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertTrue(sent.none { it.has("countdowns") }, "signing in does not publish the signed-out list")
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+        }
+
+    @Test
     fun `a new token for the same account keeps its countdowns`() {
         AnkiquestSettingsSync.switchOwner(prefs())
         save(SPANISH)
