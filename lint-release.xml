@@ -24,6 +24,8 @@
     <issue id="HardcodedText" severity="fatal" />
     <issue id="InlinedApi" severity="fatal" />
     <issue id="MissingSuperCall" severity="fatal" />
+    <!-- Regexes Android's ICU engine rejects throw on device but pass JVM unit tests -->
+    <issue id="IcuRegexSyntax" severity="fatal" />
     <issue id="StringFormatCount" severity="fatal" />
     <issue id="StringFormatMatches" severity="fatal" />
     <issue id="StringFormatInvalid" severity="fatal" />
