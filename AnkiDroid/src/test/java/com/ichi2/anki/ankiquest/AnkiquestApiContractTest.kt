@@ -242,7 +242,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
             assertEquals(
-                targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L) + "\n\n" +
+                targetContext.getString(R.string.ankiquest_check_ok, "hill", 2, 101L, 5L) + "\n\n" +
                     targetContext.getString(R.string.ankiquest_check_no_token),
                 Ankiquest.runFromSettings(targetContext, uploadAll = false),
             )
@@ -252,7 +252,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `an upload answers the profile after reading which decks are shared`() =
         runBlocking {
             val message = Ankiquest.runFromSettings(targetContext, uploadAll = true)
-            assertTrue(message.endsWith(targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L)), message)
+            assertTrue(message.endsWith(targetContext.getString(R.string.ankiquest_check_ok, "hill", 2, 101L, 5L)), message)
             assertTrue("GET /api/decks/hill" in requests)
             assertTrue("POST /api/reviews/hill" in requests)
             assertNull(Ankiquest.feedback(JSONObject(example("upload")).optJSONObject("feedback"), showFeedback = true))
@@ -298,7 +298,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         runBlocking {
             val week = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK).standings
             assertEquals(listOf("hill", "cerro"), week.map { it.user })
-            assertEquals(listOf("Hill", "Cerro"), week.map { it.display })
+            assertEquals(listOf("hill", "Cerro"), week.map { it.display })
             assertEquals(listOf(101L, 31L), week.map { it.xp })
             assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.STUDIED), week.map { it.state })
             assertEquals(listOf(5L, 3L), week.map { it.todayReviews })
@@ -332,7 +332,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             // The player is listed: their full row, then a stranger's summary without today's counts.
             val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY, AnkiquestBoards.Source.Global).standings
             assertEquals(listOf("hill", "ana"), day.map { it.user })
-            assertEquals(listOf("Hill", "Ana"), day.map { it.display })
+            assertEquals(listOf("hill", "Ana"), day.map { it.display })
             assertEquals(listOf(1, 2), day.map { it.rank })
             assertEquals(listOf(107L, 20L), day.map { it.xp })
             assertEquals(listOf(true, null), day.map { it.shown })
@@ -432,7 +432,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 AnkiquestDailyGoal.ServerGoal.parse(AnkiquestSharing.goal(account)),
             )
             assertEquals("aki", AnkiquestHomeData.companion(account))
-            assertFalse(Ankiquest.streakProtectionEnabled())
+            assertFalse(Ankiquest.setStreakProtection(false))
         }
 
     @Test

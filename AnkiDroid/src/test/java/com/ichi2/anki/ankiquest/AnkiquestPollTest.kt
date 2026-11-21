@@ -89,6 +89,8 @@ class AnkiquestPollTest : RobolectricTest() {
     @Before
     fun startPollingServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
+        // Earlier tests in the same sandbox may have started AnkiDroidApp; start each poll without it.
+        Ankiquest.forgetApp()
         mockkObject(AnkiquestWidget, AnkiquestNotifier)
         every { AnkiquestWidget.render(any(), any(), any(), any(), any()) } just Runs
         coEvery { AnkiquestNotifier.onLeaderboard(any()) } just Runs
@@ -180,6 +182,21 @@ class AnkiquestPollTest : RobolectricTest() {
                 manager.cancelAll()
                 assertEquals(Result.success(), worker().doWork())
                 assertEquals(0, shadowOf(manager).size())
+            } finally {
+                unmockkObject(AnkiquestIcon)
+            }
+        }
+
+    @Test
+    fun `poll upload refreshes icon before app start`() =
+        runBlocking {
+            mockkObject(AnkiquestIcon)
+            every { AnkiquestIcon.update(any(), any(), any(), any()) } just Runs
+            try {
+                assertEquals(Result.success(), worker().doWork())
+
+                // The upload's empty answer reaches the icon with the worker's context.
+                verify(exactly = 1) { AnkiquestIcon.update(any(), match { it.length() == 0 }, any(), any()) }
             } finally {
                 unmockkObject(AnkiquestIcon)
             }

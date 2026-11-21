@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
 class AnkiquestCalendarActivityTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
 
-    /** The server's recorded October 2026: Hill won the 25th and 26th, nobody the 27th, and leads the 28th and the week. */
+    /** The server's recorded October 2026: hill won the 25th and 26th, nobody the 27th, and leads the 28th and the week. */
     private val october =
         AnkiquestCommunity.parseCalendar(
             JSONObject(
@@ -63,7 +63,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
         coVerify { AnkiquestCommunity.calendar(identity, 2026, 10) }
         val days = calendar.views<LinearLayout>().filter { it.contentDescription != null && it.isClickable }
         assertEquals(4, days.size, "only days with a result open")
-        assertTrue(days.count { it.contentDescription.contains("Hill") } == 3)
+        assertTrue(days.count { it.contentDescription.contains("hill") } == 3)
         assertTrue(days.any { it.contentDescription.contains(calendar.getString(R.string.aq_calendar_pending)) })
         assertTrue(
             calendar.views<LinearLayout>().any {
@@ -76,8 +76,8 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
 
         val live = days.single { it.contentDescription.contains(calendar.getString(R.string.aq_calendar_live)) }
         live.performClick()
-        assertTrue(calendar.hasText(calendar.getString(R.string.aq_calendar_leader, "Hill", "70")))
-        assertTrue(calendar.hasText(calendar.getString(R.string.aq_calendar_place, 1, "Hill")))
+        assertTrue(calendar.hasText(calendar.getString(R.string.aq_calendar_leader, "hill", "70")))
+        assertTrue(calendar.hasText(calendar.getString(R.string.aq_calendar_place, 1, "hill")))
         assertTrue(calendar.hasText(calendar.getString(R.string.aq_calendar_place, 2, "Cerro")))
         assertTrue(calendar.hasTextContaining("UTC"), "the competition's time zone and cutoff are explained")
     }
@@ -86,7 +86,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
     fun `weeks list their champion or leader and open their standings`() {
         val calendar = launch()
         calendar.click(calendar.getString(R.string.aq_calendar_weeks))
-        val leader = calendar.getString(R.string.aq_calendar_leader, "Hill", "132")
+        val leader = calendar.getString(R.string.aq_calendar_leader, "hill", "132")
         assertTrue(calendar.hasText(leader))
         calendar.views<TextView>().first { it.text.toString() == leader }.let { (it.parent as View).performClick() }
         assertTrue(calendar.hasText(calendar.getString(R.string.aq_calendar_place, 3, "Friend")))
@@ -134,7 +134,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
             coEvery { AnkiquestBoards.hasScopes(any()) } returns false
             coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(emptyList())
             coEvery { AnkiquestBoards.weekEnds(identity) } returns null
-            val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
+            val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext))
             advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             board
                 .findViewById<View>(R.id.aq_friends_board_content)

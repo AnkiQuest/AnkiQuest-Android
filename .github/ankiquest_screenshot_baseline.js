@@ -6,14 +6,47 @@ const WORKFLOW = "ankiquest_screenshot_store.yml";
 const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
 
+// The commit whose baseline a run compares against: the base a pull request's merge commit was
+// built on, the main commit a merge queue group was built on, or the pushed commit itself.
+async function baseCommit({ github, context }) {
+    // The event's base.sha can lag the base branch; the checked-out merge commit's first parent
+    // is the base GitHub merged into.
+    const pullRequest = context.payload.pull_request;
+    if (pullRequest) {
+        const {
+            data: { parents },
+        } = await github.rest.repos.getCommit({ ...context.repo, ref: context.sha });
+        return { sha: parents[0].sha, ref: pullRequest.base.ref };
+    }
+
+    // A group's parent can be the group queued ahead of it, which never gets a baseline.
+    // Its merge base with the target branch is the branch commit the queue started from.
+    const group = context.payload.merge_group;
+    if (group) {
+        const ref = group.base_ref.replace(/^refs\/heads\//, "");
+        const {
+            data: { merge_base_commit: mergeBase },
+        } = await github.rest.repos.compareCommitsWithBasehead({
+            ...context.repo,
+            basehead: `${ref}...${group.head_sha}`,
+            per_page: 1,
+        });
+        return { sha: mergeBase.sha, ref };
+    }
+
+    return { sha: context.sha, ref: context.ref.replace(/^refs\/heads\//, "") };
+}
+
 module.exports = async function waitForScreenshotBaseline({
     github,
     context,
     core,
     sleep = delay => new Promise(resolve => setTimeout(resolve, delay)),
 }) {
-    const base = await baseOf({ github, context });
-    core.setOutput("sha", base.sha);
+    const base = await baseCommit({ github, context });
+
+    // The workflow names this commit when no baseline can be downloaded.
+    core.setOutput("base", base.sha);
 
     // Store jobs can overlap or outlive the branch tip. Only this commit's artifact is safe.
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
@@ -56,17 +89,3 @@ module.exports = async function waitForScreenshotBaseline({
             `Run ${WORKFLOW} on a branch at that commit, then rerun this check.`,
     );
 };
-
-// The commit the checked-out tree was built on. A pull request runs on GitHub's merge commit, whose
-// first parent is the base it merged into; the event's base.sha can be older when the base branch
-// moved without a push to the pull request.
-async function baseOf({ github, context }) {
-    const pullRequest = context.payload.pull_request;
-    if (!pullRequest) {
-        return { sha: context.sha, ref: context.ref.replace(/^refs\/heads\//, "") };
-    }
-    const {
-        data: { parents },
-    } = await github.rest.repos.getCommit({ ...context.repo, ref: context.sha });
-    return { sha: parents[0].sha, ref: pullRequest.base.ref };
-}

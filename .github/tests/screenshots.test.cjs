@@ -20,19 +20,23 @@ function run(id, options = {}) {
 }
 
 function harness(batches = [[run(42)]], artifacts = {}) {
-  const queries = [], artifactQueries = [], waits = [], messages = [], outputs = {};
+  const queries = [], artifactQueries = [], waits = [], messages = [], outputs = {}, compares = [];
   const context = {
     repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
     payload: { pull_request: { base: { sha: 'base-sha', ref: 'main' } } },
   };
-  const github = { rest: {
+  const github = { rest: { repos: {
     // GitHub builds refs/pull/N/merge with the base it merged into as the first parent.
-    repos: { async getCommit({ ref }) {
+    async getCommit({ ref }) {
       assert.equal(ref, 'merge-sha');
       return { data: { parents: [{ sha: 'base-sha' }, { sha: 'head-sha' }] } };
-    } },
-    actions: {
+    },
+    async compareCommitsWithBasehead(query) {
+      compares.push(query);
+      return { data: { merge_base_commit: { sha: 'base-sha' } } };
+    },
+  }, actions: {
     async listWorkflowRuns(query) {
       queries.push(query);
       return { data: { workflow_runs: batches[Math.min(queries.length - 1, batches.length - 1)] } };
@@ -44,7 +48,7 @@ function harness(batches = [[run(42)]], artifacts = {}) {
   } } };
   const core = { info: message => messages.push(message), setOutput: (name, value) => { outputs[name] = value; } };
   return {
-    github, context, core, queries, artifactQueries, waits, messages, outputs,
+    github, context, core, queries, artifactQueries, waits, messages, outputs, compares,
     sleep: async delay => { waits.push(delay); },
   };
 }
@@ -117,12 +121,34 @@ test('a PR waits for the base its merge commit was built on, not a stale event b
   fixture.context.payload.pull_request.base.sha = 'stale-sha';
   assert.equal(await waitForBaseline(fixture), 7);
   assert.ok(fixture.queries.every(query => query.head_sha === 'base-sha'));
-  assert.equal(fixture.outputs.sha, 'base-sha');
+  assert.equal(fixture.outputs.base, 'base-sha');
+});
+
+test('a merge group waits for the main commit the queue built it on', async () => {
+  // A group's parent can be the group queued ahead of it, which has no baseline.
+  const fixture = harness();
+  fixture.context.payload = {
+    merge_group: { base_ref: 'refs/heads/main', base_sha: 'queued-sha', head_sha: 'group-sha' },
+  };
+  fixture.context.sha = 'group-sha';
+  fixture.context.ref = 'refs/heads/gh-readonly-queue/main/pr-2-queued-sha';
+  assert.equal(await waitForBaseline(fixture), 42);
+  assert.deepEqual(fixture.compares, [{
+    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', basehead: 'main...group-sha', per_page: 1,
+  }]);
+  assert.ok(fixture.queries.every(query => query.head_sha === 'base-sha'));
+  assert.equal(fixture.outputs.base, 'base-sha');
+});
+
+test('the baseline commit is an output for the error message', async () => {
+  const fixture = harness();
+  await waitForBaseline(fixture);
+  assert.equal(fixture.outputs.base, 'base-sha');
 });
 
 test('the unavailable baseline message names the commit that was waited for', () => {
   const explain = step('Explain unavailable baseline');
-  assert.match(explain, /BASE_SHA: \$\{\{ steps\.source\.outputs\.sha \}\}/);
+  assert.match(explain, /BASE_SHA: \$\{\{ steps\.source\.outputs\.base \|\| github\.sha \}\}/);
   assert.doesNotMatch(explain, /pull_request\.base\.sha/);
 });
 
