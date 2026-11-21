@@ -37,8 +37,7 @@ concurrency:
 # No setup-gradle cache here: this only runs when Gradle files change, and those changes
 # change the cache key, so a cache would always miss.
 jobs:
-  # AnkiQuest-Dev's shared Nix check. On GitHub's runners every command runs in the
-  # nixos/nix image; merge groups and master pushes run on the self-hosted NixOS runners.
+  # AnkiQuest-Dev's shared Nix check. Every command runs in the nixos/nix image.
   nixos:
     name: Build and test in the dev shell
     uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/nix-check.yml@master
