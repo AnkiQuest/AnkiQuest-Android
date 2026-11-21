@@ -86,7 +86,7 @@ internal class FeedSection(
             ?: AnkiquestFeed.Category.ALL
         unreadOnly = saved?.getBoolean(STATE_UNREAD) ?: false
         if (saved == null) {
-            val addressed = activity.intent.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT)
+            val addressed = activity.intent.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
                 status = getString(R.string.aq_home_account_route_changed)
             }
@@ -388,7 +388,7 @@ internal class FeedSection(
             chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
         }
         if (item.answerable) {
-            AnkiquestFeedActivity.quickReply(item.kind)?.let { words ->
+            quickReply(item.kind)?.let { words ->
                 chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
             }
             chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
@@ -800,5 +800,14 @@ internal class FeedSection(
         private const val STATE_CATEGORY = "ankiquest.feed_category"
         private const val STATE_UNREAD = "ankiquest.feed_unread"
         private const val DATE_AND_TIME = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH
+
+        /** The suggested one-tap answer to a row of [kind], as the website and notifications suggest it. */
+        private fun quickReply(kind: String): Int? =
+            when (kind) {
+                "completion", "conquest", "share" -> R.string.ankiquest_reply_cheer
+                "reply", "reaction" -> R.string.ankiquest_reply_thanks
+                "nudge" -> R.string.ankiquest_reply_on_it
+                else -> null
+            }
     }
 }

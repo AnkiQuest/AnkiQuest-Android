@@ -47,7 +47,7 @@ internal class AnkiquestFriendsSections(
             activity,
             restored,
             initial,
-            activity.intent.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD).takeIf { savedState == null },
+            activity.intent.getStringExtra(EXTRA_BOARD_PERIOD).takeIf { savedState == null },
         )
     private val root =
         LinearLayout(activity).apply {
@@ -89,10 +89,35 @@ internal class AnkiquestFriendsSections(
         private const val EXTRA_SECTION = "ankiquest.friends_section"
         private const val STATE_ACCOUNT = "ankiquest.friends_sections_account"
 
+        /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's feed says so. */
+        const val EXTRA_FEED_ACCOUNT = "ankiquest.feed_account"
+
+        /** A period's name, as [AnkiquestBoards.Period.query]; the week when missing or unknown. */
+        const val EXTRA_BOARD_PERIOD = "ankiquest.board_period"
+
+        /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's board says so. */
+        const val EXTRA_BOARD_ACCOUNT = "ankiquest.board_account"
+
         fun intent(
             context: Context,
             destination: Destination,
         ): Intent = AnkiquestFriendsActivity.intent(context).putExtra(EXTRA_SECTION, destination.name)
+
+        fun feedIntent(
+            context: Context,
+            account: String? = null,
+        ): Intent =
+            intent(context, Destination.FEED)
+                .apply { account?.let { putExtra(EXTRA_FEED_ACCOUNT, it) } }
+
+        fun boardIntent(
+            context: Context,
+            period: String = AnkiquestBoards.Period.WEEK.query,
+            account: String? = null,
+        ): Intent =
+            intent(context, Destination.LEADERBOARD)
+                .putExtra(EXTRA_BOARD_PERIOD, period)
+                .apply { account?.let { putExtra(EXTRA_BOARD_ACCOUNT, it) } }
     }
 }
 
