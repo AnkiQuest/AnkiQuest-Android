@@ -27,7 +27,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
-import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.VisibleForTesting
 
 class TemplatePreviewerViewModel(
@@ -122,7 +121,7 @@ class TemplatePreviewerViewModel(
                                         deckId = arguments.deckId,
                                     ).renderOutput(this)
                             }.questionText
-                        EMPTY_FRONT_LINK in questionText
+                        EMPTY_FRONT_ANCHOR in questionText
                     }
                 }
         }
@@ -274,8 +273,10 @@ class TemplatePreviewerViewModel(
         }
 
     companion object {
-        @Language("HTML")
-        private const val EMPTY_FRONT_LINK = """<a href='https://docs.ankiweb.net/templates/errors.html#front-of-card-is-blank'>"""
+        // The backend's "front of card is blank" link. Match only its anchor:
+        // newer Anki moved the manual from /templates/errors.html to
+        // /manual/templates/errors.
+        private const val EMPTY_FRONT_ANCHOR = "#front-of-card-is-blank'>"
     }
 }
 
