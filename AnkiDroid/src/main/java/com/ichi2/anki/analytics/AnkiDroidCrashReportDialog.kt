@@ -12,12 +12,16 @@ import android.view.View
 import androidx.core.content.edit
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestCrashAdministrator
+import com.ichi2.anki.ankiquest.AnkiquestCrashReports
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.crashreporting.CrashReporter
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.databinding.DialogFeedbackBinding
 import org.acra.dialog.CrashReportDialog
 import org.acra.dialog.CrashReportDialogHelper
+import timber.log.Timber
+import java.io.IOException
 
 /**
  * This file will appear to have static type errors because BaseCrashReportDialog extends android.support.XXX
@@ -38,8 +42,8 @@ class AnkiDroidCrashReportDialog :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val dialogBuilder = AlertDialog.Builder(this)
-        dialogBuilder.setIcon(R.drawable.logo_star_144dp)
-        dialogBuilder.setTitle(CommonString.feedback_title)
+        dialogBuilder.setIcon(AnkiquestCrashReports.ICON)
+        dialogBuilder.setTitle(R.string.ankiquest_feedback_title)
         dialogBuilder.setPositiveButton(getString(CommonString.feedback_report), this@AnkiDroidCrashReportDialog)
         dialogBuilder.setNegativeButton(CommonString.dialog_cancel, this@AnkiDroidCrashReportDialog)
         helper = CrashReportDialogHelper(this, intent)
@@ -91,6 +95,12 @@ class AnkiDroidCrashReportDialog :
             // Therefore, on cancel, purge limits to make sure the user may actually send in future.
             // Better to maybe send to many reports than definitely too few.
             CrashReportService.deleteLimiterData(this)
+            // AnkiQuest counted this report as sent when collection started; take back only this one.
+            try {
+                AnkiquestCrashAdministrator.cancelled(this, helper!!.reportData)
+            } catch (e: IOException) {
+                Timber.w(e, "Unable to read the cancelled report")
+            }
             helper!!.cancelReports()
         }
         finish()

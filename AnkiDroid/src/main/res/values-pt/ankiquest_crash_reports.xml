@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_feedback_title">Feedback do AnkiQuest</string>
+    <string name="ankiquest_feedback_auto_toast_text">O AnkiQuest encontrou um problema; um relatório está a ser enviado aos desenvolvedores do AnkiQuest…</string>
+    <string name="ankiquest_feedback_manual_toast_text">Um relatório de erro está a ser preparado para os desenvolvedores do AnkiQuest…</string>
+    <string name="ankiquest_error_reporting_choice">Relatórios de erro ao AnkiQuest</string>
+    <string name="ankiquest_feedback_disclaimer">Os relatórios vão para o servidor do AnkiQuest e são apagados após 30 dias. Um relatório contém o erro e onde ocorreu na aplicação, as últimas linhas do registo da aplicação, as tuas definições sem os dados da conta, o teu comentário, quando a aplicação foi iniciada e quando ocorreu o erro, e detalhes técnicos sobre a aplicação e o teu dispositivo: versão da aplicação, modelo do dispositivo, versão e compilação do Android, definições de ecrã e idioma, memória, caminhos de armazenamento e versão do WebView.</string>
+</resources>

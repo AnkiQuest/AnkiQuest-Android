@@ -1,3 +1,4 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 com.ichi2.anki.exception.SanitizedReportCollector
+com.ichi2.anki.ankiquest.AnkiquestLogcatCap

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_feedback_title">Commentaires AnkiQuest</string>
+    <string name="ankiquest_feedback_auto_toast_text">AnkiQuest a rencontré un problème ; un rapport est en cours d’envoi aux développeurs d’AnkiQuest…</string>
+    <string name="ankiquest_feedback_manual_toast_text">Un rapport d’erreur est en cours de préparation pour les développeurs d’AnkiQuest…</string>
+    <string name="ankiquest_error_reporting_choice">Rapports d’erreur à AnkiQuest</string>
+    <string name="ankiquest_feedback_disclaimer">Les rapports sont envoyés au serveur AnkiQuest et supprimés après 30 jours. Un rapport contient l’erreur et l’endroit de l’app où elle s’est produite, les dernières lignes du journal de l’app, tes réglages sans les données de compte, ton commentaire, l’heure de démarrage de l’app et celle de l’erreur, ainsi que des détails techniques sur l’app et ton appareil : version de l’app, modèle de l’appareil, version et build d’Android, réglages d’écran et de langue, mémoire, chemins de stockage et version de WebView.</string>
+</resources>
