@@ -10,7 +10,6 @@ import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -22,19 +21,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.databinding.FragmentStudyOptionsBinding
 import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.QueueType
 import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.progress.ViewModelProgress
-import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.testutils.ext.menu
-import com.ichi2.testutils.ext.triggerDeckNotFoundInLimitsMap
+import com.ichi2.testutils.ext.orphanDeckByDeletingParent
 import com.ichi2.testutils.launchFragmentInContainer
 import com.ichi2.testutils.withFragment
-import com.ichi2.utils.neutralButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -47,7 +43,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowDialog
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -293,22 +288,16 @@ class StudyOptionsFragmentTest : RobolectricTest() {
         }
     }
 
-    /** Issue 21981: a refresh must offer recovery when the deck hierarchy is corrupt. */
+    /**
+     * Issue 21981: a corrupt deck hierarchy made the refresh fail. AnkiQuest-Anki counts
+     * the orphaned deck under its nearest ancestor, so study options show its card.
+     */
     @Test
-    fun `corrupt deck hierarchy offers Check database instead of crashing`() =
+    fun `corrupt deck hierarchy still shows study options`() =
         runTest {
-            triggerDeckNotFoundInLimitsMap()
-            throwOnShowError = false
+            orphanDeckByDeletingParent()
 
             withStudyOptions {
-                val dialog = assertIs<AlertDialog>(ShadowDialog.getLatestDialog())
-                assertTrue(dialog.isShowing)
-                assertEquals("deck not found in limits map", getAlertDialogText(checkDismissed = true))
-                assertEquals(TR.sentenceCase.checkDatabase, dialog.neutralButton?.text)
-
-                dialog.dismiss()
-                col.fixIntegrity()
-                refreshAndAwait()
                 val state = assertIs<StudyOptionsState.StudyOptions>(viewModel.state)
                 assertEquals(1, state.data.newCardsToday)
             }

@@ -2,12 +2,14 @@
 
 package com.ichi2.anki
 
+import anki.backend.BackendError
 import com.ichi2.anki.CrashReportData.Companion.isDeckNotFoundInLimitsMapException
 import com.ichi2.anki.CrashReportData.HelpAction
 import com.ichi2.anki.libanki.Note
 import com.ichi2.testutils.JvmTest
-import com.ichi2.testutils.ext.triggerDeckNotFoundInLimitsMap
+import com.ichi2.testutils.ext.orphanDeckByDeletingParent
 import net.ankiweb.rsdroid.BackendException
+import net.ankiweb.rsdroid.exceptions.BackendInvalidInputException
 import net.ankiweb.rsdroid.exceptions.BackendNotFoundException
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -16,13 +18,34 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CrashReportDataTest : JvmTest() {
-    /** #15195: corrupt deck hierarchy raises 'deck not found in limits map' */
+    /** #15195: 'deck not found in limits map' offers a database check and is not reported */
     @Test
-    fun `deck not found in limits map regression test`() {
-        triggerDeckNotFoundInLimitsMap()
+    fun `deck not found in limits map offers a database check`() {
+        val error =
+            BackendError
+                .newBuilder()
+                .setKind(BackendError.Kind.INVALID_INPUT)
+                .setMessage("deck not found in limits map")
+                .build()
+        val exception = BackendInvalidInputException(error)
 
-        val ex = assertFailsWith<Exception> { col.sched.counts() }
-        assertTrue(ex.isDeckNotFoundInLimitsMapException())
+        assertTrue(exception.isDeckNotFoundInLimitsMapException())
+        assertEquals(HelpAction.OpenCheckDatabase, CrashReportData(exception, "test", true).helpAction)
+        assertFalse(CrashReportData(exception, "test", true).shouldReportException())
+    }
+
+    /**
+     * #15195: a deck whose parent was deleted made the counts throw. AnkiQuest-Anki
+     * attaches it to its nearest remaining ancestor instead.
+     */
+    @Test
+    fun `deck without its parent still counts`() {
+        orphanDeckByDeletingParent()
+
+        val counts = col.sched.counts()
+        assertEquals(1, counts.new)
+        assertEquals(0, counts.lrn)
+        assertEquals(0, counts.rev)
     }
 
     @Test

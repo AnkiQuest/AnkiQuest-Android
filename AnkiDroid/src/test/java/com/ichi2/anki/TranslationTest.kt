@@ -271,6 +271,7 @@ class TranslationTest : JvmTest() {
                 // TR.actionsNew()
                 // TR.changeNotetypeNew()
                 // TR.statisticsCountsNewCards()
+                "Not used", // CommonString.custom_sync_server_summary_none_of_the_two_servers_used | TR.deckConfigRwkvModelNotUsed()
                 "Note", // CommonString.note
                 // TR.browsingNote()
                 // TR.preferencesNote()
@@ -311,6 +312,7 @@ class TranslationTest : JvmTest() {
                 // TR.actionsSelect()
                 // TR.customStudySelect()
                 // TR.editingImageOcclusionSelectTool()
+                "Settings", // CommonString.settings | TR.deckConfigCopySettings()
                 "Show remaining card count", // CommonString.show_progress_summ | TR.preferencesShowRemainingCardCount()
                 "Study", // CommonString.studyoptions_start | TR.decksStudy()
                 "Sync", // CommonString.button_sync, CommonString.pref_cat_sync
@@ -321,6 +323,7 @@ class TranslationTest : JvmTest() {
                 // TR.browsingSidebarTags()
                 "Theme", // CommonString.app_theme | TR.preferencesTheme()
                 "Timebox time limit", // CommonString.time_limit | TR.preferencesTimeboxTimeLimit()
+                "Unavailable", // CommonString.card_browser_order_section_unavailable | TR.deckConfigRwkvComparisonAgreementUnavailable()
                 "Undo", // CommonString.undo | TR.undoUndo()
             )
 
