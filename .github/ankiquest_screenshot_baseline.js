@@ -7,7 +7,7 @@ const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
 
 // The commit whose baseline a run compares against: the base a pull request's merge commit was
-// built on, the main commit a merge queue group was built on, or the pushed commit itself.
+// built on, the master commit a merge queue group was built on, or the pushed commit itself.
 async function baseCommit({ github, context }) {
     // The event's base.sha can lag the base branch; the checked-out merge commit's first parent
     // is the base GitHub merged into.

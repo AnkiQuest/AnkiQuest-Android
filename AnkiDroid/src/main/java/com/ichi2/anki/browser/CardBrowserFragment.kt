@@ -439,8 +439,7 @@ class CardBrowserFragment :
         cardStateChip =
             view.findViewById<Chip>(R.id.card_state_chip)?.apply {
                 setOnClickListener {
-                    val fragment = CardStateBottomSheetFragment()
-                    fragment.show(childFragmentManager, CardStateBottomSheetFragment.TAG)
+                    CardStateBottomSheetFragment.show(childFragmentManager)
                 }
             }
         flagsChip =
@@ -1759,7 +1758,7 @@ class CardBrowserFragment :
     @VisibleForTesting
     fun toggleMark() =
         launchCatchingTask {
-            activityViewModel.toggleMark()
+            activityViewModel.onEvent(BrowserEvent.ToggleMarkRequested)
         }
 
     fun toggleSuspendCards() = launchCatchingTask { activityViewModel.toggleSuspendCards().join() }

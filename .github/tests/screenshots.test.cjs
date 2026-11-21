@@ -16,7 +16,7 @@ function step(name) {
 }
 
 function run(id, options = {}) {
-  return { id, head_sha: 'base-sha', head_branch: 'main', event: 'push', status: 'completed', conclusion: 'success', ...options };
+  return { id, head_sha: 'base-sha', head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', ...options };
 }
 
 function harness(batches = [[run(42)]], artifacts = {}) {
@@ -24,7 +24,7 @@ function harness(batches = [[run(42)]], artifacts = {}) {
   const context = {
     repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
-    payload: { pull_request: { base: { sha: 'base-sha', ref: 'main' } } },
+    payload: { pull_request: { base: { sha: 'base-sha', ref: 'master' } } },
   };
   const github = { rest: { repos: {
     // GitHub builds refs/pull/N/merge with the base it merged into as the first parent.
@@ -110,7 +110,7 @@ test('the pushed commit is used when there is no pull request', async () => {
   const fixture = harness([[run(43, { head_sha: 'push-sha' })]]);
   fixture.context.payload = {};
   fixture.context.sha = 'push-sha';
-  fixture.context.ref = 'refs/heads/main';
+  fixture.context.ref = 'refs/heads/master';
   assert.equal(await waitForBaseline(fixture), 43);
   assert.equal(fixture.queries[0].head_sha, 'push-sha');
 });
@@ -124,17 +124,17 @@ test('a PR waits for the base its merge commit was built on, not a stale event b
   assert.equal(fixture.outputs.base, 'base-sha');
 });
 
-test('a merge group waits for the main commit the queue built it on', async () => {
+test('a merge group waits for the master commit the queue built it on', async () => {
   // A group's parent can be the group queued ahead of it, which has no baseline.
   const fixture = harness();
   fixture.context.payload = {
-    merge_group: { base_ref: 'refs/heads/main', base_sha: 'queued-sha', head_sha: 'group-sha' },
+    merge_group: { base_ref: 'refs/heads/master', base_sha: 'queued-sha', head_sha: 'group-sha' },
   };
   fixture.context.sha = 'group-sha';
-  fixture.context.ref = 'refs/heads/gh-readonly-queue/main/pr-2-queued-sha';
+  fixture.context.ref = 'refs/heads/gh-readonly-queue/master/pr-2-queued-sha';
   assert.equal(await waitForBaseline(fixture), 42);
   assert.deepEqual(fixture.compares, [{
-    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', basehead: 'main...group-sha', per_page: 1,
+    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', basehead: 'master...group-sha', per_page: 1,
   }]);
   assert.ok(fixture.queries.every(query => query.head_sha === 'base-sha'));
   assert.equal(fixture.outputs.base, 'base-sha');
@@ -152,8 +152,8 @@ test('the unavailable baseline message names the commit that was waited for', ()
   assert.doesNotMatch(explain, /pull_request\.base\.sha/);
 });
 
-test('stacked PRs wait for their exact base commit instead of falling back to main', async () => {
-  const fixture = harness([[run(1, { head_sha: 'main-sha' })], [run(2, { head_branch: 'feature' })]]);
+test('stacked PRs wait for their exact base commit instead of falling back to master', async () => {
+  const fixture = harness([[run(1, { head_sha: 'master-sha' })], [run(2, { head_branch: 'feature' })]]);
   fixture.context.payload.pull_request.base.ref = 'feature';
   assert.equal(await waitForBaseline(fixture), 2);
   assert.equal(fixture.waits.length, 1);
