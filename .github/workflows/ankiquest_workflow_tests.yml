@@ -7,7 +7,10 @@ on:
     paths:
       - ".github/workflows/ankiquest_*.yml"
       - ".github/tests/*.test.cjs"
-      - ".github/ankiquest_screenshot_baseline.js"
+      - ".github/wait_for_screenshot_baseline.js"
+      - ".github/workflows/lint.yml"
+      - ".github/workflows/screenshot_*.yml"
+      - ".github/workflows/tests_*.yml"
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
@@ -23,7 +26,10 @@ on:
     paths:
       - ".github/workflows/ankiquest_*.yml"
       - ".github/tests/*.test.cjs"
-      - ".github/ankiquest_screenshot_baseline.js"
+      - ".github/wait_for_screenshot_baseline.js"
+      - ".github/workflows/lint.yml"
+      - ".github/workflows/screenshot_*.yml"
+      - ".github/workflows/tests_*.yml"
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"

@@ -22,7 +22,19 @@ function concurrency(text) {
     return { group: value("group"), cancel: value("cancel-in-progress") };
 }
 
-const files = fs.readdirSync(workflows).filter(name => /^ankiquest_.*\.yml$/.test(name));
+// Upstream workflows that carry our changes follow the same rule as ours.
+const UPSTREAM_OWNED = [
+    "lint.yml",
+    "screenshot_comment.yml",
+    "screenshot_compare.yml",
+    "screenshot_store.yml",
+    "tests_emulator.yml",
+    "tests_unit.yml",
+];
+
+const files = fs
+    .readdirSync(workflows)
+    .filter(name => /^ankiquest_.*\.yml$/.test(name) || UPSTREAM_OWNED.includes(name));
 
 for (const name of files) {
     test(`${name}: a later run never cancels a master push run`, () => {

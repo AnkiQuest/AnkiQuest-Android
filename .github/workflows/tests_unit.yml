@@ -1,4 +1,4 @@
-name: 🛠️ Unit Tests
+name: ankiquest Unit Tests
 
 on:
   workflow_dispatch:
@@ -13,43 +13,41 @@ on:
         required: true
         type: choice
         # If you alter system names in default + options here, also alter osArray below to match
-        default: '["windows-latest", "macos-15", "ubuntu-latest"]'
+        default: '["windows-latest", "macos-latest", "ubuntu-latest"]'
         options:
-          - '["windows-latest", "macos-15", "ubuntu-latest"]'
+          - '["windows-latest", "macos-latest", "ubuntu-latest"]'
           - '["windows-latest"]'
-          - '["macos-15"]'
+          - '["macos-latest"]'
           - '["ubuntu-latest"]'
+  # Nightly run of the full three-OS matrix
   schedule:
-    - cron: "42 0 * * 2"
+    - cron: "42 0 * * *"
+  # PRs and the merge queue run ubuntu only, see osArray below
   pull_request:
   push:
-    # Ignore merge queue branches on push; avoids merge_group+push concurrency race since ref is same
-    branches-ignore:
-      - 'gh-readonly-queue/**'
-      # Dependabot branches are already checked by the pull_request trigger.
-      - 'dependabot/**'
-      # Crowdin translations are already checked by the pull_request trigger.
-      - 'i18n_sync'
+    branches:
+      - master
   merge_group:
 
 permissions:
   contents: read
 
 concurrency:
-  # if a workflow is run against the same ref, only one at a time...
-  # ...but allow different triggers to run concurrent (push, manual flake run, scheduled flake run...)
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
   matrix_prep:
-    # Do not run the scheduled jobs on forks
-    if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.result }}
@@ -59,13 +57,19 @@ jobs:
         with:
           script: |
             // by default, we will include all 3 platforms we test on
-            // "latest" would be easy everywhere, but "macos-15" doesn't always happen if you choose "latest"
-            // and we want macos-15 because it has Apple Silicon and is faster
+            // "macos-latest" follows GitHub's current default macOS image, so the job keeps getting a machine
+            // as older images are retired; it is Apple Silicon
             // if you alter this, also alter it above in the workflow_dispatch options list
-            let osArray = ["ubuntu-latest", "macos-15", "windows-latest"]
+            let osArray = ["ubuntu-latest", "macos-latest", "windows-latest"]
             
             // by default, we will run one iteration on each selected system
             let iterationArray = [1]
+
+            // PRs and the merge queue run on ubuntu only: upstream code is already tested on all three
+            // systems upstream, and pushes to master/ankiquest plus the nightly run keep the full matrix here
+            if (context.eventName === "pull_request" || context.eventName === "merge_group") {
+              osArray = ["ubuntu-latest"]
+            }
             
             // workflow dispatch will be a drop-down of different options
             if (context.eventName === "workflow_dispatch") {
@@ -82,16 +86,6 @@ jobs:
                 iterationArray.push(i);
               }
               console.log('iterationArray is: ' + iterationArray)
-            }
-
-            // If we are running on a schedule it's our periodic passive scan for flakes
-            // Goal is to run enough iterations on all systems that we have confidence there are no flakes
-            if (context.eventName === "schedule") {
-              const iterationCount = 15
-              iterationArray = []
-              for (let i = 1; i <= iterationCount; i++) {
-                iterationArray.push(i);
-              }
             }
 
             let includeArray = [];
@@ -115,11 +109,9 @@ jobs:
   # it will run unit tests on whatever OS combinations are desired
   unit:
     name: JUnit Tests (${{ matrix.name }} run ${{ matrix.iteration }})
-    # Do not run the scheduled jobs on forks
-    if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     needs: matrix_prep
     # Windows can take 40m+ on tests
-    timeout-minutes: 60
+    timeout-minutes: 75
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
@@ -175,10 +167,15 @@ jobs:
         with:
           # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
           cache-provider: basic
-          # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
-          # Builds on other branches will only read from main branch cache writes
+          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
+          # Builds on other branches will only read from master branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+
+      - name: Robolectric SDK cache
+        # Linux only; macOS and Windows keep the SDK jars in their setup-gradle cache
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/robolectric-sdk-cache
 
       - name: Gradle Dependency Download
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
