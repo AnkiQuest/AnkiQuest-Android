@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -18,7 +17,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.ColorUtils
@@ -26,8 +24,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
@@ -51,6 +47,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     private lateinit var content: LinearLayout
     private lateinit var sections: AnkiquestFriendsSections
     private lateinit var scroll: NestedScrollView
+    private val views = AnkiquestBoardViews(this)
     private lateinit var undo: AnkiquestUndo
     private var account: HomeAccount? = null
     private var overview: AnkiquestSocial.Overview? = null
@@ -296,36 +293,36 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         sections.showTarget()
         findViewById<View>(R.id.aq_feed_loading).isVisible = loading
         status?.let { line ->
-            text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
+            views.text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         }
         val current = account
         if (current == null) {
-            val panel = card(content)
-            text(panel, getString(R.string.aq_friends_connect))
-            button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_friends_connect))
+            views.button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
             return
         }
         failure?.let { problem ->
-            text(content, getString(problem), small = true)
-            if (problem == R.string.aq_home_auth) button(content, getString(R.string.aq_home_settings)) { settings() }
+            views.text(content, getString(problem), small = true)
+            if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         val shown = overview
         if (shown == null) {
-            if (loading) text(content, getString(R.string.aq_friends_loading), small = true)
+            if (loading) views.text(content, getString(R.string.aq_friends_loading), small = true)
             return
         }
         renderInvite()
-        val goals = card(content)
-        text(goals, getString(R.string.aq_challenges_title), heading = true)
-        text(goals, getString(R.string.aq_friends_goals_hint), small = true)
-        button(goals, getString(R.string.aq_friends_goals_open)) { openFriendGoals() }
+        val goals = views.card(content)
+        views.text(goals, getString(R.string.aq_challenges_title), heading = true)
+        views.text(goals, getString(R.string.aq_friends_goals_hint), small = true)
+        views.button(goals, getString(R.string.aq_friends_goals_open)) { openFriendGoals() }
         renderFriends(shown)
         renderGroups(shown, current.user)
         if (shown.muted.isNotEmpty()) {
-            section(getString(R.string.aq_friends_muted), getString(R.string.aq_friends_muted_hint))
+            views.section(content, getString(R.string.aq_friends_muted), getString(R.string.aq_friends_muted_hint))
             for (person in shown.muted) {
                 val row = person(content, person)
-                chip(actions(row), getString(R.string.aq_friends_unmute), enabled = !busy) { unmute(person) }
+                views.chip(views.actions(row), getString(R.string.aq_friends_unmute), enabled = !busy) { unmute(person) }
             }
         }
         renderVisibility(shown)
@@ -335,61 +332,61 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     /** The confirmation a `/join/<code>` link asks for, as the website's join page shows it. */
     private fun renderInvite() {
         val code = invite ?: return
-        val panel = card(content, tinted = true)
+        val panel = views.card(content, tinted = true)
         if (inviteGone) {
-            text(panel, getString(R.string.aq_friends_invite_gone), heading = true)
-            text(panel, getString(R.string.aq_friends_invite_gone_hint), small = true)
-            button(panel, getString(android.R.string.ok)) { dismissInvite() }
+            views.text(panel, getString(R.string.aq_friends_invite_gone), heading = true)
+            views.text(panel, getString(R.string.aq_friends_invite_gone_hint), small = true)
+            views.button(panel, getString(android.R.string.ok)) { dismissInvite() }
             return
         }
         val group = preview ?: return
-        text(panel, getString(R.string.aq_friends_invite), small = true)
-        text(panel, group.name, heading = true)
-        text(panel, members(group.members), small = true)
-        text(panel, getString(R.string.aq_friends_invite_hint))
-        button(panel, getString(R.string.aq_friends_join), primary = true, enabled = !busy) {
+        views.text(panel, getString(R.string.aq_friends_invite), small = true)
+        views.text(panel, group.name, heading = true)
+        views.text(panel, members(group.members), small = true)
+        views.text(panel, getString(R.string.aq_friends_invite_hint))
+        views.button(panel, getString(R.string.aq_friends_join), primary = true, enabled = !busy) {
             change(AnkiquestSocial.Change.Join(code), { getString(R.string.aq_friends_joined, group.name) }) { dismissInvite() }
         }
-        button(panel, getString(R.string.ankiquest_deck_share_not_now), enabled = !busy) { dismissInvite() }
+        views.button(panel, getString(R.string.ankiquest_deck_share_not_now), enabled = !busy) { dismissInvite() }
     }
 
     private fun renderFriends(shown: AnkiquestSocial.Overview) {
         if (shown.incoming.isNotEmpty()) {
-            section(getString(R.string.aq_friends_requests), getString(R.string.aq_friends_requests_hint))
+            views.section(content, getString(R.string.aq_friends_requests), getString(R.string.aq_friends_requests_hint))
             for (person in shown.incoming) {
                 val row = person(content, person, tinted = true)
-                val actions = actions(row)
-                chip(actions, getString(R.string.aq_friends_accept), primary = true, enabled = !busy) {
+                val actions = views.actions(row)
+                views.chip(actions, getString(R.string.aq_friends_accept), primary = true, enabled = !busy) {
                     change(AnkiquestSocial.Change.Befriend(person.user), { getString(R.string.aq_friends_accepted, person.display) })
                 }
-                chip(actions, getString(R.string.aq_challenges_decline), enabled = !busy) {
+                views.chip(actions, getString(R.string.aq_challenges_decline), enabled = !busy) {
                     change(AnkiquestSocial.Change.Unfriend(person.user), { getString(R.string.aq_friends_declined) })
                 }
             }
         }
-        section(getString(R.string.aq_friends_friends), getString(R.string.aq_friends_friends_hint))
-        button(content, getString(R.string.aq_friends_add), primary = true, enabled = !busy) { askFriend() }
+        views.section(content, getString(R.string.aq_friends_friends), getString(R.string.aq_friends_friends_hint))
+        views.button(content, getString(R.string.aq_friends_add), primary = true, enabled = !busy) { askFriend() }
         if (shown.friends.isEmpty()) {
             content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
-            text(content, getString(R.string.aq_friends_empty), heading = true)
-            text(content, getString(R.string.aq_friends_empty_hint), small = true)
+            views.text(content, getString(R.string.aq_friends_empty), heading = true)
+            views.text(content, getString(R.string.aq_friends_empty_hint), small = true)
         }
         for (person in shown.friends) {
             val row = person(content, person)
-            val actions = actions(row)
-            chip(actions, getString(R.string.aq_profile_title)) { openProfile(person) }
+            val actions = views.actions(row)
+            views.chip(actions, getString(R.string.aq_profile_title)) { openProfile(person) }
             muteChip(actions, shown, person)
-            chip(actions, getString(R.string.aq_friends_remove), enabled = !busy) {
+            views.chip(actions, getString(R.string.aq_friends_remove), enabled = !busy) {
                 confirm(getString(R.string.aq_friends_remove_confirm, person.display), R.string.aq_friends_remove) {
                     change(AnkiquestSocial.Change.Unfriend(person.user), { getString(R.string.aq_friends_removed, person.display) })
                 }
             }
         }
         if (shown.outgoing.isNotEmpty()) {
-            text(content, getString(R.string.aq_friends_waiting), heading = true).setPadding(0, dp(12), 0, 0)
+            views.text(content, getString(R.string.aq_friends_waiting), heading = true).setPadding(0, views.dp(12), 0, 0)
             for (person in shown.outgoing) {
                 val row = person(content, person)
-                chip(actions(row), getString(R.string.aq_friends_cancel_request), enabled = !busy) {
+                views.chip(views.actions(row), getString(R.string.aq_friends_cancel_request), enabled = !busy) {
                     change(AnkiquestSocial.Change.Unfriend(person.user), { getString(R.string.aq_friends_request_cancelled) })
                 }
             }
@@ -400,37 +397,37 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         shown: AnkiquestSocial.Overview,
         me: String,
     ) {
-        section(getString(R.string.aq_friends_groups), getString(R.string.aq_friends_groups_hint))
-        button(content, getString(R.string.aq_friends_group_create), enabled = !busy) { askGroupName(null) }
-        button(content, getString(R.string.aq_friends_group_join), enabled = !busy) { askInvite() }
-        if (shown.groups.isEmpty()) text(content, getString(R.string.aq_friends_groups_empty), small = true)
+        views.section(content, getString(R.string.aq_friends_groups), getString(R.string.aq_friends_groups_hint))
+        views.button(content, getString(R.string.aq_friends_group_create), enabled = !busy) { askGroupName(null) }
+        views.button(content, getString(R.string.aq_friends_group_join), enabled = !busy) { askInvite() }
+        if (shown.groups.isEmpty()) views.text(content, getString(R.string.aq_friends_groups_empty), small = true)
         for (group in shown.groups) {
-            val panel = card(content)
-            text(panel, group.name, heading = true)
-            text(panel, members(group.members.size), small = true)
+            val panel = views.card(content)
+            views.text(panel, group.name, heading = true)
+            views.text(panel, members(group.members.size), small = true)
             val code = group.invite
             if (group.owner && code != null) {
                 val link = AnkiquestSocial.inviteLink(checkNotNull(account), code)
-                text(panel, getString(R.string.aq_friends_invite_link), small = true).setPadding(0, dp(8), 0, 0)
-                text(panel, link).setTextIsSelectable(true)
-                text(panel, getString(R.string.aq_friends_invite_link_hint), small = true)
-                val owner = actions(panel)
-                chip(owner, getString(R.string.aq_friends_share_link), primary = true) { shareInvite(group, link) }
-                chip(owner, getString(R.string.aq_friends_new_link), enabled = !busy) {
+                views.text(panel, getString(R.string.aq_friends_invite_link), small = true).setPadding(0, views.dp(8), 0, 0)
+                views.text(panel, link).setTextIsSelectable(true)
+                views.text(panel, getString(R.string.aq_friends_invite_link_hint), small = true)
+                val owner = views.actions(panel)
+                views.chip(owner, getString(R.string.aq_friends_share_link), primary = true) { shareInvite(group, link) }
+                views.chip(owner, getString(R.string.aq_friends_new_link), enabled = !busy) {
                     confirm(getString(R.string.aq_friends_new_link_confirm), R.string.aq_friends_new_link) {
                         change(AnkiquestSocial.Change.NewInvite(group.id), { getString(R.string.aq_friends_new_link_done) })
                     }
                 }
-                chip(owner, getString(R.string.aq_friends_rename), enabled = !busy) { askGroupName(group) }
+                views.chip(owner, getString(R.string.aq_friends_rename), enabled = !busy) { askGroupName(group) }
             }
             for (member in group.members) {
                 val name = if (member.user == me) getString(R.string.aq_friends_you, member.display) else member.display
                 val row = person(panel, member.copy(display = name), tinted = true)
                 if (member.user == me) continue
-                val actions = actions(row)
+                val actions = views.actions(row)
                 muteChip(actions, shown, member)
                 if (group.owner) {
-                    chip(actions, getString(R.string.aq_friends_remove), enabled = !busy) {
+                    views.chip(actions, getString(R.string.aq_friends_remove), enabled = !busy) {
                         confirm(
                             getString(R.string.aq_friends_member_remove_confirm, member.display, group.name),
                             R.string.aq_friends_remove,
@@ -443,7 +440,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                     }
                 }
             }
-            button(panel, getString(R.string.aq_friends_leave), enabled = !busy) {
+            views.button(panel, getString(R.string.aq_friends_leave), enabled = !busy) {
                 confirm(getString(R.string.aq_friends_leave_confirm, group.name), R.string.aq_friends_leave) {
                     change(AnkiquestSocial.Change.Leave(group.id), { getString(R.string.aq_friends_left, group.name) })
                 }
@@ -452,15 +449,15 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     }
 
     private fun renderVisibility(shown: AnkiquestSocial.Overview) {
-        val panel = card(content)
-        text(panel, getString(R.string.aq_board_my_profile), heading = true)
-        text(
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.aq_board_my_profile), heading = true)
+        views.text(
             panel,
             getString(if (shown.public) R.string.aq_friends_visibility_public else R.string.aq_friends_visibility_private),
             small = true,
         )
-        val choice = actions(panel)
-        chip(choice, getString(R.string.aq_friends_public), checked = shown.public, enabled = !busy) {
+        val choice = views.actions(panel)
+        views.chip(choice, getString(R.string.aq_friends_public), checked = shown.public, enabled = !busy) {
             val public = !shown.public
             change(AnkiquestSocial.Change.Visibility(public), {
                 getString(if (public) R.string.aq_friends_visibility_public else R.string.aq_friends_visibility_private)
@@ -474,9 +471,9 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         person: AnkiquestSocial.Person,
     ) {
         if (shown.isMuted(person.user)) {
-            chip(parent, getString(R.string.aq_friends_unmute), enabled = !busy) { unmute(person) }
+            views.chip(parent, getString(R.string.aq_friends_unmute), enabled = !busy) { unmute(person) }
         } else {
-            chip(parent, getString(R.string.aq_friends_mute), enabled = !busy) {
+            views.chip(parent, getString(R.string.aq_friends_mute), enabled = !busy) {
                 val current = account ?: return@chip
                 val message = getString(R.string.aq_friends_muted_done, person.display)
                 undo.apply(
@@ -565,10 +562,10 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         val form =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(24), dp(8), dp(24), 0)
+                setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
                 addView(field)
             }
-        val problem = text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
+        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
         val dialog =
             MaterialAlertDialogBuilder(this)
                 .setTitle(title)
@@ -636,32 +633,24 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
 
     private fun members(count: Int): String = resources.getQuantityString(R.plurals.aq_friends_members, count, count)
 
-    private fun section(
-        title: String,
-        hint: String,
-    ) {
-        text(content, title, heading = true).setPadding(0, dp(16), 0, 0)
-        text(content, hint, small = true)
-    }
-
     /** A card for [person]: picture or initials, display name and username; actions go below. */
     private fun person(
         parent: LinearLayout,
         person: AnkiquestSocial.Person,
         tinted: Boolean = false,
     ): LinearLayout {
-        val panel = card(parent, tinted)
+        val panel = views.card(parent, tinted)
         val row =
             LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
         panel.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        row.addView(avatar(person), LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginEnd = dp(12) })
+        row.addView(avatar(person), LinearLayout.LayoutParams(views.dp(40), views.dp(40)).apply { marginEnd = views.dp(12) })
         val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         row.addView(names, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        text(names, person.display).typeface = Typeface.DEFAULT_BOLD
-        if (person.display != person.user) text(names, person.user, small = true)
+        views.text(names, person.display).typeface = Typeface.DEFAULT_BOLD
+        if (person.display != person.user) views.text(names, person.user, small = true)
         return panel
     }
 
@@ -684,120 +673,10 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                 GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(getColor(R.color.aq_home_background))
-                    setStroke(dp(2), ColorUtils.HSLToColor(floatArrayOf(hue(person.user), 0.55f, 0.55f)))
+                    setStroke(views.dp(2), ColorUtils.HSLToColor(floatArrayOf(hue(person.user), 0.55f, 0.55f)))
                 }
         }
     }
-
-    private fun actions(parent: LinearLayout): ChipGroup =
-        ChipGroup(this).also {
-            parent.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun chip(
-        parent: ViewGroup,
-        label: String,
-        checked: Boolean = false,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): Chip =
-        Chip(this).apply {
-            text = label
-            textSize = 15f
-            // Grows with the text size, so large text is never clipped.
-            chipMinHeight = maxOf(dp(32).toFloat(), paint.fontMetrics.run { descent - ascent } + dp(14))
-            isCheckable = checked
-            isChecked = checked
-            isCheckedIconVisible = false
-            isEnabled = enabled
-            val filled = checked || primary
-            setTextColor(getColor(if (filled) R.color.aq_home_primary_text else R.color.aq_home_text))
-            chipBackgroundColor = ColorStateList.valueOf(getColor(if (filled) R.color.aq_home_primary else R.color.aq_home_surface))
-            chipStrokeWidth = if (filled) 0f else dp(1).toFloat()
-            chipStrokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            setOnClickListener { click() }
-            parent.addView(this)
-        }
-
-    private fun card(
-        parent: LinearLayout,
-        tinted: Boolean = false,
-    ): LinearLayout =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            background = shape(if (tinted) R.color.aq_home_tint else R.color.aq_home_surface)
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(10)
-                },
-            )
-        }
-
-    private fun text(
-        parent: LinearLayout,
-        value: String,
-        heading: Boolean = false,
-        small: Boolean = false,
-    ): TextView =
-        TextView(this).apply {
-            text = value
-            textSize =
-                when {
-                    heading -> 17f
-                    small -> 14f
-                    else -> 16f
-                }
-            setTextColor(getColor(if (small) R.color.aq_home_muted else R.color.aq_home_text))
-            if (heading) {
-                typeface = Typeface.DEFAULT_BOLD
-                ViewCompat.setAccessibilityHeading(this, true)
-            }
-            setPadding(0, dp(3), 0, dp(3))
-            parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun button(
-        parent: LinearLayout,
-        label: String,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): MaterialButton =
-        MaterialButton(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 16f
-            minHeight = dp(48)
-            minimumHeight = dp(48)
-            cornerRadius = dp(12)
-            isEnabled = enabled
-            setTextColor(getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
-            backgroundTintList = ColorStateList.valueOf(getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
-            if (!primary) {
-                strokeWidth = dp(1)
-                strokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            }
-            setOnClickListener { click() }
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(8)
-                },
-            )
-        }
-
-    private fun shape(
-        @ColorRes color: Int,
-    ): GradientDrawable =
-        GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
-            setColor(getColor(color))
-        }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's list says so. */

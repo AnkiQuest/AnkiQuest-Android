@@ -25,6 +25,23 @@ class ReviewHeatmapDataTest {
         assertNull(ReviewHeatmap.searchForDay(data, today))
     }
 
+    /** The share of days studied, as the cases in AnkiQuest-Server's review_heatmap.json give it. */
+    private fun share(
+        today: String,
+        vararg studied: String,
+    ) = ReviewHeatmap
+        .summarize(LocalDate.parse(today), studied.associate { LocalDate.parse(it) to 4 }, emptyMap())
+        .daysStudiedPercent
+
+    @Test
+    fun `the share of days studied rounds down and counts today once studied`() {
+        assertEquals(0, share("2024-03-01"))
+        assertEquals(66, share("2024-03-01", "2024-02-28", "2024-03-01"))
+        assertEquals(100, share("2024-03-01", "2024-02-27", "2024-02-28", "2024-02-29"))
+        assertEquals(80, share("2025-01-04", "2024-12-30", "2024-12-31", "2025-01-01", "2025-01-02"))
+        assertEquals(7, share("2024-03-01", "2024-01-21", "2024-02-28", "2024-02-29"))
+    }
+
     @Test
     fun `yesterday streak survives until today is over and includes leap day`() {
         val reviews = (1L..3L).associate { today.minusDays(it) to 10 }

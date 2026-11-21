@@ -71,6 +71,10 @@ class ReviewHeatmapFixtureTest {
             assertEquals(expected.getInt("longest_streak"), data.longestStreak, name)
             assertEquals(expected.getLong("total_reviews"), data.totalReviews, name)
             assertEquals(expected.getInt("days_studied"), data.daysStudied, name)
+            // Pins before AnkiQuest-Server#74 have no share; the bump PR brings it in.
+            if (expected.has("days_studied_percent")) {
+                assertEquals(expected.getInt("days_studied_percent"), data.daysStudiedPercent, name)
+            }
             assertEquals(first, data.firstReviewDate, name)
             assertEquals(expected.getDouble("daily_average"), data.dailyAverage, 1e-9, name)
             assertEquals(protectedDays, data.protectedDays, name)
