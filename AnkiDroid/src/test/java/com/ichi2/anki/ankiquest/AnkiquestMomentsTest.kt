@@ -14,11 +14,11 @@ import androidx.core.content.edit
 import androidx.lifecycle.LifecycleRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.viewpager2.widget.ViewPager2
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestMoments.Kind
 import com.ichi2.anki.ankiquest.AnkiquestMoments.Moment
 import com.ichi2.anki.ankiquest.AnkiquestMoments.Route
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import io.mockk.every
 import io.mockk.mockkObject
@@ -542,7 +542,7 @@ class AnkiquestMomentsTest : RobolectricTest() {
     @Test
     fun `nothing pops up over a screen where studying goes on`() {
         val host = host()
-        assertFalse(AnkiquestMoments.resting(host))
+        assertFalse(AnkiquestHost.current.resting(host))
         AnkiquestMoments.offer(prefs, account, listOf(moment("level:4", Kind.LEVEL)))
         AnkiquestMoments.present(host, prefs)
         advanceRobolectricLooper()

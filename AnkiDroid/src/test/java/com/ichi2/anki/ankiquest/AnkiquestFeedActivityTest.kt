@@ -10,8 +10,8 @@ import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -33,6 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -200,7 +201,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
             coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
             val feed = launch()
             feed
-                .findViewById<View>(R.id.aq_feed_content)
+                .findViewById<View>(AnkiDroidR.id.aq_feed_content)
                 .allViews
                 .filterIsInstance<TextView>()
                 .first { it.text.toString() == feed.getString(R.string.aq_friends_mute) }
@@ -342,7 +343,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         val feed = launch()
         feed.click(feed.getString(R.string.aq_feed_mark_all_read))
 
-        feed.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        feed.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_friends_feed_loading).isVisible }
         val markAll = feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_feed_mark_all_read) }
         assertFalse(markAll.isEnabled, "marking all read could be sent twice")

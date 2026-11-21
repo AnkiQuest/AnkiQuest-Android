@@ -13,10 +13,10 @@ import android.widget.TextView
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings.Scale
 import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings.Who
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
@@ -40,6 +40,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -215,14 +216,14 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         val activity = controller.get()
         assertEquals(Activity.RESULT_CANCELED, shadowOf(activity).resultCode, "leaving without saving cancels placing it")
 
-        val who = activity.findViewById<RadioGroup>(R.id.aq_widget_settings_who)
+        val who = activity.findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_who)
         assertEquals(listOf("FRIENDS"), who.tags(), "without an account only friends are offered")
-        assertEquals("month", activity.findViewById<RadioGroup>(R.id.aq_widget_settings_period).checkedTag())
-        assertEquals("AUTO", activity.findViewById<RadioGroup>(R.id.aq_widget_settings_scale).checkedTag())
+        assertEquals("month", activity.findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_period).checkedTag())
+        assertEquals("AUTO", activity.findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_scale).checkedTag())
 
-        activity.findViewById<RadioGroup>(R.id.aq_widget_settings_period).click("hour")
-        activity.findViewById<RadioGroup>(R.id.aq_widget_settings_scale).click("EXTRA_LARGE")
-        activity.findViewById<android.view.View>(R.id.aq_widget_settings_save).performClick()
+        activity.findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_period).click("hour")
+        activity.findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_scale).click("EXTRA_LARGE")
+        activity.findViewById<android.view.View>(AnkiDroidR.id.aq_widget_settings_save).performClick()
 
         assertEquals(AnkiquestWidgetSettings(period = "hour", scale = Scale.EXTRA_LARGE), AnkiquestWidgetSettings.of(3))
         assertEquals(Activity.RESULT_OK, shadowOf(activity).resultCode)
@@ -236,7 +237,7 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         val intent = Intent(targetContext, AnkiquestWidgetConfig::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 6)
         val controller = Robolectric.buildActivity(AnkiquestWidgetConfig::class.java, intent).setup()
         saveControllerForCleanup(controller)
-        val who = controller.get().findViewById<RadioGroup>(R.id.aq_widget_settings_who)
+        val who = controller.get().findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_who)
         assertEquals(listOf("FRIENDS", "group:7"), who.tags())
         assertEquals("group:7", who.checkedTag())
         assertEquals("Study group", assertNotNull(who.findViewWithTag<RadioButton>("group:7")).text.toString())
@@ -366,7 +367,7 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
             val controller = Robolectric.buildActivity(AnkiquestWidgetConfig::class.java, intent).setup()
             saveControllerForCleanup(controller)
             val activity = controller.get()
-            val who = activity.findViewById<RadioGroup>(R.id.aq_widget_settings_who)
+            val who = activity.findViewById<RadioGroup>(AnkiDroidR.id.aq_widget_settings_who)
             // Group loading follows the scope reply, including when the quick timeout lost it.
             advanceRobolectricLooperUntil { who.tags().contains("group:7") }
             assertTrue(who.tags().contains("GLOBAL"), "Everyone must remain available on a slow connection")

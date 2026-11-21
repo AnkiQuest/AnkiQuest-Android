@@ -7,21 +7,21 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestChibi.Step
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * The study companion, chosen from a card per companion that previews its poses. The choice is
@@ -32,7 +32,7 @@ import kotlinx.coroutines.sync.withLock
  * quickly enough times turns it into its chibi ([AnkiquestChibi]).
  */
 class AnkiquestCompanionFragment : SettingsFragment() {
-    override val preferenceResource = R.xml.preferences_ankiquest_companion
+    override val preferenceResource = AnkiDroidR.xml.preferences_ankiquest_companion
     override val analyticsScreenNameConstant = "prefs.ankiquest.companion"
 
     /** Server reads and writes, one at a time, so an older answer never replaces a newer choice. */
@@ -84,7 +84,7 @@ class AnkiquestCompanionFragment : SettingsFragment() {
 
     private fun status() = requirePreference<Preference>(R.string.ankiquest_companion_status_key)
 
-    private fun signedIn(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+    private fun signedIn(): HomeAccount? = HomeAccount.current()?.takeIf { it.token.isNotEmpty() }
 
     private fun render() {
         val account = signedIn()

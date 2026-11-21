@@ -234,7 +234,7 @@ internal object AnkiquestAccountSettings {
         account: HomeAccount,
         rememberUsername: Boolean,
     ) {
-        if (AnkiquestHomeData.account()?.scope != account.scope) return
+        if (HomeAccount.current()?.scope != account.scope) return
         AnkiDroidApp.sharedPrefs().edit {
             if (rememberUsername) putString(usernameKey(account.server), account.user) else remove(usernameKey(account.server))
             remove(AnkiquestPreferences.PREF_TOKEN)

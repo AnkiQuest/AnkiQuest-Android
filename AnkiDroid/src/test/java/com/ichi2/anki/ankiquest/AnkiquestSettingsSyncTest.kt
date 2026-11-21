@@ -7,12 +7,12 @@ import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync.Entry
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync.Local
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync.Setting
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync.Trigger
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
@@ -135,7 +135,7 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
 
     private fun switchOff() = prefs().edit(commit = true) { putBoolean(AnkiquestSettingsSync.PREF_SWITCH, false) }
 
-    private fun account() = assertNotNull(AnkiquestHomeData.account())
+    private fun account() = assertNotNull(HomeAccount.current())
 
     private fun cases(name: String): List<JSONObject> = fixture.getJSONArray(name).objects()
 
@@ -218,7 +218,7 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
             prefs().edit(commit = true) { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
             assertTrue(AnkiquestSettingsSync.note(Setting.OPEN_TODAY))
             // A choice made before sync existed and different from the default goes up as the oldest change.
-            prefs().edit(commit = true) { putBoolean(AnkiquestDeckShare.PREF_ASK, false) }
+            prefs().edit(commit = true) { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
 
             AnkiquestSettingsSync.sync(targetContext, Trigger.START)
 

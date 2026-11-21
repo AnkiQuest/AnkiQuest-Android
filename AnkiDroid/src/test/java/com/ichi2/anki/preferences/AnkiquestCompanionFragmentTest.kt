@@ -13,17 +13,17 @@ import androidx.core.view.children
 import androidx.preference.Preference
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestCompanions
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -46,6 +46,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 /** The companion screen with the server's unlocks example: Bluma unlocked, Ankilope locked at a level. */
 @RunWith(AndroidJUnit4::class)
@@ -86,17 +87,17 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
             putString(AnkiquestPreferences.PREF_USER, "member")
             putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
-        mockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
+        mockkObject(AnkiquestCompanions, AnkiquestWidget, AnkiquestCapabilities)
         every { AnkiquestWidget.requestUpdate(any()) } just runs
         coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")
-        coEvery { AnkiquestHomeData.unlocks(any()) } answers { JSONObject(unlocksExample) }
-        coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
-        coEvery { AnkiquestHomeData.saveCompanion(any(), any()) } answers { secondArg() }
+        coEvery { AnkiquestCompanions.unlocks(any()) } answers { JSONObject(unlocksExample) }
+        coEvery { AnkiquestCompanions.choice(any()) } returns "aki"
+        coEvery { AnkiquestCompanions.choose(any(), any()) } answers { secondArg() }
     }
 
     @After
     fun clearMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
+        unmockkObject(AnkiquestCompanions, AnkiquestWidget, AnkiquestCapabilities)
     }
 
     @Test
@@ -110,7 +111,7 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
         assertEquals(Choice.COW, AnkiquestCompanion.choice())
         assertEquals("Bluma", fragment.chosen())
-        coVerify { AnkiquestHomeData.saveCompanion(any(), "cow") }
+        coVerify { AnkiquestCompanions.choose(any(), "cow") }
     }
 
     @Test
@@ -131,12 +132,12 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         idle()
 
         assertEquals(Choice.AKI, AnkiquestCompanion.choice())
-        coVerify(exactly = 0) { AnkiquestHomeData.saveCompanion(any(), any()) }
+        coVerify(exactly = 0) { AnkiquestCompanions.choose(any(), any()) }
     }
 
     @Test
     fun `Ankilope chosen before milestones stays a choice`() {
-        coEvery { AnkiquestHomeData.companion(any()) } returns "ankilope"
+        coEvery { AnkiquestCompanions.choice(any()) } returns "ankilope"
         val fragment = open()
         assertEquals(listOf("Aki", "Ankilope", "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
         assertEquals("Ankilope", fragment.chosen())
@@ -153,12 +154,12 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         }
 
         assertNull(ShadowToast.getLatestToast())
-        coVerify(exactly = 0) { AnkiquestHomeData.saveUnlock(any(), any()) }
+        coVerify(exactly = 0) { AnkiquestCompanions.unlock(any(), any()) }
     }
 
     @Test
     fun `a save refused for a changed account shows no error`() {
-        coEvery { AnkiquestHomeData.saveCompanion(any(), any()) } answers {
+        coEvery { AnkiquestCompanions.choose(any(), any()) } answers {
             signIn("another-member")
             throw HomeAccountChanged()
         }
@@ -174,17 +175,17 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
     @Test
     fun `the previous account's error is gone when another account returns to the screen`() {
-        coEvery { AnkiquestHomeData.companion(any()) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(any()) } throws IOException("offline")
         val fragment = open()
         assertTrue(fragment.status().isVisible)
 
-        coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
+        coEvery { AnkiquestCompanions.choice(any()) } returns "aki"
         signIn("another-member")
         controller.pause().resume()
         idle()
 
         assertFalse(fragment.status().isVisible)
-        coVerify { AnkiquestHomeData.companion(match { it.user == "another-member" }) }
+        coVerify { AnkiquestCompanions.choice(match { it.user == "another-member" }) }
     }
 
     private fun signIn(user: String) =
@@ -200,7 +201,10 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         controller = Robolectric.buildActivity(PreferencesActivity::class.java, intent).setup()
         saveControllerForCleanup(controller)
         idle()
-        val fragment = (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(R.id.settings_container)
+        val fragment =
+            (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(
+                AnkiDroidR.id.settings_container,
+            )
         return fragment as AnkiquestCompanionFragment
     }
 

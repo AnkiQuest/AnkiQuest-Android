@@ -23,6 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -117,12 +118,12 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
 
     @Test
     fun `each notification kind opens what it is about`() {
-        val today = AnkiquestNavigation.Destination.Today()
-        val quests = AnkiquestNavigation.Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
-        val week = AnkiquestNavigation.Destination.Leaderboard("week")
-        val feed = AnkiquestNavigation.Destination.Activity
-        val challenges = AnkiquestNavigation.Destination.Challenges()
-        val goal = AnkiquestNavigation.Destination.Challenges(42)
+        val today = AnkiquestNotifier.Destination.Today()
+        val quests = AnkiquestNotifier.Destination.Today(AnkiquestScreen.Today.QUESTS)
+        val week = AnkiquestNotifier.Destination.Leaderboard("week")
+        val feed = AnkiquestNotifier.Destination.Activity
+        val challenges = AnkiquestNotifier.Destination.Challenges()
+        val goal = AnkiquestNotifier.Destination.Challenges(42)
         val cases =
             listOf(
                 Triple("reminder_daily", null, 0L) to today,
@@ -151,14 +152,14 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
                 Triple("conquest", null, 0L) to feed,
                 Triple("message", null, 0L) to feed,
                 Triple("reply", null, 0L) to feed,
-                Triple("friend_request", null, 0L) to AnkiquestNavigation.Destination.Friends,
-                Triple("group_joined", null, 0L) to AnkiquestNavigation.Destination.Friends,
+                Triple("friend_request", null, 0L) to AnkiquestNotifier.Destination.Friends,
+                Triple("group_joined", null, 0L) to AnkiquestNotifier.Destination.Friends,
                 Triple("something_new", null, 0L) to today,
                 Triple("", null, 0L) to today,
             )
         for ((input, expected) in cases) {
             val (kind, topic, challenge) = input
-            assertEquals(expected, AnkiquestNavigation.notificationDestination(kind, topic, challenge), "$kind $topic $challenge")
+            assertEquals(expected, AnkiquestNotifier.destination(kind, topic, challenge), "$kind $topic $challenge")
         }
     }
 
@@ -168,7 +169,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         val freezeEntry = JSONObject().put("id", 73).put("kind", "reminder_freeze_refill")
         val freeze = AnkiquestNotifier.notificationIntent(targetContext, freezeEntry, owner)
         assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), freeze.component)
-        assertEquals(AnkiquestHomeActivity.FOCUS_QUESTS, freeze.getStringExtra(AnkiquestHomeActivity.EXTRA_FOCUS))
+        assertEquals(AnkiquestScreen.Today.QUESTS, freeze.getStringExtra(AnkiquestHomeActivity.EXTRA_FOCUS))
         assertTrue((freeze.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
 
         val dailyEntry =
@@ -196,7 +197,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), today.component)
         val friends = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_friends)!!
         assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), friends.component)
-        val progress = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_progress)!!
+        val progress = AnkiquestNavigation.destination(targetContext, AnkiquestR.id.ankiquest_nav_progress)!!
         assertEquals(ComponentName(targetContext, AnkiquestProfileActivity::class.java), progress.component)
         assertEquals(null, progress.getStringExtra(AnkiquestProfileActivity.EXTRA_USER), "the player's own profile")
         assertEquals(null, AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_decks))

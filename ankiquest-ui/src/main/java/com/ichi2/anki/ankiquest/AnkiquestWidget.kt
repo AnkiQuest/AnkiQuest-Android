@@ -1,0 +1,867 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package com.ichi2.anki.ankiquest
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.text.format.DateUtils
+import android.util.TypedValue
+import android.view.View
+import android.widget.RemoteViews
+import androidx.annotation.DrawableRes
+import androidx.annotation.IdRes
+import androidx.annotation.LayoutRes
+import androidx.annotation.StringRes
+import androidx.annotation.VisibleForTesting
+import androidx.core.app.PendingIntentCompat
+import androidx.core.content.edit
+import androidx.core.net.toUri
+import androidx.core.widget.RemoteViewsCompat
+import androidx.core.widget.RemoteViewsCompat.RemoteCollectionItems
+import com.ichi2.anki.ankiquest.ui.R
+import com.ichi2.anki.common.time.TimeManager
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import timber.log.Timber
+import java.text.NumberFormat
+
+/** Scrollable homescreen leaderboard. Tapping the header or a player opens the study library. */
+open class AnkiquestWidget : AppWidgetProvider() {
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+    ) {
+        AnkiquestHost.current.schedule(context)
+        AnkiquestHost.current.refreshNow(context)
+    }
+
+    override fun onEnabled(context: Context) {
+        AnkiquestHost.current.schedule(context)
+    }
+
+    override fun onDeleted(
+        context: Context,
+        appWidgetIds: IntArray,
+    ) {
+        AnkiquestWidgetSettings.remove(appWidgetIds)
+    }
+
+    /** A resized widget is drawn again for its new size straight away, from the standings it already shows. */
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        redraw(context, appWidgetManager, styles.first { it.provider == javaClass }, appWidgetId)
+    }
+
+    companion object {
+        private const val MIN_REFRESH_MS = 30 * 1000L
+
+        /** The leaderboard the poll last fetched, per account scope, and when. */
+        const val PREF_CACHE = "ankiquestWidgetLeaderboard"
+        const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
+
+        /** Why the cached leaderboard leaves others out ([AnkiquestLock.name]), absent when it does not. */
+        const val PREF_CACHE_LOCK = "ankiquestWidgetLeaderboardLock"
+
+        /** A widget's own standings ([AnkiquestWidgetSettings.ownBoard]), per widget id. */
+        const val BOARD_KEY = "ankiquestWidgetBoard"
+
+        /** The companion's size in the widget layouts. */
+        private const val COMPANION_DP = 28
+
+        /** The leaderboard periods a widget can show, as served by the ankiquest API. */
+        class Period(
+            val name: String,
+            @StringRes val label: Int,
+        )
+
+        val PERIODS =
+            listOf(
+                Period("hour", R.string.ankiquest_period_hour),
+                Period("day", R.string.ankiquest_period_day),
+                Period("week", R.string.ankiquest_period_week),
+                Period("month", R.string.ankiquest_period_month),
+                Period("year", R.string.ankiquest_period_year),
+                Period("all", R.string.ankiquest_period_all),
+            )
+
+        /** Widget [id]'s settings, as the settings screen saved them. */
+        internal fun settingsOf(id: Int): AnkiquestWidgetSettings = AnkiquestWidgetSettings.of(id)
+
+        /** Saves widget [widgetId]'s settings and draws it again with them. */
+        fun saveSettings(
+            context: Context,
+            widgetId: Int,
+            settings: AnkiquestWidgetSettings,
+        ) {
+            val before = AnkiquestWidgetSettings.of(widgetId)
+            AnkiquestWidgetSettings.save(widgetId, settings)
+            val sameBoard = before.who == settings.who && before.group == settings.group && before.period == settings.period
+            if (!sameBoard) AnkiquestStore.preferences().edit { remove("$BOARD_KEY:$widgetId") }
+            val manager = getAppWidgetManager(context)
+            val style = styles.firstOrNull { widgetId in widgetIds(context, it) }
+            if (manager != null && style != null) redraw(context, manager, style, widgetId)
+            if (settings.ownBoard && !sameBoard) AnkiquestHost.current.refreshNow(context)
+        }
+
+        /**
+         * Orders [board] by the XP of [period], falling back to the week for older servers. Rows
+         * without `periods`, like strangers on the global board, carry the asked period's `xp`; a
+         * board whose rows all have a `rank` keeps the server's order, where the player's own row may
+         * come last with its own place.
+         */
+        fun forPeriod(
+            board: JSONArray,
+            period: String,
+        ): JSONArray {
+            val entries = board.objects()
+            val xpOf = { entry: JSONObject ->
+                entry.optJSONObject("periods")?.takeIf { it.has(period) }?.optLong(period)
+                    ?: if (entry.has("xp")) entry.optLong("xp") else entry.optLong("week_xp")
+            }
+            val ranked = entries.isNotEmpty() && entries.all { it.optInt("rank") > 0 }
+            val ordered = JSONArray()
+            entries
+                .sortedWith(
+                    if (ranked) {
+                        compareBy { it.optInt("rank") }
+                    } else {
+                        compareByDescending(xpOf).thenByDescending { it.optLong("xp_total") }
+                    },
+                ).forEach { ordered.put(JSONObject(it.toString()).put("xp", xpOf(it))) }
+            return ordered
+        }
+
+        class Style(
+            val provider: Class<out AnkiquestWidget>,
+            @LayoutRes val layout: Int,
+            @LayoutRes val rowLayout: Int,
+            @DrawableRes val ownRow: Int,
+            @LayoutRes val lockLayout: Int,
+        )
+
+        val styles =
+            listOf(
+                Style(
+                    AnkiquestWidget::class.java,
+                    R.layout.widget_ankiquest,
+                    R.layout.widget_ankiquest_row,
+                    R.drawable.ankiquest_widget_row_self,
+                    R.layout.widget_ankiquest_lock,
+                ),
+                Style(
+                    AnkiquestTransparentWidget::class.java,
+                    R.layout.widget_ankiquest_transparent,
+                    R.layout.widget_ankiquest_row_transparent,
+                    R.drawable.ankiquest_widget_row_self_clear,
+                    R.layout.widget_ankiquest_lock_transparent,
+                ),
+            )
+
+        @Volatile
+        private var requestedAt = 0L
+
+        /** What the widgets show now, so a resized one is drawn again without asking the server. */
+        private class Drawn(
+            val board: JSONArray?,
+            val fetchedAt: Long,
+            val offline: Boolean,
+            @StringRes val note: Int? = null,
+            val scope: String?,
+            val lock: AnkiquestLock? = null,
+        )
+
+        @Volatile
+        private var drawn: Drawn? = null
+
+        /** Refreshes the leaderboard soon, at most every [MIN_REFRESH_MS]. */
+        fun requestUpdate(context: Context) {
+            val now = TimeManager.time.intTimeMS()
+            if (now - requestedAt < MIN_REFRESH_MS) return
+            requestedAt = now
+            AnkiquestHost.current.refreshNow(context)
+        }
+
+        private fun widgetIds(
+            context: Context,
+            style: Style,
+        ): IntArray =
+            getAppWidgetManager(context)
+                ?.getAppWidgetIds(ComponentName(context, style.provider))
+                ?: IntArray(0)
+
+        internal fun widgetDestination(context: Context): Intent =
+            AnkiquestHost.current
+                .intent(context, AnkiquestScreen.Decks)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+        /** The refresh button's broadcast, sent to [AnkiquestWidgetRefreshReceiver] which other apps cannot reach. */
+        fun refreshIntent(context: Context): PendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                1,
+                Intent(context, AnkiquestWidgetRefreshReceiver::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        /** Shows every placed widget as refreshing and fetches the leaderboard now. */
+        internal fun refresh(context: Context) {
+            showRefreshing(context)
+            AnkiquestHost.current.refreshNow(context)
+        }
+
+        private fun showRefreshing(context: Context) {
+            for (style in styles) {
+                val ids = widgetIds(context, style)
+                if (ids.isEmpty()) continue
+                val views = RemoteViews(context.packageName, style.layout)
+                views.setTextViewText(R.id.ankiquest_widget_updated, "…")
+                getAppWidgetManager(context)?.partiallyUpdateAppWidget(ids, views)
+            }
+        }
+
+        /**
+         * Draws [board] into every placed widget of every style. Each placed widget, transparent
+         * ones included, gets its own adapter ID.
+         *
+         * @param board this week's standings, or null when ankiquest is not configured
+         * @param fetchedAt when [board] was fetched from the server
+         * @param offline whether the last fetch failed and [board] is a cached copy
+         * @param lock why the server left other players out of [board], when it did
+         */
+        fun render(
+            context: Context,
+            board: JSONArray?,
+            fetchedAt: Long,
+            offline: Boolean,
+            lock: AnkiquestLock?,
+        ) {
+            val shown = Drawn(board, fetchedAt, offline, scope = HomeAccount.current()?.scope, lock = lock)
+            drawn = shown
+            renderStreaks(context, shown)
+            renderBoards(context, shown)
+        }
+
+        private fun renderBoards(
+            context: Context,
+            shown: Drawn,
+        ) {
+            val manager = getAppWidgetManager(context) ?: return
+            for (style in styles) {
+                for (id in widgetIds(context, style)) draw(context, manager, style, id, shown)
+            }
+        }
+
+        /** Draws widget [id] again for its current size; before anything was drawn in this process, it fetches instead. */
+        internal fun redraw(
+            context: Context,
+            manager: AppWidgetManager,
+            style: Style,
+            id: Int,
+        ) {
+            val shown = drawn ?: return AnkiquestHost.current.refreshNow(context)
+            draw(context, manager, style, id, shown)
+        }
+
+        /** Draws the streak widgets again from the standings already shown, like [redraw]. */
+        fun redrawStreaks(context: Context) {
+            val shown = drawn ?: return AnkiquestHost.current.refreshNow(context)
+            renderStreaks(context, shown)
+        }
+
+        /** The streak widgets show [shown] with your own row as fresh as the last upload made it. */
+        private fun renderStreaks(
+            context: Context,
+            shown: Drawn,
+        ) = AnkiquestStreakWidget.render(context, shown.board?.let { withFreshRow(it, shown.fetchedAt, addMissing = true) })
+
+        /**
+         * Your own row as the profile of the last upload made in this process had it: uploads answer
+         * with the whole profile, so the widgets can follow each review without asking the server
+         * again, while the poll keeps everyone else's rows current.
+         */
+        private class Fresh(
+            val scope: String,
+            val user: String,
+            val profile: JSONObject,
+            val at: Long,
+        )
+
+        @Volatile
+        private var fresh: Fresh? = null
+
+        @Volatile
+        private var freshDrawnAt = 0L
+
+        /** How often the leaderboards are drawn again for your own row while you study; the streak widget follows every change. */
+        private const val FRESH_REDRAW_MS = 15 * 1000L
+
+        /**
+         * Draws the widgets again with your own row from [profile], the answer to an upload just made
+         * by [account]. The streak widgets are drawn whenever what they show changes, the leaderboards
+         * at most every [FRESH_REDRAW_MS]. Nothing is fetched.
+         */
+        fun onOwnProfile(
+            context: Context,
+            account: HomeAccount,
+            profile: JSONObject,
+            now: Long,
+        ) {
+            val before = fresh?.takeIf { it.scope == account.scope }
+            fresh = Fresh(account.scope, account.user, profile, now)
+            val known = currentBoard(account)
+            val streakChanged = before == null || streakShown(before.profile) != streakShown(profile)
+            if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false, scope = account.scope))
+            // Without standings to put the row in, the leaderboards keep what they show until the poll.
+            val shown = known ?: return
+            if (!streakChanged && now - freshDrawnAt < FRESH_REDRAW_MS) return
+            freshDrawnAt = now
+            renderBoards(context, shown)
+        }
+
+        /** Redraw from the collection verdict without waiting for an upload or poll. */
+        fun onLocalDay(
+            context: Context,
+            account: HomeAccount,
+        ) {
+            if (HomeAccount.current()?.scope != account.scope) {
+                return
+            }
+            val shown = currentBoard(account)
+            renderStreaks(context, shown ?: Drawn(JSONArray(), 0, false, scope = account.scope))
+            if (shown != null) {
+                renderBoards(context, shown)
+            }
+        }
+
+        private fun currentBoard(account: HomeAccount): Drawn? =
+            drawn?.takeIf { it.scope == account.scope } ?: cached(account)?.also { drawn = it }
+
+        /** Why the leaderboard cached for account [scope] leaves others out, or null when it does not. */
+        fun cachedLock(scope: String?): AnkiquestLock? {
+            val stored = AnkiquestStore.preferences().getString(scopedKey(PREF_CACHE_LOCK, scope), null)
+            return AnkiquestLock.named(stored)
+        }
+
+        /** What the poll last fetched for [account], before anything was drawn in this process. */
+        private fun cached(account: HomeAccount): Drawn? {
+            val prefs = AnkiquestStore.preferences()
+            val board =
+                prefs
+                    .getString(scopedKey(PREF_CACHE, account.scope), null)
+                    ?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return null
+            return Drawn(
+                board,
+                prefs.getLong(scopedKey(PREF_CACHE_AT, account.scope), 0),
+                offline = false,
+                scope = account.scope,
+                lock = cachedLock(account.scope),
+            )
+        }
+
+        private fun streakShown(profile: JSONObject): List<Any> {
+            val row = ownRow(profile, null)
+            return listOf(
+                row.optLong("streak"),
+                AnkiquestBoards
+                    .streakState(row),
+                row.optLong("today_minutes"),
+                row.optLong("streak_minutes"),
+                row.optLong("day_ends_at"),
+                profile.optJSONObject("goal")?.toString().orEmpty(),
+            )
+        }
+
+        /** A leaderboard row for the player of [profile], keeping what [old] has that a profile does not say. */
+        fun ownRow(
+            profile: JSONObject,
+            old: JSONObject?,
+        ): JSONObject {
+            val row = JSONObject(old?.toString() ?: "{}")
+            for (key in listOf("display", "level", "xp_total", "week_xp", "periods", "streak", "streak_state", "day_ends_at")) {
+                if (profile.has(key)) row.put(key, profile.get(key))
+            }
+            profile.optJSONObject("today")?.let { today ->
+                row.put("today_reviews", today.optLong("reviews"))
+                row.put("today_minutes", today.optLong("minutes"))
+                row.put("streak_minutes", today.optLong("streak_minutes"))
+            }
+            val period = row.optString("period").ifEmpty { null }
+            profile.optJSONObject("periods")?.takeIf { period != null && it.has(period) }?.let { row.put("xp", it.optLong(period)) }
+            return row
+        }
+
+        /**
+         * [board] with your own row replaced by the fresher one from the last upload, when that came
+         * after [fetchedAt] and belongs to the account signed in now. A board ranked by the server,
+         * like the global one, keeps its rows. With [addMissing], a board without your row gets it,
+         * which only the streak widget wants.
+         */
+        fun withFreshRow(
+            board: JSONArray,
+            fetchedAt: Long,
+            addMissing: Boolean = false,
+        ): JSONArray {
+            val mine = fresh ?: return board
+            if (mine.at < fetchedAt || mine.scope != HomeAccount.current()?.scope) return board
+            val rows = board.objects()
+            if (rows.isNotEmpty() && rows.all { it.has("rank") }) return board
+            val index = rows.indexOfFirst { it.optString("user") == mine.user }
+            if (index < 0) {
+                if (!addMissing) return board
+                return JSONArray(rows).put(ownRow(mine.profile, JSONObject().put("user", mine.user)))
+            }
+            return JSONArray(rows.mapIndexed { i, row -> if (i == index) ownRow(mine.profile, row) else row })
+        }
+
+        /** Forgets the fresh row, as when the tests start again. */
+        @VisibleForTesting
+        fun forgetFresh() {
+            fresh = null
+            freshDrawnAt = 0L
+            drawn = null
+        }
+
+        private fun draw(
+            context: Context,
+            manager: AppWidgetManager,
+            style: Style,
+            id: Int,
+            shown: Drawn,
+        ) {
+            val settings = settingsOf(id)
+            val scale = settings.scale(manager.getAppWidgetOptions(id))
+            // Not signed in shows the same note on every widget; otherwise a widget of one group or of
+            // everyone shows its own standings, or that they are still on their way.
+            val source =
+                if (settings.ownBoard && shown.board != null) {
+                    ownBoard(id) ?: Drawn(null, 0, false, R.string.aq_board_loading, shown.scope)
+                } else {
+                    shown
+                }
+            val ranked = source.board?.let { forPeriod(withFreshRow(it, source.fetchedAt), settings.period) }
+            val items = collection(context, ranked ?: JSONArray(), style, scale, source.lock)
+            val views = layout(context, ranked, source.fetchedAt, source.offline, style, settings, scale, id, source.note, source.lock)
+            RemoteViewsCompat.setRemoteAdapter(context, views, id, R.id.ankiquest_widget_list, items)
+            manager.updateAppWidget(id, views)
+        }
+
+        /** Widget [id]'s own standings as last fetched for the signed-in account, or null before the first fetch. */
+        private fun ownBoard(id: Int): Drawn? {
+            val stored = AnkiquestStore.preferences().getString("$BOARD_KEY:$id", null) ?: return null
+            return try {
+                val json = JSONObject(stored)
+                val scope = json.optString("account")
+                if (scope != HomeAccount.current()?.scope) return null
+                val note = OwnNote.entries.firstOrNull { it.name == json.optString("note") }?.text
+                val lock = AnkiquestLock.named(json.optString("lock"))
+                Drawn(json.optJSONArray("board") ?: JSONArray(), json.optLong("at"), json.optBoolean("offline"), note, scope, lock)
+            } catch (_: JSONException) {
+                null
+            }
+        }
+
+        /** Why a widget with its own standings shows none. */
+        private enum class OwnNote(
+            @StringRes val text: Int,
+        ) {
+            GLOBAL_UNAVAILABLE(R.string.ankiquest_widget_global_unavailable),
+        }
+
+        private fun storeOwnBoard(
+            id: Int,
+            account: HomeAccount,
+            board: JSONArray,
+            at: Long,
+            offline: Boolean,
+            note: OwnNote? = null,
+            lock: AnkiquestLock? = null,
+        ) {
+            val value =
+                JSONObject()
+                    .put("account", account.scope)
+                    .put("board", board)
+                    .put("at", at)
+                    .put("offline", offline)
+                    .put("note", note?.name ?: "")
+                    .put("lock", lock?.name ?: "")
+            AnkiquestStore.preferences().edit { putString("$BOARD_KEY:$id", value.toString()) }
+        }
+
+        /**
+         * Fetches the standings of every placed widget that shows one group or everyone, and draws
+         * those widgets. Widgets asking the same thing share one request. A server without
+         * scopes ([AnkiquestBoards.hasScopes]) gets a group's standings from [circle], the
+         * standings every widget shares, by keeping the group's members; it has no global board.
+         * A group the player is no longer in (`403`) shows nobody. When a fetch fails otherwise, the
+         * widget keeps what it showed, marked offline. A group's standings taken from [circle] keep
+         * [circleLock], why the server left others out of it.
+         */
+        suspend fun refreshOwnBoards(
+            context: Context,
+            circle: JSONArray?,
+            circleLock: AnkiquestLock?,
+        ) {
+            val manager = getAppWidgetManager(context) ?: return
+            val placed =
+                styles
+                    .flatMap { style -> widgetIds(context, style).map { style to it } }
+                    .filter { (_, id) -> settingsOf(id).ownBoard }
+            if (placed.isEmpty() || circle == null) return
+            val account = HomeAccount.current() ?: return
+            val scoped = fetch { AnkiquestBoards.hasScopes(account, AnkiquestApi.Timeout.STANDARD) }
+            val fetched = mutableMapOf<String, Result<AnkiquestBoards.Standings>>()
+            var overview: Result<AnkiquestSocial.Overview>? = null
+            for ((style, id) in placed) {
+                val settings = settingsOf(id)
+                val now = TimeManager.time.intTimeMS()
+                val answer: Result<AnkiquestBoards.Standings>? =
+                    when {
+                        scoped.getOrNull() == true -> {
+                            val url = settings.leaderboardUrl(account)
+                            fetched.getOrPut(url.toString()) { fetch { leaderboard(account, url) } }
+                        }
+                        // Whether there is a global board is unknown while the server cannot be reached.
+                        scoped.isFailure && settings.who == AnkiquestWidgetSettings.Who.GLOBAL -> Result.failure(scoped.exceptionOrNull()!!)
+                        settings.who == AnkiquestWidgetSettings.Who.GROUP -> {
+                            val social = overview ?: fetch { AnkiquestSocial.overview(account) }.also { overview = it }
+                            social.map { AnkiquestBoards.Standings(groupBoard(circle, it, settings.group, account.user), circleLock) }
+                        }
+                        else -> null
+                    }
+                when {
+                    answer == null -> storeOwnBoard(id, account, JSONArray(), now, offline = false, note = OwnNote.GLOBAL_UNAVAILABLE)
+                    answer.isSuccess -> {
+                        val standings = answer.getOrThrow()
+                        storeOwnBoard(id, account, standings.rows, now, offline = false, lock = standings.lock)
+                    }
+                    (answer.exceptionOrNull() as? AnkiquestHttpException)?.code == 403 ->
+                        storeOwnBoard(id, account, JSONArray(), now, offline = false)
+                    else -> {
+                        val last = ownBoard(id)
+                        storeOwnBoard(id, account, last?.board ?: JSONArray(), last?.fetchedAt ?: 0, offline = true, lock = last?.lock)
+                    }
+                }
+                draw(context, manager, style, id, drawn ?: Drawn(circle, now, false, scope = account.scope, lock = circleLock))
+            }
+        }
+
+        private suspend fun <T> fetch(block: suspend () -> T): Result<T> =
+            try {
+                Result.success(block())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "ankiquest widget standings fetch failed")
+                Result.failure(e)
+            }
+
+        private suspend fun leaderboard(
+            account: HomeAccount,
+            url: HttpUrl,
+        ): AnkiquestBoards.Standings =
+            withContext(Dispatchers.IO) {
+                val request = AnkiquestApi.request(url, account.token, account.language).build()
+                AnkiquestApi.call(account, request) { AnkiquestBoards.Standings(AnkiquestApi.jsonArray(it), AnkiquestLock.of(it)) }
+            }
+
+        /** The rows of [circle] for [group]'s members and [me], for servers that cannot answer one group. */
+        fun groupBoard(
+            circle: JSONArray,
+            overview: AnkiquestSocial.Overview,
+            group: Long?,
+            me: String,
+        ): JSONArray {
+            val members =
+                overview.groups
+                    .firstOrNull { it.id == group }
+                    ?.members
+                    .orEmpty()
+                    .map { it.user }
+                    .toSet() + me
+            return JSONArray(circle.objects().filter { it.optString("user") in members })
+        }
+
+        /** Whether views of a fixed size can grow; launchers before Android 12 keep the layout's sizes. */
+        private val boxesGrow get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+        /**
+         * Scales the text of [id] from its size in the layout, [sp], by [scale]. Text inside a box of
+         * fixed size ([boxed]) only changes along with its box.
+         */
+        private fun RemoteViews.scaleText(
+            @IdRes id: Int,
+            sp: Float,
+            scale: Float,
+            boxed: Boolean = false,
+        ) {
+            if (boxed && !boxesGrow) return
+            setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * scale)
+        }
+
+        /** Scales the box [id] of [widthDp] x [heightDp] in the layout by [scale]; a null height keeps wrapping its content. */
+        private fun RemoteViews.scaleBox(
+            @IdRes id: Int,
+            widthDp: Float,
+            heightDp: Float?,
+            scale: Float,
+        ) {
+            if (!boxesGrow) return
+            setViewLayoutWidth(id, widthDp * scale, TypedValue.COMPLEX_UNIT_DIP)
+            if (heightDp != null) setViewLayoutHeight(id, heightDp * scale, TypedValue.COMPLEX_UNIT_DIP)
+        }
+
+        /** Opens the settings of widget [widgetId]; each widget has its own. */
+        fun settingsIntent(
+            context: Context,
+            widgetId: Int,
+        ): PendingIntent =
+            PendingIntent.getActivity(
+                context,
+                widgetId,
+                AnkiquestHost.current
+                    .intent(context, AnkiquestScreen.WidgetSettings)
+                    .setData("ankiquest-widget:$widgetId".toUri())
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        /**
+         * @param widgetId the placed widget, whose header then opens its settings
+         * @param note shown instead of the standings, like while a widget's own ones are on their way
+         * @param lock why the server left other players out of [board]; the list then ends with it
+         */
+        fun layout(
+            context: Context,
+            board: JSONArray?,
+            fetchedAt: Long,
+            offline: Boolean,
+            style: Style = styles.first(),
+            settings: AnkiquestWidgetSettings = AnkiquestWidgetSettings(),
+            scale: Float = 1f,
+            widgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
+            @StringRes note: Int? = null,
+            lock: AnkiquestLock? = null,
+        ): RemoteViews {
+            val language = AnkiquestLanguage.context(context)
+            val period = settings.period
+            val views = RemoteViews(context.packageName, style.layout)
+            views.scaleText(R.id.ankiquest_widget_title, 15f, scale)
+            views.scaleText(R.id.ankiquest_widget_period, 12f, scale)
+            views.scaleText(R.id.ankiquest_widget_updated, 11f, scale)
+            views.scaleText(R.id.ankiquest_widget_status, 13f, scale)
+            views.scaleBox(R.id.ankiquest_widget_companion, COMPANION_DP.toFloat(), COMPANION_DP.toFloat(), scale)
+            views.scaleBox(R.id.ankiquest_widget_refresh, 32f, 32f, scale)
+            views.setViewVisibility(R.id.ankiquest_widget_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
+            if (AnkiquestCompanion.visible()) {
+                val pixels = (COMPANION_DP * scale * context.resources.displayMetrics.density).toInt()
+                val bitmap = AnkiquestCompanion.bitmap(context, R.drawable.aki_face, pixels)
+                if (bitmap != null) {
+                    views.setImageViewBitmap(R.id.ankiquest_widget_companion, bitmap)
+                } else {
+                    views.setImageViewResource(R.id.ankiquest_widget_companion, AnkiquestCompanion.resource(R.drawable.aki_face))
+                }
+            }
+            val header = settings.header(context)
+            views.setTextViewText(R.id.ankiquest_widget_period, header)
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                views.setOnClickPendingIntent(R.id.ankiquest_widget_period, settingsIntent(context, widgetId))
+                views.setContentDescription(
+                    R.id.ankiquest_widget_period,
+                    language.getString(R.string.ankiquest_widget_settings_open, header),
+                )
+            }
+            views.setOnClickPendingIntent(
+                R.id.ankiquest_widget_root,
+                PendingIntent.getActivity(
+                    context,
+                    1000 + period.hashCode(),
+                    widgetDestination(context),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                ),
+            )
+            views.setPendingIntentTemplate(
+                R.id.ankiquest_widget_list,
+                PendingIntentCompat.getActivity(
+                    context,
+                    2000 + period.hashCode(),
+                    widgetDestination(context),
+                    PendingIntent.FLAG_UPDATE_CURRENT,
+                    true,
+                ),
+            )
+            views.setOnClickPendingIntent(
+                R.id.ankiquest_widget_refresh,
+                refreshIntent(context),
+            )
+
+            val time = if (fetchedAt > 0) DateUtils.formatDateTime(language, fetchedAt, DateUtils.FORMAT_SHOW_TIME) else ""
+            views.setTextViewText(
+                R.id.ankiquest_widget_updated,
+                if (offline) language.getString(R.string.ankiquest_widget_offline_at, time) else time,
+            )
+
+            when {
+                note != null -> status(views, language.getString(note))
+                board == null -> status(views, language.getString(R.string.ankiquest_widget_unconfigured))
+                // The list shows the player's own row, if the server sent it, and then why nobody else is there.
+                lock != null -> list(views)
+                board.length() == 0 && offline -> status(views, language.getString(R.string.ankiquest_widget_offline))
+                board.length() == 0 -> status(views, language.getString(R.string.ankiquest_widget_empty))
+                else -> list(views)
+            }
+            return views
+        }
+
+        private fun list(views: RemoteViews) {
+            views.setViewVisibility(R.id.ankiquest_widget_status, View.GONE)
+            views.setViewVisibility(R.id.ankiquest_widget_list, View.VISIBLE)
+        }
+
+        private fun status(
+            views: RemoteViews,
+            text: String,
+        ) {
+            views.setTextViewText(R.id.ankiquest_widget_status, text)
+            views.setViewVisibility(R.id.ankiquest_widget_status, View.VISIBLE)
+            views.setViewVisibility(R.id.ankiquest_widget_list, View.GONE)
+        }
+
+        /** The list's layouts: a player's row and the line saying why others are missing. */
+        const val VIEW_TYPES = 2
+
+        /** The list items for [board], followed by a line saying why others are missing when [lock] says so. */
+        fun collection(
+            context: Context,
+            board: JSONArray,
+            style: Style = styles.first(),
+            scale: Float = 1f,
+            lock: AnkiquestLock? = null,
+        ): RemoteCollectionItems {
+            // The count stays the same with or without the line, so the launcher can keep its adapter.
+            val items = RemoteCollectionItems.Builder().setViewTypeCount(VIEW_TYPES)
+            val me = HomeAccount.current()?.user
+            val ownDay = AnkiquestDay.own(TimeManager.time.intTimeMS())
+            val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
+            val languageContext = AnkiquestLanguage.context(context)
+            val xpOf = { entry: JSONObject -> entry.optLong("xp", entry.optLong("week_xp")) }
+            val leaderXp = board.optJSONObject(0)?.let(xpOf)?.coerceAtLeast(1) ?: 1
+            for (i in 0 until board.length()) {
+                val entry = board.getJSONObject(i)
+                val xp = xpOf(entry)
+                val mine = entry.optString("user") == me
+                val day = ownDay?.takeIf { mine }
+                val streak = if (day == null) entry.optInt("streak") else day.streak ?: 0
+                val views = RemoteViews(context.packageName, style.rowLayout)
+                views.scaleText(R.id.ankiquest_widget_rank, 16f, scale, boxed = true)
+                views.scaleText(R.id.ankiquest_widget_initial, 16f, scale, boxed = true)
+                views.scaleText(R.id.ankiquest_widget_name, 14f, scale)
+                views.scaleText(R.id.ankiquest_widget_streak, 12f, scale)
+                views.scaleText(R.id.ankiquest_widget_level, 12f, scale)
+                views.scaleText(R.id.ankiquest_widget_xp, 14f, scale)
+                views.scaleBox(R.id.ankiquest_widget_place, 30f, null, scale)
+                views.scaleBox(R.id.ankiquest_widget_medal, 22f, 22f, scale)
+                views.scaleBox(R.id.ankiquest_widget_portrait, 32f, 32f, scale)
+                views.setInt(
+                    R.id.ankiquest_widget_row,
+                    "setBackgroundResource",
+                    if (entry.getString("user") == me) style.ownRow else 0,
+                )
+                val place = entry.optInt("rank").takeIf { it > 0 } ?: (i + 1)
+                val medal = AnkiquestArt.medal(place)
+                views.setTextViewText(R.id.ankiquest_widget_rank, if (medal == null) numbers.format(place) else "")
+                views.setViewVisibility(R.id.ankiquest_widget_medal, if (medal == null) View.GONE else View.VISIBLE)
+                if (medal != null) {
+                    views.setImageViewResource(R.id.ankiquest_widget_medal, medal)
+                    views.setContentDescription(
+                        R.id.ankiquest_widget_medal,
+                        languageContext.getString(R.string.ankiquest_widget_place, place),
+                    )
+                }
+                views.setTextViewText(R.id.ankiquest_widget_name, entry.getString("display"))
+                val photo = AnkiquestAvatars.bitmap(entry.getString("user"))
+                val display = entry.getString("display").trim().ifEmpty { entry.getString("user") }
+                val initial = AnkiquestAvatars.initials(display, letters = 1)
+                views.setTextViewText(R.id.ankiquest_widget_initial, initial)
+                views.setViewVisibility(R.id.ankiquest_widget_initial, if (photo == null) View.VISIBLE else View.GONE)
+                views.setViewVisibility(R.id.ankiquest_widget_avatar, if (photo == null) View.GONE else View.VISIBLE)
+                views.setImageViewBitmap(R.id.ankiquest_widget_avatar, photo)
+                val state =
+                    day?.label ?: if (mine) {
+                        AnkiquestDay.label(AnkiquestDay.Server.ownRow(entry), TimeManager.time.intTimeMS())
+                    } else {
+                        AnkiquestBoards
+                            .streakState(entry)
+                    }
+                val icon =
+                    when (state) {
+                        AnkiquestDay.State.STUDIED -> R.drawable.ankiquest_streak_studied
+                        AnkiquestDay.State.PROTECTED -> R.drawable.ankiquest_streak_protected
+                        else -> R.drawable.ankiquest_streak_pending
+                    }
+                val label = if (day == null) streakLabel(languageContext, entry, state) else AnkiquestDay.words(languageContext, day)
+                views.setTextViewText(R.id.ankiquest_widget_streak, if (streak > 0) numbers.format(streak) else "")
+                views.setTextViewCompoundDrawables(R.id.ankiquest_widget_streak, if (streak > 0) icon else 0, 0, 0, 0)
+                views.setContentDescription(
+                    R.id.ankiquest_widget_streak,
+                    if (streak > 0) {
+                        languageContext.getString(
+                            R.string.ankiquest_streak_description,
+                            numbers.format(streak),
+                            label,
+                        )
+                    } else {
+                        null
+                    },
+                )
+                views.setTextViewText(
+                    R.id.ankiquest_widget_level,
+                    languageContext.getString(R.string.ankiquest_widget_level, entry.getInt("level")),
+                )
+                views.setProgressBar(R.id.ankiquest_widget_bar, 1000, (xp * 1000 / leaderXp).toInt(), false)
+                views.setTextViewText(R.id.ankiquest_widget_xp, numbers.format(xp))
+                views.setOnClickFillInIntent(R.id.ankiquest_widget_row, Intent())
+                items.addItem(i.toLong(), views)
+            }
+
+            // After the player's own row, as on the in-app board; a tap opens what a row opens.
+            if (lock != null) {
+                val line = RemoteViews(context.packageName, style.lockLayout)
+                line.scaleText(R.id.ankiquest_widget_lock, 13f, scale)
+                line.setTextViewText(R.id.ankiquest_widget_lock, languageContext.getString(lock.text))
+                line.setOnClickFillInIntent(R.id.ankiquest_widget_lock, Intent())
+                items.addItem(LOCK_ITEM_ID, line)
+            }
+            return items.build()
+        }
+
+        /** The list item id of the line saying why others are missing; rows use their position. */
+        private const val LOCK_ITEM_ID = -1L
+
+        /** How today stands for [entry]'s streak, in words, for a [state] from [AnkiquestBoards.streakState]. */
+        internal fun streakLabel(
+            languageContext: Context,
+            entry: JSONObject,
+            state: AnkiquestDay.State,
+        ): String = AnkiquestDay.words(languageContext, state, entry.optLong("today_minutes"), entry.optLong("streak_minutes"))
+    }
+}
+
+/** The same leaderboard without a background, drawn straight on the wallpaper. */
+class AnkiquestTransparentWidget : AnkiquestWidget()

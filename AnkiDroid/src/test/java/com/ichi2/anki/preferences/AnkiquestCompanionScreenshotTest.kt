@@ -9,9 +9,10 @@ import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestCompanions
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
+import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.testutils.launchForFullHeightScreenshot
 import io.mockk.coEvery
 import io.mockk.mockkObject
@@ -35,16 +36,16 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
             putString(AnkiquestPreferences.PREF_USER, "member")
             putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
-        mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
+        mockkObject(AnkiquestCompanions, AnkiquestCapabilities)
         coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")
-        coEvery { AnkiquestHomeData.unlocks(any()) } answers {
+        coEvery { AnkiquestCompanions.unlocks(any()) } answers {
             JSONObject(checkNotNull(javaClass.classLoader?.getResource("ankiquest-api/unlocks.json")).readText())
         }
     }
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestCapabilities)
+        unmockkObject(AnkiquestCompanions, AnkiquestCapabilities)
     }
 
     /** Ankilope chosen before milestones: it stays a choice. */
@@ -59,8 +60,8 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
         name: String,
         chosen: Choice,
     ) {
-        coEvery { AnkiquestHomeData.companion(any()) } returns chosen.id
-        val account = assertNotNull(AnkiquestHomeData.account())
+        coEvery { AnkiquestCompanions.choice(any()) } returns chosen.id
+        val account = assertNotNull(HomeAccount.current())
         AnkiquestCompanion.remember(account, chosen.id)
         runBlocking { AnkiquestUnlocks.sync(account) }
         launch(name)

@@ -7,8 +7,8 @@ import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
@@ -84,7 +84,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `private leaderboard and profile reads send the member token`() =
         runBlocking {
-            Ankiquest.leaderboard()
+            AnkiquestBoards.weekly()
             Ankiquest.profile()
 
             assertEquals(setOf("/api/leaderboard", "/api/profile/member%20name"), requests.map { it.path }.toSet())
@@ -97,7 +97,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
         runBlocking {
             AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
 
-            Ankiquest.leaderboard()
+            AnkiquestBoards.weekly()
             Ankiquest.profile()
 
             assertEquals(setOf("/api/leaderboard", "/api/profile/member%20name"), requests.map { it.path }.toSet())

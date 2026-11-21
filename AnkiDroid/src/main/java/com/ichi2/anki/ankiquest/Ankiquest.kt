@@ -23,8 +23,8 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import anki.collection.OpChanges
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
-import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.observability.ChangeManager
@@ -115,6 +115,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      */
     fun init(app: Application) {
         this.app = app
+        AnkiquestHost.install(AnkiquestAppHost)
         AnkiquestApi.drawnCompanions = AnkiquestCompanion.drawn
         app.registerActivityLifecycleCallbacks(this)
         ChangeManager.unsubscribe(this)
@@ -134,38 +135,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     /** Whether a server and a player are set, so that the profile can be asked for. */
     fun isConfigured(): Boolean = HomeAccount.current() != null
 
-    /** The configured player name, or the sync username when none is set. */
-    fun player(): String? = HomeAccount.current()?.user
-
     private fun configured(): HomeAccount = HomeAccount.current() ?: throw IllegalStateException("ankiquest is not configured")
-
-    /** A `/api/leaderboard` answer as the widgets read it: its rows, and why others are left out, when they are. */
-    internal class Standings(
-        val rows: JSONArray,
-        val lock: AnkiquestLock?,
-    )
-
-    /** This week's standings, as served by `/api/leaderboard`. */
-    internal suspend fun leaderboard(): Standings =
-        withContext(Dispatchers.IO) {
-            val account = configured()
-            AnkiquestApi.call(account, AnkiquestApi.request(account, "api/leaderboard").build()) {
-                Standings(AnkiquestApi.jsonArray(it), AnkiquestLock.of(it))
-            }
-        }
-
-    /** The weekly order and how this player moved since [previous], as judged by `/api/rank/<user>`. */
-    suspend fun rank(previous: List<String>): JSONObject =
-        withContext(Dispatchers.IO) {
-            val account = configured()
-            AnkiquestApi.json(
-                account,
-                AnkiquestApi
-                    .request(account, "api/rank/${account.encodedUser}")
-                    .post(AnkiquestApi.body(JSONObject().put("previous", JSONArray(previous))))
-                    .build(),
-            )
-        }
 
     /** Refresh the catalog before private preferences; capture [account] before queuing IO. */
     internal suspend fun deckNotificationSettings(account: HomeAccount = authenticated()): JSONObject =
@@ -228,59 +198,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         )
     }
 
-    /**
-     * Shares a win with everyone in the player's circle through `/api/share`: one of their own
-     * [notification]s, or their current [place] on this week's board. Answers how many friends got it.
-     *
-     * @param expectedScope the [HomeAccount.scope] the win belongs to; another signed-in account never shares it
-     */
-    suspend fun shareWin(
-        notification: Long?,
-        place: Int?,
-        expectedScope: String,
-    ): Int =
-        share(
-            JSONObject().apply {
-                notification?.let { put("notification", it) }
-                place?.let { put("place", it) }
-            },
-            expectedScope,
-        ).optInt("recipients")
-
-    /** Sends the server's [win] to everyone in the player's circle; answers how many friends got it. */
-    suspend fun shareWinWithFriends(
-        win: Long,
-        expectedScope: String,
-    ): Int = share(JSONObject().put("win", win).put("to", "friends"), expectedScope).optInt("recipients")
-
-    /** The public link for the server's [win], with its card and invitation text; the server makes it once and reuses it. */
-    internal suspend fun shareWinLink(
-        win: Long,
-        expectedScope: String,
-    ): AnkiquestShare.Link {
-        val answer = share(JSONObject().put("win", win).put("to", "link"), expectedScope)
-        return AnkiquestShare.Link(answer.getString("url"), answer.getString("image"), answer.getString("text"))
-    }
-
-    private suspend fun share(
-        body: JSONObject,
-        expectedScope: String,
-    ): JSONObject =
-        withContext(Dispatchers.IO) {
-            val account = AnkiquestHomeData.account()?.takeIf { it.scope == expectedScope } ?: throw HomeAccountChanged()
-            check(account.token.isNotEmpty()) { "Set your ankiquest token to share a win." }
-            AnkiquestApi.json(
-                account,
-                AnkiquestApi
-                    .request(account, "api/share/${account.encodedUser}")
-                    .post(AnkiquestApi.body(body))
-                    .build(),
-            )
-        }
-
-    /** The server's address, for inviting people met outside the app. */
-    fun serverUrl(): String? = HomeAccount.current()?.server
-
     suspend fun setStreakProtection(enabled: Boolean): Boolean {
         val account = authenticated()
         return AnkiquestApi
@@ -301,7 +218,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     /** Preserve the exact fetch identity for both delivery cursors and queued reply actions. */
     internal suspend fun completionNotifications(): CompletionNotifications? =
         withContext(Dispatchers.IO) {
-            val account = AnkiquestHomeData.account() ?: return@withContext null
+            val account = HomeAccount.current() ?: return@withContext null
             if (account.token.isEmpty()) return@withContext null
             val request = AnkiquestApi.request(account, "api/notifications/${account.encodedUser}").build()
             AnkiquestApi.call(account, request, recheck = false) { response ->
@@ -1195,7 +1112,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
         // The activity callback can run before AndroidX dispatches ON_RESUME.
         activity.window.decorView.post {
-            if (AnkiquestPostStudyPrompts.resumed(activity) && AnkiquestMoments.resting(activity)) {
+            if (AnkiquestPostStudyPrompts.resumed(activity) && AnkiquestHost.current.resting(activity)) {
                 AnkiquestMoments.present(activity, AnkiDroidApp.sharedPrefs())
                 if (HomeAccount.current()?.token?.isNotEmpty() == true) {
                     checkMoments(activity)

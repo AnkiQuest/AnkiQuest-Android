@@ -15,10 +15,10 @@ import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Style
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.justRun

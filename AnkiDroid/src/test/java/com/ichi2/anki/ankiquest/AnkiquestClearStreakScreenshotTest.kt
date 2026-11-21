@@ -19,10 +19,10 @@ import androidx.core.view.isVisible
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.provideRoborazziContext
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Style
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import org.json.JSONArray
 import org.json.JSONObject

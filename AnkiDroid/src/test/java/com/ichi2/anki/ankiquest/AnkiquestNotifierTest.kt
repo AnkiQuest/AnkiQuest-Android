@@ -221,7 +221,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
             putString(AnkiquestPreferences.PREF_USER, "hill")
             putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
-        return AnkiquestHomeData.account()!!
+        return HomeAccount.current()!!
     }
 
     @Test

@@ -8,8 +8,8 @@ import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyAnkiActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -248,6 +248,24 @@ class AnkiquestDeckAlertsTest : RobolectricTest() {
                 AnkiquestDeckAlerts.action(targetContext, 31, 41, identity.notificationAccount, identity.scope, "cerro", "completion"),
             )
         assertEquals("Stop deck alerts from cerro", action.title.toString())
+    }
+
+    @Test
+    fun oldAlertAfterUpgrade() {
+        val screen = launch().get()
+        // Recreate the persisted pre-module payload without using the current intent factory.
+        screen.intent =
+            Intent(targetContext, EmptyAnkiActivity::class.java)
+                .setAction("com.ichi2.anki.ankiquest.STOP_DECK_ALERTS")
+                .putExtra("ankiquest.profile_user", "cerro")
+                .putExtra("ankiquest.stop_deck_scope", identity.scope)
+                .putExtra("ankiquest.stop_deck_account", identity.notificationAccount)
+                .putExtra("ankiquest.stop_deck_notice", 31L)
+
+        AnkiquestDeckAlerts(screen)
+        idle()
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        assertNotNull(undo(screen))
     }
 
     @Test

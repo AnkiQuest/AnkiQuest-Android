@@ -9,8 +9,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import com.google.android.material.chip.Chip
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -24,6 +24,7 @@ import org.robolectric.RuntimeEnvironment
 import java.net.HttpURLConnection.HTTP_FORBIDDEN
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     private val identity = HomeAccount("https://anki.example.test", "aldanita", "screenshot-token")
@@ -103,21 +104,16 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     private fun captureGlobal(name: String) {
         val screen = launch()
         click(screen, R.string.ankiquest_widget_who_global)
-        val selected =
-            screen
-                .findViewById<View>(R.id.aq_friends_board_content)
-                .allViews
-                .filterIsInstance<Chip>()
-                .first { it.isChecked }
+        val selected = boardViews(screen).filterIsInstance<Chip>().first { it.isChecked }
         val bounds = Rect()
         assertTrue(selected.getGlobalVisibleRect(bounds))
         assertEquals(selected.width, bounds.width(), "the selected scope must fit at large text sizes")
         captureScreen(name)
         val own =
-            screen.findViewById<View>(R.id.aq_friends_board_content).allViews.first {
+            boardViews(screen).first {
                 it.isClickable && it.contentDescription?.contains("Place 103:") == true
             }
-        val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
+        val scroll = screen.findViewById<NestedScrollView>(AnkiDroidR.id.aq_feed_scroll)
         val rowBounds = Rect(0, 0, own.width, own.height)
         scroll.offsetDescendantRectToMyCoords(own, rowBounds)
         scroll.scrollTo(0, rowBounds.top)
@@ -133,7 +129,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     private fun awaitBoard(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
+                !screen.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible
         }
         advanceRobolectricLooper()
     }
@@ -142,12 +138,13 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
         screen: AnkiquestFriendsActivity,
         label: Int,
     ) {
-        screen
-            .findViewById<View>(R.id.aq_friends_board_content)
-            .allViews
+        boardViews(screen)
             .filterIsInstance<TextView>()
             .first { it.isClickable && it.text == screen.getString(label) }
             .performClick()
         awaitBoard(screen)
     }
+
+    /** The board's views, looked up afresh on each call. */
+    private fun boardViews(screen: AnkiquestFriendsActivity) = screen.findViewById<View>(R.id.aq_friends_board_content).allViews
 }

@@ -10,8 +10,8 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CollectionOperation
 import com.ichi2.anki.EmptyApplicationCategory
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
@@ -146,7 +146,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `a reply carries the message to the server and names who heard it`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             assertEquals("Aldana", AnkiquestFeed.reply(7, "Good job!", account.notificationAccount, account.scope))
 
             val sent = requests.single { it.path == "/api/reply/cerro" }
@@ -167,8 +167,8 @@ class AnkiquestUploadTest : RobolectricTest() {
                     .putString(AnkiquestReply.EXTRA_TITLE, "Deck complete")
                     .putString(AnkiquestReply.EXTRA_BODY, "Cerro has finished Spanish for today.")
                     .putString(AnkiquestReply.EXTRA_MESSAGE, "Good job!")
-                    .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, AnkiquestHomeData.account()!!.notificationAccount)
-                    .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, AnkiquestHomeData.account()!!.scope)
+                    .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, HomeAccount.current()!!.notificationAccount)
+                    .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, HomeAccount.current()!!.scope)
                     .build()
             assertEquals(AnkiquestReply.Outcome.SENT, AnkiquestReply.run(targetContext, data, 0))
 
@@ -463,7 +463,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `saving for subdecks stores the same choice for each deck in one request`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             Ankiquest.saveDeckNotificationSettings(listOf("1", unsharedDeck.toString()), emptyList(), listOf("hill"), account)
 
             val saves = requests.filter { it.method == "POST" && it.path == "/api/decks/cerro" }
@@ -482,7 +482,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `stale deck settings and saves never use changed account details`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             for ((key, value) in listOf(
                 AnkiquestPreferences.PREF_USER to "other",
                 AnkiquestPreferences.PREF_TOKEN to "replacement-token",
@@ -507,7 +507,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `bulk restoration sends each previous setting in one owned request`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             val rows =
                 listOf(
                     JSONObject("""{"id":"1","enabled":true,"recipients":["hill"]}"""),
@@ -536,7 +536,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `a switched account rejects a late restoration result`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             replyOwner = ReplyOwner.CHANGED
             assertFailsWith<HomeAccountChanged> {
                 AnkiquestDeckSharing.restore(
@@ -551,7 +551,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `an account switch during a deck save rejects the result without changing the request owner`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             replyOwner = ReplyOwner.CHANGED
             assertFailsWith<HomeAccountChanged> {
                 Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("hill"), account)

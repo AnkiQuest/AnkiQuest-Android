@@ -21,7 +21,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -32,13 +32,14 @@ import java.util.Calendar
 import java.util.Formatter
 import java.util.Locale
 import java.util.TimeZone
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * The community calendar, natively, as the website's `/community#calendar` shows it: who won each day
  * of a month, each week's champions and each month's season, whether a result is final, and the full
  * standings of any of them. It reads `GET /api/community`; a server without it says it needs updating.
  */
-class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board) {
+class AnkiquestCalendarActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiquest_board) {
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
@@ -60,18 +61,18 @@ class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
         views = AnkiquestBoardViews(this)
-        content = findViewById(R.id.aq_board_content)
-        scroll = findViewById(R.id.aq_board_scroll)
-        findViewById<TextView>(R.id.aq_board_title).apply {
+        content = findViewById(AnkiDroidR.id.aq_board_content)
+        scroll = findViewById(AnkiDroidR.id.aq_board_scroll)
+        findViewById<TextView>(AnkiDroidR.id.aq_board_title).apply {
             setText(R.string.aq_calendar_title)
             ViewCompat.setAccessibilityHeading(this, true)
         }
-        findViewById<View>(R.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        findViewById<View>(R.id.aq_board_refresh).apply {
+        findViewById<View>(AnkiDroidR.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<View>(AnkiDroidR.id.aq_board_refresh).apply {
             contentDescription = getString(R.string.aq_calendar_refresh)
             setOnClickListener { load() }
         }
-        val root = findViewById<View>(R.id.aq_board_root)
+        val root = findViewById<View>(AnkiDroidR.id.aq_board_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
@@ -82,14 +83,14 @@ class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board
         year = savedInstanceState?.getInt(STATE_YEAR) ?: now.get(Calendar.YEAR)
         month = savedInstanceState?.getInt(STATE_MONTH) ?: (now.get(Calendar.MONTH) + 1)
         selected = savedInstanceState?.getString(STATE_SELECTED)
-        account = AnkiquestHomeData.account()
+        account = HomeAccount.current()
         load()
     }
 
     override fun onResume() {
         super.onResume()
         if (!::content.isInitialized) return
-        if (AnkiquestHomeData.account()?.scope != account?.scope) load()
+        if (HomeAccount.current()?.scope != account?.scope) load()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -101,7 +102,7 @@ class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board
     }
 
     private fun load() {
-        val current = AnkiquestHomeData.account()
+        val current = HomeAccount.current()
         if (current?.scope != account?.scope) {
             account = current
             calendar = null
@@ -148,7 +149,7 @@ class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        findViewById<View>(R.id.aq_board_loading).isVisible = loading
+        findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible = loading
         if (account == null) {
             val panel = views.card(content)
             views.text(panel, getString(R.string.aq_board_connect))

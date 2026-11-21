@@ -17,7 +17,6 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
@@ -26,10 +25,10 @@ import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminder
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
+import com.ichi2.anki.ankiquest.AnkiquestCompanions
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
@@ -38,6 +37,7 @@ import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.SubscriptionRepository
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -61,6 +61,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
 
@@ -74,7 +75,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     fun prepare() {
         signIn()
         repository = mockk()
-        mockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestHomeData)
+        mockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestCompanions)
         mockkObject(AnkiquestDeckSharing)
         coEvery { AnkiquestDeckSharing.restore(any(), any()) } returns JSONObject()
         every { AnkiquestSubscriptions.repository } returns repository
@@ -83,12 +84,12 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { AnkiquestCommunity.reminders(any()) } returns reminders
         coEvery { AnkiquestSharing.settings(any()) } returns sharing
         coEvery { Ankiquest.notificationSwitches() } returns JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, true)
-        coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
+        coEvery { AnkiquestCompanions.choice(any()) } returns "aki"
     }
 
     @After
     fun clearMocks() {
-        unmockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestHomeData)
+        unmockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestCompanions)
         unmockkObject(AnkiquestDeckSharing)
     }
 
@@ -444,7 +445,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         val fragment = open()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
@@ -468,7 +469,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         val fragment = open()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
@@ -528,7 +529,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
                    "recipients":[{"user":"ana","display":"Ana"},{"user":"cerro","display":"Cerro"}]}""",
             )
         val fragment = saveBulk(settings)
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         coVerify(exactly = 1) {
             Ankiquest.saveDeckNotificationSettings(listOf("1", "2"), listOf("3"), listOf("ana", "cerro"), account)
         }
@@ -563,7 +564,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         val fragment = open()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
@@ -640,7 +641,10 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val controller = Robolectric.buildActivity(PreferencesActivity::class.java, intent).setup()
         saveControllerForCleanup(controller)
         idle()
-        val fragment = (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(R.id.settings_container)
+        val fragment =
+            (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(
+                AnkiDroidR.id.settings_container,
+            )
         return fragment as AnkiquestSettingsFragment
     }
 

@@ -14,10 +14,10 @@ import androidx.core.content.edit
 import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Style
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -44,7 +44,7 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
             putString(AnkiquestPreferences.PREF_USER, "hill")
             putString(AnkiquestPreferences.PREF_TOKEN, "token-hill")
         }
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         assertTrue(AnkiquestCompanion.remember(account, "none"))
         assertFalse(AnkiquestCompanion.visible())
     }

@@ -21,6 +21,7 @@ class PreferenceTitleLengthTest {
                 // test working directory is the module directory: `AnkiDroid/`
                 File("src/main/res/values"),
                 File("../common/android/src/main/res/values"),
+                File("../ankiquest-ui/src/main/res/values"),
             )
     }
 

@@ -9,8 +9,8 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.every
 import io.mockk.mockkObject
@@ -41,7 +41,7 @@ private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIF
 class AnkiquestNotificationShareTest : RobolectricTest() {
     private val requests = CopyOnWriteArrayList<Pair<Request, AnkiquestApi.Timeout>>()
     private val art = AtomicReference<Int?>()
-    private val linked = AtomicReference<AnkiquestShare.Link?>()
+    private val linked = AtomicReference<AnkiquestWins.Link?>()
 
     @Before
     fun prepare() {
@@ -94,7 +94,7 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
                 .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")
                 .putExtra(AnkiquestShare.EXTRA_BODY, "I reached level 54.")
                 .putExtra(AnkiquestShare.EXTRA_WIN, 17L)
-                .putExtra(AnkiquestShare.EXTRA_SCOPE, assertNotNull(AnkiquestHomeData.account()).scope),
+                .putExtra(AnkiquestShare.EXTRA_SCOPE, assertNotNull(HomeAccount.current()).scope),
         )
         val (request, timeout) = requests.single { it.first.url.encodedPath == "/api/share/hill" }
         assertEquals("link", JSONObject(Buffer().also { request.body!!.writeTo(it) }.readUtf8()).getString("to"))
@@ -106,7 +106,7 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
     fun `a won challenge is drawn with the challenge art`() {
         server { throw IOException("offline") }
         val manager = targetContext.getSystemService<NotificationManager>()!!
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         val won =
             JSONObject()
                 .put("id", 1)

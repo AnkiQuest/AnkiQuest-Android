@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -42,11 +42,11 @@ class AnkiquestCopyDialogScreenshotTest : ScreenshotTest() {
         val account = HomeAccount("https://quest.example.test", "sam", "visual-test-token")
         val deck = "Languages::Spanish vocabulary"
         val id = col.decks.id(deck)
-        mockkObject(AnkiquestHomeData, AnkiquestDeckCopies, HomeAccount.Companion)
+        mockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestDeckCopies, HomeAccount.Companion)
         every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(id, deck, 3, 0, 0)), id)
         coEvery { AnkiquestHomeData.profile(any()) } throws IOException("offline")
-        coEvery { AnkiquestHomeData.companion(any()) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(any()) } throws IOException("offline")
         coEvery { AnkiquestDeckCopies.inbox(any()) } returns
             JSONObject().put(
                 "friends",
@@ -58,7 +58,7 @@ class AnkiquestCopyDialogScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies, HomeAccount.Companion)
+        unmockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestDeckCopies, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

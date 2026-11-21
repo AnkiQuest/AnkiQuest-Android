@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -25,6 +25,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "screenshot-token")
@@ -150,7 +151,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
         screen: AnkiquestFriendsActivity,
         target: View,
     ) {
-        val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
+        val scroll = screen.findViewById<NestedScrollView>(AnkiDroidR.id.aq_feed_scroll)
         val bounds = Rect(0, 0, target.width, target.height)
         scroll.offsetDescendantRectToMyCoords(target, bounds)
         scroll.scrollTo(0, maxOf(0, bounds.bottom - scroll.height))
@@ -166,7 +167,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
     private fun awaitBoard(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
+                !screen.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible
         }
         advanceRobolectricLooper()
     }

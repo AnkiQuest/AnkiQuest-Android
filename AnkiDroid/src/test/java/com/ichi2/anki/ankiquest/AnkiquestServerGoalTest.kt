@@ -112,7 +112,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         SharedPreferencesTestHook.override = null
     }
 
-    private fun account() = AnkiquestHomeData.account()!!
+    private fun account() = HomeAccount.current()!!
 
     private fun puts(path: String) = requests.filter { it.first == "PUT" && it.second == path }
 
@@ -216,7 +216,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         AnkiquestDailyGoal.remember(profile, prefs)
         assertEquals(Choice(Mode.MINUTES, 40), AnkiquestDailyGoal.choice(prefs))
         prefs.edit { putString(AnkiquestPreferences.PREF_USER, "cerro") }
-        assertNull(AnkiquestDailyGoal.cached(prefs, AnkiquestHomeData.account(prefs)?.scope), "another account never inherits it")
+        assertNull(AnkiquestDailyGoal.cached(prefs, HomeAccount.current(prefs)?.scope), "another account never inherits it")
     }
 
     @Test

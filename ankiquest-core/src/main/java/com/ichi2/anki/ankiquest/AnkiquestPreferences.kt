@@ -16,6 +16,12 @@ object AnkiquestPreferences {
     /** This device's token. */
     const val PREF_TOKEN = "ankiquestToken"
 
+    /** Whether the recap shows after studying. */
+    const val PREF_SESSION_SUMMARY = "ankiquestSessionSummary"
+
+    /** Whether finishing a deck asks to tell friends. */
+    const val PREF_ASK_DECK_SHARE = "ankiquestAskToShareDecks"
+
     /** The namespace as a regular expression, the form ACRA's exclusion list takes. */
     const val NAMESPACE = "(?i)ankiquest.*"
 

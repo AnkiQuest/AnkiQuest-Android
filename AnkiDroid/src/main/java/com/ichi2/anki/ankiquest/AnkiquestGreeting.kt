@@ -14,7 +14,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withResumed
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.utils.android.isRobolectric
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import kotlinx.coroutines.launch
@@ -98,7 +98,7 @@ internal class AnkiquestGreetingDialog : DialogFragment() {
         AnkiquestPostStudyPrompts.track(requireDialog())
     }
 
-    private fun account(): Account = if (AnkiquestHomeData.account()?.token?.isNotEmpty() == true) Account.SIGNED_IN else Account.SIGNED_OUT
+    private fun account(): Account = if (HomeAccount.current()?.token?.isNotEmpty() == true) Account.SIGNED_IN else Account.SIGNED_OUT
 
     private fun showArt(
         image: ImageView,

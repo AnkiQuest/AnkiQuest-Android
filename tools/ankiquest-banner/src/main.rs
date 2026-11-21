@@ -47,7 +47,7 @@ use image::{ImageEncoder, RgbImage, RgbaImage};
 
 /// Default paths, relative to the repository root.
 const SHOTS: &str = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots";
-const DUO: &str = "AnkiDroid/src/main/res/drawable-nodpi/duo_friends.webp";
+const DUO: &str = "ankiquest-ui/src/main/res/drawable-nodpi/duo_friends.webp";
 const OUT: &str = "docs/graphics/logos/banner_readme.png";
 
 const USAGE: &str = "usage: ankiquest-banner [--shots <dir>] [--font-dir <dir>] [--out <file>]

@@ -15,8 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.dialogs.DeckSelectionDialog
 import io.mockk.coEvery
@@ -40,6 +40,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 import com.ichi2.anki.ankicommon.R as AnkiCommonR
 
 @RunWith(AndroidJUnit4::class)
@@ -57,7 +58,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @Before
     fun prepareHome() {
-        mockkObject(AnkiquestHomeData, AnkiquestAvatars, HomeAccount.Companion)
+        mockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestAvatars, HomeAccount.Companion)
         every { HomeAccount.current(any()) } returns identity
 
         // No photo refresh: it reads HomeAccount on an IO thread, which can outlive the test and
@@ -66,12 +67,12 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns profile
         // Otherwise the activity really asks anki.example.test, and the render that follows waits on that socket.
-        coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(identity) } throws IOException("offline")
     }
 
     @After
     fun clearHomeMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestAvatars, AnkiquestDeckCopies, HomeAccount.Companion)
+        unmockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestAvatars, AnkiquestDeckCopies, HomeAccount.Companion)
     }
 
     @Test
@@ -194,7 +195,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
             if (switched) HomeLocal(listOf(HomeDeck(19, "Geography", 1, 0, 0)), 19) else waiting.await()
         }
         coEvery { AnkiquestHomeData.profile(other) } returns profile
-        coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(other) } throws IOException("offline")
         val controller = launchController()
         val home = controller.get()
         switched = true
@@ -217,7 +218,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
             coEvery { AnkiquestDeckCopies.inbox(identity) } throws IOException("offline")
             coEvery { AnkiquestDeckCopies.inbox(other) } coAnswers { waiting.await() }
             coEvery { AnkiquestHomeData.profile(other) } returns profile
-            coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+            coEvery { AnkiquestCompanions.choice(other) } throws IOException("offline")
             val controller = launchController()
             val home = controller.get()
             val failure = home.getString(R.string.aq_copies_unavailable)
@@ -246,30 +247,30 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     @Test
     fun `three tabs and the avatar keep the native destinations`() {
         val home = launch()
-        val nav = home.findViewById<BottomNavigationView>(R.id.ankiquest_tab_bar)
+        val nav = home.findViewById<BottomNavigationView>(AnkiDroidR.id.ankiquest_tab_bar)
         assertEquals(3, nav.menu.size)
 
-        nav.selectedItemId = R.id.ankiquest_nav_friends
+        nav.selectedItemId = AnkiDroidR.id.ankiquest_nav_friends
         val friends = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(AnkiquestFriendsActivity::class.java.name, friends.component?.className)
-        assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+        assertEquals(AnkiDroidR.id.ankiquest_nav_today, nav.selectedItemId)
 
         home.findViewById<View>(R.id.aq_home_account).performClick()
         val progress = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(AnkiquestProfileActivity::class.java.name, progress.component?.className, "Me is the native profile")
-        assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+        assertEquals(AnkiDroidR.id.ankiquest_nav_today, nav.selectedItemId)
 
         home.findViewById<View>(R.id.aq_home_activity).performClick()
         val feed = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(AnkiquestFriendsActivity::class.java.name, feed.component?.className)
         assertNull(feed.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
 
-        nav.selectedItemId = R.id.ankiquest_nav_decks
+        nav.selectedItemId = AnkiDroidR.id.ankiquest_nav_decks
         val decks = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(DeckPicker::class.java.name, decks.component?.className)
         assertFalse(decks.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK))
         assertTrue(decks.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
-        assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+        assertEquals(AnkiDroidR.id.ankiquest_nav_today, nav.selectedItemId)
     }
 
     @Test
@@ -544,7 +545,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         val replacement = identity.copy(token = "replacement-token")
         every { HomeAccount.current(any()) } returns replacement
         coEvery { AnkiquestHomeData.profile(replacement) } returns profile
-        coEvery { AnkiquestHomeData.companion(replacement) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(replacement) } throws IOException("offline")
         controller.recreate()
         advanceRobolectricLooper()
         assertNull(controller.get().supportFragmentManager.findFragmentByTag(AnkiquestCopyDialog.TAG))
@@ -682,7 +683,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         val other = HomeAccount("https://anki.example.test", "other", "other-token")
         every { HomeAccount.current(any()) } returns other
         coEvery { AnkiquestHomeData.profile(other) } returns profile
-        coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(other) } throws IOException("offline")
     }
 
     private fun copyDialog(home: AnkiquestHomeActivity): AlertDialog {
