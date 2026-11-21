@@ -4,9 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
-const waitForBaseline = require('../ankiquest_screenshot_baseline.js');
+const waitForBaseline = require('../wait_for_screenshot_baseline.js');
 
-const compare = fs.readFileSync(path.join(__dirname, '../workflows/ankiquest_screenshot_compare.yml'), 'utf8').replaceAll('\r\n', '\n');
+const compare = fs.readFileSync(path.join(__dirname, '../workflows/screenshot_compare.yml'), 'utf8').replaceAll('\r\n', '\n');
 
 function step(name) {
   const start = compare.indexOf(`      - name: ${name}\n`);
@@ -69,7 +69,7 @@ test('the workflow passes its matching run to the artifact download', async () =
     file => require(path.join(__dirname, '../..', file)));
   assert.equal(result, 42);
   assert.deepEqual(fixture.queries[0], {
-    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', workflow_id: 'ankiquest_screenshot_store.yml',
+    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', workflow_id: 'screenshot_store.yml',
     head_sha: 'base-sha', per_page: 100,
   });
 });
@@ -138,7 +138,7 @@ test('a store with no screenshot artifact stays pending', async () => {
 
 test('timeout names the exact commit and a way to regenerate its baseline', async () => {
   const fixture = harness([[]]);
-  await assert.rejects(waitForBaseline(fixture), /base-sha after 30 minutes.*ankiquest_screenshot_store.yml.*branch at that commit/);
+  await assert.rejects(waitForBaseline(fixture), /base-sha after 30 minutes.*screenshot_store.yml.*branch at that commit/);
   assert.equal(fixture.queries.length, 60);
   assert.equal(fixture.waits.reduce((sum, delay) => sum + delay, 0), 30 * 60 * 1000);
 });
