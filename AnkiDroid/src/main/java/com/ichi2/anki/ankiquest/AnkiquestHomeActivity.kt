@@ -5,17 +5,13 @@ package com.ichi2.anki.ankiquest
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
@@ -49,14 +45,14 @@ import java.io.IOException
 
 /**
  * The daily study surface is native and local, like every other AnkiQuest screen: activity
- * ([AnkiquestFeedActivity]), friends, progress, study history ([AnkiquestHistoryActivity]) and
- * records ([AnkiquestRecordsActivity]).
+ * and friends ([AnkiquestFriendsActivity]), progress, study history and records ([AnkiquestProfileActivity]).
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private enum class GoalSetup { READY, SAVING, FAILED }
 
     private var goalSetup = GoalSetup.READY
     private lateinit var content: LinearLayout
+    private val views = AnkiquestBoardViews(this, AnkiquestBoardViews.Spacing.ROOMY)
     private lateinit var scroll: NestedScrollView
     private var account: HomeAccount? = null
     private var local: HomeLocal? = null
@@ -121,7 +117,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         scroll = findViewById(R.id.aq_home_scroll)
         findViewById<MaterialButton>(R.id.aq_home_activity).apply {
             setTextColor(getColor(R.color.aq_home_text))
-            setOnClickListener { startActivity(AnkiquestFeedActivity.intent(this@AnkiquestHomeActivity)) }
+            setOnClickListener { startActivity(AnkiquestFriendsSections.feedIntent(this@AnkiquestHomeActivity)) }
         }
         findViewById<View>(R.id.aq_home_account).apply {
             setOnClickListener { startActivity(AnkiquestProfileActivity.intent(this@AnkiquestHomeActivity)) }
@@ -316,7 +312,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         avatar.removeAllViews()
         val user = account?.user.orEmpty()
         val display = profile?.optString("display").orEmpty().ifBlank { user.ifBlank { getString(R.string.ankiquest_me) } }
-        AnkiquestBoardViews(this).avatar(avatar, user, display, 32)
+        views.avatar(avatar, user, display, 32)
     }
 
     /** Optional photos must neither delay Today nor apply after its account changes. */
@@ -339,39 +335,43 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         title(R.string.ankiquest_nav_today, R.string.aq_home_today_subtitle)
         content.addView(AnkiquestAki.encouragement(this, AnkiquestAki.mood(local, profile)))
         profile?.let {
-            text(content, getString(R.string.aq_home_streak_level, it.optInt("streak"), it.optInt("level")), small = true)
-            AnkiquestBoards.closingLine(this, AnkiquestBoards.parseClosingWeek(it), TimeManager.time.intTimeMS())?.let { line ->
-                text(card(tinted = true), line)
+            views.text(content, getString(R.string.aq_home_streak_level, it.optInt("streak"), it.optInt("level")), small = true)
+            AnkiquestBoards.ownWeekLine(this, AnkiquestBoards.parseOwnWeek(it), TimeManager.time.intTimeMS())?.let { line ->
+                views.text(views.card(content, tinted = true), line)
             }
         }
-        val study = card(tinted = true)
-        text(study, getString(R.string.aq_home_next_step), small = true)
+        val study = views.card(content, tinted = true)
+        views.text(study, getString(R.string.aq_home_next_step), small = true)
         val focus = local?.focus
         when {
             focus != null -> {
-                text(study, focus.name, heading = true)
-                text(study, getString(R.string.aq_home_counts, focus.review, focus.learning, focus.new), small = true)
+                views.text(study, focus.name, heading = true)
+                views.text(study, getString(R.string.aq_home_counts, focus.review, focus.learning, focus.new), small = true)
                 val daily = focus.daily
-                val label = text(study, daily.label(this), small = true)
+                val label = views.text(study, daily.label(this), small = true)
                 label.setTextColor(getColor(daily.color))
                 if (daily.icon != 0) {
                     label.setCompoundDrawablesRelativeWithIntrinsicBounds(daily.icon, 0, 0, 0)
                     TextViewCompat.setCompoundDrawableTintList(label, ColorStateList.valueOf(getColor(daily.color)))
-                    label.compoundDrawablePadding = dp(6)
+                    label.compoundDrawablePadding = views.dp(6)
                 }
-                if (daily.status == DailyDeckStatus.DONE) study.background = shape(R.color.aq_deck_done_background)
+                if (daily.status == DailyDeckStatus.DONE) study.background = views.shape(R.color.aq_deck_done_background)
                 if (daily.status == DailyDeckStatus.REVIEW_NOW) {
-                    button(study, getString(R.string.aq_home_study_due, daily.readyCount.toInt()), primary = true) { openDecks(focus.id) }
+                    views.button(
+                        study,
+                        getString(R.string.aq_home_study_due, daily.readyCount.toInt()),
+                        primary = true,
+                    ) { openDecks(focus.id) }
                 }
                 button(study, R.string.aq_home_change_deck) { chooseDeck() }
             }
             localFailed -> {
-                text(study, getString(R.string.aq_home_local_unavailable))
+                views.text(study, getString(R.string.aq_home_local_unavailable))
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
-            local == null -> text(study, getString(R.string.aq_home_loading_local))
+            local == null -> views.text(study, getString(R.string.aq_home_loading_local))
             else -> {
-                text(study, getString(R.string.aq_home_no_decks))
+                views.text(study, getString(R.string.aq_home_no_decks))
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
@@ -388,29 +388,40 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
-            val panel = card()
+            val panel = views.card(content)
             panel.addView(AnkiquestAki.image(this, if (summary.remaining == 0) R.drawable.aki_celebrate else R.drawable.aki_streak, 56))
-            text(panel, getString(R.string.aq_home_last_session), heading = true)
-            text(panel, getString(R.string.aq_home_session_summary, summary.reviews, summary.duration(this), summary.remaining))
+            views.text(panel, getString(R.string.aq_home_last_session), heading = true)
+            views.text(panel, getString(R.string.aq_home_session_summary, summary.reviews, summary.duration(this), summary.remaining))
         }
         profile?.optJSONArray("quests")?.objects()?.let { quests ->
             if (quests.isNotEmpty()) {
                 if (quests.all { it.optBoolean("done") }) content.addView(AnkiquestAki.image(this, R.drawable.aki_winner, 56))
-                questsHeading = text(content, getString(R.string.aq_home_quests), heading = true)
+                questsHeading = views.text(content, getString(R.string.aq_home_quests), heading = true)
                 quests.forEach { quest ->
-                    val panel = card()
-                    text(panel, quest.optString("title"), heading = true)
+                    val panel = views.card(content)
+                    views.text(panel, quest.optString("title"), heading = true)
                     meter(panel, quest.optLong("progress"), quest.optLong("target"))
-                    if (quest.optBoolean("done")) text(panel, getString(R.string.aq_home_quest_done, quest.optLong("reward")), small = true)
+                    if (quest.optBoolean(
+                            "done",
+                        )
+                    ) {
+                        views.text(panel, getString(R.string.aq_home_quest_done, quest.optLong("reward")), small = true)
+                    }
                 }
             }
         }
         if (account != null) {
-            button(content, R.string.aq_history_title) { startActivity(AnkiquestHistoryActivity.intent(this)) }
-            button(content, R.string.aq_records_title) { startActivity(AnkiquestRecordsActivity.intent(this)) }
+            button(
+                content,
+                R.string.aq_history_title,
+            ) { startActivity(AnkiquestMeSections.intent(this, AnkiquestMeSections.Destination.HISTORY)) }
+            button(
+                content,
+                R.string.aq_records_title,
+            ) { startActivity(AnkiquestMeSections.intent(this, AnkiquestMeSections.Destination.RECORDS)) }
         }
         profileFailure?.let { failure ->
-            text(content, getString(failure), small = true)
+            views.text(content, getString(failure), small = true)
             if (failure == R.string.aq_home_auth) button(content, R.string.aq_home_settings) { settings() }
         }
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
@@ -420,21 +431,21 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         status: AnkiquestDailyGoal.Status,
         suggested: AnkiquestDailyGoal.Choice?,
     ) {
-        val panel = card()
-        text(panel, getString(R.string.aq_goal_today), heading = true)
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.aq_goal_today), heading = true)
         val secondsPerCard = local?.secondsPerCard ?: AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD
         AnkiquestGoalBar.display(this, status, secondsPerCard)?.let { display ->
             panel.addView(
                 AnkiquestGoalProgress(this).apply { show(display, SLOT_TODAY) },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(6)
+                    topMargin = views.dp(6)
                 },
             )
         }
         panel.addView(
             AnkiquestStreakChip(this).apply { show(status) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(10)
+                topMargin = views.dp(10)
             },
         )
         // The goal is set where it shows; there is no goal setting elsewhere.
@@ -470,14 +481,14 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         owner: HomeAccount,
         choice: AnkiquestDailyGoal.Choice,
     ) {
-        val panel = card()
-        text(panel, getString(R.string.ankiquest_goal_setup_title), heading = true)
-        text(panel, AnkiquestDailyGoal.describe(this, choice))
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.ankiquest_goal_setup_title), heading = true)
+        views.text(panel, AnkiquestDailyGoal.describe(this, choice))
         if (goalSetup == GoalSetup.FAILED) {
-            text(panel, getString(R.string.aq_goal_setup_failed), small = true)
+            views.text(panel, getString(R.string.aq_goal_setup_failed), small = true)
         }
         if (goalSetup == GoalSetup.SAVING) {
-            text(panel, getString(R.string.ankiquest_goal_saving), small = true)
+            views.text(panel, getString(R.string.ankiquest_goal_saving), small = true)
             return
         }
         button(panel, CommonString.save, primary = true) { saveSuggestedGoal(owner, choice) }
@@ -520,16 +531,16 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
 
     private fun renderDeckCopies() {
         val current = account ?: return
-        val panel = card()
+        val panel = views.card(content)
         // Both companions: sharing is something friends do together.
         if (AnkiquestCompanion.visible()) panel.addView(AnkiquestAki.image(this, R.drawable.duo_friends, 72))
-        text(panel, getString(R.string.aq_copies_title), heading = true)
-        text(panel, getString(R.string.aq_copies_description), small = true)
-        copyStatus?.let { text(panel, it, small = true) }
+        views.text(panel, getString(R.string.aq_copies_title), heading = true)
+        views.text(panel, getString(R.string.aq_copies_description), small = true)
+        copyStatus?.let { views.text(panel, it, small = true) }
         val inbox = copyInbox
         if (inbox !is CopyInbox.Ready) {
             val label = if (inbox == CopyInbox.Unavailable) R.string.aq_copies_unavailable else R.string.aq_home_loading_local
-            text(panel, getString(label), small = true)
+            views.text(panel, getString(label), small = true)
             return
         }
         val data = inbox.data
@@ -538,16 +549,16 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         button(panel, R.string.aq_copies_share, enabled = !copyBusy && friends.isNotEmpty() && decks.isNotEmpty()) {
             chooseDeckForCopy(current, decks, friends)
         }
-        if (friends.isEmpty()) text(panel, getString(R.string.aq_copies_no_friends), small = true)
+        if (friends.isEmpty()) views.text(panel, getString(R.string.aq_copies_no_friends), small = true)
         val offers = data.optJSONArray("offers")?.objects().orEmpty()
         if (offers.isEmpty()) {
-            text(panel, getString(R.string.aq_copies_none), small = true)
+            views.text(panel, getString(R.string.aq_copies_none), small = true)
         } else {
-            text(panel, getString(R.string.aq_copies_received), heading = true)
+            views.text(panel, getString(R.string.aq_copies_received), heading = true)
             for (offer in offers) {
                 val sender = offer.optString("sender")
                 val display = friends.firstOrNull { it.optString("user") == sender }?.optString("display") ?: sender
-                text(panel, getString(R.string.aq_copies_offer, display, offer.optString("deck")))
+                views.text(panel, getString(R.string.aq_copies_offer, display, offer.optString("deck")))
                 val id = offer.optLong("id")
                 button(panel, R.string.aq_copies_import, enabled = !copyBusy) { importCopy(id) }
                 button(panel, R.string.aq_copies_dismiss, enabled = !copyBusy) { dismissCopy(id) }
@@ -715,8 +726,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
 
     private fun connectionCard() {
-        val panel = card()
-        text(panel, getString(R.string.aq_home_connected))
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.aq_home_connected))
         button(panel, R.string.aq_home_connect) { settings() }
     }
 
@@ -724,48 +735,9 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         @StringRes title: Int,
         @StringRes subtitle: Int,
     ) {
-        text(content, getString(title), heading = true, large = true)
-        text(content, getString(subtitle), small = true)
+        views.text(content, getString(title), heading = true).textSize = TITLE_SIZE
+        views.text(content, getString(subtitle), small = true)
     }
-
-    private fun card(tinted: Boolean = false): LinearLayout =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = shape(if (tinted) R.color.aq_home_tint else R.color.aq_home_surface)
-            content.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(12)
-                    bottomMargin = dp(4)
-                },
-            )
-        }
-
-    private fun text(
-        parent: LinearLayout,
-        value: String,
-        heading: Boolean = false,
-        small: Boolean = false,
-        large: Boolean = false,
-    ): TextView =
-        TextView(this).apply {
-            text = value
-            textSize =
-                when {
-                    large -> 26f
-                    heading -> 18f
-                    small -> 14f
-                    else -> 16f
-                }
-            setTextColor(getColor(if (small) R.color.aq_home_muted else R.color.aq_home_text))
-            if (heading) {
-                typeface = Typeface.DEFAULT_BOLD
-                ViewCompat.setAccessibilityHeading(this, true)
-            }
-            setPadding(0, dp(5), 0, dp(5))
-            parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
 
     private fun button(
         parent: LinearLayout,
@@ -773,44 +745,14 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         primary: Boolean = false,
         enabled: Boolean = true,
         click: () -> Unit,
-    ): MaterialButton = button(parent, getString(label), primary, enabled, click)
-
-    private fun button(
-        parent: LinearLayout,
-        label: String,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): MaterialButton =
-        MaterialButton(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 16f
-            minHeight = dp(48)
-            minimumHeight = dp(48)
-            cornerRadius = dp(12)
-            isEnabled = enabled
-            setTextColor(getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
-            backgroundTintList = ColorStateList.valueOf(getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
-            if (!primary) {
-                strokeWidth = dp(1)
-                strokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            }
-            setOnClickListener { click() }
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(6)
-                },
-            )
-        }
+    ): MaterialButton = views.button(parent, getString(label), primary, enabled, click)
 
     private fun meter(
         parent: LinearLayout,
         value: Long,
         max: Long,
     ) {
-        text(parent, getString(R.string.aq_home_progress_fraction, value, max), small = true)
+        views.text(parent, getString(R.string.aq_home_progress_fraction, value, max), small = true)
         parent.addView(
             ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                 this.max = 1000
@@ -818,21 +760,14 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 progressTintList = ColorStateList.valueOf(getColor(R.color.aq_home_primary))
                 contentDescription = getString(R.string.aq_home_progress_fraction, value, max)
             },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(8)).apply { bottomMargin = dp(6) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, views.dp(8)).apply { bottomMargin = views.dp(6) },
         )
     }
 
-    private fun shape(
-        @ColorRes color: Int,
-    ): GradientDrawable =
-        GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
-            setColor(getColor(color))
-        }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
     companion object {
+        /** The text size of the screen title above the cards. */
+        private const val TITLE_SIZE = 26f
+
         const val EXTRA_SKIP_HOME = "ankiquest.skip_home"
         const val EXTRA_STUDY_DECK = "ankiquest.study_deck"
 

@@ -10,6 +10,9 @@ import com.ichi2.anki.R
 import com.ichi2.anki.libanki.Collection
 import org.json.JSONObject
 
+/** One day of 24 hours in milliseconds, for day arithmetic in AnkiQuest. */
+internal const val DAY_MS = 86_400_000L
+
 /**
  * Today's streak verdict, worked out one way for every screen.
  *
@@ -28,7 +31,6 @@ internal object AnkiquestDay {
     private const val PREF_SERVER_DAY = "ankiquestServerToday"
     private const val PREF_LOCAL_DAY = "ankiquestLocalToday"
     private const val MINUTE_MS = 60_000L
-    private const val DAY_MS = 86_400_000L
 
     /** Revlog rows the upload sends: answers, not manual rescheduling. */
     const val UPLOADED_REVIEWS = "ease > 0 and type < 4"
