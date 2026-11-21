@@ -57,6 +57,9 @@ object AnkiquestUpdater {
     /** An ABI APK adds its ABI's number times this to the universal version code (build.gradle.kts). */
     private const val ABI_CODE_STEP = 100_000_000L
 
+    /** The ABI digit of each ABI build's version code, as AnkiDroid/build.gradle.kts sets it. */
+    private val ABI_DIGITS = mapOf("armeabi-v7a" to 1L, "x86" to 2L, "arm64-v8a" to 3L, "x86_64" to 4L)
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client =
         AnkiquestHttp.client
@@ -125,22 +128,28 @@ object AnkiquestUpdater {
     private fun baseCode(code: Long): Long = code % ABI_CODE_STEP
 
     /**
-     * The APK to download from [names]: the one built for the device's primary ABI, else the
-     * universal one. An ABI install never gets the universal APK: its version code lacks the
-     * ABI digit, so Android would refuse it as a downgrade.
+     * The APK to download from [names]: the one built for the first of [abis] (the device's
+     * ABIs, most preferred first) that has one, else the universal one. An ABI install never
+     * gets an APK with a lower ABI digit, the universal one included: Android would refuse it
+     * as a downgrade.
      */
     internal fun pickApk(
         names: Collection<String>,
         abis: List<String> = Build.SUPPORTED_ABIS.toList(),
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
     ): String? {
-        val own = abis.firstOrNull()?.let { "AnkiQuest-$it.apk" }
-        if (own != null && own in names) {
-            return own
+        // An installed ABI build carries its ABI digit; a universal install has digit 0.
+        val installedDigit = installedCode / ABI_CODE_STEP
+        val abi =
+            abis.firstOrNull {
+                "AnkiQuest-$it.apk" in names && (ABI_DIGITS[it] ?: 0) >= installedDigit
+            }
+        if (abi != null) {
+            return "AnkiQuest-$abi.apk"
         }
 
-        // An installed ABI build (version code at or above one ABI step) can only take ABI APKs.
-        if (installedCode >= ABI_CODE_STEP) {
+        // Only a universal install can take the universal APK.
+        if (installedDigit > 0) {
             return null
         }
         return UNIVERSAL_APK.takeIf { it in names }
