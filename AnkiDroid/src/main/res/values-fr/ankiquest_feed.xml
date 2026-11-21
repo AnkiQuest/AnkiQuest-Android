@@ -33,6 +33,9 @@
     <string name="aq_feed_reply_to">Répondre à %1$s</string>
     <string name="aq_feed_send">Envoyer</string>
     <string name="aq_feed_reply_done">Ta réponse a été envoyée.</string>
+    <string name="aq_feed_invite_declined">Invitation refusée.</string>
+    <string name="aq_feed_invite_joined">Tu as rejoint le groupe.</string>
+    <string name="aq_feed_invite_failed">Impossible de répondre à l’invitation.</string>
     <string name="aq_feed_reply_failed">Ta réponse n’a pas été envoyée.</string>
     <string name="aq_feed_reply_sent">Réponse envoyée</string>
     <string name="aq_feed_read_failed">L’état de lecture n’a pas été enregistré.</string>

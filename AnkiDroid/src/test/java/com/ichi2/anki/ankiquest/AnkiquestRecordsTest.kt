@@ -82,7 +82,7 @@ class AnkiquestRecordsTest : RobolectricTest() {
         assertEquals("xp", day.unit)
         assertEquals(listOf("hill", "cerro"), day.holders.map { it.user })
         val best = day.holders.first()
-        assertEquals("Hill", best.display)
+        assertEquals("hill", best.display)
         assertEquals(101L, best.value)
         assertEquals(5L, best.detail)
         assertTrue(best.until >= best.at)

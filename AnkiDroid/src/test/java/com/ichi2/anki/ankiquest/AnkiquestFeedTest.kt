@@ -222,6 +222,44 @@ class AnkiquestFeedTest : RobolectricTest() {
         }
 
     @Test
+    fun `a message goes to a friend through the owner's endpoint, cleaned as the server accepts it`() =
+        runBlocking {
+            answer = { seen ->
+                if (seen.path == "/api/messages/member%20name") Answer(200, example("message")) else Answer(404, "")
+            }
+            assertEquals(AnkiquestMessages.Outcome.SENT, AnkiquestMessages.send(account, "cerro", "  Want to do\nthe verbs together?  "))
+            val seen = requests.single()
+            assertEquals("POST", seen.method)
+            assertEquals("Bearer member-test-token", seen.authorization)
+            assertEquals(JSONObject().put("to", "cerro").put("message", "Want to do the verbs together?").toString(), seen.body)
+
+            // The daily limit is an outcome; any other refusal is an error.
+            answer = { Answer(429, """{"error":"later"}""") }
+            assertEquals(AnkiquestMessages.Outcome.DAILY_LIMIT, AnkiquestMessages.send(account, "cerro", "Hi"))
+            answer = { Answer(403, """{"error":"Only friends."}""") }
+            assertEquals(403, assertFailsWith<AnkiquestHttpException> { AnkiquestMessages.send(account, "ana", "Hi") }.code)
+        }
+
+    @Test
+    fun `a group invitation names its group until it is answered, and a message can be answered`() {
+        // The rows of the server's activity_messages.json example.
+        val page = AnkiquestFeed.parsePage(JSONObject(MESSAGES))
+        val (message, invitation) = page.items
+        assertEquals(listOf(1L), page.attention.map { it.id })
+        assertEquals(1, page.actionCount)
+
+        assertEquals("message", message.kind)
+        assertNull(message.group)
+        assertNull(message.invitation)
+        assertTrue(message.answerable, "a friend's message can be answered")
+
+        assertEquals(AnkiquestFeed.GROUP_INVITE, invitation.kind)
+        assertEquals(1L, invitation.group)
+        assertEquals(1L, invitation.invitation)
+        assertNull(invitation.copy(actionRequired = false).invitation, "an answered invitation offers nothing to answer")
+    }
+
+    @Test
     fun `sent messages say who they went to and when they were seen`() {
         val sent =
             AnkiquestFeed.parseSent(
@@ -250,6 +288,14 @@ class AnkiquestFeedTest : RobolectricTest() {
     }
 
     companion object {
+        private fun example(name: String): String =
+            checkNotNull(AnkiquestFeedTest::class.java.classLoader?.getResource("ankiquest-api/$name.json")) {
+                "missing API example $name"
+            }.readText(Charsets.UTF_8)
+
+        /** `GET /api/activity/{user}?category=messages` as the server's activity_messages.json example answers it. */
+        val MESSAGES = example("activity_messages")
+
         /** The documented page shape (docs/mobile-api.md), with rows as the server's examples record them. */
         val PAGE =
             """

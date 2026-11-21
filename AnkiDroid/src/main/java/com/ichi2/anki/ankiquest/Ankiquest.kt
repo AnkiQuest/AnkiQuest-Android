@@ -950,7 +950,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             val rows = JSONArray()
             db
                 .query(
-                    "select id, cid, lastIvl, ivl, time, type from revlog " +
+                    "select id, cid, lastIvl, ivl, time, type, ease from revlog " +
                         "where id > ? and ease > 0 and type < 4 order by id limit ${limit.coerceAtLeast(0)}",
                     afterId,
                 ).use { cursor ->
@@ -963,6 +963,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                                 cursor.getLong(3),
                                 cursor.getLong(4),
                                 cursor.getInt(5),
+                                cursor.getInt(6),
                             ),
                         )
                     }

@@ -3,6 +3,7 @@
         "account",
         "activity",
         "activity_locked",
+        "activity_messages",
         "activity_older",
         "capabilities",
         "challenge_action",
@@ -20,8 +21,11 @@
         "global_leaderboard_on",
         "goal",
         "group_create",
+        "group_invite",
+        "group_invite_accept",
         "invite",
         "leaderboard",
+        "message",
         "mute",
         "notifications",
         "notifications_companion",
@@ -47,6 +51,7 @@
         "sign_up",
         "social",
         "social_change",
+        "social_invitation",
         "streak_freezes",
         "study",
         "unlocks",
@@ -65,5 +70,18 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": []
+    "not_yet": [
+        "crash_report",
+        "crash_report_stored",
+        "password_set_token_only",
+        "share_deck_moment",
+        "share_notification",
+        "share_place",
+        "sign_in_methods_token_only",
+        "sign_in_second_factor",
+        "two_factor",
+        "two_factor_begin",
+        "two_factor_disable",
+        "two_factor_enable"
+    ]
 }

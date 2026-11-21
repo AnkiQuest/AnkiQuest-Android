@@ -47,8 +47,11 @@ class AnkiquestMuteScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareSocialScreens() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestSubscriptions)
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestSubscriptions, AnkiquestCapabilities)
         every { AnkiquestHomeData.account(any()) } returns identity
+        // An older server, asked nothing over the network.
+        every { AnkiquestCapabilities.features(any()) } returns emptySet()
+        coEvery { AnkiquestCapabilities.current(any()) } returns emptySet()
         coEvery { AnkiquestSocial.overview(identity) } answers { overview }
         coEvery { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute(person.user)) } answers {
             overview = overview.copy(muted = listOf(person))
@@ -69,7 +72,7 @@ class AnkiquestMuteScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupSocialScreens() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestSubscriptions)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestSubscriptions, AnkiquestCapabilities)
         RuntimeEnvironment.setFontScale(1f)
     }
 

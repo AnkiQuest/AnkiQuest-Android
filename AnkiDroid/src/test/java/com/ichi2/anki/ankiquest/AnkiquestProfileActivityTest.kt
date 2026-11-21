@@ -2,9 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.Intent
 import android.os.Looper
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.IntentCompat
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -12,6 +14,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.PreferencesActivity
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -49,7 +52,10 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @Before
     fun prepareProfile() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, AnkiquestCapabilities)
+        // An older server: invitations go by link and there is no Message.
+        every { AnkiquestCapabilities.features(any()) } returns emptySet()
+        coEvery { AnkiquestCapabilities.current(any()) } returns emptySet()
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
@@ -64,18 +70,277 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @After
     fun clearProfileMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, AnkiquestCapabilities)
     }
 
-    private fun overview(vararg muted: String) =
-        AnkiquestSocial.Overview(
-            friends = emptyList(),
-            incoming = emptyList(),
-            outgoing = emptyList(),
-            muted = muted.map { AnkiquestSocial.Person(it, it.replaceFirstChar(Char::uppercase)) },
-            groups = emptyList(),
-            public = true,
-        )
+    private fun person(user: String) = AnkiquestSocial.Person(user, user.replaceFirstChar(Char::uppercase))
+
+    private fun overview(
+        vararg muted: String,
+        friends: List<String> = emptyList(),
+        incoming: List<String> = emptyList(),
+        outgoing: List<String> = emptyList(),
+        groups: List<AnkiquestSocial.Group> = emptyList(),
+    ) = AnkiquestSocial.Overview(
+        friends = friends.map(::person),
+        incoming = incoming.map(::person),
+        outgoing = outgoing.map(::person),
+        muted = muted.map(::person),
+        groups = groups,
+        public = true,
+    )
+
+    /** An overview where the player stands with cerro as [relation]. */
+    private fun standing(relation: AnkiquestSocial.Relation): AnkiquestSocial.Overview =
+        when (relation) {
+            AnkiquestSocial.Relation.NONE -> overview()
+            AnkiquestSocial.Relation.REQUESTED -> overview(outgoing = listOf("cerro"))
+            AnkiquestSocial.Relation.ASKED -> overview(incoming = listOf("cerro"))
+            AnkiquestSocial.Relation.FRIENDS -> overview(friends = listOf("cerro"))
+        }
+
+    /** A group the player owns, with its invite code, unless [invite] is null as for a group someone else owns. */
+    private fun group(
+        id: Long,
+        name: String,
+        members: List<String> = emptyList(),
+        invite: String? = "code-$id",
+        invited: List<String> = emptyList(),
+    ) = AnkiquestSocial.Group(
+        id,
+        name,
+        owner = invite != null,
+        invite = invite,
+        members = members.map(::person),
+        invited = invited.map(::person),
+    )
+
+    private fun cerro() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+    }
+
+    @Test
+    fun `another player's profile shows the friendship action for each relation`() {
+        cerro()
+        val add = R.string.aq_profile_add_friend
+        val cancel = R.string.aq_friends_cancel_request
+        val accept = R.string.aq_profile_accept_request
+        val decline = R.string.aq_profile_decline_request
+        val expected =
+            mapOf(
+                AnkiquestSocial.Relation.NONE to setOf(add),
+                AnkiquestSocial.Relation.REQUESTED to setOf(cancel),
+                AnkiquestSocial.Relation.ASKED to setOf(accept, decline),
+                AnkiquestSocial.Relation.FRIENDS to emptySet(),
+            )
+        for ((relation, shown) in expected) {
+            coEvery { AnkiquestSocial.overview(identity) } returns standing(relation)
+            val screen = launch("cerro")
+            advanceRobolectricLooper()
+            for (label in listOf(add, cancel, accept, decline)) {
+                assertEquals(label in shown, screen.hasText(screen.getString(label)), "$relation: ${screen.getString(label)}")
+            }
+            assertEquals(relation == AnkiquestSocial.Relation.REQUESTED, screen.hasText(screen.getString(R.string.aq_profile_request_sent)))
+            assertEquals(
+                relation == AnkiquestSocial.Relation.ASKED,
+                screen.hasText(screen.getString(R.string.aq_profile_request_received, "Cerro")),
+            )
+            assertEquals(
+                relation == AnkiquestSocial.Relation.FRIENDS,
+                screen.hasText(screen.getString(R.string.aq_profile_friends, "Cerro")),
+            )
+        }
+    }
+
+    @Test
+    fun `each friendship action sends its social change`() {
+        cerro()
+        val cases =
+            listOf(
+                Triple(AnkiquestSocial.Relation.NONE, R.string.aq_profile_add_friend, AnkiquestSocial.Change.Befriend("cerro")),
+                Triple(AnkiquestSocial.Relation.REQUESTED, R.string.aq_friends_cancel_request, AnkiquestSocial.Change.Unfriend("cerro")),
+                Triple(AnkiquestSocial.Relation.ASKED, R.string.aq_profile_accept_request, AnkiquestSocial.Change.Befriend("cerro")),
+                Triple(AnkiquestSocial.Relation.ASKED, R.string.aq_profile_decline_request, AnkiquestSocial.Change.Unfriend("cerro")),
+            )
+        for ((relation, label, change) in cases) {
+            coEvery { AnkiquestSocial.overview(identity) } returns standing(relation)
+            coEvery { AnkiquestSocial.change(identity, any()) } returns standing(relation)
+            val screen = launch("cerro")
+            advanceRobolectricLooper()
+            screen.click(screen.getString(label))
+            coVerify(exactly = 1) { AnkiquestSocial.change(identity, change) }
+            clearMocks(AnkiquestSocial, answers = false, recordedCalls = true, childMocks = false, verificationMarks = true)
+        }
+    }
+
+    @Test
+    fun `invite to group shares the link of an owned group they are not in`() {
+        cerro()
+        val owned = group(1, "Spanish club")
+        val joined = group(2, "Night owls", members = listOf("cerro"))
+        val foreign = group(3, "Owls", invite = null)
+        coEvery { AnkiquestSocial.overview(identity) } returns overview(groups = listOf(joined, foreign))
+        val none = launch("cerro")
+        advanceRobolectricLooper()
+        assertFalse(none.hasText(none.getString(R.string.aq_profile_invite)), "no group to invite them to")
+
+        // One group shares its link at once.
+        coEvery { AnkiquestSocial.overview(identity) } returns overview(groups = listOf(owned, joined, foreign))
+        val one = launch("cerro")
+        advanceRobolectricLooper()
+        one.click(one.getString(R.string.aq_profile_invite))
+        assertEquals(AnkiquestSocial.inviteLink(identity, "code-1"), sharedLink(one))
+
+        // Several groups ask which one first.
+        val second = group(4, "Study night")
+        coEvery { AnkiquestSocial.overview(identity) } returns overview(groups = listOf(owned, second))
+        val two = launch("cerro")
+        advanceRobolectricLooper()
+        two.click(two.getString(R.string.aq_profile_invite))
+        assertNull(shadowOf(two).nextStartedActivity, "nothing is shared before a group is picked")
+        val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        val list = dialog.listView
+        list.performItemClick(list.adapter.getView(1, null, list), 1, list.adapter.getItemId(1))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(AnkiquestSocial.inviteLink(identity, "code-4"), sharedLink(two))
+    }
+
+    @Test
+    fun `a server with group invites sends the invitation instead of sharing the link`() {
+        cerro()
+        coEvery { AnkiquestCapabilities.current(identity) } returns setOf(AnkiquestSocial.FEATURE_INVITES)
+        val owned = group(1, "Spanish club")
+        coEvery { AnkiquestSocial.overview(identity) } returns overview(groups = listOf(owned))
+        coEvery { AnkiquestSocial.change(identity, any()) } returns
+            overview(groups = listOf(group(1, "Spanish club", invited = listOf("cerro"))))
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        coEvery { AnkiquestSocial.overview(identity) } returns
+            overview(groups = listOf(group(1, "Spanish club", invited = listOf("cerro"))))
+        screen.click(screen.getString(R.string.aq_profile_invite))
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Invite(1, "cerro")) }
+        assertNull(shadowOf(screen).nextStartedActivity, "no link is shared")
+
+        // Once invited, the profile says so and offers no second invitation to that group.
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_invited, "Cerro", "Spanish club")))
+        assertFalse(screen.hasText(screen.getString(R.string.aq_profile_invite)))
+    }
+
+    @Test
+    fun `a friend can be messaged on a server with messages`() {
+        cerro()
+        mockkObject(AnkiquestMessages)
+        try {
+            coEvery { AnkiquestSocial.overview(identity) } returns standing(AnkiquestSocial.Relation.FRIENDS)
+            val older = launch("cerro")
+            advanceRobolectricLooper()
+            assertFalse(older.hasText(older.getString(R.string.aq_profile_message)), "an older server has no messages")
+
+            coEvery { AnkiquestCapabilities.current(identity) } returns setOf(AnkiquestMessages.FEATURE)
+            coEvery { AnkiquestMessages.send(identity, "cerro", any()) } returns AnkiquestMessages.Outcome.SENT
+            val screen = launch("cerro")
+            advanceRobolectricLooper()
+            screen.click(screen.getString(R.string.aq_profile_message))
+            val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+            val field =
+                dialog.window!!
+                    .decorView.allViews
+                    .filterIsInstance<android.widget.EditText>()
+                    .single()
+            field.setText(" Verbs tonight? ")
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+            advanceRobolectricLooper()
+            advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
+            coVerify(exactly = 1) { AnkiquestMessages.send(identity, "cerro", "Verbs tonight?") }
+
+            // Only friends get Message.
+            for (relation in listOf(AnkiquestSocial.Relation.NONE, AnkiquestSocial.Relation.REQUESTED, AnkiquestSocial.Relation.ASKED)) {
+                coEvery { AnkiquestSocial.overview(identity) } returns standing(relation)
+                val stranger = launch("cerro")
+                advanceRobolectricLooper()
+                assertFalse(stranger.hasText(stranger.getString(R.string.aq_profile_message)), "$relation")
+            }
+        } finally {
+            unmockkObject(AnkiquestMessages)
+        }
+    }
+
+    @Test
+    fun `a dialog opened under one account sends nothing once the account changed`() {
+        cerro()
+        mockkObject(AnkiquestMessages)
+        try {
+            val other = HomeAccount("https://other.example.test", "hill", "other-secret")
+            coEvery { AnkiquestBoards.player(other, "cerro") } returns
+                AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+            val befriended = overview(friends = listOf("cerro"), groups = listOf(group(1, "Spanish club"), group(4, "Study night")))
+            coEvery { AnkiquestSocial.overview(any()) } returns befriended
+            coEvery { AnkiquestSocial.change(any(), any()) } returns befriended
+            coEvery { AnkiquestMessages.send(any(), any(), any()) } returns AnkiquestMessages.Outcome.SENT
+
+            // Message, and the group picker with invitations sent by the server or shared as links.
+            val dialogs =
+                listOf(
+                    setOf(AnkiquestMessages.FEATURE) to R.string.aq_profile_message,
+                    setOf(AnkiquestSocial.FEATURE_INVITES) to R.string.aq_profile_invite,
+                    emptySet<String>() to R.string.aq_profile_invite,
+                )
+            for ((features, label) in dialogs) {
+                for (next in listOf(other, null)) {
+                    val case = "$features, then ${next?.server ?: "signed out"}"
+                    every { AnkiquestHomeData.account(any()) } returns identity
+                    coEvery { AnkiquestCapabilities.current(any()) } returns features
+                    val controller =
+                        startActivityControllerNormallyOpenCollectionWithIntent(
+                            this,
+                            AnkiquestProfileActivity::class.java,
+                            AnkiquestProfileActivity.intent(targetContext, "cerro"),
+                        )
+                    val screen = controller.get()
+                    advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
+                    advanceRobolectricLooper()
+                    screen.click(screen.getString(label))
+                    val dialog = ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+                    dialog.window!!
+                        .decorView.allViews
+                        .filterIsInstance<android.widget.EditText>()
+                        .singleOrNull()
+                        ?.setText("Verbs tonight?")
+
+                    // The account changes while the profile is away.
+                    controller.pause()
+                    every { AnkiquestHomeData.account(any()) } returns next
+                    controller.resume()
+                    advanceRobolectricLooper()
+                    val stillOpen = dialog.isShowing
+
+                    // Confirming the stale dialog sends and shares nothing.
+                    if (label == R.string.aq_profile_message) {
+                        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+                    } else {
+                        val list = dialog.listView
+                        list.performItemClick(list.adapter.getView(0, null, list), 0, list.adapter.getItemId(0))
+                    }
+                    advanceRobolectricLooper()
+                    coVerify(exactly = 0) { AnkiquestMessages.send(any(), any(), any()) }
+                    coVerify(exactly = 0) { AnkiquestSocial.change(any(), any()) }
+                    assertNull(shadowOf(screen).nextStartedActivity, "$case: nothing is shared")
+                    assertFalse(stillOpen, "$case: the dialog closes when the account changes")
+                }
+            }
+        } finally {
+            unmockkObject(AnkiquestMessages)
+        }
+    }
+
+    /** The invite link in the text the screen last handed to the share sheet. */
+    private fun sharedLink(screen: AnkiquestProfileActivity): String? {
+        val chooser = assertNotNull(shadowOf(screen).nextStartedActivity)
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        val send = assertNotNull(IntentCompat.getParcelableExtra(chooser, Intent.EXTRA_INTENT, Intent::class.java))
+        return send.getStringExtra(Intent.EXTRA_TEXT)?.substringAfterLast(' ')
+    }
 
     @Test
     fun `another player can be muted and their deck alerts stopped from their profile`() {
