@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
@@ -441,6 +442,11 @@ object AnkiquestUpdater {
                         progress?.update(app.getString(R.string.ankiquest_update_downloading, done))
                     }
                 }
+
+                // Another package would install next to this app instead of updating it.
+                if (!isOwnApk(app, file)) {
+                    throw IllegalStateException("ankiquest update is not ${app.packageName}")
+                }
                 withContext(Dispatchers.Main) {
                     val host = progress?.attached()
                     val uri = FileProvider.getUriForFile(app, AnkiquestGallery.authority(app), file)
@@ -532,14 +538,24 @@ object AnkiquestUpdater {
         }
     }
 
+    /** Whether [file] is an APK of this app's package, so installing it updates this app. */
+    internal fun isOwnApk(
+        context: Context,
+        file: File,
+        packageOf: (File) -> String? = { archiveInfo(context, it)?.packageName },
+    ): Boolean = packageOf(file) == context.packageName
+
     private fun archiveVersionCode(
         context: Context,
         file: File,
-    ): Long? =
+    ): Long? = archiveInfo(context, file)?.let { PackageInfoCompat.getLongVersionCode(it) }
+
+    private fun archiveInfo(
+        context: Context,
+        file: File,
+    ): PackageInfo? =
         runCatching {
-            context.packageManager
-                .getPackageArchiveInfoCompat(file.path, PackageInfoFlagsCompat.EMPTY)
-                ?.let { PackageInfoCompat.getLongVersionCode(it) }
+            context.packageManager.getPackageArchiveInfoCompat(file.path, PackageInfoFlagsCompat.EMPTY)
         }.getOrNull()
 
     private suspend fun fetch(

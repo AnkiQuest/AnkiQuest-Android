@@ -32,6 +32,7 @@ for (const channel of ["release", "nightly"]) {
         for (const abi of ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]) {
             fs.writeFileSync(path.join(dir, "AnkiQuest-" + abi + ".apk"), "synthetic signed ABI APK");
         }
+        fs.writeFileSync(path.join(dir, "AnkiQuest-ankidroid-compatible.apk"), "synthetic signed AnkiDroid-compatible APK");
         fs.writeFileSync(path.join(dir, "AnkiQuest.aab"), "synthetic app bundle");
         const notes = path.join(dir, "AnkiDroid/src/main/assets/ankiquest");
         fs.mkdirSync(notes, { recursive: true });
