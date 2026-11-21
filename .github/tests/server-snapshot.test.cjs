@@ -127,7 +127,7 @@ test("normal contract, fixture and art runs never substitute server master", () 
 
 test("only data workflows accept a manual server ref", () => {
     // The contract and fixture checks only read server files; the art check builds and runs server
-    // code with a Rust cache shared with main, so a manual ref there could poison the cache.
+    // code with a Rust cache shared with master, so a manual ref there could poison the cache.
     for (const name of ["ankiquest_api_contract.yml", "ankiquest_fixtures.yml"]) {
         const workflow = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
         assert.match(workflow, /server_ref:/);
