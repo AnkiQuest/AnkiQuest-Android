@@ -124,7 +124,7 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
     @Test
     fun `a counted day lights the tier flame`() {
         noCompanion()
-        assertFlame(row("studied", 20, 12), R.drawable.ankiquest_streak_tier_30, "36 days to 100 🔥")
+        assertFlame(row("studied", 20, 12), R.drawable.ankiquest_streak_tier_30, "36 days to 100")
     }
 
     @Test
@@ -139,6 +139,34 @@ class AnkiquestStreakFlameTest : RobolectricTest() {
         noCompanion()
         val now = TimeManager.time.intTimeMS()
         assertFlame(row("studied", 20, 12, now - hour), R.drawable.ankiquest_streak_unlit_30, "Study today to keep it", now)
+    }
+
+    @Test
+    fun `large widgets keep the coloured flame past the last milestone`() {
+        noCompanion()
+        val cases =
+            listOf(
+                Triple("studied", R.drawable.ankiquest_streak_tier_365, null),
+                Triple("pending", R.drawable.ankiquest_streak_unlit_365, "Study today to keep it"),
+                Triple("protected", R.drawable.ankiquest_streak_icy_365, "Study today to keep it"),
+            )
+        for ((state, flame, line) in cases) {
+            val reviews = if (state == "studied") 20 else 0
+            val board = row(state, reviews, reviews).apply { getJSONObject(0).put("streak", 400) }
+            val expected = pixels(assertNotNull(AppCompatResources.getDrawable(targetContext, flame)))
+            for (size in listOf(Size.LARGE, Size.HUGE)) {
+                val view = AnkiquestStreakWidget.views(targetContext, board, "hill", size).apply(targetContext, FrameLayout(targetContext))
+                val message = "$state $size"
+
+                // The number keeps the flame for the day's state; the line is a nudge or absent.
+                val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
+                val shown = assertNotNull(number.compoundDrawablesRelative[2], message)
+                assertTrue(pixels(shown).sameAs(expected), message)
+                val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
+                assertEquals(if (line == null) View.GONE else View.VISIBLE, milestone.visibility, message)
+                line?.let { assertEquals(it, milestone.text.toString(), message) }
+            }
+        }
     }
 
     @Test

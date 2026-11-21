@@ -66,11 +66,63 @@ class AnkiquestStreakTiersTest : RobolectricTest() {
                 val remaining = expected - streak
                 val days = if (remaining == 1) "day" else "days"
                 assertEquals(View.VISIBLE, milestone.visibility)
-                assertEquals("$remaining $days to $expected 🔥", milestone.text.toString())
+                assertEquals("$remaining $days to $expected", milestone.text.toString())
                 assertContains(view.contentDescription.toString(), milestone.text.toString())
             }
             val final = render(board(365), size)
             assertEquals(View.GONE, final.findViewById<TextView>(R.id.ankiquest_streak_milestone).visibility)
+        }
+    }
+
+    @Test
+    fun `large widgets show one flame on a counted day`() {
+        for (size in listOf(Size.LARGE, Size.HUGE)) {
+            // The flame stays beside the number; the milestone line has no second one.
+            val view = render(board(66), size)
+            val number = view.findViewById<TextView>(R.id.ankiquest_streak_number)
+            assertNotNull(number.compoundDrawablesRelative[2], size.name)
+            assertEquals("34 days to 100", view.findViewById<TextView>(R.id.ankiquest_streak_milestone).text.toString())
+
+            // Past the last milestone there is no line and the number keeps its flame.
+            val final = render(board(400), size).findViewById<TextView>(R.id.ankiquest_streak_number)
+            assertNotNull(final.compoundDrawablesRelative[2], size.name)
+        }
+    }
+
+    @Test
+    fun `large widgets drop the status once the flame says today counts`() {
+        for (size in listOf(Size.LARGE, Size.HUGE)) {
+            for (streak in listOf(66, 400)) {
+                val view = render(board(streak), size)
+                val status = view.findViewById<TextView>(R.id.ankiquest_streak_status)
+                assertEquals(View.GONE, status.visibility, "$size at $streak")
+                // Screen readers do not see the flame, so the description keeps the words.
+                assertContains(view.contentDescription.toString(), "Studied today")
+            }
+        }
+
+        // The 2x2 card has no other words for the streak, so it keeps the status.
+        val medium = render(board(66), Size.MEDIUM).findViewById<TextView>(R.id.ankiquest_streak_status)
+        assertEquals(View.VISIBLE, medium.visibility)
+        assertEquals("Studied today", medium.text.toString())
+    }
+
+    @Test
+    fun `large widgets keep the status and the nudge until today counts`() {
+        val pending =
+            board(66).apply {
+                getJSONObject(0).put("streak_state", "pending").put("today_reviews", 0).put("today_minutes", 0)
+            }
+        for (size in listOf(Size.LARGE, Size.HUGE)) {
+            // A counted view reapplied with a pending day shows the status again.
+            val view = render(board(66), size)
+            AnkiquestStreakWidget.views(targetContext, pending, "hill", size).reapply(targetContext, view)
+            val status = view.findViewById<TextView>(R.id.ankiquest_streak_status)
+            assertEquals(View.VISIBLE, status.visibility, size.name)
+            assertEquals("Not studied yet", status.text.toString(), size.name)
+            val milestone = view.findViewById<TextView>(R.id.ankiquest_streak_milestone)
+            assertEquals("Study today to keep it", milestone.text.toString(), size.name)
+            assertNotNull(view.findViewById<TextView>(R.id.ankiquest_streak_number).compoundDrawablesRelative[2], size.name)
         }
     }
 
