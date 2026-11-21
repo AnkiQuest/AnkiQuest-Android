@@ -48,6 +48,13 @@ done
 
 // Two release runs of the same version must not both upload it: the publish job
 // waits for any other run of that version and never cancels a different release.
+// Merging is the release, so pushes to the default branch must trigger it.
+test("pushes to master release", () => {
+    const push = workflow.match(/^  push:\n((?: {4}.*\n)*)/m);
+    assert.ok(push, "push trigger exists");
+    assert.match(push[1], /^    branches: \[master\]$/m);
+});
+
 test("publish runs of one version are serialised, never cancelled", () => {
     const publish = job("publish");
     assert.match(publish, /^ {4}concurrency:\n {6}group: .*needs\.version\.outputs\.version.*\n {6}cancel-in-progress: false$/m);

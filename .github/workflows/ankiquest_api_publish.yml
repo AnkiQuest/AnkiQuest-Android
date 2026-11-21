@@ -4,7 +4,7 @@ name: ankiquest API publish
 # Publishes the api module to Maven Central as org.ankiquest:api, signed, with the vanniktech
 # plugin (see api/build.gradle.kts and docs/ankiquest-api.md).
 #
-# Releases are automatic: a push to main that touches api/ (or a manual run) publishes the
+# Releases are automatic: a push to master that touches api/ (or a manual run) publishes the
 # version in api/build.gradle.kts when it is not released yet (no tag api-v<version>, not on
 # Maven Central), then tags it. Pull requests that change api/ without a new version fail,
 # since a version on Maven Central can never change; they never publish.
@@ -14,7 +14,7 @@ name: ankiquest API publish
 # signs the artefacts), as in AnkiQuest's Anki-Android-Backend fork.
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "api/**"
       - ".github/workflows/ankiquest_api_publish.yml"
@@ -76,7 +76,7 @@ jobs:
     permissions:
       contents: write # for the release tag
     # One release run per version at a time. A second run of the same version (a manual retry
-    # during a main push run) waits here instead of uploading too; runs of other versions are
+    # during a master push run) waits here instead of uploading too; runs of other versions are
     # never cancelled.
     concurrency:
       group: ankiquest-api-publish-${{ needs.version.outputs.version }}
