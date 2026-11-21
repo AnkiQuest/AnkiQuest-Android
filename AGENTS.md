@@ -2,7 +2,7 @@
 
 AnkiQuest adds XP, streaks, friends, leaderboards and moments to Anki. It has three repositories:
 
-- [AnkiQuest/AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server): the server (Rust), its web pages (TypeScript), the API examples, the shared fixtures and the companion art masters.
+- [AnkiQuest/AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server): the server (Rust), its web pages (TypeScript), the API examples, the shared fixtures and the pose masters.
 - [AnkiQuest/AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop): the Anki desktop add-on (Python).
 - [AnkiQuest/AnkiQuest-Android](https://github.com/AnkiQuest/AnkiQuest-Android): the Android app (Kotlin), a fork of AnkiDroid.
 
@@ -18,13 +18,24 @@ These rules apply to every agent (Claude, Codex, others) and to people too. Ever
 
 Never call a person "the owner"; name them. "Code owner" describes how you treat the code, not who decides. "The owners" means hill and Aldana together. Name the person who approved something: "hill approved…", "Aldana approved…". An agent passing on an approval links the person's own words.
 
+When a decision or action is left for hill, ask hill a question with the options, the recommended one first, instead of listing it as an open item. In chat, use the tool for questions with options, if there is one.
+
+## Glossary
+
+- Companion: a character (Aki, Ankilope, Bluma, Anki-tan).
+- Pose: one picture of a companion. Its master is `static/<companion>/<pose>.png` in AnkiQuest-Server; every other copy (Android drawable, add-on art, share card) is an exported copy of that pose, generated and hash-checked. A pose exists only when it is drawn for every live companion.
+- Mood: today's streak state, computed by the shared rule in `tests/fixtures/streak_moods.json`. Each mood names the pose it shows; several moods may show the same pose (`frozen_1` and `thawing` both show `frozen`). That is a mapping, not a fallback.
+- Moment: something that happened worth telling (milestone, level up, place, deck conquered), shown as a card.
+- Share: send a moment, board place or deck to friends in AnkiQuest or to another app. Don't say "shareable".
+- "Drawable" and "art" are only platform file names in code. In docs and discussion, say "the pose's exported copy".
+
 ## Code ownership
 
 You are the code owner and long-term maintainer of this codebase. The design is yours to decide, unless hill or Aldana overrules it.
 
 Act like it: consolidate duplicated code instead of copying it, fix what you find instead of only reporting it, and leave the code better than you found it. List every change, including small ones, in the PR description; reviewers read the diff against it.
 
-Don't hold on to the past. Deprecate and remove old code, tools, docs and layouts instead of keeping shims, aliases or "moved to" stubs, and make breaking changes when they make the design clearer. Pull requests that remove code are especially welcome. Say in the PR what breaks and who has to act. Two limits still apply: released apps keep working, so old endpoints, fields and API examples stay until no supported client uses them; and companion art is never deleted (see below).
+Don't hold on to the past. Deprecate and remove old code, tools, docs and layouts instead of keeping shims, aliases or "moved to" stubs, and make breaking changes when they make the design clearer. Pull requests that remove code are especially welcome. Say in the PR what breaks and who has to act. Two limits still apply: released apps keep working, so old endpoints, fields and API examples stay until no supported client uses them; and pose masters and their exported copies are never deleted (see below).
 
 ## Bugs: test first
 
@@ -58,7 +69,7 @@ Write new code in Rust, or TypeScript for the web, when the platform allows it. 
 - Never push to the default branch; open a pull request.
 - Pull requests by hill or Claude need an approving review from Aldana or Astra (the AldanaBRZ account). Pull requests by Aldana or Astra need an approving review from hill or Claude (the float3 account). One approval from the other side is enough; merge only once it is given and every check is green on the final commit. hill may merge trivially correct changes (documentation, AGENTS.md, README, labels, search and replace) without that review.
 - Commit messages: subject in the imperative, capitalised, at most 50 characters (72 hard limit), no full stop; a blank line; a body wrapped at 72 characters that explains what and why, not how.
-- Name the model that did the work. Every commit, pull request, issue, comment and review an agent writes ends with `Assisted-by: <tool> (<model and version>)`, such as `Assisted-by: Claude Code (Opus 5.5)` or `Assisted-by: Codex (GPT-6)`. Generated images name the model that drew them in the pull request and in their generation record. If the tool does not say which model it used, write that instead of guessing.
+- Name the model that did the work. Every commit, pull request, issue, comment and review an agent writes ends with `Assisted-by: <tool> (<model and version>)`, such as `Assisted-by: Claude Code (Opus 5.5)` or `Assisted-by: Codex (GPT-6)`. In a GitHub post with a generated footer (`---`, then `_Generated by [Claude Code](https://claude.ai/code)_`), the `Assisted-by` line comes directly above the footer, the order the GitHub tools write (hill, 2026-11-20). Don't edit old posts to reorder them. Generated images name the model that drew them in the pull request and in their generation record. If the tool does not say which model it used, write that instead of guessing.
 - Never link to an agent session (such as `claude.ai/code/session_…`) in commits, pull requests, issues or comments.
 - No emoji in commits, pull requests, issues or comments.
 - Never commit secrets, tokens or personal data. Secrets live on the servers, outside the repositories.
@@ -74,13 +85,16 @@ AnkiQuest has two clients: the Android app ([AnkiQuest/AnkiQuest-Android](https:
 
 ## Companion art
 
-Companion art means every picture of a character: poses, moment and card pictures, widget and notification drawables.
+Every picture of a companion is a pose, including those on moments, share cards, widgets and notifications. The section and tool names keep "art"; the rules speak of poses, masters and exported copies.
 
-- Masters live only in `static/<companion>/` in AnkiQuest-Server. Every other copy (share cards, add-on, Android, docs) is generated from them by the exporters and hash-checked in CI; never commit a hand-made copy.
-- Never delete companion art, even when nothing uses it any more. Remove the references, keep the files, so they can be reused or merged later.
-- Each character needs a core set of poses before it goes live in the apps: face, asleep, happy, streak (on fire), sad, hopeful, frozen and neglected. A character without the full core set stays hidden.
-- Every other pose is an extension: streak tiers, milestones, frozen days 2 and 3, hurt, dead, welcome, a defeated leech, and poses for other rare moments. Extensions are optional. A missing extension falls back to its core pose (a streak tier to streak, frozen 3 to frozen, a defeated leech to happy).
-- The core set, the extensions and their fallbacks are defined once, in [`tests/fixtures/companion_poses.json`](https://github.com/AnkiQuest/AnkiQuest-Server/blob/master/tests/fixtures/companion_poses.json) in AnkiQuest-Server; both clients use that list.
+- Masters live only in `static/<companion>/` in AnkiQuest-Server. Every exported copy (share cards, add-on, Android, docs) is generated from its master by the exporters and hash-checked in CI; never commit a hand-made copy.
+- Never delete a master or an exported copy, even when nothing uses it any more. Remove the references, keep the files, so they can be reused or merged later.
+- Every live companion has every pose listed in [`tests/fixtures/companion_poses.json`](https://github.com/AnkiQuest/AnkiQuest-Server/blob/master/tests/fixtures/companion_poses.json) in AnkiQuest-Server; both clients use that list.
+- A new companion goes live only with every pose drawn.
+- A PR that adds a pose to the list adds its master for every live companion. CI fails a PR that adds a pose without them. A mood that needs a new picture adds a pose this way; otherwise it maps to an existing pose.
+- No placeholder pictures: no stand-in, recoloured or borrowed picture for a missing pose.
+- One exception (hill, 2026-11-19): Anki-tan goes live before her missing extensions are drawn (`streak_hot`, `streak_blazing`, `frozen_2`, `frozen_3`, `abandoned`, `leech_defeated`, `winner`); they show their fallbacks until then. Drawing them comes first in AnkiQuest/AnkiQuest-Server#57. No other companion goes live with missing poses.
+- Until the missing poses are drawn (AnkiQuest/AnkiQuest-Server#57), the clients keep the current fallbacks: a missing extension shows the fallback the list gives it (a streak tier shows streak, frozen 3 shows frozen), and Bluma shows Ankilope's poses recoloured where hers are missing. These are the only poses not drawn for every live companion, and they are temporary. Once every live companion has every pose, remove the fallbacks from the list and both clients.
 
 ## Writing
 
@@ -95,7 +109,7 @@ AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 - **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Code ownership covers upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
 - **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies, in this section. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
 - **Shared instructions.** Everything above "This repository" in this file is a copy of AnkiQuest-Server's `AGENTS.md`; the `ankiquest agents copy` workflow fails while they differ. Change it there first.
-- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest-Desktop until the split moves them to AnkiQuest-Server (AnkiQuest/AnkiQuest-Desktop#306). The bump PR brings server changes in; whoever's server change breaks it fixes it. The examples Android reads are listed in `ankiquest-api/names.json`.
+- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest/AnkiQuest-Server; commits from before the split (AnkiQuest/AnkiQuest-Desktop#306) have the same hashes there. The bump PR brings server changes in; whoever's server change breaks it fixes it. The examples Android reads are listed in `ankiquest-api/names.json`.
 - **Unit tests run on the JVM.** Robolectric unit tests run on the JVM, not Android's runtime: regex (ICU), text, locale and other platform behaviour can differ. Code that depends on such behaviour needs a test in the emulator suite (`AnkiDroid/src/androidTest`), and lint errors are not to be suppressed without a comment saying why.
-- **CI on PRs runs Ubuntu only.** macOS and Windows run on `main` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
+- **CI on PRs runs Ubuntu only.** macOS and Windows run on `master` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
 - **Checks to run** before pushing: `./gradlew ktlintCheck` and the unit tests you touched (`./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'`). Leave the full suites to CI.
