@@ -20,7 +20,8 @@ class AnkiquestChibiTest {
     /** Every chibi as live, as flipping the fixture's `status` makes it. */
     private val live = AnkiquestChibi.ALL.map { it.copy(status = Status.LIVE) }
 
-    private val chibi = live.single()
+    /** Anki-tan's chibi: the fixture's `cases` tap her base. */
+    private val chibi = live.single { it.base == ANKI_TAN }
 
     @Test
     fun `the chibis are the fixture's tap companions`() {
@@ -74,7 +75,12 @@ class AnkiquestChibiTest {
                     (0 until all.length()).map { all.opt(it).takeIf { h -> h != JSONObject.NULL } }
                 }
             assertEquals(hints, steps.map { hint(it) }, name)
-            assertEquals(case.getBoolean("unlocks"), steps.last() == Step.Done(chibi), name)
+
+            // An unlock finds the chibi of the base tapped last.
+            val sequence = case.getJSONArray("sequence")
+            val last = sequence.getJSONArray(sequence.length() - 1).getString(0)
+            val found = live.singleOrNull { it.base == last }?.let { Step.Done(it) }
+            assertEquals(case.getBoolean("unlocks"), steps.last() == found, name)
         }
     }
 
@@ -155,5 +161,7 @@ class AnkiquestChibiTest {
     private companion object {
         /** A tap well inside the rule's gap. */
         const val QUICK_MS = 300L
+
+        const val ANKI_TAN = "anki_tan"
     }
 }

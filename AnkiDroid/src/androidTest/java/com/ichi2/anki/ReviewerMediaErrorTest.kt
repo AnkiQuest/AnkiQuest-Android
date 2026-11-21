@@ -40,6 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertEquals
 import com.google.android.material.R as MaterialR
 
+private const val FAVICON_PATH = "/favicon.ico"
+
 class ReviewerMediaErrorTest : InstrumentedTest() {
     @get:Rule(order = 0)
     val avoidDayRollover = AvoidDayRolloverRule()
@@ -74,8 +76,18 @@ class ReviewerMediaErrorTest : InstrumentedTest() {
         withReviewer { scenario ->
             val errors = scenario.recordWebViewErrors(errorBaseUrl)
             // not fetch(), which sends same-origin POST requests through PostRequestBridge
+            // Request the favicon first; WebView can ask for it after the page finishes loading.
             scenario.evaluateJavascript(
-                "const request = new XMLHttpRequest(); request.open('POST', '${apiBaseUrl ?: errorBaseUrl}/jsapi/cardDue'); request.send();",
+                """
+                const favicon = new XMLHttpRequest();
+                favicon.open('GET', '$errorBaseUrl$FAVICON_PATH');
+                favicon.onloadend = () => {
+                    const request = new XMLHttpRequest();
+                    request.open('POST', '${apiBaseUrl ?: errorBaseUrl}/jsapi/cardDue');
+                    request.send();
+                };
+                favicon.send();
+                """.trimIndent(),
             )
             assertEquals("/jsapi/cardDue" to expectedApiErrorCode, errors.poll(10, TimeUnit.SECONDS))
             onView(withId(MaterialR.id.snackbar_text)).check(doesNotExist())
