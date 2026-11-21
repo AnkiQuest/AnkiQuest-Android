@@ -2,7 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Intent
 import android.widget.TextView
 import com.ichi2.anki.R
@@ -45,8 +45,9 @@ class AnkiquestCrashDialogScreenshotTest : ScreenshotTest() {
         startRegularActivity<AnkiDroidCrashReportDialog>(intent)
         advanceRobolectricLooper()
 
-        // The dialog shown last is the one the player sees.
-        val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        // The dialog shown last is the one the player sees. Read as a plain Dialog: lint refuses
+        // android.app.AlertDialog, which AnkiDroid's crash dialog builds.
+        val dialog: Dialog = assertNotNull(ShadowDialog.getLatestDialog())
         assertTrue(dialog.isShowing)
         val disclaimer = assertNotNull(dialog.findViewById<TextView>(R.id.tvFeedbackDisclaimer))
         assertEquals(targetContext.getString(R.string.ankiquest_feedback_disclaimer), disclaimer.text.toString())
