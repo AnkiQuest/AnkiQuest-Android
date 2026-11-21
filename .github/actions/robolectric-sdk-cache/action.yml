@@ -9,7 +9,7 @@ description: >-
 # ~2 GB of SDK jars from Maven Central at the same time. That is what got HTTP 429s.
 # The SDK list rarely changes, so keeping the jars apart from the rest of the cache
 # means they come from Maven Central about once per Robolectric upgrade.
-# PR runs only read this cache; runs on main save it, like the setup-gradle cache.
+# PR runs only read this cache; runs on master save it, like the setup-gradle cache.
 
 runs:
   using: composite
@@ -48,7 +48,7 @@ runs:
         rm -rf "$home"
 
     - name: Save Robolectric SDKs
-      if: steps.restore.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+      if: steps.restore.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master'
       continue-on-error: true
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
