@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - master
       - dependency-updates
   # On PRs, verify structural changes without publishing the PR as a branch baseline.
   pull_request:
