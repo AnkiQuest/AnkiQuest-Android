@@ -9,7 +9,6 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
@@ -21,12 +20,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
@@ -34,7 +31,6 @@ import androidx.core.view.isEmpty
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -87,7 +83,7 @@ internal class AnkiquestFriendsSections(
             activity,
             restored,
             initial,
-            activity.intent.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD).takeIf { savedState == null },
+            activity.intent.getStringExtra(EXTRA_BOARD_PERIOD).takeIf { savedState == null },
         )
     private val root =
         LinearLayout(activity).apply {
@@ -129,10 +125,35 @@ internal class AnkiquestFriendsSections(
         private const val EXTRA_SECTION = "ankiquest.friends_section"
         private const val STATE_ACCOUNT = "ankiquest.friends_sections_account"
 
+        /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's feed says so. */
+        const val EXTRA_FEED_ACCOUNT = "ankiquest.feed_account"
+
+        /** A period's name, as [AnkiquestBoards.Period.query]; the week when missing or unknown. */
+        const val EXTRA_BOARD_PERIOD = "ankiquest.board_period"
+
+        /** The account a notification was for, as [HomeAccount.notificationAccount]; another account's board says so. */
+        const val EXTRA_BOARD_ACCOUNT = "ankiquest.board_account"
+
         fun intent(
             context: Context,
             destination: Destination,
         ): Intent = AnkiquestFriendsActivity.intent(context).putExtra(EXTRA_SECTION, destination.name)
+
+        fun feedIntent(
+            context: Context,
+            account: String? = null,
+        ): Intent =
+            intent(context, Destination.FEED)
+                .apply { account?.let { putExtra(EXTRA_FEED_ACCOUNT, it) } }
+
+        fun boardIntent(
+            context: Context,
+            period: String = AnkiquestBoards.Period.WEEK.query,
+            account: String? = null,
+        ): Intent =
+            intent(context, Destination.LEADERBOARD)
+                .putExtra(EXTRA_BOARD_PERIOD, period)
+                .apply { account?.let { putExtra(EXTRA_BOARD_ACCOUNT, it) } }
     }
 }
 
@@ -147,6 +168,7 @@ private abstract class FriendsSection(
     saved: Bundle?,
     initial: AnkiquestFriendsSections.Destination?,
 ) : ContextWrapper(activity) {
+    protected val views = AnkiquestBoardViews(activity)
     protected val scroll: NestedScrollView = activity.findViewById(R.id.aq_feed_scroll)
     protected val lifecycleScope get() = activity.lifecycleScope
     val root = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -164,7 +186,7 @@ private abstract class FriendsSection(
     private val stateKey = "ankiquest.friends_expanded.${target.name}"
     private var expanded = saved?.getBoolean(stateKey) ?: (initial == target)
     private val heading =
-        AnkiquestBoardViews(activity).button(root, getString(title)) {
+        views.button(root, getString(title)) {
             expanded = !expanded
             showExpansion()
             if (expanded) {
@@ -253,7 +275,7 @@ private class FeedSection(
             ?: AnkiquestFeed.Category.ALL
         unreadOnly = saved?.getBoolean(STATE_UNREAD) ?: false
         if (saved == null) {
-            val addressed = activity.intent.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT)
+            val addressed = activity.intent.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
                 status = getString(R.string.aq_home_account_route_changed)
             }
@@ -404,15 +426,16 @@ private class FeedSection(
         content.removeAllViews()
         progress.isVisible = loading && content.isVisible
         status?.let { line ->
-            text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
+            views.text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         }
         if (account == null) {
-            val panel = card(content)
-            text(panel, getString(R.string.aq_feed_connect))
-            button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_feed_connect))
+            views.button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
             return
         }
-        choices(
+        views.choices(
+            content,
             listOf(Box.INBOX to getString(R.string.aq_feed_inbox), Box.SENT to getString(R.string.aq_feed_sent)),
             selected = box,
             enabled = true,
@@ -425,8 +448,8 @@ private class FeedSection(
             Box.SENT -> renderSent()
         }
         failure?.let { problem ->
-            text(content, getString(problem), small = true)
-            if (problem == R.string.aq_home_auth) button(content, getString(R.string.aq_home_settings)) { settings() }
+            views.text(content, getString(problem), small = true)
+            if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         scroll.post { scroll.scrollTo(0, position) }
     }
@@ -434,7 +457,8 @@ private class FeedSection(
     private fun renderInbox() {
         val current = page
         if (current?.legacy != true) {
-            choices(
+            views.choices(
+                content,
                 AnkiquestFeed.Category.entries.map { it to categoryLabel(it, current) },
                 selected = category,
                 enabled = !loading,
@@ -447,34 +471,34 @@ private class FeedSection(
                     render()
                 }
             }
-            chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
+            views.chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
                 unreadOnly = !unreadOnly
                 page = null
                 load(more = false)
             }
         }
         if (current == null) {
-            if (loading) text(content, getString(R.string.aq_feed_loading), small = true)
+            if (loading) views.text(content, getString(R.string.aq_feed_loading), small = true)
             return
         }
         if (current.unread > 0 && !current.legacy) {
-            button(content, getString(R.string.aq_feed_mark_all_read), enabled = !markingAll) { markAllRead() }
+            views.button(content, getString(R.string.aq_feed_mark_all_read), enabled = !markingAll) { markAllRead() }
         }
-        if (current.legacy) text(content, getString(R.string.aq_feed_legacy), small = true)
+        if (current.legacy) views.text(content, getString(R.string.aq_feed_legacy), small = true)
         val attention = current.attention.takeIf { category == AnkiquestFeed.Category.ALL }.orEmpty()
         if (attention.isNotEmpty() && current.actionCount > 0) {
-            val panel = card(content, tinted = true)
-            text(panel, getString(R.string.aq_feed_needs_action_count, current.actionCount), heading = true)
-            text(panel, getString(R.string.aq_feed_needs_action_hint), small = true)
+            val panel = views.card(content, tinted = true)
+            views.text(panel, getString(R.string.aq_feed_needs_action_count, current.actionCount), heading = true)
+            views.text(panel, getString(R.string.aq_feed_needs_action_hint), small = true)
             for (item in attention) {
-                text(panel, item.title, heading = true)
-                if (item.body.isNotEmpty()) text(panel, item.body)
+                views.text(panel, item.title, heading = true)
+                if (item.body.isNotEmpty()) views.text(panel, item.body)
                 item.challengeId?.let { goal ->
-                    button(panel, getString(R.string.aq_feed_view_invitation), primary = true) { openGoal(item, goal) }
+                    views.button(panel, getString(R.string.aq_feed_view_invitation), primary = true) { openGoal(item, goal) }
                 }
             }
             if (current.actionCount > attention.size) {
-                button(panel, getString(R.string.aq_feed_all_invitations)) {
+                views.button(panel, getString(R.string.aq_feed_all_invitations)) {
                     category = AnkiquestFeed.Category.NEEDS_ACTION
                     page = null
                     load(more = false)
@@ -484,12 +508,12 @@ private class FeedSection(
         val shown = current.items.filter { item -> attention.none { it.id == item.id } }
 
         // Friends' study waits for the player's first upload; "all caught up" would be wrong then.
-        current.lock?.let { text(content, getString(it.text), heading = true).setPadding(0, dp(16), 0, 0) }
+        current.lock?.let { views.text(content, getString(it.text), heading = true).setPadding(0, views.dp(16), 0, 0) }
         if (shown.isEmpty()) {
             if (!loading && current.lock == null) {
                 content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
-                text(content, getString(emptyMessage(attention.isNotEmpty())), heading = true)
-                text(content, getString(R.string.aq_feed_empty_hint), small = true)
+                views.text(content, getString(emptyMessage(attention.isNotEmpty())), heading = true)
+                views.text(content, getString(R.string.aq_feed_empty_hint), small = true)
             }
         } else {
             var day: Long? = null
@@ -497,13 +521,13 @@ private class FeedSection(
                 val itemDay = dayOf(item.createdAt)
                 if (itemDay != day) {
                     day = itemDay
-                    text(content, dayLabel(item.createdAt), heading = true).setPadding(0, dp(16), 0, 0)
+                    views.text(content, dayLabel(item.createdAt), heading = true).setPadding(0, views.dp(16), 0, 0)
                 }
                 renderItem(item, current.legacy)
             }
         }
         if (current.nextBefore != null) {
-            button(
+            views.button(
                 content,
                 getString(if (loading) R.string.aq_feed_loading else R.string.aq_feed_more),
                 enabled = !loading,
@@ -525,12 +549,12 @@ private class FeedSection(
         legacy: Boolean,
     ) {
         val unread = !legacy && item.unread
-        val panel = card(content, tinted = unread)
-        text(panel, item.heading, heading = true)
+        val panel = views.card(content, tinted = unread)
+        views.text(panel, item.heading, heading = true)
         val time = DateUtils.formatDateTime(this, item.createdAt * 1000, DateUtils.FORMAT_SHOW_TIME)
-        text(panel, if (unread) getString(R.string.aq_feed_time_unread, time) else time, small = true)
+        views.text(panel, if (unread) getString(R.string.aq_feed_time_unread, time) else time, small = true)
         item.replyTo?.let { (title, body) -> quote(panel, title, body) }
-        item.text?.let { text(panel, it) }
+        item.text?.let { views.text(panel, it) }
         account?.let { AnkiquestFeed.image(it, item) }?.let { url -> pictures[url] }?.let { picture ->
             panel.addView(
                 ImageView(this).apply {
@@ -538,34 +562,34 @@ private class FeedSection(
                     adjustViewBounds = true
                     contentDescription = getString(R.string.aq_feed_card, item.title)
                 },
-                LinearLayout.LayoutParams(dp(160), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+                LinearLayout.LayoutParams(views.dp(160), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = views.dp(6) },
             )
         }
-        val actions = actions(panel)
+        val actions = views.actions(panel)
         val waiting = item.id in busy
         if (item.cheerable) {
             if (item.reacted) {
-                chip(actions, getString(R.string.aq_feed_cheered), checked = true, enabled = false) {}
+                views.chip(actions, getString(R.string.aq_feed_cheered), checked = true, enabled = false) {}
             } else {
-                chip(actions, getString(R.string.ankiquest_cheer), enabled = !waiting) { cheer(item) }
+                views.chip(actions, getString(R.string.ankiquest_cheer), enabled = !waiting) { cheer(item) }
             }
         }
         item.challengeId?.let { goal ->
             val label = if (item.actionRequired) R.string.aq_feed_view_invitation else R.string.aq_feed_open_goal
-            chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
+            views.chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
         }
         if (item.answerable) {
-            AnkiquestFeedActivity.quickReply(item.kind)?.let { words ->
-                chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
+            quickReply(item.kind)?.let { words ->
+                views.chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
             }
-            chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
+            views.chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
         }
-        if (unread) chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
+        if (unread) views.chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
         if (actions.isEmpty()) panel.removeView(actions)
-        if (item.replied) text(panel, getString(R.string.aq_feed_reply_sent), small = true)
+        if (item.replied) views.text(panel, getString(R.string.aq_feed_reply_sent), small = true)
         if (item.kind == "completion" && account?.let { deckAlerts.canStop(it, item.sender) } == true) {
             // A full-width button can wrap the sender name at large text sizes.
-            button(panel, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
+            views.button(panel, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
                 account?.let { deckAlerts.stop(it, item.sender) { render() } }
                 render()
             }
@@ -575,27 +599,27 @@ private class FeedSection(
     private fun renderSent() {
         val current = sent
         if (current == null) {
-            if (loading) text(content, getString(R.string.aq_feed_loading), small = true)
+            if (loading) views.text(content, getString(R.string.aq_feed_loading), small = true)
             return
         }
         if (current.items.isEmpty() && !loading) {
-            text(content, getString(R.string.aq_feed_sent_empty), heading = true)
-            text(content, getString(R.string.aq_feed_sent_empty_hint), small = true)
+            views.text(content, getString(R.string.aq_feed_sent_empty), heading = true)
+            views.text(content, getString(R.string.aq_feed_sent_empty_hint), small = true)
         }
         for ((recipient, item) in current.items) {
-            val panel = card(content)
-            text(panel, getString(R.string.aq_feed_sent_to, recipient), heading = true)
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_feed_sent_to, recipient), heading = true)
             val time = DateUtils.formatDateTime(this, item.createdAt * 1000, DATE_AND_TIME)
             val seen =
                 item.readAt?.let {
                     getString(R.string.aq_feed_seen, DateUtils.formatDateTime(this, it * 1000, DATE_AND_TIME))
                 } ?: getString(R.string.aq_feed_not_seen)
-            text(panel, "$time · $seen", small = true)
+            views.text(panel, "$time · $seen", small = true)
             item.replyTo?.let { (title, body) -> quote(panel, title, body) }
-            if (item.body.isNotEmpty()) text(panel, item.body)
+            if (item.body.isNotEmpty()) views.text(panel, item.body)
         }
         if (current.nextBefore != null) {
-            button(
+            views.button(
                 content,
                 getString(if (loading) R.string.aq_feed_loading else R.string.aq_feed_more_sent),
                 enabled = !loading,
@@ -637,7 +661,7 @@ private class FeedSection(
             }
         val frame =
             FrameLayout(this).apply {
-                setPadding(dp(24), dp(8), dp(24), 0)
+                setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
                 addView(field)
             }
         MaterialAlertDialogBuilder(this)
@@ -804,63 +828,6 @@ private class FeedSection(
         }
     }
 
-    private fun <T> choices(
-        options: List<Pair<T, String>>,
-        selected: T,
-        enabled: Boolean,
-        pick: (T) -> Unit,
-    ) {
-        val group =
-            ChipGroup(this).apply {
-                isSingleLine = true
-                isSingleSelection = true
-            }
-        for ((value, label) in options) chip(group, label, checked = value == selected, enabled = enabled) { pick(value) }
-        content.addView(
-            HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-                addView(group)
-            },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
-        )
-    }
-
-    private fun actions(parent: LinearLayout): ChipGroup =
-        ChipGroup(this).also {
-            parent.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun chip(
-        parent: ViewGroup,
-        label: String,
-        checked: Boolean = false,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): Chip =
-        Chip(this).apply {
-            text = label
-            textSize = 15f
-            // Grows with the text size, so large text is never clipped.
-            chipMinHeight = maxOf(dp(32).toFloat(), paint.fontMetrics.run { descent - ascent } + dp(14))
-            isCheckable = checked
-            isChecked = checked
-            isCheckedIconVisible = false
-            isEnabled = enabled
-            val filled = checked || primary
-            setTextColor(getColor(if (filled) R.color.aq_home_primary_text else R.color.aq_home_text))
-            chipBackgroundColor = ColorStateList.valueOf(getColor(if (filled) R.color.aq_home_primary else R.color.aq_home_surface))
-            chipStrokeWidth = if (filled) 0f else dp(1).toFloat()
-            chipStrokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            // The state is the selection drawn above; clicking always asks [click], which re-renders.
-            setOnClickListener { click() }
-            if (parent is LinearLayout) {
-                parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            } else {
-                parent.addView(this)
-            }
-        }
-
     private fun quote(
         parent: LinearLayout,
         title: String,
@@ -869,104 +836,35 @@ private class FeedSection(
         val box =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(6), dp(12), dp(6))
-                background = shape(R.color.aq_home_background, 10)
+                setPadding(views.dp(12), views.dp(6), views.dp(12), views.dp(6))
+                background = views.shape(R.color.aq_home_background, 10)
             }
         parent.addView(
             box,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin =
+                    views.dp(4)
+            },
         )
-        text(box, getString(R.string.aq_feed_in_reply_to), small = true)
-        if (title.isNotEmpty()) text(box, title).typeface = Typeface.DEFAULT_BOLD
-        if (body.isNotEmpty()) text(box, body, small = true)
+        views.text(box, getString(R.string.aq_feed_in_reply_to), small = true)
+        if (title.isNotEmpty()) views.text(box, title).typeface = Typeface.DEFAULT_BOLD
+        if (body.isNotEmpty()) views.text(box, body, small = true)
     }
-
-    private fun card(
-        parent: LinearLayout,
-        tinted: Boolean = false,
-    ): LinearLayout =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            background = shape(if (tinted) R.color.aq_home_tint else R.color.aq_home_surface)
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(10)
-                },
-            )
-        }
-
-    private fun text(
-        parent: LinearLayout,
-        value: String,
-        heading: Boolean = false,
-        small: Boolean = false,
-    ): TextView =
-        TextView(this).apply {
-            text = value
-            textSize =
-                when {
-                    heading -> 17f
-                    small -> 14f
-                    else -> 16f
-                }
-            setTextColor(getColor(if (small) R.color.aq_home_muted else R.color.aq_home_text))
-            if (heading) {
-                typeface = Typeface.DEFAULT_BOLD
-                ViewCompat.setAccessibilityHeading(this, true)
-            }
-            setPadding(0, dp(3), 0, dp(3))
-            parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun button(
-        parent: LinearLayout,
-        label: String,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): MaterialButton =
-        MaterialButton(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 16f
-            minHeight = dp(48)
-            minimumHeight = dp(48)
-            cornerRadius = dp(12)
-            isEnabled = enabled
-            setTextColor(getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
-            backgroundTintList = ColorStateList.valueOf(getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
-            if (!primary) {
-                strokeWidth = dp(1)
-                strokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            }
-            setOnClickListener { click() }
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin =
-                        dp(8)
-                },
-            )
-        }
-
-    private fun shape(
-        @ColorRes color: Int,
-        radius: Int = 18,
-    ): GradientDrawable =
-        GradientDrawable().apply {
-            cornerRadius = dp(radius).toFloat()
-            setColor(getColor(color))
-        }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         private const val STATE_BOX = "ankiquest.feed_box"
         private const val STATE_CATEGORY = "ankiquest.feed_category"
         private const val STATE_UNREAD = "ankiquest.feed_unread"
         private const val DATE_AND_TIME = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH
+
+        /** The suggested one-tap answer to a row of [kind], as the website and notifications suggest it. */
+        private fun quickReply(kind: String): Int? =
+            when (kind) {
+                "completion", "conquest", "share" -> R.string.ankiquest_reply_cheer
+                "reply", "reaction" -> R.string.ankiquest_reply_thanks
+                "nudge" -> R.string.ankiquest_reply_on_it
+                else -> null
+            }
     }
 }
 
@@ -1029,7 +927,6 @@ private class LeaderboardSection(
         ) : Selection
     }
 
-    private val views = AnkiquestBoardViews(activity)
     private var account: HomeAccount? = AnkiquestHomeData.account()
     private var period = AnkiquestBoards.Period.WEEK
     private var selection: Selection = Selection.Friends
@@ -1067,7 +964,7 @@ private class LeaderboardSection(
                 else -> Selection.Friends
             }
         if (saved == null) {
-            val addressed = activity.intent.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT)
+            val addressed = activity.intent.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
                 status = getString(R.string.aq_board_account_changed)
             }
@@ -1434,7 +1331,7 @@ private class LeaderboardSection(
         if (scope == Scope.GLOBAL) {
             hiddenControls(current)
         }
-        views.section(content, getString(R.string.aq_board_xp_in, getString(AnkiquestLeaderboardActivity.periodPhrase(period))))
+        views.section(content, getString(R.string.aq_board_xp_in, getString(periodPhrase(period))))
         weekEnds?.takeIf { period == AnkiquestBoards.Period.WEEK }?.let { ends ->
             val now = TimeManager.time.intTimeMS()
             if (ends > now) {
@@ -1689,9 +1586,16 @@ private class LeaderboardSection(
         if (row.hasToday) {
             views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
         }
-        val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
+        // Around the weekly switch, XP that counts for the week before or after the board's.
+        val now = TimeManager.time.intTimeMS()
+        val week = period == AnkiquestBoards.Period.WEEK
+        val closing = row.closingXp(now)?.takeIf { week }
+        val next = row.nextXp(now, weekEnds)?.takeIf { week }
         closing?.let { xp ->
             views.text(score, getString(R.string.aq_board_closing_xp, views.number(xp)), small = true).gravity = alignment
+        }
+        next?.let { xp ->
+            views.text(score, getString(R.string.aq_board_next_xp, views.number(xp)), small = true).gravity = alignment
         }
         val current = account
         if (hiding && current != null) {
@@ -1718,6 +1622,7 @@ private class LeaderboardSection(
                     }
                 },
                 closing?.let { getString(R.string.aq_board_closing_xp, views.number(it)) },
+                next?.let { getString(R.string.aq_board_next_xp, views.number(it)) },
                 getString(R.string.aq_board_private_row).takeIf { mine && row.shown == false },
             ).joinToString(". ")
         val ripple = TypedValue().also { theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }
@@ -1751,5 +1656,17 @@ private class LeaderboardSection(
         private const val STATE_SCOPE = "ankiquest.board_scope"
         private const val STATE_GROUP = "ankiquest.board_group"
         private const val STACKED_TEXT_SCALE = 1.5f
+
+        /** The phrase for [period] after "XP", such as "this week". */
+        @StringRes
+        private fun periodPhrase(period: AnkiquestBoards.Period): Int =
+            when (period) {
+                AnkiquestBoards.Period.HOUR -> R.string.ankiquest_period_hour
+                AnkiquestBoards.Period.DAY -> R.string.ankiquest_period_day
+                AnkiquestBoards.Period.WEEK -> R.string.ankiquest_period_week
+                AnkiquestBoards.Period.MONTH -> R.string.ankiquest_period_month
+                AnkiquestBoards.Period.YEAR -> R.string.ankiquest_period_year
+                AnkiquestBoards.Period.ALL -> R.string.ankiquest_period_all
+            }
     }
 }
