@@ -4,6 +4,7 @@ package org.ankiquest
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -31,7 +32,17 @@ import java.util.concurrent.TimeUnit
  * Runs every 15 minutes and on demand.
  */
 object AnkiquestPoll {
-    private const val PERIODIC_NAME = "ankiquestPoll"
+    @VisibleForTesting
+    internal const val PERIODIC_NAME = "ankiquestPoll"
+
+    /**
+     * [AnkiquestPollWorker]'s name before the code moved to org.ankiquest. WorkManager stored it
+     * and tagged the periodic poll with it; that work can no longer start, and KEEP would keep it
+     * instead of scheduling the poll again. Only org.ankiquest.anki installs from before the move
+     * have it; remove it once none are left.
+     */
+    @VisibleForTesting
+    internal const val LEGACY_POLL_WORKER = "com.ichi2.anki.ankiquest.AnkiquestPollWorker" // ankiquest-packages: keep
     private const val NOW_NAME = "ankiquestPollNow"
     private const val DAY_END_NAME = "ankiquestPollDayEnd"
     private const val LAST_SUCCESS = "ankiquestLastSuccessfulPoll"
@@ -58,9 +69,11 @@ object AnkiquestPoll {
                 PeriodicWorkRequestBuilder<AnkiquestPollWorker>(15, TimeUnit.MINUTES)
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                     .build()
-            WorkManager
-                .getInstance(context)
-                .enqueueUniquePeriodicWork(PERIODIC_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+            val manager = WorkManager.getInstance(context)
+
+            // Drop the poll stored under the old class name, so KEEP schedules this one.
+            manager.cancelAllWorkByTag(LEGACY_POLL_WORKER)
+            manager.enqueueUniquePeriodicWork(PERIODIC_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
         } catch (e: Exception) {
             Timber.w(e, "ankiquest could not schedule polling")
         }
