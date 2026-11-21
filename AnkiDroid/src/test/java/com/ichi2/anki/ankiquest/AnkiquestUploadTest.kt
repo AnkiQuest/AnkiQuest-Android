@@ -434,7 +434,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `a server that stores the button gets the whole history once`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             val mark = uploadedIds().single()
             val old = mark - 30 * DAY_MS
             insertReview(old)
@@ -461,7 +461,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `a server without the button keeps the resend owed`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             val old = uploadedIds().single() - 30 * DAY_MS
             insertReview(old)
 
@@ -474,12 +474,12 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `an upload after each answer does not ask the server for the resend`() =
         runBlocking {
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             requests.clear()
             addBasicNote("second")
             col.sched.answerCard(col.sched.card!!, Rating.GOOD)
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertTrue(requests.none { it.path == "/api/capabilities" })
             assertEquals(AnkiquestEaseResend.State.PENDING, easeResend())
@@ -490,7 +490,7 @@ class AnkiquestUploadTest : RobolectricTest() {
         runBlocking {
             cacheFeatures(AnkiquestEaseResend.FEATURE)
 
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals(1, reviewUploads().size, "the first upload is the only pass")
             assertEquals(AnkiquestEaseResend.State.NOT_NEEDED, easeResend())
