@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //! Moves AnkiQuest's Kotlin and Java code from `com.ichi2.anki.ankiquest` to
 //! `org.ankiquest`, so the app names nothing of ours after AnkiDroid's
-//! `com.ichi2.anki` (AnkiQuest/AnkiQuest-Android#issue in the pull request).
+//! `com.ichi2.anki` (#461).
 //!
 //! The rename is textual and re-runnable:
 //!

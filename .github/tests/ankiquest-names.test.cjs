@@ -2,7 +2,7 @@
 // hill decided that AnkiQuest-Android produces nothing named com.ichi2.anki: no application id,
 // provider authority, declared permission or Maven group, and no package of AnkiQuest's own code.
 // Upstream AnkiDroid's packages and the api/ library (AnkiDroid's code, which other apps compile
-// against) keep their names. tools/ankiquest-packages does the package move.
+// against) keep their names (#461). tools/ankiquest-packages does the package move.
 const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
@@ -78,7 +78,7 @@ test("AnkiQuest code is in org.ankiquest", () => {
     }
 });
 
-test("nothing names com.ichi2.anki.ankiquest except lines kept for installed apps", () => {
+test("nothing names the old AnkiQuest package except lines kept for installed apps", () => {
     const text = byName(/\.(kt|kts|java|xml|pro|cjs|js|yml|yaml|md)$|META-INF\/services\//);
     for (const file of text) {
         read(file)
