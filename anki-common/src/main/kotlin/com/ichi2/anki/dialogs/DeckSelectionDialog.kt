@@ -18,6 +18,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.setFragmentResultListener
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.RecyclerView
@@ -43,9 +44,11 @@ import com.ichi2.anki.libanki.sched.DeckNode
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.ui.internationalization.sentenceCase
+import com.ichi2.anki.utils.ext.awaitStarted
 import com.ichi2.anki.utils.ext.getParcelableCompat
 import com.ichi2.anki.utils.ext.requireLongArray
 import com.ichi2.anki.utils.ext.setFragmentResultListener
+import com.ichi2.anki.utils.ext.showOnce
 import com.ichi2.anki.withProgress
 import com.ichi2.ui.AccessibleSearchView
 import com.ichi2.utils.TypedFilter
@@ -53,7 +56,9 @@ import com.ichi2.utils.create
 import com.ichi2.utils.customView
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import com.ichi2.anki.common.android.R as CommonR
 
@@ -415,6 +420,9 @@ class DeckSelectionDialog : AnalyticsDialogFragment() {
         }
     }
 
+    /** Keeps at most one deck selector open in [manager]. */
+    fun show(manager: FragmentManager) = showOnce(manager, TAG)
+
     // TODO: allow filtering to SelectableDeck.Deck, excluding 'AllDecks'
 
     companion object {
@@ -550,9 +558,11 @@ fun Fragment.startDeckSelection(
                 allowFiltered = allowFiltered,
                 skipEmptyDefault = skipEmptyDefault,
             )
-        val targetManager = if (asChild) childFragmentManager else parentFragmentManager
-        if (!targetManager.isStateSaved) {
-            dialog.show(targetManager, DeckSelectionDialog.TAG)
+        // Queue lifecycle resumptions so showNow runs after FragmentManager's lifecycle dispatch.
+        withContext(Dispatchers.Main) {
+            awaitStarted()
+            val targetManager = if (asChild) childFragmentManager else parentFragmentManager
+            dialog.show(targetManager)
         }
     }
 
@@ -602,8 +612,9 @@ fun FragmentActivity.startDeckSelection(
                 allowFiltered = allowFiltered,
                 skipEmptyDefault = skipEmptyDefault,
             )
-        if (!supportFragmentManager.isStateSaved) {
-            dialog.show(supportFragmentManager, DeckSelectionDialog.TAG)
+        withContext(Dispatchers.Main) {
+            awaitStarted()
+            dialog.show(supportFragmentManager)
         }
     }
 }

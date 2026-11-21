@@ -215,7 +215,7 @@ test("the scheduled job only pushes the bump branch and keeps trusted helpers fr
     assert.match(workflow, /node "\$RUNNER_TEMP\/ankiquest_server_snapshot\.cjs" copy server/);
     assert.match(workflow, /require\(path.join\(process.env.RUNNER_TEMP/);
     assert.ok(
-        workflow.indexOf("Keep reviewed main-branch automation") <
+        workflow.indexOf("Keep reviewed master-branch automation") <
             workflow.indexOf("git checkout -b bot/server-bump"),
     );
 });
