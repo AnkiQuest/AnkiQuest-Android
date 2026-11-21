@@ -75,7 +75,7 @@ by bump PR".
 
 ## Owner settings
 
-Require PRs and required checks on Android `main` and server `master`, including
+Require PRs and required checks on Android `master` and server `master`, including
 for administrators. Make the server's `android-contract` check required.
 These are repository administration settings; this change cannot enforce
 them from code. Neither this workflow nor agents should push default

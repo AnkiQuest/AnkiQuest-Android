@@ -94,8 +94,9 @@ function jobScript(file, job) {
 }
 
 // Runs the pull request status script for one event and returns the label
-// changes it makes.
-async function status(action, draft, names = []) {
+// changes it makes. The script reads the pull request and its reviews from
+// the API, so the fakes below answer those calls.
+async function status(action, draft, names = [], reviews = []) {
     const calls = [];
     const issues = {
         addLabels: async (args) => {
@@ -105,13 +106,30 @@ async function status(action, draft, names = []) {
             calls.push({ action: "remove", labels: [args.name] });
         },
     };
-    const context = {
-        repo: { owner: "AnkiQuest", repo: "test" },
-        payload: { action, pull_request: { number: 1, draft, author_association: "MEMBER", labels: names.map((name) => ({ name })) } },
+    const pr = {
+        number: 1,
+        state: action === "closed" ? "closed" : "open",
+        draft,
+        user: { login: "author" },
+        labels: names.map((name) => ({ name })),
+        head: { repo: { full_name: "AnkiQuest/test" } },
     };
-    const core = { info: () => {} };
+    const pulls = {
+        get: async () => ({ data: pr }),
+        listReviews: async () => ({ data: reviews }),
+    };
+    const github = {
+        rest: { issues, pulls },
+        paginate: async (method, args) => (await method(args)).data,
+    };
+    const context = {
+        eventName: "pull_request_target",
+        repo: { owner: "AnkiQuest", repo: "test" },
+        payload: { action, pull_request: pr },
+    };
+    const core = { info: () => {}, notice: () => {} };
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    await new AsyncFunction("github", "context", "core", jobScript("ankiquest_pr_labels.yml", "status"))({ rest: { issues } }, context, core);
+    await new AsyncFunction("github", "context", "core", jobScript("ankiquest_pr_labels.yml", "status"))(github, context, core);
     return calls;
 }
 
@@ -180,4 +198,18 @@ test("Needs Review follows the draft state", async () => {
         review("remove"),
         { action: "remove", labels: ["Has Conflicts"] },
     ]);
+});
+
+test("Needs Review goes once a member approves", async () => {
+    const review = (login, state, association = "MEMBER") => ({ id: 1, user: { login }, state, author_association: association });
+    const remove = [{ action: "remove", labels: ["Needs Review"] }];
+    assert.deepEqual(await status("synchronize", false, ["Needs Review"], [review("member", "APPROVED")]), remove);
+    // The author's own review and approvals from outside the org don't count.
+    assert.deepEqual(await status("synchronize", false, [], [review("author", "APPROVED")]), [{ action: "add", labels: ["Needs Review"] }]);
+    assert.deepEqual(await status("synchronize", false, [], [review("guest", "APPROVED", "NONE")]), [{ action: "add", labels: ["Needs Review"] }]);
+    // A later change request outweighs an earlier approval.
+    assert.deepEqual(
+        await status("synchronize", false, [], [review("member", "APPROVED"), review("other", "CHANGES_REQUESTED")]),
+        [{ action: "add", labels: ["Needs Review"] }],
+    );
 });
