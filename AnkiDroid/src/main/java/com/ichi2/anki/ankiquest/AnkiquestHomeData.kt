@@ -6,12 +6,16 @@ import android.content.SharedPreferences
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.libanki.Collection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import java.net.URLEncoder
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /** A captured identity: queued work must never borrow credentials from changed preferences. */
 internal data class HomeAccount(
@@ -134,6 +138,8 @@ internal data class HomeLocal(
     val goal: AnkiquestDailyGoal.Status? = null,
     /** The average answer time, for the time left toward [goal]. */
     val secondsPerCard: Double = AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD,
+    /** The nearest countdown that is not over, if any. */
+    val countdown: HomeCountdown? = null,
 ) {
     val focus: HomeDeck? get() =
         decks.firstOrNull { it.id == selected && it.daily.status == DailyDeckStatus.REVIEW_NOW }
@@ -141,6 +147,13 @@ internal data class HomeLocal(
             ?: decks.firstOrNull { it.id == selected }
             ?: decks.firstOrNull()
 }
+
+/** The countdown Home shows: the event, its days and the cards a day for its deck. */
+internal data class HomeCountdown(
+    val event: AnkiquestCountdowns.Countdown,
+    val days: AnkiquestCountdowns.Days,
+    val pace: AnkiquestCountdowns.Pace,
+)
 
 internal object AnkiquestHomeData {
     /** Sent with every companion save: `docs/mobile-api.md`, study companion, in float3/ankiquest. */
@@ -224,6 +237,26 @@ internal object AnkiquestHomeData {
             val goal = runCatching { AnkiquestDailyGoal.status(AnkiquestDailyGoal.load(this), AnkiDroidApp.sharedPrefs()) }.getOrNull()
             val secondsPerCard =
                 runCatching { AnkiquestGoalPlan.secondsPerCard(this, now) }.getOrDefault(AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD)
-            HomeLocal(rows, decks.selected(), next, goal, secondsPerCard)
+            val countdown = runCatching { countdown(this, now) }.getOrNull()
+            HomeLocal(rows, decks.selected(), next, goal, secondsPerCard, countdown)
         }
+
+    /** The nearest countdown at [now], with the cards its deck still has before the event. */
+    private fun countdown(
+        col: Collection,
+        now: Long,
+    ): HomeCountdown? {
+        val events = AnkiquestCountdowns.read(AnkiDroidApp.sharedPrefs()).events
+        val local = LocalDateTime.ofInstant(Instant.ofEpochMilli(now), ZoneId.systemDefault())
+        val today = AnkiquestCountdowns.ankiToday(local, AnkiquestDecks.rollover(col))
+        val event = AnkiquestCountdowns.nearest(events, today) ?: return null
+        val days = AnkiquestCountdowns.days(today, event.date)
+
+        // A deck the collection no longer has gives no pace line.
+        val remaining =
+            event.deck
+                ?.takeIf { days.days >= 1 && col.decks.byName(it) != null }
+                ?.let { col.findCards(AnkiquestCountdowns.search(it, days.days)).size.toLong() }
+        return HomeCountdown(event, days, AnkiquestCountdowns.pace(days.days, remaining))
+    }
 }

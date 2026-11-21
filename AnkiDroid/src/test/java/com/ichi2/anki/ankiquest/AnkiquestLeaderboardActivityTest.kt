@@ -68,7 +68,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         assertTrue(board.hasText("Ana"))
         assertTrue(board.hasText(board.getString(R.string.aq_challenges_you, "Bo")), "the player's own row says so")
         assertTrue(board.hasText(board.getString(R.string.aq_board_xp, "90")))
-        assertTrue(board.hasText(board.getString(R.string.aq_board_today_reviews, "4")))
+        assertTrue(board.hasText(board.getString(R.string.ankiquest_today, "4")))
         assertTrue(board.hasText("4"), "places after the podium are numbered")
         assertTrue(
             board.hasText(
