@@ -68,6 +68,13 @@ object AnkiquestApi {
     /** Names the companions this app draws, so the server leaves out moments about others (docs/mobile-api.md). */
     private const val COMPANION_ART_HEADER = "X-AnkiQuest-Companion-Art"
 
+    /**
+     * The companions the app has art for, as the server names them, for [COMPANION_ART_HEADER]. Core
+     * has no art, so the app sets this when it starts; until then no companion is named.
+     */
+    @Volatile
+    var drawnCompanions: List<String> = emptyList()
+
     private val base =
         AnkiquestHttp.client
             .newBuilder()
@@ -103,7 +110,7 @@ object AnkiquestApi {
             .Builder()
             .url(url)
             .header("Accept-Language", language)
-            .header(COMPANION_ART_HEADER, AnkiquestCompanion.drawn.joinToString(", "))
+            .header(COMPANION_ART_HEADER, drawnCompanions.joinToString(", "))
             .apply { if (token.isNotEmpty()) header("Authorization", "Bearer $token") }
 
     /** A request to [path] on [account]'s server, with its credentials and language. */

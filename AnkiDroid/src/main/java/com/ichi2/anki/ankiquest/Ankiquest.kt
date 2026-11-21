@@ -116,6 +116,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     fun init(app: Application) {
         this.app = app
         AnkiquestHost.install(AnkiquestAppHost)
+        AnkiquestApi.drawnCompanions = AnkiquestCompanion.drawn
         app.registerActivityLifecycleCallbacks(this)
         ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
