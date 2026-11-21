@@ -386,7 +386,7 @@ android {
                         test.systemProperty("screenshot.theme", theme)
                         test.systemProperty("screenshot.device", device)
                         test.systemProperty("screenshot.accessibilityScan", project.hasProperty("accessibilityScan"))
-                        // Screens for the README banner: see tools/ankiquest-banner
+                        // Screens for the README banner: see docs/graphics/banner.toml
                         test.systemProperty("screenshot.banner", project.hasProperty("readmeBanner"))
                     }
                     // Ensures that no EmptyApplication test relies on AnkiDroidApp
