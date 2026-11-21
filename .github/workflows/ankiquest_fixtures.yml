@@ -6,6 +6,9 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  # Required check: the merge queue waits for it on its merge commit.
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
     inputs:
       server_ref:

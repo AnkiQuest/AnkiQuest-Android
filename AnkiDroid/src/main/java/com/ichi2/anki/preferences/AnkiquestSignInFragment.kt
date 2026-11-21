@@ -31,11 +31,13 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Device
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Methods
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Purpose
+import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.SignIn
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Summary
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHosts
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
+import com.ichi2.anki.ankiquest.AnkiquestPasswordPrompt
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
@@ -315,7 +317,8 @@ class AnkiquestSignInFragment : SettingsFragment() {
         // Only a signed-in account stores reviews on the server.
         requirePreference<Preference>(R.string.ankiquest_upload_all_key).isVisible = current() != null
         requirePreference<Preference>(R.string.ankiquest_password_key).apply {
-            isVisible = methods?.account == true
+            // A player from the server configuration has no account until their first password.
+            isVisible = methods?.account == true || methods?.signIn == SignIn.TOKEN_ONLY
             isEnabled = !busy
             if (methods != null) {
                 setTitle(if (methods.password) R.string.ankiquest_password_title else R.string.ankiquest_password_set_title)
@@ -386,14 +389,15 @@ class AnkiquestSignInFragment : SettingsFragment() {
     }
 
     /**
-     * What it takes to set a password: the current one, signing in again with a linked provider, or,
-     * with no linked provider this server offers, the server operator, since a signed-in device alone
-     * may not add a way in.
+     * What it takes to set a password: the current one, this device's token when it is the only way in,
+     * signing in again with a linked provider, or, from servers that do not say `sign_in`, the server
+     * operator.
      */
     private fun passwordSummary(methods: Methods): String {
         val linked = methods.linked
         return when {
             methods.password -> getString(R.string.ankiquest_password_change)
+            methods.signIn == SignIn.TOKEN_ONLY -> getString(R.string.ankiquest_password_prompt_body)
             linked.size == 1 -> getString(R.string.ankiquest_password_set_with, linked.single().name)
             linked.isNotEmpty() -> getString(R.string.ankiquest_password_set)
             else -> getString(R.string.ankiquest_password_operator)
@@ -500,7 +504,8 @@ class AnkiquestSignInFragment : SettingsFragment() {
      * first when that is not fresh, and then asks for the first one.
      */
     private fun startPassword(methods: Methods) {
-        if (methods.password) {
+        // A token-only player's token is all the proof there is, so the server takes it alone.
+        if (methods.password || methods.signIn == SignIn.TOKEN_ONLY) {
             showPassword(methods)
             return
         }
@@ -547,12 +552,9 @@ class AnkiquestSignInFragment : SettingsFragment() {
         val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
         submit.setOnClickListener {
             val typed = password.text.toString()
-            if (typed.length !in PASSWORD_LENGTH) {
-                message.setText(R.string.ankiquest_password_length)
-                return@setOnClickListener
-            }
-            if (!methods.password && repeat.text.toString() != typed) {
-                message.setText(R.string.ankiquest_password_mismatch)
+            val problem = AnkiquestPasswordPrompt.problem(typed, repeat.text.toString().takeIf { !methods.password })
+            if (problem != null) {
+                message.setText(problem)
                 return@setOnClickListener
             }
             val account = signedIn() ?: return@setOnClickListener
@@ -720,6 +722,5 @@ class AnkiquestSignInFragment : SettingsFragment() {
     companion object {
         @VisibleForTesting
         internal const val DYNAMIC_PREFIX = "ankiquestSignIn:"
-        private val PASSWORD_LENGTH = 10..256
     }
 }

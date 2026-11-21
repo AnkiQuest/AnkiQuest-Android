@@ -63,11 +63,143 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         coEvery { AnkiquestHomeData.profile(identity) } returns profile
         // Otherwise the activity really asks anki.example.test, and the render that follows waits on that socket.
         coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
+        mockkObject(AnkiquestAccountSettings)
+        coEvery { AnkiquestAccountSettings.methods(any()) } throws IOException("offline")
     }
 
     @After
     fun clearHomeMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies)
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies, AnkiquestAccountSettings)
+    }
+
+    private fun signIn(signIn: AnkiquestAccountSettings.SignIn?) =
+        AnkiquestAccountSettings.Methods(account = false, password = false, providers = emptyList(), signIn = signIn)
+
+    @Test
+    fun `a token-only player is asked for a password until Not now`() {
+        coEvery { AnkiquestAccountSettings.methods(identity) } returns signIn(AnkiquestAccountSettings.SignIn.TOKEN_ONLY)
+        val home = launch()
+        val body = home.getString(R.string.ankiquest_password_prompt_body)
+        advanceRobolectricLooperUntil { home.hasText(body) }
+
+        home.click(home.getString(R.string.ankiquest_deck_share_not_now))
+        assertFalse(home.hasText(body))
+        assertNotNull(AnkiquestPasswordPrompt.snoozedAt(home.sharedPrefs(), identity))
+
+        // Within the three days, Home does not even ask the server.
+        val again = launch()
+        advanceRobolectricLooper()
+        assertFalse(again.hasText(body))
+        coVerify(exactly = 1) { AnkiquestAccountSettings.methods(identity) }
+    }
+
+    @Test
+    fun `a token-only player sets a password from Home`() {
+        coEvery { AnkiquestAccountSettings.methods(identity) } returns signIn(AnkiquestAccountSettings.SignIn.TOKEN_ONLY)
+        coEvery { AnkiquestAccountSettings.setPassword(identity, null, "a new long password", false) } returns
+            AnkiquestAccountSettings.Methods(true, true, emptyList(), false, AnkiquestAccountSettings.SignIn.PASSWORD)
+        val home = launch()
+        val body = home.getString(R.string.ankiquest_password_prompt_body)
+        advanceRobolectricLooperUntil { home.hasText(body) }
+
+        home.click(home.getString(R.string.ankiquest_password_set_title))
+        val form = ShadowDialog.getLatestDialog() as AlertDialog
+        val fields = form.edits()
+        assertEquals(2, fields.size, "the new password twice, no current one")
+        fields[0].setText("a new long password")
+        fields[1].setText("a different password")
+        form.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        coVerify(exactly = 0) { AnkiquestAccountSettings.setPassword(any(), any(), any(), any()) }
+
+        fields[1].setText("a new long password")
+        form.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestAccountSettings.setPassword(identity, null, "a new long password", false) }
+        assertFalse(form.isShowing)
+        assertFalse(home.hasText(body))
+    }
+
+    @Test
+    fun `a late answer does not bring back a card the player chose Not now on`() {
+        assertDismissedStaysHidden { home -> home.click(home.getString(R.string.ankiquest_deck_share_not_now)) }
+    }
+
+    @Test
+    fun `a late answer does not bring back the card after the password was saved`() {
+        coEvery { AnkiquestAccountSettings.setPassword(identity, null, "a new long password", false) } returns
+            signIn(AnkiquestAccountSettings.SignIn.PASSWORD)
+        assertDismissedStaysHidden { home ->
+            home.click(home.getString(R.string.ankiquest_password_set_title))
+            val form = ShadowDialog.getLatestDialog() as AlertDialog
+            form.edits().forEach { it.setText("a new long password") }
+            form.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            advanceRobolectricLooper()
+            coVerify(exactly = 1) { AnkiquestAccountSettings.setPassword(identity, null, "a new long password", false) }
+        }
+    }
+
+    /** Shows the card, starts a refresh whose answer is late, runs [dismiss], then lets the old answer arrive. */
+    private fun assertDismissedStaysHidden(dismiss: (AnkiquestHomeActivity) -> Unit) {
+        val late = CompletableDeferred<AnkiquestAccountSettings.Methods>()
+        var calls = 0
+        coEvery { AnkiquestAccountSettings.methods(identity) } coAnswers {
+            calls++
+            if (calls == 1) signIn(AnkiquestAccountSettings.SignIn.TOKEN_ONLY) else late.await()
+        }
+        val controller = launchController()
+        val home = controller.get()
+        val body = home.getString(R.string.ankiquest_password_prompt_body)
+        advanceRobolectricLooperUntil { home.hasText(body) }
+
+        // The refresh asks again while the card is shown; the player dismisses it before the answer comes.
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        assertEquals(2, calls)
+        dismiss(home)
+        assertFalse(home.hasText(body))
+
+        late.complete(signIn(AnkiquestAccountSettings.SignIn.TOKEN_ONLY))
+        advanceRobolectricLooper()
+        assertFalse(home.hasText(body), "the answer from before the dismissal must not show the card again")
+    }
+
+    @Test
+    fun `the password length counts characters as the server does`() {
+        // Each emoji is one character but two UTF-16 units.
+        val five = "\uD83D\uDE00".repeat(5)
+        val many = "\uD83D\uDE00".repeat(129)
+        coEvery { AnkiquestAccountSettings.methods(identity) } returns signIn(AnkiquestAccountSettings.SignIn.TOKEN_ONLY)
+        coEvery { AnkiquestAccountSettings.setPassword(identity, null, many, false) } returns
+            signIn(AnkiquestAccountSettings.SignIn.PASSWORD)
+        val home = launch()
+        advanceRobolectricLooperUntil { home.hasText(home.getString(R.string.ankiquest_password_prompt_body)) }
+        home.click(home.getString(R.string.ankiquest_password_set_title))
+        val form = ShadowDialog.getLatestDialog() as AlertDialog
+
+        form.edits().forEach { it.setText(five) }
+        form.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        coVerify(exactly = 0) { AnkiquestAccountSettings.setPassword(any(), any(), any(), any()) }
+
+        form.edits().forEach { it.setText(many) }
+        form.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestAccountSettings.setPassword(identity, null, many, false) }
+    }
+
+    private fun AlertDialog.edits() =
+        findViewById<View>(android.R.id.content)!!
+            .allViews
+            .filterIsInstance<android.widget.EditText>()
+            .toList()
+
+    @Test
+    fun `players with a password, and servers that do not say, see no password card`() {
+        for (answer in listOf(signIn(AnkiquestAccountSettings.SignIn.PASSWORD), signIn(null))) {
+            coEvery { AnkiquestAccountSettings.methods(identity) } returns answer
+            val home = launch()
+            advanceRobolectricLooper()
+            assertFalse(home.hasText(home.getString(R.string.ankiquest_password_prompt_body)), "$answer")
+        }
     }
 
     @Test

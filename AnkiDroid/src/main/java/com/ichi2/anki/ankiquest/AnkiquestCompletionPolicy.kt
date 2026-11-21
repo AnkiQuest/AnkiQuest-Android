@@ -48,7 +48,10 @@ internal object AnkiquestCompletionPolicy {
             restored = window.filter { it <= known && it !in recent },
         )
 
-    /** One revlog row `id, cid, lastIvl, time, type` as the server's review upload object. */
+    /**
+     * One revlog row `id, cid, lastIvl, ivl, time, type, ease` as the server's review upload object.
+     * The server counts a review answered Again (`ease` 1) as a lapse.
+     */
     fun review(
         id: Long,
         cid: Long,
@@ -56,6 +59,7 @@ internal object AnkiquestCompletionPolicy {
         ivl: Long,
         timeMs: Long,
         kind: Int,
+        ease: Int,
     ): JSONObject =
         JSONObject()
             .put("id", id)
@@ -64,4 +68,5 @@ internal object AnkiquestCompletionPolicy {
             .put("ivl", ivl)
             .put("time_ms", timeMs)
             .put("kind", kind)
+            .put("ease", ease)
 }

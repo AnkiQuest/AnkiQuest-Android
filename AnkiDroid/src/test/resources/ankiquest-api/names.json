@@ -26,6 +26,7 @@
         "notifications",
         "notifications_companion",
         "password_change",
+        "password_set_token_only",
         "profile",
         "rank",
         "react",
@@ -44,6 +45,7 @@
         "sign_in",
         "sign_in_browser",
         "sign_in_methods",
+        "sign_in_methods_token_only",
         "sign_up",
         "social",
         "social_change",
@@ -65,5 +67,21 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": []
+    "not_yet": [
+        "activity_messages",
+        "crash_report",
+        "crash_report_stored",
+        "group_invite",
+        "group_invite_accept",
+        "message",
+        "share_deck_moment",
+        "share_notification",
+        "share_place",
+        "sign_in_second_factor",
+        "social_invitation",
+        "two_factor",
+        "two_factor_begin",
+        "two_factor_disable",
+        "two_factor_enable"
+    ]
 }

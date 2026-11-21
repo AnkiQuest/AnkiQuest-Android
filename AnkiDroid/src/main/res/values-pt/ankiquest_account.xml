@@ -53,4 +53,5 @@
     <string name="ankiquest_delete_button">Eliminar para sempre</string>
     <string name="ankiquest_delete_type_username">Escreve %s para confirmar.</string>
     <string name="ankiquest_delete_done">A tua conta foi eliminada e este dispositivo terminou a sessão.</string>
+    <string name="ankiquest_password_prompt_body">Só inicias sessão com um token. Define uma palavra-passe para poderes iniciar sessão num dispositivo novo ou se o token deixar de funcionar.</string>
 </resources>
