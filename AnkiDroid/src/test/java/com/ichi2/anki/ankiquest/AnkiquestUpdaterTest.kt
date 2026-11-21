@@ -317,6 +317,50 @@ class AnkiquestUpdaterTest : RobolectricTest() {
     }
 
     @Test
+    fun `an abi install is never offered the universal apk`() {
+        // Android refuses the universal APK on an ABI install: its version code lacks the ABI digit.
+        val abiInstall = 350_017_000L
+        assertEquals("AnkiQuest-arm64-v8a.apk", AnkiquestUpdater.pickApk(abiAssets, "arm64-v8a", abiInstall))
+        assertNull(AnkiquestUpdater.pickApk(abiAssets, "armeabi-v7a", abiInstall))
+        assertNull(AnkiquestUpdater.pickApk(listOf("AnkiQuest.apk"), "arm64-v8a", abiInstall))
+
+        // A universal install still takes the universal APK, or moves to its ABI one.
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(listOf("AnkiQuest.apk"), "arm64-v8a", 50_017_000L))
+        assertEquals("AnkiQuest-arm64-v8a.apk", AnkiquestUpdater.pickApk(abiAssets, "arm64-v8a", 50_017_000L))
+    }
+
+    @Test
+    fun `a universal-only nightly is not offered to an abi install`() {
+        assertNull(AnkiquestUpdater.parseNightly(nightlyJson, "arm64-v8a", installedCode = 350_017_000L))
+        assertEquals(
+            "https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk",
+            AnkiquestUpdater.parseNightly(nightlyJson, "arm64-v8a", installedCode = 50_017_000L)!!.apkUrl,
+        )
+    }
+
+    @Test
+    fun `a universal-only release is not offered to an abi install`() {
+        val release =
+            JSONObject()
+                .put("tag_name", "quest-18")
+                .put("name", "AnkiQuest 18")
+                .put(
+                    "assets",
+                    JSONArray(
+                        listOf(
+                            JSONObject()
+                                .put("name", "AnkiQuest.apk")
+                                .put("size", 1)
+                                .put("browser_download_url", "https://example.org/AnkiQuest.apk"),
+                        ),
+                    ),
+                )
+        assertNull(AnkiquestUpdater.parseLatest(release, "arm64-v8a", installedCode = 350_017_000L))
+        val universal = AnkiquestUpdater.parseLatest(release, "arm64-v8a", installedCode = 50_017_000L)!!
+        assertEquals("https://example.org/AnkiQuest.apk", universal.apkUrl)
+    }
+
+    @Test
     fun `an abi build compares to a nightly without its abi digit`() {
         val nightly = AnkiquestUpdater.parseNightly(nightlyJson)!!
         assertTrue(AnkiquestUpdater.isNewer(nightly, installedRelease = 17, installedCode = 350_017_000))
