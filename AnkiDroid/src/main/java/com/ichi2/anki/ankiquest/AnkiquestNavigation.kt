@@ -95,18 +95,4 @@ object AnkiquestNavigation {
             putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
             deck?.let { putExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK, it) }
         }
-
-    /** A credential change invalidates private presentation state, including a same-user token change. */
-    fun accountFingerprint(settings: Map<String, *> = AnkiDroidApp.sharedPrefs().all): String {
-        val player =
-            (settings[Ankiquest.PREF_USER] as? String).orEmpty().trim().ifEmpty {
-                (settings["username"] as? String).orEmpty().trim()
-            }
-        return sha256(
-            settings[Ankiquest.PREF_URL].toString(),
-            settings[Ankiquest.PREF_USER].toString(),
-            player,
-            settings[Ankiquest.PREF_TOKEN].toString(),
-        )
-    }
 }

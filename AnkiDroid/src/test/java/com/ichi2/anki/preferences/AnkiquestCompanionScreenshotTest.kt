@@ -6,11 +6,11 @@ import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.testutils.launchForFullHeightScreenshot
 import io.mockk.coEvery
@@ -31,9 +31,9 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "https://ankiquest.example")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://ankiquest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
         mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
         coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")

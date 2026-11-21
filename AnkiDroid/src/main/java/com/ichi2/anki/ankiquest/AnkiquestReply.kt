@@ -43,7 +43,6 @@ object AnkiquestReply {
     const val ACTION_CHEER = "com.ichi2.anki.ankiquest.CHEER"
 
     const val ATTEMPTS = 3
-    const val MAX_MESSAGE = 200
 
     private const val WORK_NAME = "ankiquestReply"
 
@@ -164,41 +163,10 @@ object AnkiquestReply {
 
     /** The chosen or typed text; the 🎉 button, and notifications posted by older versions, carry it as an extra instead. */
     fun message(intent: Intent): String =
-        clean(
+        AnkiquestFeed.clean(
             RemoteInput.getResultsFromIntent(intent)?.getCharSequence(EXTRA_MESSAGE)?.toString()
                 ?: intent.getStringExtra(EXTRA_MESSAGE).orEmpty(),
         )
-
-    /**
-     * [text] as the server accepts a message: control characters such as line breaks become spaces,
-     * and it is cut to [MAX_MESSAGE] UTF-8 bytes without splitting a character.
-     */
-    fun clean(text: String): String {
-        val spaced =
-            buildString {
-                var i = 0
-                while (i < text.length) {
-                    val point = text.codePointAt(i)
-                    if (Character.isISOControl(point)) append(' ') else appendCodePoint(point)
-                    i += Character.charCount(point)
-                }
-            }.trim()
-        var bytes = 0
-        var end = 0
-        while (end < spaced.length) {
-            val point = spaced.codePointAt(end)
-            bytes +=
-                when {
-                    point < 0x80 -> 1
-                    point < 0x800 -> 2
-                    point < 0x10000 -> 3
-                    else -> 4
-                }
-            if (bytes > MAX_MESSAGE) break
-            end += Character.charCount(point)
-        }
-        return spaced.substring(0, end).trimEnd()
-    }
 
     fun data(
         intent: Intent,
@@ -235,10 +203,10 @@ object AnkiquestReply {
         if (message.isEmpty() || notification <= 0 || account.isEmpty() || scope.isEmpty() || !current(data)) return Outcome.FAILED
         return try {
             if (data.getBoolean(EXTRA_REACT, false)) {
-                Ankiquest.react(notification, account, scope)
+                AnkiquestFeed.react(notification, account, scope)
                 AnkiquestNotifier.onCheered(context, data)
             } else {
-                AnkiquestNotifier.onReplySent(context, data, Ankiquest.reply(notification, message, account, scope))
+                AnkiquestNotifier.onReplySent(context, data, AnkiquestFeed.reply(notification, message, account, scope))
             }
             Outcome.SENT
         } catch (e: CancellationException) {

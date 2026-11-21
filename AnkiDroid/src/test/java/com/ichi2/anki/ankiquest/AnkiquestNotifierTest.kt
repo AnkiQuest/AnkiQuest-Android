@@ -217,9 +217,9 @@ class AnkiquestNotifierTest : RobolectricTest() {
 
     private fun replyAccount(): HomeAccount {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://server.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://server.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
         return AnkiquestHomeData.account()!!
     }
@@ -661,7 +661,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
             var order = listOf("hill", "cerro")
             var change: Any = JSONObject.NULL
             val server = rankServer { JSONObject().put("order", JSONArray(order)).put("change", change) }
-            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "cerro-token") }
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestPreferences.PREF_TOKEN, "cerro-token") }
 
             suspend fun climb(): Intent {
                 order = order.reversed()
@@ -708,7 +708,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 }
             try {
                 AnkiquestNotifier.onLeaderboard(targetContext)
-                AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "another-credential") }
+                AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestPreferences.PREF_TOKEN, "another-credential") }
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, bodies[1].getJSONArray("previous").length(), "a switched account has seen no order yet")
             } finally {
@@ -727,8 +727,8 @@ class AnkiquestNotifierTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
         }
         return server
     }

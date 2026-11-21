@@ -38,12 +38,20 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareFriends() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
+        every { HomeAccount.current(any()) } returns identity
         val sample = assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/social.json")).readText(Charsets.UTF_8)
         val overview = AnkiquestSocial.parse(JSONObject(sample))
         coEvery { AnkiquestSocial.overview(any()) } returns overview
-        coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         val rows = JSONArray().put(AnkiquestBoardsTest.row("cerro", 90, 5)).put(AnkiquestBoardsTest.row("hill", 40, 2))
         coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns
@@ -55,7 +63,15 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupFriends() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
+        unmockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
         RuntimeEnvironment.setFontScale(1f)
     }
 

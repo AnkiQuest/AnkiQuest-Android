@@ -222,8 +222,8 @@ internal object AnkiquestAccountSettings {
     fun signInUsername(server: String): String? {
         val normalized = server.trim().trimEnd('/')
         val prefs = AnkiDroidApp.sharedPrefs()
-        if (prefs.getString(Ankiquest.PREF_URL, null)?.trim()?.trimEnd('/') == normalized) {
-            prefs.getString(Ankiquest.PREF_USER, null)?.takeIf { it.isNotBlank() }?.let { return it }
+        if (prefs.getString(AnkiquestPreferences.PREF_URL, null)?.trim()?.trimEnd('/') == normalized) {
+            prefs.getString(AnkiquestPreferences.PREF_USER, null)?.takeIf { it.isNotBlank() }?.let { return it }
         }
         return prefs.getString(usernameKey(normalized), null)
     }
@@ -237,8 +237,8 @@ internal object AnkiquestAccountSettings {
         if (AnkiquestHomeData.account()?.scope != account.scope) return
         AnkiDroidApp.sharedPrefs().edit {
             if (rememberUsername) putString(usernameKey(account.server), account.user) else remove(usernameKey(account.server))
-            remove(Ankiquest.PREF_TOKEN)
-            remove(Ankiquest.PREF_USER)
+            remove(AnkiquestPreferences.PREF_TOKEN)
+            remove(AnkiquestPreferences.PREF_USER)
         }
     }
 

@@ -15,12 +15,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccountChanged
@@ -82,9 +82,9 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         mockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
         every { AnkiquestWidget.requestUpdate(any()) } just runs
@@ -189,8 +189,8 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
     private fun signIn(user: String) =
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_USER, user)
-            putString(Ankiquest.PREF_TOKEN, "token-$user")
+            putString(AnkiquestPreferences.PREF_USER, user)
+            putString(AnkiquestPreferences.PREF_TOKEN, "token-$user")
         }
 
     private fun AnkiquestCompanionFragment.status() = requirePreference<Preference>(R.string.ankiquest_companion_status_key)

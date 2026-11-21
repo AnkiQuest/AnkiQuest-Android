@@ -83,9 +83,9 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.PREF_USER, "aldanita")
-            putString(Ankiquest.PREF_TOKEN, "token")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "aldanita")
+            putString(AnkiquestPreferences.PREF_TOKEN, "token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, true)
         }
     }
@@ -163,7 +163,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         )
 
         // A new token for the same player cannot reuse the previous session's offline verdict.
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "new-token") }
         AnkiquestDay.remember(pending)
         AnkiquestIcon.showLastKnown(targetContext, now)
         assertEquals(listOf(Icon.AKI_WORRIED), enabled())
@@ -213,8 +213,8 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 Ankiquest.opExecuted(changes, mockk<ReviewerViewModel>())
                 withTimeout(10_000) { entered.await() }
                 AnkiDroidApp.sharedPrefs().edit {
-                    putString(Ankiquest.PREF_USER, "other")
-                    putString(Ankiquest.PREF_TOKEN, "other-token")
+                    putString(AnkiquestPreferences.PREF_USER, "other")
+                    putString(AnkiquestPreferences.PREF_TOKEN, "other-token")
                 }
                 release.complete(Unit)
                 drainReviewJobs()
@@ -252,8 +252,8 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 // The review callback has queued its upload, which cannot pass the mutex yet.
                 withTimeout(10_000) { callback.join() }
                 AnkiDroidApp.sharedPrefs().edit {
-                    putString(Ankiquest.PREF_USER, "other")
-                    putString(Ankiquest.PREF_TOKEN, "other-token")
+                    putString(AnkiquestPreferences.PREF_USER, "other")
+                    putString(AnkiquestPreferences.PREF_TOKEN, "other-token")
                 }
                 mutex.unlock(owner)
                 drainReviewJobs()

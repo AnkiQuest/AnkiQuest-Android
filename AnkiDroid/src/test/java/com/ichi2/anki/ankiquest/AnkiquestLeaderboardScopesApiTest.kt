@@ -76,7 +76,7 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
     @Test
     fun `an account change cannot send the old account's scoped request`() {
         withServer { account, requests ->
-            every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other", token = "other-token")
+            every { HomeAccount.current(any()) } returns account.copy(user = "other", token = "other-token")
             assertFailsWith<HomeAccountChanged> {
                 runBlocking { AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global) }
             }
@@ -110,12 +110,12 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
         val previousSync = prefs.all[AnkiquestSettingsSync.PREF_SWITCH] as Boolean?
         prefs.edit(commit = true) { putBoolean(AnkiquestSettingsSync.PREF_SWITCH, false) }
         try {
-            mockkObject(AnkiquestHomeData)
+            mockkObject(AnkiquestHomeData, HomeAccount.Companion)
             val account = HomeAccount("http://127.0.0.1:${server.address.port}", "hill", "test-token")
-            every { AnkiquestHomeData.account(any()) } returns account
+            every { HomeAccount.current(any()) } returns account
             block(account, requests)
         } finally {
-            unmockkObject(AnkiquestHomeData)
+            unmockkObject(AnkiquestHomeData, HomeAccount.Companion)
             server.stop(0)
 
             // Restore the preference only after the fake account is no longer visible.

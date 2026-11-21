@@ -32,6 +32,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.HomeAccount
@@ -93,14 +94,14 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     private fun signIn() =
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
 
     @Test
     fun `a phone that is not signed in only offers signing in and the app's own settings`() {
-        AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
         val fragment = open()
         val signIn = fragment.preference<Preference>(R.string.ankiquest_sign_in_key)
         assertEquals(targetContext.getString(R.string.ankiquest_sign_in_title), signIn.title)
@@ -128,7 +129,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         assertEquals("", dialog.findViewById<EditText>(R.id.ankiquest_sign_in_password).text.toString())
         user.setText("another")
         assertEquals("another", user.text.toString())
-        assertNull(AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+        assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
     }
 
     @Test
@@ -162,7 +163,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
             shadowOf(Looper.getMainLooper()).idle()
 
             assertEquals(listOf("", "123456"), sent.map { it.code })
-            assertEquals("device-token", AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+            assertEquals("device-token", AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
         } finally {
             unmockkObject(AnkiquestAccount)
         }
@@ -301,7 +302,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val field = AnkiquestBoards.GLOBAL_SETTING
         val current = JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, false).put(field, true)
         coEvery { Ankiquest.notificationSwitches() } coAnswers {
-            if (prefs.getString(Ankiquest.PREF_USER, null) == "member") old.await() else current
+            if (prefs.getString(AnkiquestPreferences.PREF_USER, null) == "member") old.await() else current
         }
         try {
             val fragment = open()
@@ -310,8 +311,8 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
             assertFalse(moments.isEnabled)
 
             prefs.edit {
-                putString(Ankiquest.PREF_USER, "other")
-                putString(Ankiquest.PREF_TOKEN, "other-token")
+                putString(AnkiquestPreferences.PREF_USER, "other")
+                putString(AnkiquestPreferences.PREF_TOKEN, "other-token")
             }
             fragment.onResume()
             idle()
@@ -373,7 +374,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val before = scope.children.toSet()
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         val work = scope.children.first { it !in before }
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
         waiting.complete(deckSettings())
         advanceRobolectricLooperUntil { work.isCompleted }
         assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
@@ -392,7 +393,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
         assertTrue(people !== decks)
         assertTrue(people.listView.isItemChecked(0), "retain the server's recipient preselection")
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
         people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         idle()
         coVerify(exactly = 0) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) }
@@ -504,7 +505,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         idle()
         val work = scope.children.first { it !in before }
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "new-token") }
         waiting.complete(JSONObject())
         advanceRobolectricLooperUntil { work.isCompleted }
         assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
@@ -551,7 +552,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     fun `bulk Undo cannot cross an account switch`() {
         val fragment = saveBulk(deckSettings())
         val button = assertNotNull(undoButton(fragment))
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "replacement") }
         button.performClick()
         idle()
         coVerify(exactly = 0) { AnkiquestDeckSharing.restore(any(), any()) }

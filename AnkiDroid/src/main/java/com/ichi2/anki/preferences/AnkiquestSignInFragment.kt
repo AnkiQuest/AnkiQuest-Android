@@ -36,6 +36,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHosts
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
@@ -225,7 +226,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
         key: String?,
     ) {
         super.onSharedPreferenceChanged(sharedPreferences, key)
-        if (key in setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)) {
+        if (key in setOf(AnkiquestPreferences.PREF_URL, AnkiquestPreferences.PREF_USER, AnkiquestPreferences.PREF_TOKEN)) {
             afterReauth = null
             refresh()
         }

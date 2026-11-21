@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package com.ichi2.anki.ankiquest
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+
+data class IncomingSender(
+    val user: String,
+    val display: String,
+)
+
+data class IncomingSubscriptions(
+    val enabled: Boolean,
+    val unsubscribedSenders: Set<String>,
+    val senders: List<IncomingSender>,
+) {
+    companion object {
+        /** Roster entries alone are not listed: being in the roster does not mean sharing a deck with this recipient. */
+        fun parse(json: JSONObject): IncomingSubscriptions {
+            fun strings(key: String): Set<String> = json.getJSONArray(key).strings().toSet()
+            val unsubscribed = strings("unsubscribed_senders") + strings("muted_senders")
+            val visible = strings("sharing_senders") + unsubscribed
+            val senders =
+                json.getJSONArray("senders").objects().map {
+                    val user = it.getString("user")
+                    IncomingSender(user, it.getString("display").ifBlank { user })
+                }
+            val retained = visible.filter { user -> senders.none { it.user == user } }.map { IncomingSender(it, it) }
+            return IncomingSubscriptions(
+                json.getBoolean("enabled"),
+                unsubscribed,
+                (senders + retained)
+                    .filter { it.user in visible }
+                    .distinctBy { it.user }
+                    .sortedWith(compareBy<IncomingSender, String>(String.CASE_INSENSITIVE_ORDER) { it.display }.thenBy { it.user }),
+            )
+        }
+    }
+}
+
+/** Captures credentials once and keeps reads and writes ordered across recreated settings screens. */
+class SubscriptionRepository(
+    private val accountProvider: () -> HomeAccount?,
+) {
+    private val mutex = Mutex()
+
+    private fun requireCurrent(account: HomeAccount) {
+        if (accountProvider()?.scope != account.scope) throw HomeAccountChanged()
+        if (account.token.isEmpty()) throw AnkiquestHttpException(401)
+    }
+
+    private fun request(
+        account: HomeAccount,
+        body: JSONObject? = null,
+    ): IncomingSubscriptions {
+        val request =
+            AnkiquestApi
+                .request(account, "api/deck-subscriptions/${account.encodedUser}")
+                .apply { if (body != null) post(AnkiquestApi.body(body)) }
+                .build()
+        return AnkiquestApi.call(request, check = { requireCurrent(account) }) { IncomingSubscriptions.parse(JSONObject(it.body.string())) }
+    }
+
+    suspend fun load(account: HomeAccount): IncomingSubscriptions =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                currentCoroutineContext().ensureActive()
+                request(account)
+            }
+        }
+
+    suspend fun setEnabled(
+        account: HomeAccount,
+        enabled: Boolean,
+    ): IncomingSubscriptions = update(account) { it.copy(enabled = enabled) }
+
+    suspend fun setSubscribed(
+        account: HomeAccount,
+        user: String,
+        subscribed: Boolean,
+    ): IncomingSubscriptions =
+        update(account) { current ->
+            require(current.senders.any { it.user == user }) { "The sender is no longer available" }
+            current.copy(unsubscribedSenders = if (subscribed) current.unsubscribedSenders - user else current.unsubscribedSenders + user)
+        }
+
+    /** A full replacement built on a fresh read, so observed remote changes survive; simultaneous remote writes can still race. */
+    private suspend fun update(
+        account: HomeAccount,
+        change: (IncomingSubscriptions) -> IncomingSubscriptions,
+    ): IncomingSubscriptions =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                currentCoroutineContext().ensureActive()
+                val wanted = change(request(account))
+                currentCoroutineContext().ensureActive()
+                request(
+                    account,
+                    JSONObject().put("enabled", wanted.enabled).put("unsubscribed_senders", JSONArray(wanted.unsubscribedSenders.sorted())),
+                )
+            }
+        }
+}
+
+object AnkiquestSubscriptions {
+    val repository = SubscriptionRepository { HomeAccount.current() }
+}

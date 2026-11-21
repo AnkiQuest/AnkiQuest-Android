@@ -101,16 +101,16 @@ class AnkiquestHomeDataTest : RobolectricTest() {
 
     private val firstSettings =
         mapOf(
-            Ankiquest.PREF_URL to "https://first.example",
-            Ankiquest.PREF_USER to " ",
-            Ankiquest.PREF_TOKEN to "first-token",
+            AnkiquestPreferences.PREF_URL to "https://first.example",
+            AnkiquestPreferences.PREF_USER to " ",
+            AnkiquestPreferences.PREF_TOKEN to "first-token",
             "username" to "first member",
         )
     private val secondSettings =
         mapOf(
-            Ankiquest.PREF_URL to "https://second.example",
-            Ankiquest.PREF_USER to "",
-            Ankiquest.PREF_TOKEN to "second-token",
+            AnkiquestPreferences.PREF_URL to "https://second.example",
+            AnkiquestPreferences.PREF_USER to "",
+            AnkiquestPreferences.PREF_TOKEN to "second-token",
             "username" to "second member",
         )
 
@@ -134,7 +134,7 @@ class AnkiquestHomeDataTest : RobolectricTest() {
         val preferences = mockk<SharedPreferences>()
         every { preferences.getString(any(), any()) } answers {
             val key = firstArg<String>()
-            stored[key].also { if (key == Ankiquest.PREF_URL) stored = secondSettings }
+            stored[key].also { if (key == AnkiquestPreferences.PREF_URL) stored = secondSettings }
         }
 
         assertEquals(HomeAccount("https://second.example", "second member", "second-token"), AnkiquestHomeData.account(preferences))
@@ -144,7 +144,12 @@ class AnkiquestHomeDataTest : RobolectricTest() {
     // Synthetic credentials on a reserved example domain verify that URL userinfo is rejected.
     @SuppressLint("AuthLeak")
     fun `blank and ambiguous server URLs cannot carry credentials`() {
-        fun settings(url: String) = mapOf(Ankiquest.PREF_URL to url, Ankiquest.PREF_USER to "member", Ankiquest.PREF_TOKEN to "secret")
+        fun settings(url: String) =
+            mapOf(
+                AnkiquestPreferences.PREF_URL to url,
+                AnkiquestPreferences.PREF_USER to "member",
+                AnkiquestPreferences.PREF_TOKEN to "secret",
+            )
         listOf(
             "",
             "not a url",
@@ -159,7 +164,12 @@ class AnkiquestHomeDataTest : RobolectricTest() {
 
     @Test
     fun `plain http is accepted only on this device and the local network`() {
-        fun settings(url: String) = mapOf(Ankiquest.PREF_URL to url, Ankiquest.PREF_USER to "member", Ankiquest.PREF_TOKEN to "secret")
+        fun settings(url: String) =
+            mapOf(
+                AnkiquestPreferences.PREF_URL to url,
+                AnkiquestPreferences.PREF_USER to "member",
+                AnkiquestPreferences.PREF_TOKEN to "secret",
+            )
         for (url in listOf(
             "https://example.com",
             "http://localhost:8080",

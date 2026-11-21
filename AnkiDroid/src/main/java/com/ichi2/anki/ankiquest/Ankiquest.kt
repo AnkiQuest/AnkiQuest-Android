@@ -56,9 +56,6 @@ import java.util.concurrent.atomic.AtomicBoolean
  * sent to its preview endpoint, which stores nothing, when the server permits public access.
  */
 object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallbacks {
-    const val PREF_URL = "ankiquestUrl"
-    const val PREF_USER = "ankiquestUser"
-    const val PREF_TOKEN = "ankiquestToken"
     private const val PREF_MARK = "ankiquestUploadedThrough"
     private const val PREF_UPLOAD_AT = "ankiquestLastUploadAt"
     private const val PREF_RECENT = "ankiquestRecentUploads"
@@ -118,6 +115,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      */
     fun init(app: Application) {
         this.app = app
+        AnkiquestApi.drawnCompanions = AnkiquestCompanion.drawn
         app.registerActivityLifecycleCallbacks(this)
         ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
@@ -294,62 +292,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             ).getBoolean("enabled")
     }
 
-    /**
-     * Answers one inbox notification; returns the name of whoever will read it.
-     *
-     * @throws HomeAccountChanged when the notification belongs to an account that is no longer signed in
-     * @throws AnkiquestHttpException when the server refuses; a 4xx refusal is final
-     */
-    suspend fun reply(
-        notification: Long,
-        message: String,
-        expectedAccount: String,
-        expectedScope: String,
-    ): String =
-        withContext(Dispatchers.IO) {
-            val account = replyAccount(expectedAccount, expectedScope)
-            AnkiquestApi
-                .json(
-                    account,
-                    AnkiquestApi
-                        .request(account, "api/reply/${account.encodedUser}")
-                        .post(AnkiquestApi.body(JSONObject().put("notification", notification).put("message", message)))
-                        .build(),
-                ).getString("sent_to")
-        }
-
-    /**
-     * Cheers 🎉 on a win a friend shared, one inbox [notification]; the friend is told who cheered.
-     * Answers whether this player had already cheered it. Fails as [reply] does.
-     */
-    suspend fun react(
-        notification: Long,
-        expectedAccount: String,
-        expectedScope: String,
-    ): Boolean =
-        withContext(Dispatchers.IO) {
-            val account = replyAccount(expectedAccount, expectedScope)
-            AnkiquestApi
-                .json(
-                    account,
-                    AnkiquestApi
-                        .request(account, "api/react/${account.encodedUser}")
-                        .post(AnkiquestApi.body(JSONObject().put("notification", notification)))
-                        .build(),
-                ).optBoolean("already")
-        }
-
-    private fun replyAccount(
-        expectedAccount: String,
-        expectedScope: String,
-    ): HomeAccount {
-        val account =
-            AnkiquestHomeData.account()?.takeIf { it.notificationAccount == expectedAccount && it.scope == expectedScope }
-                ?: throw HomeAccountChanged()
-        if (account.token.isEmpty()) throw AnkiquestHttpException(401)
-        return account
-    }
-
     internal data class CompletionNotifications(
         val account: String,
         val notifications: JSONArray,
@@ -425,7 +367,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             // Keep collection reads ordered, and discard work from a replaced account or profile.
             val day =
                 CollectionManager.tryWithCol {
-                    val reviews = AnkiquestDay.unsent(this, server)
+                    val reviews = AnkiquestDay.unsent(RevlogSource(this), server)
                     if (HomeAccount.current()?.scope != account.scope || AnkiquestDay.last(prefs) != server) {
                         return@tryWithCol null
                     }
@@ -1133,12 +1075,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val typed =
             AnkiDroidApp
                 .sharedPrefs()
-                .getString(PREF_URL, "")
+                .getString(AnkiquestPreferences.PREF_URL, "")
                 .orEmpty()
                 .trim()
         return when {
             AnkiquestHosts.insecure(typed) -> context.getString(R.string.ankiquest_check_insecure, typed)
-            typed.isNotEmpty() && HomeAccount.from(mapOf(PREF_URL to typed), "player") == null ->
+            typed.isNotEmpty() && HomeAccount.from(mapOf(AnkiquestPreferences.PREF_URL to typed), "player") == null ->
                 context.getString(R.string.ankiquest_check_bad_url, typed)
             else -> context.getString(R.string.ankiquest_check_unconfigured)
         }

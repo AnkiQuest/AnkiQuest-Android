@@ -38,8 +38,8 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestSocial.overview(any()) } returns AnkiquestSocial.parse(JSONObject("""{"groups":[]}"""))
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
@@ -52,7 +52,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

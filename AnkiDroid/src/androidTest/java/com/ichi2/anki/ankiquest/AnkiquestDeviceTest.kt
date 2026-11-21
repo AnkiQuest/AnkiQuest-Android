@@ -84,9 +84,9 @@ class AnkiquestDeviceTest : InstrumentedTest() {
     @Test
     fun pollWorkerRuns() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, UNREACHABLE_SERVER)
-            putString(Ankiquest.PREF_USER, TEST_PLAYER)
-            putString(Ankiquest.PREF_TOKEN, TEST_TOKEN)
+            putString(AnkiquestPreferences.PREF_URL, UNREACHABLE_SERVER)
+            putString(AnkiquestPreferences.PREF_USER, TEST_PLAYER)
+            putString(AnkiquestPreferences.PREF_TOKEN, TEST_TOKEN)
         }
         val worker = TestListenableWorkerBuilder<AnkiquestPollWorker>(testContext).build()
 

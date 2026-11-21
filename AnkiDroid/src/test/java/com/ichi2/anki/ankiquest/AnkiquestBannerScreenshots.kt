@@ -228,9 +228,9 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
     /** The server screens: a signed-in sample player at a fixed time, with the API mocked. */
     private fun social() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial)
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
     }
 
     /**

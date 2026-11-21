@@ -11,9 +11,9 @@ import kotlin.test.assertTrue
 /** Signs in a test account, alice, and makes [choice] her companion. */
 internal fun chooseCompanion(choice: Choice) {
     AnkiDroidApp.sharedPrefs().edit(commit = true) {
-        putString(Ankiquest.PREF_URL, "https://example.com")
-        putString(Ankiquest.PREF_USER, "alice")
-        putString(Ankiquest.PREF_TOKEN, "token-alice")
+        putString(AnkiquestPreferences.PREF_URL, "https://example.com")
+        putString(AnkiquestPreferences.PREF_USER, "alice")
+        putString(AnkiquestPreferences.PREF_TOKEN, "token-alice")
     }
     assertTrue(AnkiquestCompanion.remember(requireNotNull(AnkiquestHomeData.account()), choice.id))
 }

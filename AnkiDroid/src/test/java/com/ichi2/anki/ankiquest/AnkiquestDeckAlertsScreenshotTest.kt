@@ -43,8 +43,8 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
     @Before
     fun prepare() {
         val account = HomeAccount("https://quest.example.test", "hill", "visual-test-token")
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         val completion =
             AnkiquestFeed.item(
@@ -56,7 +56,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
                     .put("sender", "cerro")
                     .put("kind", "completion"),
             )!!
-        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         coEvery { AnkiquestFeed.page(account, any(), any(), any()) } returns
             page.copy(items = listOf(completion), attention = emptyList())
         val repository = mockk<SubscriptionRepository>()
@@ -68,7 +68,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

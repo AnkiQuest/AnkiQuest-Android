@@ -48,12 +48,12 @@ class AnkiquestTabBarTest : RobolectricTest() {
     fun prepareTabs() {
         setIntroductionSlidesShown(true)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, identity.server)
-            putString(Ankiquest.PREF_USER, identity.user)
-            putString(Ankiquest.PREF_TOKEN, identity.token)
+            putString(AnkiquestPreferences.PREF_URL, identity.server)
+            putString(AnkiquestPreferences.PREF_USER, identity.user)
+            putString(AnkiquestPreferences.PREF_TOKEN, identity.token)
         }
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject().put("level", 2)
         coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
@@ -67,7 +67,7 @@ class AnkiquestTabBarTest : RobolectricTest() {
 
     @After
     fun clearTabMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars, HomeAccount.Companion)
     }
 
     @Test

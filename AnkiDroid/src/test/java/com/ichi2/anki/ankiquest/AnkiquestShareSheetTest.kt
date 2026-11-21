@@ -81,8 +81,8 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Before
     fun prepare() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
     }
@@ -90,7 +90,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare, HomeAccount.Companion)
         TimeManager.reset()
     }
 
@@ -253,7 +253,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         mockkObject(AnkiquestCapabilities)
         every { AnkiquestCapabilities.has(any(), any()) } returns true
         account = account.copy(server = "http://127.0.0.1:${server.address.port}")
-        every { AnkiquestHomeData.account(any()) } returns account
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
         try {
             val (_, first, screen) = open()
@@ -379,7 +379,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Test
     fun `a finished deck keeps its edited Unicode name in the picture and chosen send`() {
         val symbol = "\uD83C\uDF31"
-        val name = symbol.repeat(AnkiquestShare.MAX_LABEL)
+        val name = symbol.repeat(AnkiquestCardLabels.MAX_LABEL)
         val reference = MomentRef.Deck("7", "Japanese")
         coEvery { AnkiquestSharing.send(account, reference.copy(name = name), any(), any()) } returns AnkiquestSharing.Sent(1, 91, null)
         val (_, dialog) = open(reference = reference)

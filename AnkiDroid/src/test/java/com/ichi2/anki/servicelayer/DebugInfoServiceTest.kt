@@ -11,8 +11,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.scopedKey
 import com.ichi2.anki.common.preferences.sharedPrefs
 import org.json.JSONArray
@@ -60,9 +60,9 @@ class DebugInfoServiceTest : RobolectricTest() {
             val path = "private-instance-path"
             val server = "https://study.example.test:8443/$path"
             targetContext.sharedPrefs().edit {
-                putString(Ankiquest.PREF_URL, server)
-                putString(Ankiquest.PREF_USER, user)
-                putString(Ankiquest.PREF_TOKEN, token)
+                putString(AnkiquestPreferences.PREF_URL, server)
+                putString(AnkiquestPreferences.PREF_USER, user)
+                putString(AnkiquestPreferences.PREF_TOKEN, token)
                 putString(
                     scopedKey(AnkiquestCapabilities.PREF_CAPABILITIES, server),
                     JSONObject().put("version", 1).put("features", JSONArray(listOf(token, user))).toString(),
@@ -105,7 +105,7 @@ class DebugInfoServiceTest : RobolectricTest() {
         runTest {
             targetContext.sharedPrefs().edit {
                 putString(
-                    Ankiquest.PREF_URL,
+                    AnkiquestPreferences.PREF_URL,
                     "https://private-user:private-password@study.example.test/?email=private@example.test#private-fragment",
                 )
             }

@@ -38,15 +38,15 @@ class AnkiquestDeckNameDialogTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestDeckNames)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, AnkiquestDeckNames, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { AnkiquestDeckNames.find(100) } answers { deck() }
     }
 
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestDeckNames)
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckNames, HomeAccount.Companion)
     }
 
     private fun deck() =

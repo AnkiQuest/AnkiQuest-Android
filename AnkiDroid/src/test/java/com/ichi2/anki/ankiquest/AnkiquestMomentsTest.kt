@@ -51,13 +51,13 @@ class AnkiquestMomentsTest : RobolectricTest() {
 
     @Before
     fun signIn() {
-        mockkObject(AnkiquestHomeData)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
     }
 
     @After
     fun signOut() {
-        unmockkObject(AnkiquestHomeData)
+        unmockkObject(AnkiquestHomeData, HomeAccount.Companion)
     }
 
     private fun moment(
@@ -114,11 +114,11 @@ class AnkiquestMomentsTest : RobolectricTest() {
      * account; that load runs off the main thread and could outlive the test's mocks.
      */
     private fun <T> signedOut(block: () -> T): T {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         try {
             return block()
         } finally {
-            every { AnkiquestHomeData.account(any()) } returns identity
+            every { HomeAccount.current(any()) } returns identity
         }
     }
 

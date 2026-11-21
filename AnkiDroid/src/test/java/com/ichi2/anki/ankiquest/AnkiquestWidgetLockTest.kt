@@ -98,9 +98,9 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.PREF_USER, "aldanita")
-            putString(Ankiquest.PREF_TOKEN, "aldanita-token")
+            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_USER, "aldanita")
+            putString(AnkiquestPreferences.PREF_TOKEN, "aldanita-token")
         }
     }
 
