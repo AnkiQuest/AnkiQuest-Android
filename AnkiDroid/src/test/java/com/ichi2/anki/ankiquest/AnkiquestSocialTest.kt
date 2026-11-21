@@ -95,9 +95,12 @@ class AnkiquestSocialTest {
 
     @Test
     fun `initials and ring colours follow the website`() {
-        assertEquals("AL", AnkiquestFriendsActivity.initials("ada lovelace"))
-        assertEquals("C", AnkiquestFriendsActivity.initials("Cerro"))
-        assertEquals("?", AnkiquestFriendsActivity.initials("  "))
+        // Initials keep the name's own case, as hill writes his name in lowercase.
+        assertEquals("al", AnkiquestAvatars.initials("ada lovelace"))
+        assertEquals("h", AnkiquestAvatars.initials("hill"))
+        assertEquals("C", AnkiquestAvatars.initials("Cerro"))
+        assertEquals("A", AnkiquestAvatars.initials("Aldana Torre", letters = 1))
+        assertEquals("?", AnkiquestAvatars.initials("  "))
         // ((('h' * 31 + 'i') * 31 + 'l') * 31 + 'l') = 3_202_625, which is 65 modulo 360.
         assertEquals(65f, AnkiquestFriendsActivity.hue("hill"))
     }
