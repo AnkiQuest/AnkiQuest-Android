@@ -2,6 +2,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_countdowns">Comptes à rebours</string>
+    <string name="ankiquest_countdowns_changed">Tes comptes à rebours ont changé. Vérifie la liste et réessaie.</string>
     <string name="ankiquest_countdowns_empty">Ajoute un examen ou un événement pour compter les jours qui restent.</string>
     <string name="ankiquest_countdown_add">Ajouter un compte à rebours</string>
     <string name="ankiquest_countdown_edit">Modifier le compte à rebours</string>
