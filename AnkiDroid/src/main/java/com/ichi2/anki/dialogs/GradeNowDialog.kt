@@ -73,7 +73,13 @@ object GradeNowDialog {
     ) = launchCatchingTask {
         Timber.d("Grading %d cards as %s", ids.size, grade.name)
         withProgress {
-            undoableOp { this.backend.gradeNow(ids, grade.rating) }
+            undoableOp {
+                this.backend.gradeNow(
+                    cardIds = ids,
+                    rating = grade.rating,
+                    cardOptions = emptyList(),
+                )
+            }
         }
         showSnackbar(TR.schedulingGradedCardsDone(ids.size)) {
             setAction(CommonString.undo) { launchCatchingTask { undoAndShowSnackbar() } }
