@@ -2,10 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
@@ -14,19 +12,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
-import androidx.core.view.ViewCompat
 import androidx.core.view.isEmpty
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
@@ -237,15 +228,16 @@ internal class FeedSection(
         content.removeAllViews()
         progress.isVisible = loading && content.isVisible
         status?.let { line ->
-            text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
+            views.text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         }
         if (account == null) {
-            val panel = card(content)
-            text(panel, getString(R.string.aq_feed_connect))
-            button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_feed_connect))
+            views.button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
             return
         }
-        choices(
+        views.choices(
+            content,
             listOf(Box.INBOX to getString(R.string.aq_feed_inbox), Box.SENT to getString(R.string.aq_feed_sent)),
             selected = box,
             enabled = true,
@@ -258,8 +250,8 @@ internal class FeedSection(
             Box.SENT -> renderSent()
         }
         failure?.let { problem ->
-            text(content, getString(problem), small = true)
-            if (problem == R.string.aq_home_auth) button(content, getString(R.string.aq_home_settings)) { settings() }
+            views.text(content, getString(problem), small = true)
+            if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         scroll.post { scroll.scrollTo(0, position) }
     }
@@ -267,7 +259,8 @@ internal class FeedSection(
     private fun renderInbox() {
         val current = page
         if (current?.legacy != true) {
-            choices(
+            views.choices(
+                content,
                 AnkiquestFeed.Category.entries.map { it to categoryLabel(it, current) },
                 selected = category,
                 enabled = !loading,
@@ -280,34 +273,34 @@ internal class FeedSection(
                     render()
                 }
             }
-            chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
+            views.chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
                 unreadOnly = !unreadOnly
                 page = null
                 load(more = false)
             }
         }
         if (current == null) {
-            if (loading) text(content, getString(R.string.aq_feed_loading), small = true)
+            if (loading) views.text(content, getString(R.string.aq_feed_loading), small = true)
             return
         }
         if (current.unread > 0 && !current.legacy) {
-            button(content, getString(R.string.aq_feed_mark_all_read), enabled = !markingAll) { markAllRead() }
+            views.button(content, getString(R.string.aq_feed_mark_all_read), enabled = !markingAll) { markAllRead() }
         }
-        if (current.legacy) text(content, getString(R.string.aq_feed_legacy), small = true)
+        if (current.legacy) views.text(content, getString(R.string.aq_feed_legacy), small = true)
         val attention = current.attention.takeIf { category == AnkiquestFeed.Category.ALL }.orEmpty()
         if (attention.isNotEmpty() && current.actionCount > 0) {
-            val panel = card(content, tinted = true)
-            text(panel, getString(R.string.aq_feed_needs_action_count, current.actionCount), heading = true)
-            text(panel, getString(R.string.aq_feed_needs_action_hint), small = true)
+            val panel = views.card(content, tinted = true)
+            views.text(panel, getString(R.string.aq_feed_needs_action_count, current.actionCount), heading = true)
+            views.text(panel, getString(R.string.aq_feed_needs_action_hint), small = true)
             for (item in attention) {
-                text(panel, item.title, heading = true)
-                if (item.body.isNotEmpty()) text(panel, item.body)
+                views.text(panel, item.title, heading = true)
+                if (item.body.isNotEmpty()) views.text(panel, item.body)
                 item.challengeId?.let { goal ->
-                    button(panel, getString(R.string.aq_feed_view_invitation), primary = true) { openGoal(item, goal) }
+                    views.button(panel, getString(R.string.aq_feed_view_invitation), primary = true) { openGoal(item, goal) }
                 }
             }
             if (current.actionCount > attention.size) {
-                button(panel, getString(R.string.aq_feed_all_invitations)) {
+                views.button(panel, getString(R.string.aq_feed_all_invitations)) {
                     category = AnkiquestFeed.Category.NEEDS_ACTION
                     page = null
                     load(more = false)
@@ -317,12 +310,12 @@ internal class FeedSection(
         val shown = current.items.filter { item -> attention.none { it.id == item.id } }
 
         // Friends' study waits for the player's first upload; "all caught up" would be wrong then.
-        current.lock?.let { text(content, getString(it.text), heading = true).setPadding(0, dp(16), 0, 0) }
+        current.lock?.let { views.text(content, getString(it.text), heading = true).setPadding(0, views.dp(16), 0, 0) }
         if (shown.isEmpty()) {
             if (!loading && current.lock == null) {
                 content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
-                text(content, getString(emptyMessage(attention.isNotEmpty())), heading = true)
-                text(content, getString(R.string.aq_feed_empty_hint), small = true)
+                views.text(content, getString(emptyMessage(attention.isNotEmpty())), heading = true)
+                views.text(content, getString(R.string.aq_feed_empty_hint), small = true)
             }
         } else {
             var day: Long? = null
@@ -330,13 +323,13 @@ internal class FeedSection(
                 val itemDay = dayOf(item.createdAt)
                 if (itemDay != day) {
                     day = itemDay
-                    text(content, dayLabel(item.createdAt), heading = true).setPadding(0, dp(16), 0, 0)
+                    views.text(content, dayLabel(item.createdAt), heading = true).setPadding(0, views.dp(16), 0, 0)
                 }
                 renderItem(item, current.legacy)
             }
         }
         if (current.nextBefore != null) {
-            button(
+            views.button(
                 content,
                 getString(if (loading) R.string.aq_feed_loading else R.string.aq_feed_more),
                 enabled = !loading,
@@ -358,12 +351,12 @@ internal class FeedSection(
         legacy: Boolean,
     ) {
         val unread = !legacy && item.unread
-        val panel = card(content, tinted = unread)
-        text(panel, item.heading, heading = true)
+        val panel = views.card(content, tinted = unread)
+        views.text(panel, item.heading, heading = true)
         val time = DateUtils.formatDateTime(this, item.createdAt * 1000, DateUtils.FORMAT_SHOW_TIME)
-        text(panel, if (unread) getString(R.string.aq_feed_time_unread, time) else time, small = true)
+        views.text(panel, if (unread) getString(R.string.aq_feed_time_unread, time) else time, small = true)
         item.replyTo?.let { (title, body) -> quote(panel, title, body) }
-        item.text?.let { text(panel, it) }
+        item.text?.let { views.text(panel, it) }
         account?.let { AnkiquestFeed.image(it, item) }?.let { url -> pictures[url] }?.let { picture ->
             panel.addView(
                 ImageView(this).apply {
@@ -371,34 +364,34 @@ internal class FeedSection(
                     adjustViewBounds = true
                     contentDescription = getString(R.string.aq_feed_card, item.title)
                 },
-                LinearLayout.LayoutParams(dp(160), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+                LinearLayout.LayoutParams(views.dp(160), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = views.dp(6) },
             )
         }
-        val actions = actions(panel)
+        val actions = views.actions(panel)
         val waiting = item.id in busy
         if (item.cheerable) {
             if (item.reacted) {
-                chip(actions, getString(R.string.aq_feed_cheered), checked = true, enabled = false) {}
+                views.chip(actions, getString(R.string.aq_feed_cheered), checked = true, enabled = false) {}
             } else {
-                chip(actions, getString(R.string.ankiquest_cheer), enabled = !waiting) { cheer(item) }
+                views.chip(actions, getString(R.string.ankiquest_cheer), enabled = !waiting) { cheer(item) }
             }
         }
         item.challengeId?.let { goal ->
             val label = if (item.actionRequired) R.string.aq_feed_view_invitation else R.string.aq_feed_open_goal
-            chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
+            views.chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
         }
         if (item.answerable) {
             quickReply(item.kind)?.let { words ->
-                chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
+                views.chip(actions, getString(words), enabled = !waiting) { reply(item, getString(words)) }
             }
-            chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
+            views.chip(actions, getString(R.string.aq_feed_reply), enabled = !waiting) { askReply(item) }
         }
-        if (unread) chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
+        if (unread) views.chip(actions, getString(R.string.aq_feed_mark_read), enabled = !waiting) { markRead(item) }
         if (actions.isEmpty()) panel.removeView(actions)
-        if (item.replied) text(panel, getString(R.string.aq_feed_reply_sent), small = true)
+        if (item.replied) views.text(panel, getString(R.string.aq_feed_reply_sent), small = true)
         if (item.kind == "completion" && account?.let { deckAlerts.canStop(it, item.sender) } == true) {
             // A full-width button can wrap the sender name at large text sizes.
-            button(panel, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
+            views.button(panel, getString(R.string.aq_deck_alerts_stop, item.sender), enabled = !deckAlerts.busy()) {
                 account?.let { deckAlerts.stop(it, item.sender) { render() } }
                 render()
             }
@@ -408,27 +401,27 @@ internal class FeedSection(
     private fun renderSent() {
         val current = sent
         if (current == null) {
-            if (loading) text(content, getString(R.string.aq_feed_loading), small = true)
+            if (loading) views.text(content, getString(R.string.aq_feed_loading), small = true)
             return
         }
         if (current.items.isEmpty() && !loading) {
-            text(content, getString(R.string.aq_feed_sent_empty), heading = true)
-            text(content, getString(R.string.aq_feed_sent_empty_hint), small = true)
+            views.text(content, getString(R.string.aq_feed_sent_empty), heading = true)
+            views.text(content, getString(R.string.aq_feed_sent_empty_hint), small = true)
         }
         for ((recipient, item) in current.items) {
-            val panel = card(content)
-            text(panel, getString(R.string.aq_feed_sent_to, recipient), heading = true)
+            val panel = views.card(content)
+            views.text(panel, getString(R.string.aq_feed_sent_to, recipient), heading = true)
             val time = DateUtils.formatDateTime(this, item.createdAt * 1000, DATE_AND_TIME)
             val seen =
                 item.readAt?.let {
                     getString(R.string.aq_feed_seen, DateUtils.formatDateTime(this, it * 1000, DATE_AND_TIME))
                 } ?: getString(R.string.aq_feed_not_seen)
-            text(panel, "$time · $seen", small = true)
+            views.text(panel, "$time · $seen", small = true)
             item.replyTo?.let { (title, body) -> quote(panel, title, body) }
-            if (item.body.isNotEmpty()) text(panel, item.body)
+            if (item.body.isNotEmpty()) views.text(panel, item.body)
         }
         if (current.nextBefore != null) {
-            button(
+            views.button(
                 content,
                 getString(if (loading) R.string.aq_feed_loading else R.string.aq_feed_more_sent),
                 enabled = !loading,
@@ -470,7 +463,7 @@ internal class FeedSection(
             }
         val frame =
             FrameLayout(this).apply {
-                setPadding(dp(24), dp(8), dp(24), 0)
+                setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
                 addView(field)
             }
         MaterialAlertDialogBuilder(this)
@@ -637,63 +630,6 @@ internal class FeedSection(
         }
     }
 
-    private fun <T> choices(
-        options: List<Pair<T, String>>,
-        selected: T,
-        enabled: Boolean,
-        pick: (T) -> Unit,
-    ) {
-        val group =
-            ChipGroup(this).apply {
-                isSingleLine = true
-                isSingleSelection = true
-            }
-        for ((value, label) in options) chip(group, label, checked = value == selected, enabled = enabled) { pick(value) }
-        content.addView(
-            HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-                addView(group)
-            },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
-        )
-    }
-
-    private fun actions(parent: LinearLayout): ChipGroup =
-        ChipGroup(this).also {
-            parent.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun chip(
-        parent: ViewGroup,
-        label: String,
-        checked: Boolean = false,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): Chip =
-        Chip(this).apply {
-            text = label
-            textSize = 15f
-            // Grows with the text size, so large text is never clipped.
-            chipMinHeight = maxOf(dp(32).toFloat(), paint.fontMetrics.run { descent - ascent } + dp(14))
-            isCheckable = checked
-            isChecked = checked
-            isCheckedIconVisible = false
-            isEnabled = enabled
-            val filled = checked || primary
-            setTextColor(getColor(if (filled) R.color.aq_home_primary_text else R.color.aq_home_text))
-            chipBackgroundColor = ColorStateList.valueOf(getColor(if (filled) R.color.aq_home_primary else R.color.aq_home_surface))
-            chipStrokeWidth = if (filled) 0f else dp(1).toFloat()
-            chipStrokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            // The state is the selection drawn above; clicking always asks [click], which re-renders.
-            setOnClickListener { click() }
-            if (parent is LinearLayout) {
-                parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            } else {
-                parent.addView(this)
-            }
-        }
-
     private fun quote(
         parent: LinearLayout,
         title: String,
@@ -702,98 +638,20 @@ internal class FeedSection(
         val box =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(6), dp(12), dp(6))
-                background = shape(R.color.aq_home_background, 10)
+                setPadding(views.dp(12), views.dp(6), views.dp(12), views.dp(6))
+                background = views.shape(R.color.aq_home_background, 10)
             }
         parent.addView(
             box,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin =
+                    views.dp(4)
+            },
         )
-        text(box, getString(R.string.aq_feed_in_reply_to), small = true)
-        if (title.isNotEmpty()) text(box, title).typeface = Typeface.DEFAULT_BOLD
-        if (body.isNotEmpty()) text(box, body, small = true)
+        views.text(box, getString(R.string.aq_feed_in_reply_to), small = true)
+        if (title.isNotEmpty()) views.text(box, title).typeface = Typeface.DEFAULT_BOLD
+        if (body.isNotEmpty()) views.text(box, body, small = true)
     }
-
-    private fun card(
-        parent: LinearLayout,
-        tinted: Boolean = false,
-    ): LinearLayout =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            background = shape(if (tinted) R.color.aq_home_tint else R.color.aq_home_surface)
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(10)
-                },
-            )
-        }
-
-    private fun text(
-        parent: LinearLayout,
-        value: String,
-        heading: Boolean = false,
-        small: Boolean = false,
-    ): TextView =
-        TextView(this).apply {
-            text = value
-            textSize =
-                when {
-                    heading -> 17f
-                    small -> 14f
-                    else -> 16f
-                }
-            setTextColor(getColor(if (small) R.color.aq_home_muted else R.color.aq_home_text))
-            if (heading) {
-                typeface = Typeface.DEFAULT_BOLD
-                ViewCompat.setAccessibilityHeading(this, true)
-            }
-            setPadding(0, dp(3), 0, dp(3))
-            parent.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-
-    private fun button(
-        parent: LinearLayout,
-        label: String,
-        primary: Boolean = false,
-        enabled: Boolean = true,
-        click: () -> Unit,
-    ): MaterialButton =
-        MaterialButton(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 16f
-            minHeight = dp(48)
-            minimumHeight = dp(48)
-            cornerRadius = dp(12)
-            isEnabled = enabled
-            setTextColor(getColor(if (primary) R.color.aq_home_primary_text else R.color.aq_home_text))
-            backgroundTintList = ColorStateList.valueOf(getColor(if (primary) R.color.aq_home_primary else R.color.aq_home_surface))
-            if (!primary) {
-                strokeWidth = dp(1)
-                strokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
-            }
-            setOnClickListener { click() }
-            parent.addView(
-                this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin =
-                        dp(8)
-                },
-            )
-        }
-
-    private fun shape(
-        @ColorRes color: Int,
-        radius: Int = 18,
-    ): GradientDrawable =
-        GradientDrawable().apply {
-            cornerRadius = dp(radius).toFloat()
-            setColor(getColor(color))
-        }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         private const val STATE_BOX = "ankiquest.feed_box"

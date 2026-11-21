@@ -97,7 +97,6 @@ internal class LeaderboardSection(
         ) : Selection
     }
 
-    private val views = AnkiquestBoardViews(activity)
     private var account: HomeAccount? = AnkiquestHomeData.account()
     private var period = AnkiquestBoards.Period.WEEK
     private var selection: Selection = Selection.Friends

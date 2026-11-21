@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="review_heatmap_title">Mapa de repasos</string>
+    <string name="review_heatmap_subtitle">Tu colección, día a día</string>
+    <string name="review_heatmap_expand">Mostrar el mapa de repasos</string>
+    <string name="review_heatmap_collapse">Ocultar el mapa de repasos</string>
+    <string name="review_heatmap_loading">Cargando el historial de repasos…</string>
+    <string name="review_heatmap_error">No se pudo cargar el historial de repasos.</string>
+    <string name="review_heatmap_empty">Tus repasos aparecerán aquí cuando estudies.</string>
+    <string name="review_heatmap_current_streak">Racha actual</string>
+    <string name="review_heatmap_longest_streak">Racha más larga</string>
+    <string name="review_heatmap_days_studied">Días de estudio</string>
+    <string name="review_heatmap_daily_average">Repasos por día de estudio</string>
+    <string name="review_heatmap_total">Repasos en el historial disponible: %1$s</string>
+    <string name="review_heatmap_share">Estudiaste el %1$d %% de los días desde tu primer repaso</string>
+    <string name="review_heatmap_previous_year">Año anterior</string>
+    <string name="review_heatmap_next_year">Año siguiente</string>
+    <string name="review_heatmap_year">Año %1$s</string>
+    <string name="review_heatmap_today">Hoy</string>
+    <string name="review_heatmap_scroll_hint">Desliza para recorrer el año. Toca un día para ver los detalles.</string>
+    <string name="review_heatmap_forecast_hint">Los cuadros grises estiman las tarjetas de repaso pendientes de los próximos 90 días. Las cifras cambian a medida que estudias.</string>
+    <string name="review_heatmap_legend">Menos repasos → Más repasos · Gris = previsión · Azul = racha mantenida por AnkiQuest · Arena = por debajo del mínimo de la racha</string>
+    <string name="review_heatmap_today_description">%1$s. Hoy</string>
+    <string name="review_heatmap_forecast_unavailable">La previsión abarca los próximos 90 días.</string>
+    <string name="review_heatmap_protected_day">%1$s · AnkiQuest mantuvo tu racha</string>
+    <string name="review_heatmap_short_day">%1$s · %2$s de %3$s minutos, por debajo del mínimo de la racha</string>
+    <string name="review_heatmap_short_today">%1$s · %2$s de %3$s minutos para la racha hasta ahora</string>
+    <string name="review_heatmap_view_reviewed_cards">Ver tarjetas repasadas</string>
+    <string name="review_heatmap_view_due_cards">Ver tarjetas pendientes</string>
+    <plurals name="review_heatmap_review_count">
+        <item quantity="one">%1$s repaso</item>
+        <item quantity="other">%1$s repasos</item>
+    </plurals>
+    <plurals name="review_heatmap_due_count">
+        <item quantity="one">%1$s tarjeta de repaso pendiente (estimación)</item>
+        <item quantity="other">%1$s tarjetas de repaso pendientes (estimación)</item>
+    </plurals>
+    <plurals name="review_heatmap_streak_days">
+        <item quantity="one">%1$s día</item>
+        <item quantity="other">%1$s días</item>
+    </plurals>
+</resources>

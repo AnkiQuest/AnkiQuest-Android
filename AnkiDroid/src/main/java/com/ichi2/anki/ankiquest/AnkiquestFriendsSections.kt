@@ -132,6 +132,7 @@ internal abstract class FriendsSection(
     saved: Bundle?,
     initial: AnkiquestFriendsSections.Destination?,
 ) : ContextWrapper(activity) {
+    protected val views = AnkiquestBoardViews(activity)
     protected val scroll: NestedScrollView = activity.findViewById(R.id.aq_feed_scroll)
     protected val lifecycleScope get() = activity.lifecycleScope
     val root = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -149,7 +150,7 @@ internal abstract class FriendsSection(
     private val stateKey = "ankiquest.friends_expanded.${target.name}"
     private var expanded = saved?.getBoolean(stateKey) ?: (initial == target)
     private val heading =
-        AnkiquestBoardViews(activity).button(root, getString(title)) {
+        views.button(root, getString(title)) {
             expanded = !expanded
             showExpansion()
             if (expanded) {
