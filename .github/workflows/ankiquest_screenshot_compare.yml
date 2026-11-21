@@ -22,7 +22,7 @@ name: "ankiquest Screenshots: Compare"  # do not rename - referenced by ankiques
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 permissions: {}
@@ -128,7 +128,7 @@ jobs:
       - name: Stage screenshot diffs
         if: ${{ always() }}
         env:
-          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-main" on push)
+          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-master" on push)
           SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || format('screenshot-diff-{0}', github.ref_name) }}
         run: |
           # Preserve module paths so identically named tests cannot overwrite one another.

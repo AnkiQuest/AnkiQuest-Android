@@ -119,8 +119,7 @@ class StandardSearchFragment :
         }
 
         binding.cardStateChip.setOnClickListener {
-            val sheet = CardStateBottomSheetFragment()
-            sheet.show(childFragmentManager, CardStateBottomSheetFragment.TAG)
+            CardStateBottomSheetFragment.show(childFragmentManager)
         }
 
         binding.flagsChip.setOnClickListener {
