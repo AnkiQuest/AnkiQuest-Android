@@ -41,5 +41,23 @@ Estudo com o AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_summary">Quando terminas um baralho por hoje, perguntar que amigos avisar</string>
     <string name="ankiquest_deck_moment_title">Baralho concluído</string>
     <string name="ankiquest_deck_moment_body">Terminei de estudar %1$s por hoje.</string>
+    <plurals name="aq_moment_more">
+        <item quantity="one">E mais %d: desliza para o ver</item>
+        <item quantity="many">E mais %d: desliza para os ver</item>
+        <item quantity="other">E mais %d: desliza para os ver</item>
+    </plurals>
+    <string name="aq_moment_position">%1$d de %2$d</string>
+    <string name="ankiquest_share_send_to">Enviar a</string>
+    <string name="ankiquest_share_all_friends">Todos os amigos</string>
+    <string name="ankiquest_share_search">Procurar amigos e grupos</string>
+    <string name="ankiquest_share_group">Grupo: %1$s</string>
+    <string name="ankiquest_share_no_match">Nenhum amigo ou grupo tem esse nome.</string>
+    <string name="ankiquest_share_note_hint">Adicionar uma nota (opcional)</string>
+    <string name="ankiquest_share_sending">A enviar…</string>
+    <string name="ankiquest_share_refused">Não foi possível partilhar (%1$s).</string>
+    <string name="ankiquest_share_more_apps">Mais apps…</string>
+    <string name="ankiquest_share_targets_failed">Não foi possível carregar os teus amigos. Verifica a ligação ou partilha com outra app.</string>
+    <string name="ankiquest_share_invite">Convidar um amigo</string>
+    <string name="ankiquest_share_lonely">Adiciona amigos no AnkiQuest para lhes enviares os teus momentos.</string>
     <string name="ankiquest_share_uploading">A enviar o teu estudo…</string>
 </resources>

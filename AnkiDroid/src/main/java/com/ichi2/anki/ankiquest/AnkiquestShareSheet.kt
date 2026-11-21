@@ -74,8 +74,24 @@ internal class AnkiquestShareSheet(
     /** How the sheet was left; [SENT] is reported once its Undo is gone. */
     enum class Exit { CANCELLED, ELSEWHERE, SENT }
 
-    /** Where sending stands while friends and groups are being picked; [UPLOADING] waits for the server. */
-    enum class Step { UPLOADING, CHOOSING, SENDING, FAILED, ACCOUNT_CHANGED }
+    /** Where sending stands while friends and groups are being picked; [Uploading] waits for the server. */
+    sealed class Step {
+        data object Uploading : Step()
+
+        data object Choosing : Step()
+
+        data object Sending : Step()
+
+        /** The server could not be reached or gave no reason. */
+        data object Failed : Step()
+
+        /** The server refused the send and said why. */
+        data class Refused(
+            val reason: String,
+        ) : Step()
+
+        data object AccountChanged : Step()
+    }
 
     /** Everything the sheet shows apart from typed text. */
     sealed class State {
@@ -213,7 +229,7 @@ internal class AnkiquestShareSheet(
     private fun deck(): MomentRef.Deck? = (subject as? Subject.Known)?.ref as? MomentRef.Deck
 
     /** Friends can be chosen once the server has the moment. */
-    private fun opening(): Step = if (subject is Subject.Uploading) Step.UPLOADING else Step.CHOOSING
+    private fun opening(): Step = if (subject is Subject.Uploading) Step.Uploading else Step.Choosing
 
     /** The server confirmed the day: the moment can now be sent, so friends become choosable. */
     fun confirm(ref: MomentRef) {
@@ -222,8 +238,8 @@ internal class AnkiquestShareSheet(
         }
         subject = Subject.Known(ref)
         val picking = state as? State.Picking ?: return
-        if (picking.step == Step.UPLOADING) {
-            update(picking.copy(step = Step.CHOOSING))
+        if (picking.step == Step.Uploading) {
+            update(picking.copy(step = Step.Choosing))
         }
     }
 
@@ -286,8 +302,8 @@ internal class AnkiquestShareSheet(
 
         // While sending, nothing can change and the sheet stays open until the server answers.
         // While uploading, friends wait for the server but the note and other apps can be used.
-        val sending = picking?.step == Step.SENDING
-        val uploading = picking?.step == Step.UPLOADING
+        val sending = picking?.step == Step.Sending
+        val uploading = picking?.step == Step.Uploading
         dialog.setCancelable(!sending)
         search.isEnabled = !sending
         note.isEnabled = !sending
@@ -296,20 +312,21 @@ internal class AnkiquestShareSheet(
         deckName?.isEnabled = !sending
         send.isEnabled = picking != null && picking.choice != Choice.Nobody && !sending && !uploading && named
         val message =
-            when (picking?.step) {
-                Step.UPLOADING -> R.string.ankiquest_share_uploading
-                Step.SENDING -> R.string.ankiquest_share_sending
-                Step.FAILED -> R.string.ankiquest_share_failed
-                Step.ACCOUNT_CHANGED -> R.string.ankiquest_share_account_changed
-                Step.CHOOSING, null -> null
+            when (val step = picking?.step) {
+                Step.Uploading -> language.getString(R.string.ankiquest_share_uploading)
+                Step.Sending -> language.getString(R.string.ankiquest_share_sending)
+                Step.Failed -> language.getString(R.string.ankiquest_share_failed)
+                is Step.Refused -> language.getString(R.string.ankiquest_share_refused, step.reason)
+                Step.AccountChanged -> language.getString(R.string.ankiquest_share_account_changed)
+                Step.Choosing, null -> null
             }
-        status.text = message?.let { language.getString(it) }.orEmpty()
+        status.text = message.orEmpty()
         status.isVisible = message != null
     }
 
     /** "All friends", then every friend and group that matches the search. */
     private fun chips(picking: State.Picking) {
-        val enabled = picking.step != Step.SENDING && picking.step != Step.UPLOADING
+        val enabled = picking.step != Step.Sending && picking.step != Step.Uploading
         val group = ChipGroup(host).apply { id = R.id.aq_share_targets }
         group.addView(
             views.toggle(language.getString(R.string.ankiquest_share_all_friends), picking.choice == Choice.Everyone, enabled) {
@@ -334,10 +351,10 @@ internal class AnkiquestShareSheet(
 
     private fun choose(choice: Choice) {
         val picking = state as? State.Picking ?: return
-        if (picking.step == Step.SENDING || picking.step == Step.UPLOADING) {
+        if (picking.step == Step.Sending || picking.step == Step.Uploading) {
             return
         }
-        update(picking.copy(choice = choice, step = Step.CHOOSING))
+        update(picking.copy(choice = choice, step = Step.Choosing))
     }
 
     /** Nobody to send to yet: friends are added on the Friends screen. */
@@ -360,11 +377,11 @@ internal class AnkiquestShareSheet(
     private fun submit() {
         val picking = state as? State.Picking ?: return
         val moment = (subject as? Subject.Known)?.ref ?: return
-        if (picking.choice == Choice.Nobody || picking.step == Step.SENDING) {
+        if (picking.choice == Choice.Nobody || picking.step == Step.Sending) {
             return
         }
         val words = note.text?.toString().orEmpty()
-        update(picking.copy(step = Step.SENDING))
+        update(picking.copy(step = Step.Sending))
         scope.launch {
             val step =
                 try {
@@ -377,10 +394,14 @@ internal class AnkiquestShareSheet(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: HomeAccountChanged) {
-                    Step.ACCOUNT_CHANGED
+                    Step.AccountChanged
+                } catch (e: AnkiquestHttpException) {
+                    // The server's own words say what to change, such as a friend who left.
+                    Timber.w(e, "AnkiQuest share sheet: sending refused")
+                    e.explanation?.takeIf { it.isNotBlank() }?.let { Step.Refused(it) } ?: Step.Failed
                 } catch (e: Exception) {
                     Timber.w(e, "AnkiQuest share sheet: sending failed")
-                    Step.FAILED
+                    Step.Failed
                 }
             update(picking.copy(step = step))
         }

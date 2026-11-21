@@ -66,6 +66,8 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_share_no_match">No friend or group has that name.</string>
     <string name="ankiquest_share_note_hint">Add a note (optional)</string>
     <string name="ankiquest_share_sending">Sending…</string>
+    <!-- The server refused a send and said why, for example a friend who has left. -->
+    <string name="ankiquest_share_refused">Couldn’t share it (%1$s).</string>
     <!-- Share sheet status while the server has not confirmed the streak day yet; friends cannot be chosen until then. -->
     <string name="ankiquest_share_uploading">Uploading your study…</string>
     <string name="ankiquest_share_more_apps">More apps…</string>

@@ -41,5 +41,23 @@ Je révise avec AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_summary">Quand tu termines un paquet pour aujourd’hui, demander quels amis prévenir</string>
     <string name="ankiquest_deck_moment_title">Paquet terminé</string>
     <string name="ankiquest_deck_moment_body">J’ai terminé mes révisions de %1$s pour aujourd’hui.</string>
+    <plurals name="aq_moment_more">
+        <item quantity="one">Et %d autre : fais glisser pour le voir</item>
+        <item quantity="many">Et %d autres : fais glisser pour les voir</item>
+        <item quantity="other">Et %d autres : fais glisser pour les voir</item>
+    </plurals>
+    <string name="aq_moment_position">%1$d sur %2$d</string>
+    <string name="ankiquest_share_send_to">Envoyer à</string>
+    <string name="ankiquest_share_all_friends">Tous les amis</string>
+    <string name="ankiquest_share_search">Chercher des amis et des groupes</string>
+    <string name="ankiquest_share_group">Groupe : %1$s</string>
+    <string name="ankiquest_share_no_match">Aucun ami ni groupe ne porte ce nom.</string>
+    <string name="ankiquest_share_note_hint">Ajouter un message (facultatif)</string>
+    <string name="ankiquest_share_sending">Envoi…</string>
+    <string name="ankiquest_share_refused">Impossible de partager (%1$s).</string>
+    <string name="ankiquest_share_more_apps">Autres applis…</string>
+    <string name="ankiquest_share_targets_failed">Impossible de charger tes amis. Vérifie ta connexion ou partage avec une autre appli.</string>
+    <string name="ankiquest_share_invite">Inviter un ami</string>
+    <string name="ankiquest_share_lonely">Ajoute des amis dans AnkiQuest pour leur envoyer tes moments.</string>
     <string name="ankiquest_share_uploading">Envoi de tes révisions…</string>
 </resources>
