@@ -17,7 +17,6 @@ import org.json.JSONArray
  * Each mood is an [AnkiquestPose]; [AnkiquestCompanion.art] draws it as the chosen companion.
  */
 internal object AnkiquestMood {
-    private const val DAY_MS = 86_400_000L
     private const val MINUTE_MS = 60_000L
     private const val PERCENT = 100L
 
