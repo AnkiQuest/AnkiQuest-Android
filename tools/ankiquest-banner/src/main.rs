@@ -34,7 +34,7 @@
 //! workflows never run it. .github/workflows/ankiquest_banner.yml runs this
 //! for pull requests that touch the banner or its tooling and fails when the
 //! committed banner has other pixels, and for every quest-* release tag,
-//! where it opens a pull request against main when the banner changed;
+//! where it opens a pull request against master when the banner changed;
 //! `--compare` tells it whether it did.
 //!
 //! The reviewer's card is a WebView, which Robolectric draws blank: the test
