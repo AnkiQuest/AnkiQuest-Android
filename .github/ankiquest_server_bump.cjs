@@ -11,7 +11,7 @@ async function openPullRequest(github, repo) {
     const { data } = await github.rest.pulls.list({
         ...repo,
         state: "open",
-        base: "main",
+        base: "master",
         head: `${repo.owner}:${BRANCH}`,
     });
     return data.find(pr => pr.head.repo.full_name === `${repo.owner}/${repo.repo}`);
@@ -77,7 +77,7 @@ async function alertStale({ github, context, now = Date.now() }) {
     const body =
         `${marker}\nServer bump #${pr.number} has had a failing check for more than two days. ` +
         `Please fix that bump PR (including names.json when examples change), or explain what blocks it. ` +
-        `Android main still uses its committed pin.\n\n[Failing check](${old.html_url}) · [Bump PR](${pr.html_url})`;
+        `Android master still uses its committed pin.\n\n[Failing check](${old.html_url}) · [Bump PR](${pr.html_url})`;
     for (const number of [pr.number, ISSUE]) {
         const comments = await github.paginate(github.rest.issues.listComments, {
             ...context.repo,
@@ -136,7 +136,7 @@ async function updatePullRequest({ github, context, from, to, commits }) {
         .join("\n");
     const generated =
         `${BEGIN}\nCopies server API examples and shared fixtures from \`${to}\` into the committed Android snapshot.\n\n` +
-        `Part of #${ISSUE}. Normal PR/main tests use this pin, not a moving server branch. ` +
+        `Part of #${ISSUE}. Normal PR/master tests use this pin, not a moving server branch. ` +
         `If a new or removed example makes CI fail, update names.json and the consumer test in this PR; do not bypass the strict ownership check.\n\n` +
         `[All server commits](https://github.com/AnkiQuest/AnkiQuest-Server/compare/${from}...${to})\n\n${list || "(No new server commits.)"}` +
         (commits.length > 200 ? "\n\nThe compare link includes the remaining commits." : "") +
@@ -145,7 +145,7 @@ async function updatePullRequest({ github, context, from, to, commits }) {
     if (!pr) {
         return github.rest.pulls.create({
             ...context.repo,
-            base: "main",
+            base: "master",
             head: BRANCH,
             title,
             body: generated,

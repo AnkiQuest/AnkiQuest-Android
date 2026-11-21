@@ -12,7 +12,7 @@ module.exports = async function waitForScreenshotBaseline({
     };
 
     // The comparison checkout includes this base commit. A previous successful
-    // baseline can incorrectly attribute changes on main to an unrelated PR.
+    // baseline can incorrectly attribute changes on master to an unrelated PR.
     // The matching store run may still be recording, so wait up to twenty minutes.
     for (let attempt = 0; attempt < 40; attempt++) {
         const {

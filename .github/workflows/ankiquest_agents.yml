@@ -10,7 +10,7 @@ name: ankiquest agents copy
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - AGENTS.md
       - CLAUDE.md

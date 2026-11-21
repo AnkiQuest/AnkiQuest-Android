@@ -11,10 +11,10 @@
 </p>
 
 <a href="https://github.com/AnkiQuest/AnkiQuest-Android/releases"><img src="https://img.shields.io/github/v/release/AnkiQuest/AnkiQuest-Android" alt="release"/></a>
-<a href="https://github.com/AnkiQuest/AnkiQuest-Android/actions"><img src="https://img.shields.io/github/checks-status/AnkiQuest/AnkiQuest-Android/main?label=build" alt="build"/></a>
-<a href="https://github.com/AnkiQuest/AnkiQuest-Android/commits/main"><img src="https://img.shields.io/github/commit-activity/m/AnkiQuest/AnkiQuest-Android" alt="commit-activity"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/actions"><img src="https://img.shields.io/github/checks-status/AnkiQuest/AnkiQuest-Android/master?label=build" alt="build"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/commits/master"><img src="https://img.shields.io/github/commit-activity/m/AnkiQuest/AnkiQuest-Android" alt="commit-activity"/></a>
 <a href="https://github.com/AnkiQuest/AnkiQuest-Android/graphs/contributors"><img src="https://img.shields.io/github/contributors/AnkiQuest/AnkiQuest-Android" alt="contributors"/></a>
-<a href="https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/COPYING"><img src="https://img.shields.io/github/license/AnkiQuest/AnkiQuest-Android" alt="license"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING"><img src="https://img.shields.io/github/license/AnkiQuest/AnkiQuest-Android" alt="license"/></a>
 
 # AnkiQuest-Android
 
@@ -113,8 +113,8 @@ Thanks to our 1400 translators, for allowing us to be available, partially or to
 
 ## License
 
-* [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
-* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
+* [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
+* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
-* [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
-* [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/main/api/COPYING.LESSER) for the AnkiDroid API
+* [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
+* [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/COPYING.LESSER) for the AnkiDroid API
