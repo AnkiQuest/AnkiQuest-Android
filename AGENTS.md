@@ -18,11 +18,10 @@ All under [github.com/AnkiQuest](https://github.com/AnkiQuest). Every default br
 | AnkiQuest-GarmAnki | sypianski/garmanki | Garmin watch app and its Android companion. |
 | AnkiQuest-Android-MCP | ankimcp/ankidroid-mcp | MCP server on Android for AnkiDroid and AnkiQuest. |
 | AnkiQuest-AnkiConnectAndroid | KamWithK/AnkiconnectAndroid | AnkiConnect on Android for AnkiDroid and AnkiQuest. |
-| AnkiQuest-Dev | none | The development environment: dev shells, pinned toolchains, shared Nix and the WSL host. |
+| AnkiQuest-Dev | none | The development environment: dev shells, toolchain pins, shared workflows and label set, NixOS on WSL, NixOS and nix-darwin modules, Windows and dev container setup. |
 | AnkiQuest-Hosting | none | The server hosts' NixOS configuration. |
 | AnkiQuest-Sync | none | Scheduled jobs: fork sync, watched sources, `AGENTS.md` distribution. |
 | AnkiQuest-Agents | none | The source of every `AGENTS.md`. |
-| AnkiQuest-Dev | none | The development environment: dev shells, toolchain pins, NixOS on WSL, NixOS and nix-darwin modules, Windows and dev container setup. |
 | AnkiQuest.github.io | none | The art gallery (coming). |
 
 ## People
@@ -170,7 +169,7 @@ AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 
 - **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Code ownership covers upstream AnkiDroid code too: codebase quality comes before avoiding conflicts with upstream AnkiDroid. Change upstream code when it makes the code better, resolve the resulting conflicts in the upstream merge PRs, and say in the PR which upstream code changed.
 - **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies, in this section. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
-- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest-Desktop until the split moves them to AnkiQuest-Server (AnkiQuest/AnkiQuest-Desktop#306). The bump PR brings server changes in; whoever's server change breaks it fixes it. The examples Android reads are listed in `ankiquest-api/names.json`.
+- **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The workflows fetch it from AnkiQuest/AnkiQuest-Server; commits from before the split (AnkiQuest/AnkiQuest-Desktop#306) have the same hashes there. The bump PR brings server changes in; whoever's server change breaks it fixes it. The examples Android reads are listed in `ankiquest-api/names.json`.
 - **Unit tests run on the JVM.** Robolectric unit tests run on the JVM, not Android's runtime: regex (ICU), text, locale and other platform behaviour can differ. Code that depends on such behaviour needs a test in the emulator suite (`AnkiDroid/src/androidTest`), and lint errors are not to be suppressed without a comment saying why.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `master` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
 - **Checks to run** before pushing: `./gradlew ktlintCheck` and the unit tests you touched (`./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'`). Leave the full suites to CI.
