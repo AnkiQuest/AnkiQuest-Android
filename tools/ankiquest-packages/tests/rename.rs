@@ -141,6 +141,13 @@ fn rewrites_references_outside_kotlin() {
             "- 'AnkiDroid/src/test/java/org/ankiquest/AnkiquestBannerScreenshots.kt'\n",
         ),
         (
+            "AnkiDroid/src/test/java/com/ichi2/anki/IconTest.kt",
+            r#"val r = Regex("com\\.ichi2\\.anki\\.ankiquest\\.(\\w+)")
+"#,
+            r#"val r = Regex("org\\.ankiquest\\.(\\w+)")
+"#,
+        ),
+        (
             ".github/tests/a.test.cjs",
             "/com\\.ichi2\\.anki\\.ankiquest\\b/\n",
             "/org\\.ankiquest\\b/\n",

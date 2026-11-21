@@ -108,7 +108,7 @@ class AnkiquestIconTest : RobolectricTest() {
     @Test
     fun `the quest manifest declares every icon`() {
         val manifest = File("src/quest/AndroidManifest.xml").readText()
-        val declared = Regex("com\\.ichi2\\.anki\\.ankiquest\\.(AnkiquestIcon\\w+)").findAll(manifest).map { it.groupValues[1] }.toSet()
+        val declared = Regex("org\\.ankiquest\\.(AnkiquestIcon\\w+)").findAll(manifest).map { it.groupValues[1] }.toSet()
         assertEquals(Icon.entries.map { it.alias }.toSet(), declared)
     }
 

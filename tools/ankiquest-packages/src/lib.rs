@@ -9,7 +9,8 @@
 //!   module moves to `src/<set>/<dir>/org/ankiquest/`;
 //! - every text file (Kotlin, Java, XML, Gradle, ProGuard, `META-INF/services`,
 //!   workflows, docs) has `com.ichi2.anki.ankiquest`, `com/ichi2/anki/ankiquest`
-//!   and the regex form `com\.ichi2\.anki\.ankiquest` replaced, when the next
+//!   and the regex forms `com\.ichi2\.anki\.ankiquest` and
+//!   `com\\.ichi2\\.anki\\.ankiquest` replaced, when the next
 //!   character does not continue the name;
 //! - Kotlin files it changed get their imports sorted again, in ktlint's order.
 //!
@@ -30,12 +31,16 @@ const OLD_PATH: &str = "com/ichi2/anki/ankiquest";
 const NEW_PATH: &str = "org/ankiquest";
 const OLD_ESCAPED: &str = r"com\.ichi2\.anki\.ankiquest";
 const NEW_ESCAPED: &str = r"org\.ankiquest";
+const OLD_STRING_ESCAPED: &str = r"com\\.ichi2\\.anki\\.ankiquest";
+const NEW_STRING_ESCAPED: &str = r"org\\.ankiquest";
 
-/// The three spellings of the package and their replacements.
-const SPELLINGS: [(&str, &str); 3] = [
+/// The spellings of the package and their replacements: as written, as a
+/// path, as a regex, and as a regex inside a Kotlin or Java string.
+const SPELLINGS: [(&str, &str); 4] = [
     (OLD_PACKAGE, NEW_PACKAGE),
     (OLD_PATH, NEW_PATH),
     (OLD_ESCAPED, NEW_ESCAPED),
+    (OLD_STRING_ESCAPED, NEW_STRING_ESCAPED),
 ];
 
 /// Lines with this text keep the old name (a stored class name, for example).
