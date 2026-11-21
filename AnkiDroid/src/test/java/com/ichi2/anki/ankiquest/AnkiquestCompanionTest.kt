@@ -32,6 +32,16 @@ class AnkiquestCompanionTest : RobolectricTest() {
     }
 
     @Test
+    fun `every companion's asleep art uses the pose name`() {
+        // AnkiQuest-Server#32: every companion exports its asleep pose as `<companion>_asleep`.
+        for (choice in Choice.entries) {
+            val art = AnkiquestCompanion.art(AnkiquestPose.ASLEEP, choice)
+            val name = targetContext.resources.getResourceEntryName(art)
+            assertTrue(name.endsWith("_asleep"), "$choice shows $name")
+        }
+    }
+
+    @Test
     fun `choice follows only the current account and maps all mascot poses`() {
         val alice = account("alice")
         assertEquals("aki", AnkiquestCompanion.selected())
@@ -40,7 +50,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.resource(R.drawable.aki_freeze))
         assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.resource(R.drawable.aki_freeze_used))
         assertEquals(R.drawable.ankilope_sad, AnkiquestCompanion.resource(R.drawable.aki_at_risk))
-        assertEquals(R.drawable.ankilope_sleeping, AnkiquestCompanion.resource(R.drawable.aki_sleeping))
+        assertEquals(R.drawable.ankilope_asleep, AnkiquestCompanion.resource(R.drawable.aki_asleep))
         assertEquals(R.drawable.ankilope_welcome, AnkiquestCompanion.resource(R.drawable.aki_welcome))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.resource(R.drawable.aki_winner))
         assertEquals(R.drawable.ankilope_place_1, AnkiquestCompanion.resource(R.drawable.aki_place_1))
@@ -127,7 +137,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
 
     @Test
     fun `previews show face, fire and sad without repeating a picture`() {
-        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk), AnkiquestCompanion.preview(Choice.AKI))
+        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_sad), AnkiquestCompanion.preview(Choice.AKI))
         for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
             val pictures = AnkiquestCompanion.preview(choice).map { AnkiquestCompanion.resource(it, choice) }
             assertEquals(listOf(R.drawable.ankilope_face, R.drawable.ankilope_study, R.drawable.ankilope_sad), pictures)
