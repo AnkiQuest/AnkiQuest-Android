@@ -1465,7 +1465,13 @@ class Collection(
         expected: String,
         provided: String,
         combining: Boolean = true,
-    ): String = backend.compareAnswer(expected = expected, provided = provided, combining = combining)
+    ): String =
+        backend.compareAnswer(
+            expected = expected,
+            provided = provided,
+            combining = combining,
+            ignoreCase = false,
+        )
 
     @CheckResult
     @LibAnkiAlias("extract_cloze_for_typing")
