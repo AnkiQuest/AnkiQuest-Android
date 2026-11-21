@@ -66,7 +66,7 @@ has identical data or a small follow-up.
 The API-contract and shared-fixtures workflows accept an optional
 `server_ref` on manual dispatch. Blank means the committed pin. An explicit
 ref tests its API examples or compares its data with the committed snapshot;
-it does not change main. Missing/empty server examples fail clearly. The art
+it does not change master. Missing/empty server examples fail clearly. The art
 check runs only for pull requests, merge queue groups and main pushes, always
 using the committed pin.
 
