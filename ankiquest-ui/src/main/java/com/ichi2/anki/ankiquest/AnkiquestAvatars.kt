@@ -48,7 +48,7 @@ object AnkiquestAvatars {
      * Up to [letters] initials of [name], the first character of each word, as the website's
      * avatars show. They keep the name's own case: hill shows "h". "?" when the name is blank.
      */
-    internal fun initials(
+    fun initials(
         name: String,
         letters: Int = 2,
     ): String =
