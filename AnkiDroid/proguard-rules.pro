@@ -43,6 +43,10 @@
 # so a stored name could refer to a different, non-Parcelable class after an update
 -keepnames class com.ichi2.** implements android.os.Parcelable
 
+# AnkiQuest keeps its class names: crash reports stay readable, and AnkiquestDeviceTest finds the
+# package's classes in the release APK to check that each one initialises on ART
+-keepnames class com.ichi2.anki.ankiquest.**
+
 # Ignore unused packages
 -dontwarn javax.naming.**
 -dontwarn org.ietf.jgss.**
