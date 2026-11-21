@@ -39,6 +39,9 @@ class AnkiquestCompanionFragment : SettingsFragment() {
     private val writes = Mutex()
     private var generation = 0
 
+    /** Counts [restart]s, so an answer started for the screen before one is dropped. */
+    private var shown = 0
+
     /** A choice being saved, shown until the server answers. */
     private var pending: Choice? = null
 
@@ -73,11 +76,21 @@ class AnkiquestCompanionFragment : SettingsFragment() {
     private fun restart() {
         owner = signedIn()?.scope
         ++generation
+        ++shown
+        hint?.cancel()
+        hint = null
         pending = null
         chibiTaps = AnkiquestChibi.Taps()
         showStatus(null)
         render()
         refresh()
+    }
+
+    override fun onDestroyView() {
+        // A hint for taps on this screen must not outlive it.
+        hint?.cancel()
+        hint = null
+        super.onDestroyView()
     }
 
     private fun picker() = requirePreference<AnkiquestCompanionPicker>(R.string.ankiquest_companion_picker_key)
@@ -178,6 +191,7 @@ class AnkiquestCompanionFragment : SettingsFragment() {
         base: Choice,
     ) {
         hint?.cancel()
+        val screen = shown
         lifecycleScope.launch {
             try {
                 writes.withLock { AnkiquestUnlocks.claim(account, chibi) }
@@ -185,17 +199,19 @@ class AnkiquestCompanionFragment : SettingsFragment() {
                 throw e
             } catch (_: HomeAccountChanged) {
                 // The taps were another account's; the screen moves to the account now signed in.
-                if (isAdded) {
+                if (isAdded && screen == shown) {
                     restart()
                 }
                 return@launch
             } catch (e: Exception) {
-                if (isAdded) {
+                if (isAdded && screen == shown) {
                     showStatus(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))
                 }
                 return@launch
             }
-            if (isAdded) {
+
+            // A restarted screen shows another account, or this one from scratch, without the old taps.
+            if (isAdded && screen == shown) {
                 picker().grow(base)
                 render()
             }

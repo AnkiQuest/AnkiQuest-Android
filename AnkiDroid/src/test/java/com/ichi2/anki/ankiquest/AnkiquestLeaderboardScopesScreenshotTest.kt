@@ -100,6 +100,31 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
         captureScreen("unavailable_group")
     }
 
+    @Test
+    fun lockedOwnRow() {
+        // Before the first upload the server lists only the player's own row and says why.
+        val own =
+            AnkiquestBoards.parseLeaderboard(
+                JSONArray(
+                    """[{"user":"hill","display":"Hill","level":2,"xp":40,"streak":3,"me":true,
+                     "today_reviews":12,"today_minutes":10,"streak_minutes":10,"streak_state":"studied","day_ends_at":4102444800000}]""",
+                ),
+                AnkiquestBoards.Period.WEEK,
+            )
+        coEvery { AnkiquestBoards.leaderboard(any(), any(), any()) } returns AnkiquestBoards.Leaderboard(own, AnkiquestLock.UPLOAD_FIRST)
+        val screen = launch()
+        val words =
+            screen
+                .findViewById<View>(R.id.aq_friends_board_content)
+                .allViews
+                .filterIsInstance<TextView>()
+                .map { it.text.toString() }
+                .toList()
+        assertTrue(words.any { "Hill" in it }, "the own row is listed: $words")
+        assertTrue(screen.getString(R.string.aq_upload_first) in words, "$words")
+        captureScreen("locked_own_row")
+    }
+
     private fun captureGlobal(name: String) {
         val screen = launch()
         click(screen, R.string.ankiquest_widget_who_global)
