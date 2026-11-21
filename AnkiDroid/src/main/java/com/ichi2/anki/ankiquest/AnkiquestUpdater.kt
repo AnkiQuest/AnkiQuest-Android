@@ -39,9 +39,25 @@ import java.util.concurrent.TimeUnit
  * Releases are tagged `quest-<n>` and CI bakes `<n>` into [BuildConfig.ANKIQUEST_RELEASE].
  * Every push to the branch also replaces the `nightly` pre-release, whose builds carry the
  * last release number plus [BuildConfig.ANKIQUEST_NIGHTLY] commits. Local builds carry 0 and never check.
+ *
+ * Only builds made with `-PankiquestUpdates=github` update themselves; see [Source].
  */
 object AnkiquestUpdater {
     enum class Channel { STABLE, NIGHTLY }
+
+    /**
+     * Where this build gets its updates, fixed at build time by `-PankiquestUpdates`.
+     * Store builds (F-Droid, IzzyOnDroid, Play) and local builds are [NONE]: the store updates them.
+     */
+    enum class Source(
+        val property: String,
+    ) {
+        /** Checks the GitHub releases, downloads and installs them. */
+        GITHUB("github"),
+
+        /** No checks, no update settings, no install permission. */
+        NONE("none"),
+    }
 
     private const val LATEST_URL = "https://api.github.com/repos/AnkiQuest/AnkiQuest-Android/releases/latest"
     private const val NIGHTLY_URL = "https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/"
@@ -100,6 +116,8 @@ object AnkiquestUpdater {
     /** Makes the next deck list visit check again, e.g. after switching channel. */
     fun checkSoon() = AnkiDroidApp.sharedPrefs().edit { remove(PREF_CHECKED_AT) }
 
+    fun source(): Source = Source.entries.firstOrNull { it.property == BuildConfig.ANKIQUEST_UPDATES } ?: Source.NONE
+
     fun channel(): Channel = if (AnkiDroidApp.sharedPrefs().getString(PREF_CHANNEL, null) == "nightly") Channel.NIGHTLY else Channel.STABLE
 
     /** A stable release is newer by its number, a nightly by the version code Android compares on install. */
@@ -111,6 +129,9 @@ object AnkiquestUpdater {
 
     fun maybeCheck(activity: Activity) {
         if (activity !is DeckPicker) return
+        if (source() == Source.NONE) {
+            return
+        }
         cleanOnce(activity)
         checkOnResume(activity, BuildConfig.ANKIQUEST_RELEASE)
     }
@@ -167,6 +188,9 @@ object AnkiquestUpdater {
      * @return a message to show when nothing is offered, or null when the update dialog is shown
      */
     suspend fun checkNow(activity: Activity): String? {
+        if (source() == Source.NONE) {
+            return activity.getString(R.string.ankiquest_updates_off)
+        }
         val check = UpdateState.Checking()
         val active = beginCheck(check)
         if (active is UpdateState.Downloading) {

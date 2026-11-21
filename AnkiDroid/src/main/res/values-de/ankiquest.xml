@@ -84,6 +84,7 @@
     <string name="ankiquest_check_updates_summary">Installiert: %1$s</string>
     <string name="ankiquest_local_build">Lokaler Build</string>
     <string name="ankiquest_update_none">Du hast die neueste Version (%1$s).</string>
+    <string name="ankiquest_updates_off">Dieser Build aktualisiert sich nicht selbst. Der Store, aus dem du ihn installiert hast, aktualisiert ihn.</string>
     <string name="ankiquest_update_check_failed">Updates konnten auf GitHub nicht geprüft werden. Versuche es später erneut.</string>
     <string name="ankiquest_period_hour">Diese Stunde</string>
     <string name="ankiquest_period_day">Heute</string>
