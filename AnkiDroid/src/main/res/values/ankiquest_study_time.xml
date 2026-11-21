@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <!-- Same wording and order as the desktop add-on's Study time tab. -->
+    <string name="aq_study_time_title">Study time</string>
+    <string name="aq_study_time_intro">Time spent answering cards in this collection, uploaded or not. Days start at Anki’s “Next day starts at” hour, weeks on Monday.</string>
+    <string name="aq_study_time_today" comment="Study time row heading, in sentence case">Today</string>
+    <string name="aq_study_time_week" comment="Study time row heading, in sentence case">This week</string>
+    <string name="aq_study_time_month" comment="Study time row heading, in sentence case">This month</string>
+    <string name="aq_study_time_total">Total</string>
+    <string name="aq_study_time_average">Per study day</string>
+    <string name="aq_study_time_minutes">%1$d min</string>
+    <string name="aq_study_time_hours">%1$d h %2$d min</string>
+    <string name="aq_study_time_loading">Loading study time…</string>
+    <string name="aq_study_time_error">Could not read study time (%1$s).</string>
+    <string name="aq_study_time_empty">No reviews in this collection yet.</string>
+</resources>

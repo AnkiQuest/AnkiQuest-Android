@@ -13,6 +13,7 @@ import com.google.android.material.chip.Chip
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapGrid
+import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -201,6 +202,29 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
     }
 
     @Test
+    fun `study time reads this collection, uploaded or not`() {
+        val now = TimeManager.time.intTimeMS()
+        col.db.execute(
+            "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, 1, -1, 3, 1, 1, 2500, 90000, 1)",
+            now - 1,
+        )
+        val me = launch(AnkiquestRecordsActivity.intent(targetContext)).get()
+        awaitSections(me)
+        me.click(me.getString(R.string.aq_study_time_title))
+        assertTrue(me.findViewById<View>(R.id.aq_me_study_time_content).isVisible)
+        val tiles =
+            me
+                .findViewById<View>(R.id.aq_me_study_time_content)
+                .allViews
+                .mapNotNull { it.contentDescription?.toString() }
+                .toList()
+        for (label in listOf(R.string.aq_study_time_today, R.string.aq_study_time_total, R.string.aq_study_time_average)) {
+            assertTrue("1 min ${me.getString(label)}" in tiles, tiles.toString())
+        }
+        assertFalse(me.views<TextView>().any { it.text == me.getString(R.string.aq_study_time_empty) })
+    }
+
+    @Test
     fun `legacy explicit activities redirect to the matching Me section`() {
         val records =
             startRegularActivity<AnkiquestRecordsActivity>(
@@ -229,7 +253,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     private fun awaitSections(me: AnkiquestProfileActivity) {
         advanceRobolectricLooperUntil {
-            listOf(R.id.aq_board_loading, R.id.aq_me_records_loading, R.id.aq_me_history_loading).none {
+            listOf(R.id.aq_board_loading, R.id.aq_me_records_loading, R.id.aq_me_history_loading, R.id.aq_me_study_time_loading).none {
                 me.findViewById<View>(it).isVisible
             }
         }
