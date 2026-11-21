@@ -8,10 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.drawable.Icon
 import android.net.Uri
-import android.os.Build
-import android.service.chooser.ChooserAction
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
@@ -39,10 +36,6 @@ internal object AnkiquestShare {
     const val EXTRA_PLACE = "ankiquestSharePlace"
     const val EXTRA_SCOPE = "ankiquestShareScope"
     const val EXTRA_TOPIC = "ankiquestShareTopic"
-
-    /** Set on the share sheet's own "AnkiQuest friends" entry, which sends the win without asking again. */
-    const val EXTRA_DESTINATION = "ankiquestShareDestination"
-    const val DESTINATION_FRIENDS = "friends"
 
     /** The server keeps labels of conquered cards to one line of this many characters. */
     const val MAX_LABEL = 120
@@ -182,9 +175,8 @@ internal object AnkiquestShare {
     fun linkChooser(
         context: Context,
         link: Link,
-        friends: PendingIntent? = null,
         card: Card = Card(BRAND, link.text),
-    ): Intent = cardChooser(context, link.text, link.image, friends, card)
+    ): Intent = cardChooser(context, link.text, link.image, card)
 
     /**
      * Attach the server PNG when quickly available, otherwise draw [fallback] locally. Only a
@@ -194,7 +186,6 @@ internal object AnkiquestShare {
         context: Context,
         text: String,
         image: String?,
-        friends: PendingIntent? = null,
         fallback: Card = Card(BRAND, text),
     ): Intent {
         val send = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, text)
@@ -208,7 +199,7 @@ internal object AnkiquestShare {
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             send.clipData = ClipData.newRawUri(BRAND, card)
         }
-        return chooser(context, send, friends)
+        return chooser(context, send)
     }
 
     /**
@@ -275,7 +266,6 @@ internal object AnkiquestShare {
         context: Context,
         title: String,
         body: String,
-        friends: PendingIntent? = null,
         @DrawableRes art: Int = R.drawable.aki_celebrate,
         streak: Int? = null,
         companion: AnkiquestCompanion.Choice? = null,
@@ -284,53 +274,19 @@ internal object AnkiquestShare {
         val text =
             Ankiquest.serverUrl()?.let { language.getString(R.string.ankiquest_share_text, title, body, it) }
                 ?: language.getString(R.string.ankiquest_share_text_offline, title, body)
-        return cardChooser(context, text, null, friends, Card(title, body, art, streak = streak, companion = companion))
+        return cardChooser(context, text, null, Card(title, body, art, streak = streak, companion = companion))
     }
 
-    /**
-     * Android's share sheet for [send]. With [friends], and on Android 14 or later, the sheet itself
-     * also offers "AnkiQuest friends", so friends and other apps are one choice in one place.
-     */
+    /** Android's share sheet for [send]. */
     private fun chooser(
         context: Context,
         send: Intent,
-        friends: PendingIntent?,
     ): Intent {
         val language = AnkiquestLanguage.context(context)
-        val chooser =
-            Intent
-                .createChooser(send, language.getString(R.string.ankiquest_share_title))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (friends != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val action =
-                ChooserAction
-                    .Builder(
-                        Icon.createWithResource(context, R.drawable.ic_ankiquest_friends),
-                        language.getString(R.string.ankiquest_share_friends_target),
-                        friends,
-                    ).build()
-            chooser.putExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS, arrayOf(action))
-        }
-        return chooser
+        return Intent
+            .createChooser(send, language.getString(R.string.ankiquest_share_title))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-
-    /** Whether [chooser] can offer AnkiQuest friends itself, so no separate question is needed first. */
-    fun sheetOffersFriends(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-
-    /** The share sheet's entry for AnkiQuest friends: [share] again, told to send the win to friends. */
-    fun friendsTarget(
-        context: Context,
-        share: Intent,
-    ): PendingIntent =
-        PendingIntent.getActivity(
-            context,
-            share.getLongExtra(EXTRA_WIN, 0).toInt(),
-            Intent(share)
-                .setClass(context, AnkiquestShareActivity::class.java)
-                .putExtra(EXTRA_DESTINATION, DESTINATION_FRIENDS)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
 
     /** The review id in a conquered card's win key `conquered:{at}`, or null for any other key. */
     fun conqueredAt(key: String?): Long? = key?.removePrefix("conquered:")?.takeIf { it != key }?.toLongOrNull()

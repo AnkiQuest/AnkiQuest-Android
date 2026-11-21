@@ -167,4 +167,5 @@
         <item quantity="one">Sent %d review.</item>
         <item quantity="other">Sent %d reviews.</item>
     </plurals>
+    <string name="aq_server_outdated">Update your AnkiQuest server</string>
 </resources>

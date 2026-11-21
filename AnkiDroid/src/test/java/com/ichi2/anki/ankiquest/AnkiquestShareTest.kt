@@ -2,16 +2,12 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
-import android.service.chooser.ChooserAction
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.SdkSuppress
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
@@ -146,24 +142,12 @@ class AnkiquestShareTest : RobolectricTest() {
     }
 
     @Test
-    fun `older wins are sent to the server by notification or by place`() =
+    fun `a win the server keeps is linked by its id`() =
         runBlocking {
             val scope = AnkiquestHomeData.account()!!.scope
-            assertEquals(2, Ankiquest.shareWin(42, null, scope))
-            assertEquals(2, Ankiquest.shareWin(null, 1, scope))
-            assertEquals(42, JSONObject(posted[0]).getLong("notification"))
-            assertFalse(JSONObject(posted[0]).has("place"))
-            assertEquals(1, JSONObject(posted[1]).getInt("place"))
-        }
-
-    @Test
-    fun `a win the server keeps is shared by its id`() =
-        runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
-            assertEquals(3, Ankiquest.shareWinWithFriends(17, scope))
             val link = Ankiquest.shareWinLink(17, scope)
             assertEquals(
-                listOf(17L to "friends", 17L to "link"),
+                listOf(17L to "link"),
                 posted.map {
                     JSONObject(it).let { body ->
                         body.getLong("win") to
@@ -181,8 +165,6 @@ class AnkiquestShareTest : RobolectricTest() {
         runBlocking {
             val scope = AnkiquestHomeData.account()!!.scope
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "another-credential") }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWin(42, null, scope) }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWinWithFriends(17, scope) }
             assertFailsWith<HomeAccountChanged> { Ankiquest.shareWinLink(17, scope) }
             assertTrue(posted.isEmpty())
         }
@@ -405,7 +387,7 @@ class AnkiquestShareTest : RobolectricTest() {
     }
 
     @Test
-    fun `a conquered card's win, label and a finished deck go to the server`() =
+    fun `a conquered card's win and label go to the server`() =
         runBlocking {
             val account = AnkiquestHomeData.account()!!
             assertEquals("conquered:1793183400000", AnkiquestSharing.winKey(account, 17))
@@ -413,7 +395,6 @@ class AnkiquestShareTest : RobolectricTest() {
             assertEquals("der Hund", AnkiquestSharing.conquestLabel(account, 1793183400000))
             AnkiquestSharing.setConquestLabel(account, 1793183400000, "der Hund – the dog")
             AnkiquestSharing.setConquestLabel(account, 1793183400000, null)
-            assertEquals(2, AnkiquestSharing.shareFinishedDeck(account, 7, "Japanese::Kanji", listOf("cerro", "ana")))
             assertEquals(
                 listOf(
                     "GET /api/wins/hill?limit=1&before=18",
@@ -425,10 +406,6 @@ class AnkiquestShareTest : RobolectricTest() {
             )
             assertTrue(asked[3].startsWith("POST /api/conquests/hill/1793183400000/label "))
             assertEquals("der Hund – the dog", JSONObject(asked[3].substringAfter("label ")).getString("label"))
-            val deck = JSONObject(asked[5].substringAfter("share "))
-            assertEquals("7", deck.getString("id"))
-            assertEquals("Japanese::Kanji", deck.getString("name"))
-            assertEquals(listOf("cerro", "ana"), deck.getJSONArray("recipients").strings())
         }
 
     @Test
@@ -481,37 +458,6 @@ class AnkiquestShareTest : RobolectricTest() {
         assertNull(labels.better("my own words"), "a label the player wrote stays")
         assertNull(labels.better(null))
         assertNull(AnkiquestShare.Labels("der Hund", "der Hund").better("der Hund"))
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    fun `the share sheet offers AnkiQuest friends next to the other apps`() {
-        val share =
-            Intent(targetContext, AnkiquestShareActivity::class.java)
-                .putExtra(AnkiquestShare.EXTRA_WIN, 17L)
-                .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")
-        val friends = AnkiquestShare.friendsTarget(targetContext, share)
-        val target = shadowOf(friends).savedIntent
-        assertEquals(AnkiquestShare.DESTINATION_FRIENDS, target.getStringExtra(AnkiquestShare.EXTRA_DESTINATION))
-        assertEquals(17, target.getLongExtra(AnkiquestShare.EXTRA_WIN, 0))
-        assertEquals("Level 54", target.getStringExtra(AnkiquestShare.EXTRA_TITLE))
-        assertTrue(AnkiquestShare.sheetOffersFriends())
-        val chooser = AnkiquestShare.textChooser(targetContext, "Level 54", "You reached level 54.", friends)
-        val actions = chooser.getParcelableArrayExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS, ChooserAction::class.java)
-        assertEquals(listOf("AnkiQuest friends"), actions?.map { it.label.toString() })
-        assertEquals(friends, actions?.single()?.action)
-        assertFalse(AnkiquestShare.textChooser(targetContext, "Level 54", "", null).hasExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS))
-    }
-
-    @Test
-    @Config(sdk = [33])
-    // The extra name is a compile-time string, so checking it is absent on Android 13 is safe.
-    @SuppressLint("InlinedApi")
-    fun `before Android 14 the share sheet is for other apps and friends are asked about first`() {
-        assertFalse(AnkiquestShare.sheetOffersFriends())
-        val friends = AnkiquestShare.friendsTarget(targetContext, Intent(targetContext, AnkiquestShareActivity::class.java))
-        val chooser = AnkiquestShare.textChooser(targetContext, "Level 54", "", friends)
-        assertFalse(chooser.hasExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS))
     }
 
     @Test

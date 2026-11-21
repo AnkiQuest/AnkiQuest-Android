@@ -80,12 +80,7 @@
         <item quantity="other">%1$s days to learn</item>
     </plurals>
     <string name="aq_conquest_tell">Tell my friends</string>
-    <string name="aq_conquest_telling">Telling your friends…</string>
     <string name="aq_conquest_told">Friends told</string>
-    <plurals name="aq_conquest_told_count">
-        <item quantity="one">%1$d friend will see it in their activity.</item>
-        <item quantity="other">%1$d friends will see it in their activity.</item>
-    </plurals>
     <string name="aq_conquest_label_add">Show what the card was</string>
     <string name="aq_conquest_label_explanation">Anyone who can open this card will see it, and so will friends you tell. You can take it back later.</string>
     <string name="aq_conquest_label_save">Show it on the card</string>
@@ -121,5 +116,4 @@
     <!-- The moment card for a conquered card: its front, from this phone, and a button to open it. -->
     <string name="aq_conquest_popup_card">“%1$s”</string>
     <string name="aq_conquest_popup_open">See the card</string>
-    <string name="aq_server_outdated">This needs a newer AnkiQuest server. Ask whoever runs yours to update it.</string>
 </resources>

@@ -136,4 +136,5 @@
         <item quantity="one">%d revisão enviada.</item>
         <item quantity="other">%d revisões enviadas.</item>
     </plurals>
+    <string name="aq_server_outdated">Atualize seu servidor do AnkiQuest</string>
 </resources>

@@ -85,7 +85,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     fun cleanup() {
         ShadowDialog.getShownDialogs().toList().forEach { it.dismiss() }
         BackupManagerTestUtilities.reset()
-        unmockkObject(AnkiquestStudySession, AnkiquestDeckShare)
+        unmockkObject(AnkiquestStudySession, AnkiquestDeckShare, AnkiquestSocial)
     }
 
     private fun summary(remaining: Int = 3) = AnkiquestStudySession.Summary(6, 1, remaining, clock.intTimeMS())
@@ -98,6 +98,18 @@ class AnkiquestSessionCardTest : RobolectricTest() {
 
     private fun finish(host: DeckPicker) {
         assertTrue(AnkiquestDeckPickerHooks.onReviewResult(host, AbstractFlashcardViewer.RESULT_DEFAULT) { continued++ })
+    }
+
+    /** Share opens AnkiQuest's sheet, here with nobody to choose; its "More apps…" goes on to Android's share sheet. */
+    private fun shareElsewhere(card: AlertDialog) {
+        mockkObject(AnkiquestSocial)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+        advanceRobolectricLooper()
+        val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+        sheet.findViewById<View>(R.id.aq_share_more)!!.performClick()
+        advanceRobolectricLooper()
     }
 
     private fun card(): AlertDialog {
@@ -318,7 +330,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }
-        every { AnkiquestShare.linkChooser(any(), any(), any(), any()) } answers {
+        every { AnkiquestShare.linkChooser(any(), any(), any()) } answers {
             prepared.set(true)
             Intent(Intent.ACTION_CHOOSER)
         }
@@ -330,7 +342,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             val card = card()
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
-            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            shareElsewhere(card)
             advanceRobolectricLooperUntil { operation != null }
             controller.pause()
             answer.complete(AnkiquestShare.Link("https://quest.example.test/w/card", "https://quest.example.test/w/card.png", "A win"))
@@ -347,11 +359,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     }
 
     @Test
-    fun `with share_moments a moment's Share opens AnkiQuest's share sheet and Undo shows on the card`() {
-        mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+    fun `a moment's Share opens AnkiQuest's share sheet and Undo shows on the card`() {
+        mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
-        every { AnkiquestMomentShare.available(any()) } returns true
-        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
@@ -386,7 +396,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             )
         } finally {
             controller.close()
-            unmockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+            unmockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestSocial)
         }
     }
 
@@ -399,11 +409,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
 
     @Test
     fun `Tell on a kept moment asks for recipients before sending`() {
-        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestSocial, AnkiquestCommunity)
         coEvery { AnkiquestSharing.win(any(), any()) } returns null
         coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
-        every { AnkiquestMomentShare.available(any()) } returns true
-        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
@@ -467,11 +475,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 )
                 card.dismiss()
             }
-            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
-            coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
         } finally {
             controller.close()
-            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestSocial, AnkiquestCommunity)
         }
     }
 
@@ -579,8 +585,8 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 .put("url", "https://anki.example.test/w/card")
                 .put("image", "https://anki.example.test/w/card.png")
                 .put("text", "I reached level 4! https://anki.example.test/w/card")
-        every { AnkiquestShare.linkChooser(any(), any(), any(), any()) } answers {
-            prepared.set(arg(3))
+        every { AnkiquestShare.linkChooser(any(), any(), any()) } answers {
+            prepared.set(arg(2))
             Intent(Intent.ACTION_CHOOSER)
         }
         val controller = host()
@@ -602,7 +608,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             val card = card()
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
-            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            shareElsewhere(card)
             advanceRobolectricLooperUntil { prepared.get() != null }
             val picture = assertNotNull(prepared.get())
             assertEquals("Level 4!", picture.title)
@@ -684,9 +690,9 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         }
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns chosenDeck
         coEvery { Ankiquest.shareWinLink(any(), any()) } throws IOException("offline")
-        every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+        every { AnkiquestShare.cardChooser(any(), any(), any(), any()) } answers {
             caption.set(arg(1))
-            prepared.set(arg(4))
+            prepared.set(arg(3))
             Intent(Intent.ACTION_CHOOSER)
         }
         val controller = host()
@@ -720,7 +726,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 controller.start().resume()
                 advanceRobolectricLooper()
             }
-            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            shareElsewhere(card)
             // Wait for this export, then consume its chooser before the next fixture case.
             advanceRobolectricLooperUntil {
                 caption.get() != null && prepared.get() != null && shadowOf(host).peekNextStartedActivity() != null

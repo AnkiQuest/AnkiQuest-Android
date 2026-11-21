@@ -77,13 +77,7 @@
         <item quantity="other">%1$s jours pour l’apprendre</item>
     </plurals>
     <string name="aq_conquest_tell">Le dire à mes amis</string>
-    <string name="aq_conquest_telling">Tes amis sont prévenus…</string>
     <string name="aq_conquest_told">Amis prévenus</string>
-    <plurals name="aq_conquest_told_count">
-        <item quantity="one">%1$d ami le verra dans son activité.</item>
-        <item quantity="many">%1$d amis le verront dans leur activité.</item>
-        <item quantity="other">%1$d amis le verront dans leur activité.</item>
-    </plurals>
     <string name="aq_conquest_label_add">Montrer quelle carte c’était</string>
     <string name="aq_conquest_label_explanation">Toute personne pouvant ouvrir cette carte le verra, tout comme les amis que tu préviens. Tu peux le retirer plus tard.</string>
     <string name="aq_conquest_label_save">L’afficher sur la carte</string>
@@ -116,6 +110,5 @@
         <item quantity="many">%1$s a enfin appris « %2$s », une carte oubliée %3$d fois. 🏆</item>
         <item quantity="other">%1$s a enfin appris « %2$s », une carte oubliée %3$d fois. 🏆</item>
     </plurals>
-    <string name="aq_server_outdated">Il faut pour cela un serveur AnkiQuest plus récent. Demande à la personne qui gère le tien de le mettre à jour.</string>
     <string name="aq_conquest_share_deck">De mon paquet « %1$s ».</string>
 </resources>

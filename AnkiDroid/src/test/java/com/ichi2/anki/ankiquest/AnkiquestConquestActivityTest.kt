@@ -93,11 +93,11 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             clearMocks(spy)
         }
         unmockkStatic(FileProvider::class)
+        unmockkObject(AnkiquestSocial)
     }
 
     @Test
-    fun `the owner sees the card, its label and numbers, and can tell friends once`() {
-        coEvery { AnkiquestCommunity.tell(identity, AT) } returns 2
+    fun `the owner sees the card, its label and numbers`() {
         val card = launch()
         assertEquals(card.getString(R.string.aq_profile_conquest), card.findViewById<TextView>(R.id.aq_board_title).text.toString())
         assertTrue(card.hasText("el murciélago"))
@@ -106,13 +106,6 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_answers, 11, "11")))
         assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_days, 10, "10")))
         assertTrue(card.hasText(card.getString(R.string.aq_conquest_label_shown)))
-
-        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(told = true, friends = 2)
-        card.click(card.getString(R.string.aq_conquest_tell))
-        coVerify(exactly = 1) { AnkiquestCommunity.tell(identity, AT) }
-        assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_told_count, 2, 2)))
-        val told = card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_told) }
-        assertFalse(told.isEnabled, "friends are told once")
     }
 
     @Test
@@ -208,7 +201,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         every { FileProvider.getUriForFile(any(), any(), any()) } returns stream
         val card = launch()
         assertTrue(card.hasText(card.getString(R.string.aq_conquest_deck, "Animales")))
-        card.click(card.getString(R.string.ankiquest_share))
+        card.shareMore()
         val sent = card.sent()
         assertEquals("image/png", sent.type)
         assertEquals(stream, IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
@@ -221,9 +214,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     @Test
     fun `conquest exports use the shared caption and picture cases`() {
         val cases = shareFixture().getJSONArray("cases")
-        mockkObject(AnkiquestMomentShare)
         try {
-            every { AnkiquestMomentShare.available(identity) } returns false
             for (index in 0 until cases.length()) {
                 val case = cases.getJSONObject(index)
                 val found = case.getJSONObject("found")
@@ -244,13 +235,13 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
                     }
                 var caption: String? = null
                 var picture: AnkiquestShare.Card? = null
-                every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+                every { AnkiquestShare.cardChooser(any(), any(), any(), any()) } answers {
                     caption = arg(1)
-                    picture = arg(4)
+                    picture = arg(3)
                     Intent(Intent.ACTION_CHOOSER)
                 }
                 val screen = launch()
-                screen.click(screen.getString(R.string.ankiquest_share))
+                screen.shareMore()
                 val page = AnkiquestCommunity.conquestLink(identity.server, identity.user, AT)
                 assertEquals("${case.getString("caption")}\n$page", withoutTrophy(assertNotNull(caption)), case.getString("name"))
                 val rendered = assertNotNull(picture)
@@ -262,7 +253,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
                 assertFalse(rendered.details.any { it.contains("https://") || it.contains("private") })
             }
         } finally {
-            unmockkObject(AnkiquestMomentShare)
+            unmockkObject(AnkiquestSocial)
         }
     }
 
@@ -297,7 +288,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `a conquest without a server win shares a local picture`() {
         coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(win = null)
         val card = launch()
-        card.click(card.getString(R.string.ankiquest_share))
+        card.shareMore()
         val sent = card.sent()
         assertEquals("image/png", sent.type)
         assertTrue(sent.hasExtra(Intent.EXTRA_STREAM))
@@ -309,10 +300,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `with share_moments the owner's Share opens AnkiQuest's share sheet for the conquest`() {
-        mockkObject(AnkiquestMomentShare, AnkiquestSocial)
+    fun `the owner's Share opens AnkiQuest's share sheet for the conquest`() {
+        mockkObject(AnkiquestSocial)
         try {
-            every { AnkiquestMomentShare.available(identity) } returns true
             every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
             coEvery { AnkiquestSocial.overview(identity) } returns
                 AnkiquestSocial.Overview(
@@ -343,34 +333,26 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
             advanceRobolectricLooperUntil { !sheet.isShowing }
             coVerify(exactly = 1) { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) }
-            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
             assertFalse(sheet.isShowing)
         } finally {
-            unmockkObject(AnkiquestMomentShare, AnkiquestSocial)
+            unmockkObject(AnkiquestSocial)
         }
     }
 
     @Test
-    fun `with share_moments someone else's card still goes to Android's share sheet`() {
-        mockkObject(AnkiquestMomentShare)
-        try {
-            every { AnkiquestMomentShare.available(identity) } returns true
-            coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
-                recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null, win = null)
-            val card = launch("cerro")
-            card.click(card.getString(R.string.ankiquest_share))
-            assertEquals("image/png", card.sent().type)
-            assertFalse(ShadowDialog.getLatestDialog() is BottomSheetDialog)
-        } finally {
-            unmockkObject(AnkiquestMomentShare)
-        }
+    fun `someone else's card goes to Android's share sheet`() {
+        coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
+            recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null, win = null)
+        val card = launch("cerro")
+        card.click(card.getString(R.string.ankiquest_share))
+        assertEquals("image/png", card.sent().type)
+        assertFalse(ShadowDialog.getLatestDialog() is BottomSheetDialog)
     }
 
     @Test
-    fun `Tell friends waits for a recipient choice on a share_moments server`() {
-        mockkObject(AnkiquestMomentShare, AnkiquestSocial)
+    fun `Tell friends waits for a recipient choice`() {
+        mockkObject(AnkiquestSocial)
         try {
-            every { AnkiquestMomentShare.available(identity) } returns true
             every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
             coEvery { AnkiquestSocial.overview(identity) } returns
                 AnkiquestSocial.Overview(
@@ -387,7 +369,6 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             val card = launch()
             card.click(card.getString(R.string.aq_conquest_tell))
             val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
-            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
             coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
             assertNull(shadowOf(card).nextStartedActivity)
 
@@ -403,10 +384,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
             card.settle()
             coVerify(exactly = 1) { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) }
-            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
             assertFalse(sheet.isShowing)
         } finally {
-            unmockkObject(AnkiquestMomentShare, AnkiquestSocial)
+            unmockkObject(AnkiquestSocial)
         }
     }
 
@@ -452,7 +432,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         val io = StandardTestDispatcher()
         ioDispatcher = io
         val drawnOn = AtomicReference<Thread>()
-        every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+        every { AnkiquestShare.cardChooser(any(), any(), any(), any()) } answers {
             drawnOn.set(Thread.currentThread())
             callOriginal()
         }
@@ -512,26 +492,6 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         }
     }
 
-    @Test
-    fun `refreshing while friends are being told keeps the buttons waiting and shows the answer`() {
-        val answer = CompletableDeferred<Int>()
-        coEvery { AnkiquestCommunity.tell(identity, AT) } coAnswers { answer.await() }
-        val card = launch()
-        card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_tell) }.performClick()
-        advanceRobolectricLooper()
-
-        card.findViewById<View>(R.id.aq_board_refresh).performClick()
-        advanceRobolectricLooperUntil { card.hasText("el murciélago") }
-        val tell = card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_tell) }
-        assertFalse(tell.isEnabled, "friends could be told twice")
-
-        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(told = true, friends = 2)
-        answer.complete(2)
-        card.settle()
-        coVerify(exactly = 1) { AnkiquestCommunity.tell(identity, AT) }
-        assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_told_count, 2, 2)), "the answer is shown")
-    }
-
     private fun launch(user: String = "hill"): AnkiquestConquestActivity =
         startRegularActivity<AnkiquestConquestActivity>(AnkiquestConquestActivity.intent(targetContext, user, AT)).also { it.settle() }
 
@@ -586,7 +546,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         val answer = CompletableDeferred<AnkiquestShare.Link>()
         val prepared = AtomicBoolean(false)
         coEvery { Ankiquest.shareWinLink(6, identity.scope) } coAnswers { answer.await() }
-        every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
+        every { AnkiquestShare.cardChooser(any(), any(), any(), any()) } answers {
             prepared.set(true)
             Intent(Intent.ACTION_CHOOSER)
         }
@@ -599,8 +559,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         val card = controller.get()
         saveControllerForCleanup(controller)
         card.settle()
-        card.views<TextView>().first { it.text.toString() == card.getString(R.string.ankiquest_share) }.performClick()
-        advanceRobolectricLooper()
+        card.pressMoreApps()
         controller.pause()
         answer.complete(AnkiquestShare.Link("https://example.test/w/link", "https://example.test/w/link.png", "A win"))
         advanceRobolectricLooperUntil { prepared.get() }
@@ -622,6 +581,27 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
 
     private fun AnkiquestConquestActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+
+    /**
+     * Share on the owner's card opens AnkiQuest's sheet, here with nobody to choose; its
+     * "More apps…" goes on to Android's share sheet.
+     */
+    private fun AnkiquestConquestActivity.shareMore() {
+        pressMoreApps()
+        settle()
+    }
+
+    /** [shareMore] without waiting for the share to finish. */
+    private fun AnkiquestConquestActivity.pressMoreApps() {
+        mockkObject(AnkiquestSocial)
+        coEvery { AnkiquestSocial.overview(identity) } returns
+            AnkiquestSocial.Overview(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        views<TextView>().first { it.text.toString() == getString(R.string.ankiquest_share) && it.isClickable }.performClick()
+        advanceRobolectricLooper()
+        val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+        sheet.findViewById<View>(R.id.aq_share_more)!!.performClick()
+        advanceRobolectricLooper()
+    }
 
     private fun AnkiquestConquestActivity.click(label: String) {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }

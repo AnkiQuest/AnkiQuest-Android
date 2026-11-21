@@ -334,7 +334,7 @@ private class FeedSection(
                                 val next = AnkiquestFeed.page(current, category, unreadOnly, before)
                                 if (turn == generation && current.scope == AnkiquestHomeData.account()?.scope) {
                                     page = if (before == null) next else page?.let { append(it, next) } ?: next
-                                    if (next.unfiltered || next.legacy) {
+                                    if (next.unfiltered) {
                                         category = AnkiquestFeed.Category.ALL
                                         unreadOnly = false
                                     }
@@ -381,7 +381,8 @@ private class FeedSection(
             R.string.aq_feed_account_changed
         } catch (e: AnkiquestHttpException) {
             Timber.w(e, "AnkiQuest activity request refused")
-            if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_feed_server_error
+            AnkiquestServerUpdate.message(account, e)
+                ?: if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_feed_server_error
         } catch (e: IOException) {
             Timber.w(e, "AnkiQuest activity unreachable")
             R.string.aq_feed_offline
@@ -458,34 +459,31 @@ private class FeedSection(
 
     private fun renderInbox() {
         val current = page
-        if (current?.legacy != true) {
-            choices(
-                AnkiquestFeed.Category.entries.map { it to categoryLabel(it, current) },
-                selected = category,
-                enabled = !loading,
-            ) { choice ->
-                if (choice != category) {
-                    category = choice
-                    page = null
-                    load(more = false)
-                } else {
-                    render()
-                }
-            }
-            chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
-                unreadOnly = !unreadOnly
+        choices(
+            AnkiquestFeed.Category.entries.map { it to categoryLabel(it, current) },
+            selected = category,
+            enabled = !loading,
+        ) { choice ->
+            if (choice != category) {
+                category = choice
                 page = null
                 load(more = false)
+            } else {
+                render()
             }
+        }
+        chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
+            unreadOnly = !unreadOnly
+            page = null
+            load(more = false)
         }
         if (current == null) {
             if (loading) text(content, getString(R.string.aq_feed_loading), small = true)
             return
         }
-        if (current.unread > 0 && !current.legacy) {
+        if (current.unread > 0) {
             button(content, getString(R.string.aq_feed_mark_all_read), enabled = !markingAll) { markAllRead() }
         }
-        if (current.legacy) text(content, getString(R.string.aq_feed_legacy), small = true)
         val attention = current.attention.takeIf { category == AnkiquestFeed.Category.ALL }.orEmpty()
         if (attention.isNotEmpty() && current.actionCount > 0) {
             val panel = card(content, tinted = true)
@@ -524,7 +522,7 @@ private class FeedSection(
                     day = itemDay
                     text(content, dayLabel(item.createdAt), heading = true).setPadding(0, dp(16), 0, 0)
                 }
-                renderItem(item, current.legacy)
+                renderItem(item)
             }
         }
         if (current.nextBefore != null) {
@@ -545,11 +543,8 @@ private class FeedSection(
             else -> R.string.aq_feed_empty
         }
 
-    private fun renderItem(
-        item: AnkiquestFeed.Item,
-        legacy: Boolean,
-    ) {
-        val unread = !legacy && item.unread
+    private fun renderItem(item: AnkiquestFeed.Item) {
+        val unread = item.unread
         val panel = card(content, tinted = unread)
         text(panel, item.heading, heading = true)
         val time = DateUtils.formatDateTime(this, item.createdAt * 1000, DateUtils.FORMAT_SHOW_TIME)
@@ -683,7 +678,7 @@ private class FeedSection(
     ) = act(item, R.string.aq_feed_reply_failed) { current ->
         AnkiquestFeed.reply(current, item, message)
         change(item.id) { it.copy(replied = true) }
-        if (item.unread && page?.legacy != true) {
+        if (item.unread) {
             try {
                 AnkiquestFeed.markRead(current, listOf(item.id))
                 read(listOf(item.id))
@@ -739,7 +734,9 @@ private class FeedSection(
     ) {
         startActivity(AnkiquestChallengesActivity.intent(this, goal))
         val current = account ?: return
-        if (!item.unread || page?.legacy == true) return
+        if (!item.unread) {
+            return
+        }
         lifecycleScope.launch {
             val problem = attempt { AnkiquestFeed.markRead(current, listOf(item.id)) }
             if (problem == null && account?.scope == current.scope) {
@@ -1031,8 +1028,6 @@ private class LeaderboardSection(
     private sealed interface Hides {
         data object Unknown : Hides
 
-        data object Unavailable : Hides
-
         data class Loading(
             val panel: HiddenPanel,
         ) : Hides
@@ -1264,11 +1259,11 @@ private class LeaderboardSection(
             lifecycleScope.launch {
                 val next =
                     try {
-                        AnkiquestGlobalHides.load(current)?.let { Hides.Ready(it, panel) } ?: Hides.Unavailable
+                        Hides.Ready(AnkiquestGlobalHides.load(current), panel)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Hides.Failed(panel, hideFailure(e))
+                        Hides.Failed(panel, hideFailure(current, e))
                     }
                 if (turn != hideGeneration || current.scope != AnkiquestHomeData.account()?.scope) {
                     return@launch
@@ -1329,7 +1324,7 @@ private class LeaderboardSection(
                         throw e
                     } catch (e: Exception) {
                         if (turn == hideGeneration && current.scope == AnkiquestHomeData.account()?.scope) {
-                            hides = before.copy(message = getString(hideFailure(e)))
+                            hides = before.copy(message = getString(hideFailure(current, e)))
                             render()
                         }
                         return@launch
@@ -1348,8 +1343,11 @@ private class LeaderboardSection(
     }
 
     @StringRes
-    private fun hideFailure(error: Exception): Int =
-        when ((error as? AnkiquestHttpException)?.code) {
+    private fun hideFailure(
+        current: HomeAccount,
+        error: Exception,
+    ): Int =
+        AnkiquestServerUpdate.message(current, error) ?: when ((error as? AnkiquestHttpException)?.code) {
             HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> R.string.aq_home_auth
             HTTP_NOT_FOUND -> R.string.aq_board_hide_gone
             HTTP_CONFLICT -> R.string.aq_board_hide_limit
@@ -1503,7 +1501,7 @@ private class LeaderboardSection(
 
     private fun hiddenControls(current: HomeAccount) {
         when (val state = hides) {
-            Hides.Unknown, Hides.Unavailable -> return
+            Hides.Unknown -> return
             is Hides.Loading -> {
                 views.text(content, getString(R.string.aq_board_hidden_loading), small = true)
                 return

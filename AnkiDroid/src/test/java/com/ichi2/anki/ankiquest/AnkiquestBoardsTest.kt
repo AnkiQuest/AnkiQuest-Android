@@ -41,13 +41,6 @@ class AnkiquestBoardsTest : RobolectricTest() {
     }
 
     @Test
-    fun `an older row without periods falls back to its XP`() {
-        val old = JSONArray().put(JSONObject().put("user", "ana").put("display", "Ana").put("week_xp", 12))
-        assertEquals(12L, AnkiquestBoards.parseLeaderboard(old, AnkiquestBoards.Period.MONTH).single().xp)
-        assertEquals(AnkiquestDay.State.UNKNOWN, AnkiquestBoards.parseLeaderboard(old, AnkiquestBoards.Period.MONTH).single().state)
-    }
-
-    @Test
     fun `a profile reads freezes, records and achievements`() {
         val profile = AnkiquestBoards.parseProfile(JSONObject(PROFILE))
         assertEquals("Aldana", profile.display)

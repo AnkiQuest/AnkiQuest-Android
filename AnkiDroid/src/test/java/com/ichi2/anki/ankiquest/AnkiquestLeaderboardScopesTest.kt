@@ -49,7 +49,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
-        coEvery { AnkiquestGlobalHides.load(any()) } returns null
+        coEvery { AnkiquestGlobalHides.load(any()) } returns emptyList()
     }
 
     @After

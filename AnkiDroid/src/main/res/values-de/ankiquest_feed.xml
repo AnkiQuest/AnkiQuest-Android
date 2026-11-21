@@ -22,7 +22,6 @@
     <string name="aq_feed_view_invitation">Einladung ansehen</string>
     <string name="aq_feed_open_goal">Ziel öffnen</string>
     <string name="aq_feed_all_invitations">Alle Einladungen ansehen</string>
-    <string name="aq_feed_legacy">Dieser Server zeigt die letzten 7 Tage. Aktualisiere den Server für gespeicherten Lesestatus und einen längeren Verlauf.</string>
     <string name="aq_feed_yesterday">Gestern</string>
     <string name="aq_feed_time_unread">%1$s · Ungelesen</string>
     <string name="aq_feed_card">Karte: %1$s</string>
