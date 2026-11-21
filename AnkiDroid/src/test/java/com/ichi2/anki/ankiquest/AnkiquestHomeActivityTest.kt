@@ -58,8 +58,12 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @Before
     fun prepareHome() {
-        mockkObject(AnkiquestHomeData, AnkiquestCompanions, HomeAccount.Companion)
+        mockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestAvatars, HomeAccount.Companion)
         every { HomeAccount.current(any()) } returns identity
+
+        // No photo refresh: it reads HomeAccount on an IO thread, which can outlive the test and
+        // reach the mock while @After removes it.
+        every { AnkiquestAvatars.account() } returns null
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns profile
         // Otherwise the activity really asks anki.example.test, and the render that follows waits on that socket.
@@ -68,7 +72,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @After
     fun clearHomeMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestDeckCopies, HomeAccount.Companion)
+        unmockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestAvatars, AnkiquestDeckCopies, HomeAccount.Companion)
     }
 
     @Test
