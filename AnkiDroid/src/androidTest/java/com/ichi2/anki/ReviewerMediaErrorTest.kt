@@ -152,26 +152,24 @@ class ReviewerMediaErrorTest : InstrumentedTest() {
         }
     }
 
-    /** @param errorBaseUrl its requests are answered by [errorResponse] */
+    /** @param errorBaseUrl its requests the reviewer does not serve are answered by [errorResponse] */
     private fun ActivityScenario<Reviewer>.recordWebViewErrors(errorBaseUrl: String): LinkedBlockingQueue<Pair<String?, Int>> {
         val errors = LinkedBlockingQueue<Pair<String?, Int>>()
         onActivity { reviewer ->
             val client = checkNotNull(reviewer.webViewClient)
             checkNotNull(reviewer.webView).webViewClient =
                 object : WebViewClient() {
-                    // Keep the real favicon response: a fake 404 would consume the missing-media warning.
                     override fun shouldInterceptRequest(
                         view: WebView,
                         request: WebResourceRequest,
-                    ): WebResourceResponse? =
-                        if (
-                            "${request.url.scheme}://${request.url.encodedAuthority}" == errorBaseUrl &&
-                            request.url.path != FAVICON_PATH
-                        ) {
+                    ): WebResourceResponse? {
+                        client.shouldInterceptRequest(view, request)?.let { return it }
+                        return if ("${request.url.scheme}://${request.url.encodedAuthority}" == errorBaseUrl) {
                             errorResponse(request)
                         } else {
-                            client.shouldInterceptRequest(view, request)
+                            null
                         }
+                    }
 
                     override fun onReceivedError(
                         view: WebView,
