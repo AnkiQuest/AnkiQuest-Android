@@ -4,9 +4,9 @@ package com.ichi2.anki.ankiquest
 
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.screenshotOptions
 import org.junit.After
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
@@ -84,11 +84,10 @@ class AnkiquestPictureScreenshotTest : ScreenshotTest() {
         val bitmap = AnkiquestShare.render(targetContext, card)
         assertTrue(bitmap.width > 0 && bitmap.height >= bitmap.width)
         val directory = "build/outputs/roborazzi/${javaClass.simpleName}"
-        val options = provideRoborazziContext().options
         try {
             bitmap.captureRoboImage(
                 filePath = "$directory/$fileNamePrefix$name.png",
-                roborazziOptions = options.copy(compareOptions = options.compareOptions.copy(outputDirectoryPath = "$directory/diffs")),
+                roborazziOptions = screenshotOptions("$directory/diffs"),
             )
         } finally {
             bitmap.recycle()
