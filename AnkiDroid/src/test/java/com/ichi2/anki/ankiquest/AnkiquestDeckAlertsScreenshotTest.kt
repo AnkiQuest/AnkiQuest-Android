@@ -90,7 +90,10 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
     ) {
         RuntimeEnvironment.setFontScale(if (size == TextSize.LARGE) 2f else 1f)
         val screen =
-            startActivityNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
+            startActivityNormallyOpenCollectionWithIntent(
+                AnkiquestFriendsActivity::class.java,
+                AnkiquestFriendsSections.feedIntent(targetContext),
+            )
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&
                 !screen.findViewById<View>(R.id.aq_friends_feed_loading).isVisible
