@@ -33,9 +33,8 @@ documents `ankiquest_api_contract.yml`, `ankiquest_fixtures.yml` and the daily
 `ankiquest_bump_server.yml`. Normal builds use committed data; server updates
 arrive on `bot/server-bump` pull requests.
 
-`.github/labels.json` is a copy of the label set in AnkiQuest-Server, shared
-with AnkiQuest-Desktop. `ankiquest_labels.yml` checks the copy weekly and
-creates or updates the labels from it on push to `main` and on dispatch.
+`ankiquest_labels.yml` runs AnkiQuest-Dev's shared labelling workflows; the
+label set is `labels.json` there.
 
 These are typically run by maintainers. See the [Maintenance guide](https://github.com/ankidroid/Anki-Android/wiki/Maintenance-guide)
 

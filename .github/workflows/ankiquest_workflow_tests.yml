@@ -14,11 +14,8 @@ on:
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
-      - ".github/labels.json"
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
-      - ".github/workflows/ankiquest_*labels.yml"
-      - ".github/workflows/ankiquest_conflicts.yml"
       - ".github/dependabot.yml"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
@@ -33,11 +30,8 @@ on:
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
-      - ".github/labels.json"
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
-      - ".github/workflows/ankiquest_*labels.yml"
-      - ".github/workflows/ankiquest_conflicts.yml"
       - ".github/dependabot.yml"
 
 permissions:
