@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="aq_deck_alerts_stop">Arrêter les alertes de paquets de %1$s</string>
     <string name="aq_deck_alerts_stopped">Tu ne recevras plus d’alertes de paquets de %1$s.</string>
