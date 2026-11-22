@@ -265,7 +265,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `a freeze used yesterday shows Ankilope frozen on every widget`() {
-        // hill's report: the transparent widget showed her study pose with "Streak protected".
+        // Regression: the transparent widget showed her study pose with "Streak protected".
         chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
         val board = JSONArray().put(me(10, "protected", 0))
         for (style in AnkiquestStreakWidget.Style.entries) {

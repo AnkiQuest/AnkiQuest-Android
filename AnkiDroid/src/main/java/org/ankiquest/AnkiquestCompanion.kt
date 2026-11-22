@@ -221,7 +221,7 @@ internal object AnkiquestCompanion {
             AnkiquestPose.FACE to R.drawable.ankilope_face,
             AnkiquestPose.ASLEEP to R.drawable.ankilope_sleeping,
             AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
-            // Interim: Ankilope has no on-fire art yet, so she studies (hill, 2026-11-18).
+            // Interim: Ankilope has no on-fire art yet, so she studies.
             AnkiquestPose.STREAK to R.drawable.ankilope_study,
             AnkiquestPose.SAD to R.drawable.ankilope_sad,
             AnkiquestPose.HOPEFUL to R.drawable.ankilope_hopeful,
