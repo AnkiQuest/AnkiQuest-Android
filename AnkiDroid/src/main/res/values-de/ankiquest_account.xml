@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_sign_in_screen_summary">Passwort, Google und GitHub, angemeldete Geräte, deine Daten und Konto löschen</string>
     <string name="ankiquest_providers_title">Anmelden mit</string>
