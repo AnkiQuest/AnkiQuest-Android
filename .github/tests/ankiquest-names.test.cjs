@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// hill decided that AnkiQuest-Android produces nothing named com.ichi2.anki: no application id,
-// provider authority, declared permission or Maven group, and no package of AnkiQuest's own code.
+// hill decided that AnkiQuest-Android produces nothing named com.ichi2.anki: no application id
+// (every build is org.ankiquest), provider authority, declared permission, Maven group, intent
+// action or meta-data the app declares, and no package of AnkiQuest's own code.
 // Upstream AnkiDroid's packages and the api/ library (AnkiDroid's code, which other apps compile
 // against) keep their names (#461). tools/ankiquest-packages does the package move.
 const assert = require("node:assert/strict");
@@ -35,7 +36,7 @@ const gradleFiles = byName(/(^|\/)build\.gradle\.kts$/);
 const manifests = byName(/(^|\/)AndroidManifest\.xml$/).filter((file) => !/\/src\/(test|androidTest)\//.test(file));
 const sources = byName(/\.(kt|java)$/);
 
-test("no application id starts with com.ichi2.anki", () => {
+test("no build's application id starts with com.ichi2.anki", () => {
     for (const file of gradleFiles) {
         assert.doesNotMatch(read(file), /\bapplicationId\s*=\s*"com\.ichi2\.anki/, file);
     }
@@ -60,6 +61,16 @@ test("no provider authority or declared permission starts with com.ichi2.anki", 
             if (name === MOVE_PERMISSION) {
                 continue;
             }
+            assert.doesNotMatch(name, UPSTREAM, `${file}: ${name}`);
+        }
+    }
+});
+
+// hill: "I think upstream doesn't want us to use their API contracts" (#461).
+test("the app declares none of AnkiDroid's intent actions or meta-data", () => {
+    for (const file of manifests) {
+        const text = read(file).replace(/<queries>[\s\S]*?<\/queries>/g, "");
+        for (const [, name] of text.matchAll(/<(?:action|meta-data)\b[^>]*?android:name="([^"]*)"/g)) {
             assert.doesNotMatch(name, UPSTREAM, `${file}: ${name}`);
         }
     }
