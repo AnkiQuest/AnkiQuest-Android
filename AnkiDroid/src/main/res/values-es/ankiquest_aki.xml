@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="aki_welcome">Aki está aquí para ayudarte. Una tarjeta, un pequeño paso.</string>
     <string name="aki_complete">Ya terminaste tus tarjetas por ahora. ¡Buen trabajo!</string>
