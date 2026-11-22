@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_rwkv_title">Planificador RWKV (experimental)</string>
     <string name="ankiquest_rwkv_off">Programa los repasos con un modelo RWKV en lugar de FSRS. Necesita un archivo de modelo y memoria suficiente.</string>
