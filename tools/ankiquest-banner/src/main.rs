@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 //! Composes the README banner, docs/graphics/logos/banner_readme.png
 //! (1280x741).
 //!

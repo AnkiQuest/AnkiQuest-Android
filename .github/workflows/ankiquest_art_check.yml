@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest art check
 
 # Runs the server's art exporter against the app's drawables, at the server commit pinned in

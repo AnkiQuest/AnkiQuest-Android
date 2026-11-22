@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -11,7 +11,7 @@ import java.io.IOException
 
 /** Signs in with a username and password, or creates an account, and keeps only the device token it returns. */
 object AnkiquestAccount {
-    const val DEFAULT_SERVER = "https://ankiquest.rationality-munich.com"
+    const val DEFAULT_SERVER = "https://ankiquest.org"
 
     /** The capability of a server that offers two-factor authentication. */
     const val TWO_FACTOR = "two_factor"

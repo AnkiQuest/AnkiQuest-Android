@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Labelling comes from AnkiQuest-Dev's reusable workflows, which hold the
 // label set and their own tests; ankiquest_labels.yml is the caller. Upstream
 // AnkiDroid's labelling workflows stay removed so labels are not applied

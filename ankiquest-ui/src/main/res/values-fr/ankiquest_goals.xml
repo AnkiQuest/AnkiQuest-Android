@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="aq_goal_setup_failed">Impossible d’enregistrer l’objectif quotidien. Réessaie.</string>
     <string name="aq_goal_today">Objectif du jour</string>
