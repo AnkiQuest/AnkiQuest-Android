@@ -24,8 +24,10 @@ on:
 permissions: {}
 
 concurrency:
-  group: ankiquest-banner-${{ github.ref }}
-  cancel-in-progress: false
+  # The newest run for a ref wins: a pull request, a manual run on a branch or a tag redraws the
+  # same images, so an older run's result is never needed. It never runs on a push to master.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10

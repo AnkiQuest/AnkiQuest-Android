@@ -33,9 +33,42 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
+  # 'false' when every changed file is documentation. The globs leave out the app's assets:
+  # AnkiDroid/src/main/assets/ankiquest/release-notes.md ships in the APK and a unit test reads it.
+  # The same list is in every ankiquest_*.yml that skips documentation (.github/tests/docs-only.test.cjs).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.changed.outputs.code }}
+    steps:
+      - id: changed
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        with:
+          docs: |
+            *.md
+            */README.md
+            */*/README.md
+            .agents/**/*.md
+            .github/workflows/README.md
+            .github/ISSUE_TEMPLATE/**
+            .github/pull_request_template.md
+            .idea/**/*.md
+            .oss-scanner/*.md
+            LICENSE*
+            LICENSES/**
+            docs/**
+
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
+  # Skipped for documentation-only changes, which skips the emulator tests after it. A failed
+  # changes job leaves the output empty, so the tests still run.
   matrix_prep:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.result }}
