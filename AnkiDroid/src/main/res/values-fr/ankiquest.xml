@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_dashboard_title">Classement</string>
     <string name="ankiquest_streak_protection_summary">Activée par défaut. Termine les trois missions quotidiennes pendant que la protection est active pour gagner un gel de série par jour Anki, jusqu’à 3. Un gel protège automatiquement chaque jour terminé sans révisions. La désactivation suspend le gain et l’utilisation, mais conserve les gels gagnés.</string>
