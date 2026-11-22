@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="aq_board_hide_for_me">Hide for me</string>
     <string name="aq_board_hide_person">Hide %1$s for me</string>

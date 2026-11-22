@@ -110,8 +110,9 @@ jobs:
   unit:
     name: JUnit Tests (${{ matrix.name }} run ${{ matrix.iteration }})
     needs: matrix_prep
-    # Windows can take 40m+ on tests
-    timeout-minutes: 75
+    # Windows takes about 71 minutes on tests (run 44883059552); 75 cut off
+    # the upload after they passed
+    timeout-minutes: 90
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
