@@ -208,7 +208,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
             "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, 1, -1, 3, 1, 1, 2500, 90000, 1)",
             now - 1,
         )
-        val me = launch(AnkiquestRecordsActivity.intent(targetContext)).get()
+        val me = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS)).get()
         awaitSections(me)
         me.click(me.getString(R.string.aq_study_time_title))
         assertTrue(me.findViewById<View>(R.id.aq_me_study_time_content).isVisible)
