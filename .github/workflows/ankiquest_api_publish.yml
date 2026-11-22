@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest API publish
 
 # Publishes the api module to Maven Central as org.ankiquest:api, signed, with the vanniktech

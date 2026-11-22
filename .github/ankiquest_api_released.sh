@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Writes publish=true to $GITHUB_OUTPUT when api version $1 is not released yet:
 # no tag api-v<version> on origin and no POM on Maven Central.
 set -euo pipefail
