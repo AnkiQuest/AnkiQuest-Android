@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <color name="aq_goal_bar_track">#2C3A47</color>
     <color name="aq_goal_bar_tick">#4A5D70</color>

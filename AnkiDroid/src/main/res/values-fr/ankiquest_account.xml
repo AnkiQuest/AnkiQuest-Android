@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_sign_in_screen_summary">Mot de passe, Google et GitHub, appareils connectés, tes données et suppression du compte</string>
     <string name="ankiquest_providers_title">Se connecter avec</string>
