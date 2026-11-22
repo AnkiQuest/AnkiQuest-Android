@@ -3,6 +3,7 @@ name: ankiquest Nix
 # Builds and tests through the flake's dev shell inside the nixos/nix image.
 # That image has no /lib64 loader or /usr/lib, like NixOS, so anything Gradle
 # downloads that only runs on a usual Linux fails here as it would there.
+# The steps are AnkiQuest-Dev's shared nix-check.yml.
 on:
   workflow_dispatch:
   pull_request:
@@ -15,7 +16,7 @@ on:
       - '.github/workflows/ankiquest_nix.yml'
   push:
     branches:
-      - main
+      - master
     paths:
       - 'flake.*'
       - 'gradle/**'
@@ -28,39 +29,27 @@ permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # No setup-gradle cache here: this only runs when Gradle files change, and those changes
 # change the cache key, so a cache would always miss.
-env:
-  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
-  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
-  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
-
 jobs:
+  # AnkiQuest-Dev's shared Nix check. Every command runs in the nixos/nix image.
   nixos:
     name: Build and test in the dev shell
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          df -h /
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Check the flake and build
-        run: |
-          docker run --rm -v "$PWD:/src" -w /src -e CI=true \
-            -e NIX_CONFIG="experimental-features = nix-command flakes" \
-            -e GRADLE_OPTS \
-            nixos/nix sh -euc '
-              git config --global --add safe.directory /src
-              nix flake check
-              nix fmt -- --check flake.nix
-              nix develop --command ./gradlew --no-daemon assemblePlayDebug
-            '
+    uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/nix-check.yml@master
+    with:
+      image: nixos/nix
+      free-disk-space: true
+      format: flake.nix
+      timeout-minutes: 90
+      # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's
+      # rate limit lasts longer than that, so try 7 times with doubling waits from 2s (about
+      # 2 minutes). Append: the dev shell's GRADLE_OPTS holds the aapt2 override that
+      # makes aapt2 run without a /lib64 loader.
+      run: |
+        export GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000"
+        ./gradlew --no-daemon assemblePlayDebug
