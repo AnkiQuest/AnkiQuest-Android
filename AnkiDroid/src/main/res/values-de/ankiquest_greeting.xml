@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_greeting_title">Hallo, ich bin Aki!</string>
     <string name="ankiquest_greeting_text">AnkiQuest ergänzt Anki um Lernserien, Freunde und Ranglisten. Ich leiste dir beim Lernen Gesellschaft.</string>

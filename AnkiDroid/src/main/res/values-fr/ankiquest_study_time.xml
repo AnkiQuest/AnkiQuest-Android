@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="aq_study_time_title">Temps d’étude</string>
     <string name="aq_study_time_intro">Temps passé à répondre aux cartes de cette collection, envoyé ou non. Les jours commencent à l’heure « Le jour suivant commence à » d’Anki, les semaines le lundi.</string>
