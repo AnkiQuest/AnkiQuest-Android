@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_feedback_title">AnkiQuest-Feedback</string>
     <string name="ankiquest_feedback_auto_toast_text">In AnkiQuest ist ein Problem aufgetreten; ein Bericht wird an die AnkiQuest-Entwickler gesendet…</string>

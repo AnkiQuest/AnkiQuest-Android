@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources xmlns:tools="http://schemas.android.com/tools"
     tools:keep="@string/feedback_title,@string/feedback_disclaimer,@string/feedback_auto_toast_text,@string/feedback_for_manual_toast_text,@string/error_reporting_choice">
     <!-- Crash reports go to the AnkiQuest server (#329). Upstream strings are kept for future upstream merges. -->
