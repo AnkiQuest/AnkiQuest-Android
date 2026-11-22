@@ -1,9 +1,9 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest APK
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     tags: ["quest-*"]
   workflow_dispatch:
 
@@ -138,7 +138,7 @@ jobs:
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
       - name: Publish nightly
-        if: github.ref == 'refs/heads/main' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
+        if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="aq_goal_setup_failed">Impossible d’enregistrer l’objectif quotidien. Réessaie.</string>
     <string name="aq_goal_today">Objectif du jour</string>
@@ -85,6 +85,10 @@
     <string name="aq_goal_streak_safe_signed_out">Aujourd’hui compte ✓ · reconnecte-toi pour envoyer</string>
     <string name="aq_goal_streak_safe_server">Aujourd’hui compte ✓ · erreur du serveur, nouvel essai prévu</string>
     <string name="aq_goal_streak_safe_refused">Aujourd’hui compte ✓ · envoi refusé</string>
+    <string name="aq_goal_streak_safe_cert_expired">Aujourd’hui compte ✓ · le certificat du serveur a expiré, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_cert_self_signed">Aujourd’hui compte ✓ · le certificat du serveur est auto-signé, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_cert_wrong_host">Aujourd’hui compte ✓ · le certificat du serveur est celui d’une autre adresse, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_cert_unverified">Aujourd’hui compte ✓ · impossible de vérifier le certificat du serveur, nouvel essai prévu</string>
     <string name="aq_goal_upload_signed_out">Le serveur a refusé la connexion de cet appareil. Reconnecte-toi dans les réglages AnkiQuest.</string>
     <string name="aq_goal_upload_refused">« Tester la connexion » dans les réglages AnkiQuest indique pourquoi.</string>
 </resources>

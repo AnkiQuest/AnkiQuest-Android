@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -19,7 +19,7 @@ object AnkiquestNavigation {
             val focus: String? = null,
         ) : Destination
 
-        /** The native activity feed, [AnkiquestFeedActivity]. */
+        /** The native activity feed, in [AnkiquestFriendsActivity]. */
         data object Activity : Destination
 
         /** The native friends and groups, [AnkiquestFriendsActivity]. */
@@ -30,7 +30,7 @@ object AnkiquestNavigation {
             val id: Long? = null,
         ) : Destination
 
-        /** The native leaderboard, [AnkiquestLeaderboardActivity], showing [period]. */
+        /** The native leaderboard, in [AnkiquestFriendsActivity], showing [period]. */
         data class Leaderboard(
             val period: String,
         ) : Destination

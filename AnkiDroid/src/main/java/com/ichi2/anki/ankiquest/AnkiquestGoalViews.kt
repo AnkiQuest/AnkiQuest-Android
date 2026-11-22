@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -186,6 +186,10 @@ internal class AnkiquestStreakChip
                         AnkiquestUploadProblem.SIGNED_OUT -> R.string.aq_goal_streak_safe_signed_out
                         AnkiquestUploadProblem.SERVER -> R.string.aq_goal_streak_safe_server
                         AnkiquestUploadProblem.REFUSED -> R.string.aq_goal_streak_safe_refused
+                        AnkiquestUploadProblem.CERT_EXPIRED -> R.string.aq_goal_streak_safe_cert_expired
+                        AnkiquestUploadProblem.CERT_SELF_SIGNED -> R.string.aq_goal_streak_safe_cert_self_signed
+                        AnkiquestUploadProblem.CERT_WRONG_HOST -> R.string.aq_goal_streak_safe_cert_wrong_host
+                        AnkiquestUploadProblem.CERT_UNVERIFIED -> R.string.aq_goal_streak_safe_cert_unverified
                     }
 
             /** What to do about this problem, when anything helps besides waiting. */

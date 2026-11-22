@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -121,7 +121,7 @@ object AnkiquestPoll {
      * Optional pictures come after the inbox, so unavailable photos cannot delay messages.
      */
     suspend fun run(context: Context): Result {
-        Ankiquest.uploadPending()
+        Ankiquest.uploadPending(context)
         val prefs = AnkiDroidApp.sharedPrefs()
         val configured = Ankiquest.dashboardUrl() != null
         val pollingAccount = AnkiquestHomeData.account(prefs)

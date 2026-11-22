@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -134,7 +134,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
             coEvery { AnkiquestBoards.hasScopes(any()) } returns false
             coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(emptyList())
             coEvery { AnkiquestBoards.weekEnds(identity) } returns null
-            val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
+            val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext))
             advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             board
                 .findViewById<View>(R.id.aq_friends_board_content)

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -110,7 +110,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
 
         val message = AnkiquestNotifier.notificationIntent(targetContext, JSONObject().put("id", 72), owner)
         assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), message.component)
-        assertEquals(owner, message.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
+        assertEquals(owner, message.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
         assertTrue((message.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
         assertEquals(null, message.data)
     }
@@ -185,8 +185,8 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         val recapEntry = JSONObject().put("id", 75).put("kind", "reminder_weekly_recap")
         val recap = AnkiquestNotifier.notificationIntent(targetContext, recapEntry, owner)
         assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), recap.component)
-        assertEquals("week", recap.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
-        assertEquals(owner, recap.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT))
+        assertEquals("week", recap.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_PERIOD))
+        assertEquals(owner, recap.getStringExtra(AnkiquestFriendsSections.EXTRA_BOARD_ACCOUNT))
         assertTrue((recap.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
     }
 

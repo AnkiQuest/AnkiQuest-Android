@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -9,8 +9,6 @@ import java.util.TimeZone
 
 /** Deck completion uses Anki's daily limits, including subdecks and learning later today. */
 internal object AnkiquestDecks {
-    private const val DAY_MS = 86_400_000L
-
     fun dailyStates(
         col: Collection,
         now: Long,

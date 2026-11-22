@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -94,9 +94,7 @@ internal object AnkiquestRecords {
      * server cannot say, since the boards still show without a choice.
      */
     suspend fun scopes(account: HomeAccount): List<Scope> =
-        withContext(Dispatchers.IO) {
-            parseScopes(AnkiquestApi.json(account, AnkiquestApi.request(account, "api/social/${account.encodedUser}").build()))
-        }
+        parseScopes(AnkiquestApi.call(account, "GET", "api/social/${account.encodedUser}"))
 
     fun parseRecords(array: JSONArray): List<Board> {
         val boards =

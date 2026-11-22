@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.preferences
 
@@ -32,6 +32,17 @@ class AboutFragmentTest : RobolectricTest() {
         val license = licence()
         val urls = license.getSpans(0, license.length, URLSpan::class.java).map(URLSpan::getURL)
         assertContains(urls, "https://github.com/AnkiQuest/AnkiQuest-Android/tree/${BuildConfig.GIT_COMMIT_HASH}")
+    }
+
+    @Test
+    fun `About credits link the server and the desktop add-on separately`() {
+        val credits = about().binding.contributorsDescription.text as Spanned
+        val links =
+            credits.getSpans(0, credits.length, URLSpan::class.java).associate { span ->
+                credits.subSequence(credits.getSpanStart(span), credits.getSpanEnd(span)).toString() to span.url
+            }
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Server", links["AnkiQuest server"])
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Desktop", links["AnkiQuest desktop add-on"])
     }
 
     @Test

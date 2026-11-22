@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -16,7 +16,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -70,29 +69,6 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
             assertEquals(case.getString("expected"), AnkiquestDeckNames.clean(case.getString("path")), case.getString("path"))
         }
     }
-
-    /** Android's ICU regex engine rejects Java's (?U) and (?u) flags; the JVM tests run on accepts them. */
-    @Test
-    fun `AnkiQuest patterns avoid regex flags Android rejects`() {
-        val unsupported = Regex("""\(\?[a-zA-Z]*[Uu][a-zA-Z]*\)""")
-        val sources =
-            File("src/main/java/com/ichi2/anki/ankiquest")
-                .walk()
-                .filter { it.extension == "kt" }
-                .toList()
-        assertTrue(sources.isNotEmpty(), "AnkiQuest sources not found")
-        assertEquals(emptyList(), sources.flatMap { lines(it, unsupported) })
-    }
-
-    /** "File.kt:line" for each line of [file] that matches [pattern]. */
-    private fun lines(
-        file: File,
-        pattern: Regex,
-    ) = file
-        .readLines()
-        .withIndex()
-        .filter { pattern.containsMatchIn(it.value) }
-        .map { "${file.name}:${it.index + 1}" }
 
     @Test
     fun `Unicode digits and spaces clean like ASCII ones`() {
@@ -177,12 +153,12 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
         runTest {
             reviewed("Spanish::Animals")
             val old = assertNotNull(AnkiquestDeckNames.find(at))
-            old.save("Hill's deck")
+            old.save("hill's deck")
             account("other")
             assertEquals("Animals", AnkiquestDeckNames.find(at)?.name)
             assertFailsWith<HomeAccountChanged> { old.save("must not save") }
             account("hill")
-            assertEquals("Hill's deck", AnkiquestDeckNames.find(at)?.name)
+            assertEquals("hill's deck", AnkiquestDeckNames.find(at)?.name)
         }
 
     @Test

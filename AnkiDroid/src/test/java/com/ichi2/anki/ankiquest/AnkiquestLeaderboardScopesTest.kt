@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -265,7 +265,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         val controller =
             startActivityControllerNormallyOpenCollectionWithIntent(
                 AnkiquestFriendsActivity::class.java,
-                AnkiquestLeaderboardActivity.intent(targetContext, "month"),
+                AnkiquestFriendsSections.boardIntent(targetContext, "month"),
             )
         try {
             val next = identity.copy(user = "other", token = "other-token")
@@ -297,7 +297,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
     private fun launch() =
         startActivityControllerNormallyOpenCollectionWithIntent(
             AnkiquestFriendsActivity::class.java,
-            AnkiquestLeaderboardActivity.intent(targetContext),
+            AnkiquestFriendsSections.boardIntent(targetContext),
         ).also { controller ->
             awaitBoard(controller.get())
         }

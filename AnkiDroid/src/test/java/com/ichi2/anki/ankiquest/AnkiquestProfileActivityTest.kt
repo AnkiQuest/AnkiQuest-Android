@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -287,13 +287,24 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     fun `a closing week still counting shows its XP until it closes`() {
         val endsAt = TimeManager.time.intTimeMS() + 60 * 60 * 1000L
         coEvery { AnkiquestBoards.player(identity, "hill") } returns
-            own.copy(profile = profile.copy(closingWeek = AnkiquestBoards.ClosingWeek(1234, endsAt)))
+            own.copy(profile = profile.copy(ownWeek = AnkiquestBoards.ClosingWeek(1234, endsAt)))
         val screen = launch()
-        val line = assertNotNull(AnkiquestBoards.closingLine(screen, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        val line = assertNotNull(AnkiquestBoards.ownWeekLine(screen, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
         assertTrue(screen.hasText(line))
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
         val without = launch()
         assertFalse(without.hasText(line))
+    }
+
+    @Test
+    fun `a next week already counting shows its XP until the board switches`() {
+        val switch = TimeManager.time.intTimeMS() + 60 * 60 * 1000L
+        val next = AnkiquestBoards.NextWeek(1234, switch)
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own.copy(profile = profile.copy(ownWeek = next))
+        val screen = launch()
+        val line = assertNotNull(AnkiquestBoards.ownWeekLine(screen, next, switch - 1))
+        assertTrue(line.startsWith(screen.getString(R.string.aq_next_week, "1,234", "").trim()), line)
+        assertTrue(screen.hasText(line))
     }
 
     @Test

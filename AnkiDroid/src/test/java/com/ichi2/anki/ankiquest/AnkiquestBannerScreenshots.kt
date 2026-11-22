@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -182,7 +182,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * DAY
         val board =
             startRegularActivity<AnkiquestFriendsActivity>(
-                AnkiquestLeaderboardActivity.intent(targetContext, AnkiquestBoards.Period.WEEK.query, null),
+                AnkiquestFriendsSections.boardIntent(targetContext, AnkiquestBoards.Period.WEEK.query, null),
             )
         advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         captureScreen("4_leaderboard")

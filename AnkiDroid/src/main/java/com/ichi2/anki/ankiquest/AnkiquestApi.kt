@@ -1,7 +1,9 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -14,6 +16,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
+import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.util.concurrent.TimeUnit
 
 /** The server answered with a status other than success; [explanation] is its own `{"error": ...}` text, when it gave one. */
@@ -51,7 +54,19 @@ internal object AnkiquestApi {
         TRANSFER,
     }
 
+    /** Whether a request may go out without a token. */
+    enum class Token {
+        /** Sent with the account's token when it has one, without one otherwise. */
+        OPTIONAL,
+
+        /** Refused with [HTTP_UNAUTHORIZED] before sending when the account has no token. */
+        REQUIRED,
+    }
+
     val json = "application/json".toMediaType()
+
+    /** Names the companions this app draws, so the server leaves out moments about others (docs/mobile-api.md). */
+    private const val COMPANION_ART_HEADER = "X-AnkiQuest-Companion-Art"
 
     private val base =
         AnkiquestHttp.client
@@ -78,7 +93,7 @@ internal object AnkiquestApi {
             Timeout.TRANSFER -> transfer
         }
 
-    /** A request to [url] carrying [token], when there is one, and [language]. */
+    /** A request to [url] carrying [token], when there is one, [language] and the companions this app draws. */
     fun request(
         url: HttpUrl,
         token: String,
@@ -88,6 +103,7 @@ internal object AnkiquestApi {
             .Builder()
             .url(url)
             .header("Accept-Language", language)
+            .header(COMPANION_ART_HEADER, AnkiquestCompanion.drawn.joinToString(", "))
             .apply { if (token.isNotEmpty()) header("Authorization", "Bearer $token") }
 
     /** A request to [path] on [account]'s server, with its credentials and language. */
@@ -163,6 +179,30 @@ internal object AnkiquestApi {
             sent = true
         }, read)
     }
+
+    /**
+     * Sends [method] [path] with [body] for [account] on the IO dispatcher and answers the JSON object
+     * the server sent. [account] must be the signed-in account when the request is sent and when it is
+     * answered.
+     *
+     * @throws HomeAccountChanged when another account is signed in
+     * @throws AnkiquestHttpException `401` when [token] is [Token.REQUIRED] and [account] has none
+     */
+    suspend fun call(
+        account: HomeAccount,
+        method: String,
+        path: String,
+        body: JSONObject? = null,
+        token: Token = Token.OPTIONAL,
+    ): JSONObject =
+        withContext(Dispatchers.IO) {
+            requireCurrent(account)
+            if (token == Token.REQUIRED && account.token.isEmpty()) {
+                throw AnkiquestHttpException(HTTP_UNAUTHORIZED)
+            }
+            val request = request(account, path).method(method, body?.let(::body)).build()
+            json(account, request)
+        }
 
     /** [call] for [account], answering the JSON object the server sent, or an empty one for an empty body. */
     fun json(

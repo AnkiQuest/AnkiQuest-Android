@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-License-Identifier: GPL-3.0-or-later
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -16,7 +16,7 @@ function step(name) {
 }
 
 function run(id, options = {}) {
-  return { id, head_sha: 'base-sha', head_branch: 'main', event: 'push', status: 'completed', conclusion: 'success', ...options };
+  return { id, head_sha: 'base-sha', head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', ...options };
 }
 
 function harness(batches = [[run(42)]], artifacts = {}) {
@@ -24,7 +24,7 @@ function harness(batches = [[run(42)]], artifacts = {}) {
   const context = {
     repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
-    payload: { pull_request: { base: { sha: 'base-sha', ref: 'main' } } },
+    payload: { pull_request: { base: { sha: 'base-sha', ref: 'master' } } },
   };
   const github = { rest: { actions: {
     async listWorkflowRuns(query) {
@@ -100,13 +100,13 @@ test('the pushed commit is used when there is no pull request', async () => {
   const fixture = harness([[run(43, { head_sha: 'push-sha' })]]);
   fixture.context.payload = {};
   fixture.context.sha = 'push-sha';
-  fixture.context.ref = 'refs/heads/main';
+  fixture.context.ref = 'refs/heads/master';
   assert.equal(await waitForBaseline(fixture), 43);
   assert.equal(fixture.queries[0].head_sha, 'push-sha');
 });
 
-test('stacked PRs wait for their exact base commit instead of falling back to main', async () => {
-  const fixture = harness([[run(1, { head_sha: 'main-sha' })], [run(2, { head_branch: 'feature' })]]);
+test('stacked PRs wait for their exact base commit instead of falling back to master', async () => {
+  const fixture = harness([[run(1, { head_sha: 'master-sha' })], [run(2, { head_branch: 'feature' })]]);
   fixture.context.payload.pull_request.base.ref = 'feature';
   assert.equal(await waitForBaseline(fixture), 2);
   assert.equal(fixture.waits.length, 1);

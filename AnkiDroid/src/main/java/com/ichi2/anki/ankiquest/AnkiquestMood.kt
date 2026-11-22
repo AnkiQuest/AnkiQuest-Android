@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -16,8 +16,6 @@ import org.json.JSONArray
  * kept. Each mood is an [AnkiquestPose]; [AnkiquestCompanion.art] draws it as the chosen companion.
  */
 internal object AnkiquestMood {
-    private const val DAY_MS = 86_400_000L
-
     /** The streak lengths the widget and pictures count down to. */
     private val milestones = listOf(7, 30, 100, 365)
 

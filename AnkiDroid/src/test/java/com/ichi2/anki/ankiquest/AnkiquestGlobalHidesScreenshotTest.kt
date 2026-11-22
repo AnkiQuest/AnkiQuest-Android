@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -158,7 +158,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
     }
 
     private fun launch(): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext)).also { screen ->
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext)).also { screen ->
             awaitBoard(screen)
             click(screen, R.string.ankiquest_widget_who_global)
         }

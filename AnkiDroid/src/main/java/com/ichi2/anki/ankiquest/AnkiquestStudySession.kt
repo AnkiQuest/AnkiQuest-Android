@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -14,7 +14,7 @@ import org.json.JSONObject
 object AnkiquestStudySession {
     private const val PREF_ACTIVE_SESSION = "ankiquestActiveStudySession"
     private const val PREF_LATEST_SESSION = "ankiquestLastStudySession"
-    private const val MAX_DURATION = 24 * 60 * 60 * 1000L
+    private const val MAX_DURATION = DAY_MS
 
     data class Summary(
         val reviews: Int,

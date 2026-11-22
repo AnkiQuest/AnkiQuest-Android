@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -84,7 +84,10 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
     ) {
         RuntimeEnvironment.setFontScale(if (largeText) 2f else 1f)
         val screen =
-            startActivityNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
+            startActivityNormallyOpenCollectionWithIntent(
+                AnkiquestFriendsActivity::class.java,
+                AnkiquestFriendsSections.feedIntent(targetContext),
+            )
         // Both requests can rerender Friends; capture their finished fixture, not a loading frame.
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -27,6 +27,9 @@ internal object AnkiquestCompanion {
 
     /** The cache name of silhouettes ([AnkiquestArt.filtered]). */
     private const val SILHOUETTE = "silhouette"
+
+    /** The companions this app has art for, as the server names them. */
+    val drawn: List<String> = Choice.entries.filter { it != Choice.NONE }.map { it.id }
 
     /** The companions, in the order the picker shows them; [id] is the value the server stores. */
     enum class Choice(

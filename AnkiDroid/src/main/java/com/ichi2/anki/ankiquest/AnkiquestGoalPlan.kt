@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -25,8 +25,6 @@ internal object AnkiquestGoalPlan {
 
     /** The plan lengths offered as presets, besides a custom number of days. */
     val PRESET_DAYS = listOf(7, 14, 30, 60)
-
-    private const val DAY_MS = 86_400_000L
 
     /** Old versions kept the backlog goal as a percentage a day; each maps to the plan length closest to it. */
     private val DAYS_FOR_PERCENT = listOf(5 to 60, 10 to 30, 20 to 14, 34 to 7, 100 to 1)

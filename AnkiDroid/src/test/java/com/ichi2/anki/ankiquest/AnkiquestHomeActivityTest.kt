@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -121,7 +121,20 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("closing_week", closing)
         val home = launch()
         val line =
-            assertNotNull(AnkiquestBoards.closingLine(home, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+            assertNotNull(AnkiquestBoards.ownWeekLine(home, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(home.hasText(line))
+    }
+
+    @Test
+    fun `Today shows the next week while the player's day already counts for it`() {
+        val switch =
+            com.ichi2.anki.common.time.TimeManager.time
+                .intTimeMS() + 60 * 60 * 1000L
+        val next = JSONObject().put("xp", 1234).put("starts_at", switch)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("next_week", next)
+        val home = launch()
+        val line =
+            assertNotNull(AnkiquestBoards.ownWeekLine(home, AnkiquestBoards.NextWeek(1234, switch), switch - 1))
         assertTrue(home.hasText(line))
     }
 
@@ -245,7 +258,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         home.findViewById<View>(R.id.aq_home_activity).performClick()
         val feed = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(AnkiquestFriendsActivity::class.java.name, feed.component?.className)
-        assertNull(feed.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
+        assertNull(feed.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
 
         nav.selectedItemId = R.id.ankiquest_nav_decks
         val decks = assertNotNull(shadowOf(home).nextStartedActivity)

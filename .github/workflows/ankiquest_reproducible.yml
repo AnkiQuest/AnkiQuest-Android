@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest reproducible build
 
 # Builds the release APK we ship twice from the same commit, on two runners, in
@@ -15,13 +15,13 @@ on:
       - '.github/workflows/ankiquest_reproducible.yml'
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
