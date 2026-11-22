@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest.heatmap
 
@@ -49,6 +49,7 @@ class ReviewHeatmapView
         private val collapse: ImageButton
         private val previousYear: View
         private val nextYear: View
+        private val todayButton: View
         private val yearLabel: TextView
         private val grid: ReviewHeatmapGrid
         private val scroll: HorizontalScrollView
@@ -70,6 +71,7 @@ class ReviewHeatmapView
             collapse = findViewById(R.id.review_heatmap_collapse)
             previousYear = findViewById(R.id.review_heatmap_previous_year)
             nextYear = findViewById(R.id.review_heatmap_next_year)
+            todayButton = findViewById(R.id.review_heatmap_today)
             yearLabel = findViewById(R.id.review_heatmap_year)
             grid = findViewById(R.id.review_heatmap_grid)
             scroll = findViewById(R.id.review_heatmap_scroll)
@@ -83,6 +85,7 @@ class ReviewHeatmapView
             }
             previousYear.setOnClickListener { changeYear(-1) }
             nextYear.setOnClickListener { changeYear(1) }
+            todayButton.setOnClickListener { showToday() }
             grid.onDaySelected = { date ->
                 state.selectedDate = date
                 showSelectedDay()
@@ -138,6 +141,11 @@ class ReviewHeatmapView
             setStat(R.id.review_heatmap_daily_average, decimal.format(data.dailyAverage), R.string.review_heatmap_daily_average)
             findViewById<TextView>(R.id.review_heatmap_total).text =
                 context.getString(R.string.review_heatmap_total, number.format(data.totalReviews))
+            // The share of days studied means nothing before the first review.
+            findViewById<TextView>(R.id.review_heatmap_share).apply {
+                isVisible = data.reviews.isNotEmpty()
+                text = context.getString(R.string.review_heatmap_share, data.daysStudiedPercent)
+            }
             val earliest = minOf(data.firstReviewDate?.year ?: data.today.year, data.today.year)
             val latest = data.forecastEndDate.year
             state.year = (state.year ?: data.today.year).coerceIn(earliest, latest)
@@ -197,6 +205,15 @@ class ReviewHeatmapView
             showYear()
         }
 
+        /** Back to today's year, with today selected. */
+        private fun showToday() {
+            val currentData = data ?: return
+            state.year = currentData.today.year
+            state.selectedDate = currentData.today
+            state.scrollX = null
+            showYear()
+        }
+
         private fun showYear() {
             val currentData = data ?: return
             val year = state.year ?: currentData.today.year
@@ -226,6 +243,7 @@ class ReviewHeatmapView
                 date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(resources.configuration.locales[0]))
             selectedCount.text = currentData.dayCountDescription(context, date)
             viewCards.isEnabled = ReviewHeatmap.searchForDay(currentData, date) != null
+            todayButton.isEnabled = date != currentData.today
             (viewCards as TextView).setText(
                 if (date >
                     currentData.today
