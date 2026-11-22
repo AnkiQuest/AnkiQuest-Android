@@ -26,7 +26,13 @@ function concurrency(text) {
     return { group: value("group"), cancel: value("cancel-in-progress") };
 }
 
-const files = fs.readdirSync(workflows).filter(name => /^ankiquest_.*\.yml$/.test(name));
+// ankiquest_labels.yml is a byte-for-byte copy of AnkiQuest-Dev's
+// ankiquest-labels.yml, so its concurrency is decided and tested there.
+const COPIED = ["ankiquest_labels.yml"];
+
+const files = fs
+    .readdirSync(workflows)
+    .filter(name => /^ankiquest_.*\.yml$/.test(name) && !COPIED.includes(name));
 
 for (const name of files) {
     test(`${name}: a later run never cancels a master push run`, () => {
