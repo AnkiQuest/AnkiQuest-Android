@@ -27,7 +27,7 @@ class AnkiquestStreakScreenshotTest : ScreenshotTest() {
         }
     }
 
-    @Volatile private var tiny = Double.MIN_NORMAL
+    @Volatile private var tiny = java.lang.Double.MIN_NORMAL
 
     @Volatile private var half = 0.5
 }
