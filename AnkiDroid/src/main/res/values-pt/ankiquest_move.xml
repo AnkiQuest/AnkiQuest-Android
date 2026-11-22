@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_move_title">Passar do AnkiQuest antigo</string>
     <string name="ankiquest_move_message">Trazer as tuas definições e a tua sessão do AnkiQuest antigo?</string>

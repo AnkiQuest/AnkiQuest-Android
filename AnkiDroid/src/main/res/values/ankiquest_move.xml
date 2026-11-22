@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <!-- AnkiquestMoveImport: the new app's first launch, when the old com.ichi2.anki.quest app is installed. -->
     <string name="ankiquest_move_title">Move from the old AnkiQuest</string>
