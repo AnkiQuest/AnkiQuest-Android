@@ -47,6 +47,9 @@
                 android:description="@string/read_write_permission_description"
                 android:protectionLevel="dangerous"
                 />
+    <!-- CardContentProvider rejects callers that do not request its permission, the app's own
+         instrumented tests included. The API library only requests AnkiDroid's. -->
+    <uses-permission android:name="${applicationId}.permission.READ_WRITE_DATABASE" />
 
     <supports-screens
         android:anyDensity="true"
