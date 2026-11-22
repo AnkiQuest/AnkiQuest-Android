@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Only the quest build's src/quest/res uses these, so lint of other builds would call them unused. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
     tools:keep="@drawable/anki_tan_icon,@drawable/anki_tan_icon_happy,@drawable/anki_tan_icon_worried,@drawable/anki_tan_icon_sleepy,@drawable/anki_tan_icon_mono" />

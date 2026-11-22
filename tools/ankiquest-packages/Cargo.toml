@@ -3,7 +3,7 @@ name = "ankiquest-packages"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
-license = "AGPL-3.0-only"
+license = "AGPL-3.0-or-later"
 description = "Moves AnkiQuest's code from com.ichi2.anki.ankiquest to org.ankiquest"
 publish = false
 
