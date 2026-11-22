@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest reproducible build
 
 # Builds the release APKs and app bundle we ship twice from the same commit, on two
