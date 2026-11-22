@@ -193,7 +193,7 @@ class AnkiquestAkiTest : RobolectricTest() {
 
     @Test
     fun `the home card shows Ankilope's pose for every shared streak mood`() {
-        // hill's report: Ankilope studied on a day a freeze kept; each mood has her own pose.
+        // Regression: Ankilope studied on a day a freeze kept; each mood has her own pose.
         chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
         val fixtures =
             JSONObject(
