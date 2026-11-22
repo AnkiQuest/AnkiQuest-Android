@@ -47,11 +47,21 @@ class IntentHandlerTest {
 
     @Test
     fun syncIntentReturnsSync() {
-        val intent = Intent("com.ichi2.anki.DO_SYNC")
+        val intent = Intent("org.ankiquest.DO_SYNC")
 
         val expected = getLaunchType(intent)
 
         assertThat(expected, equalTo(LaunchType.SYNC))
+    }
+
+    @Test
+    fun ankiDroidSyncIntentIsNotOurs() {
+        // AnkiQuest exposes none of AnkiDroid's contract names (#461)
+        val intent = Intent("com.ichi2.anki.DO_SYNC")
+
+        val expected = getLaunchType(intent)
+
+        assertThat(expected, equalTo(LaunchType.DEFAULT_START_APP_IF_NEW))
     }
 
     @Test
