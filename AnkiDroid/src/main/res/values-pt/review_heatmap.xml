@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="review_heatmap_title">Mapa de revisões</string>
+    <string name="review_heatmap_subtitle">A tua coleção, dia a dia</string>
+    <string name="review_heatmap_expand">Mostrar o mapa de revisões</string>
+    <string name="review_heatmap_collapse">Ocultar o mapa de revisões</string>
+    <string name="review_heatmap_loading">A carregar o histórico de revisões…</string>
+    <string name="review_heatmap_error">Não foi possível carregar o histórico de revisões.</string>
+    <string name="review_heatmap_empty">As tuas revisões vão aparecer aqui depois de estudares.</string>
+    <string name="review_heatmap_current_streak">Sequência atual</string>
+    <string name="review_heatmap_longest_streak">Sequência mais longa</string>
+    <string name="review_heatmap_days_studied">Dias de estudo</string>
+    <string name="review_heatmap_daily_average">Revisões por dia de estudo</string>
+    <string name="review_heatmap_total">Revisões no histórico disponível: %1$s</string>
+    <string name="review_heatmap_share">Estudaste em %1$d%% dos dias desde a tua primeira revisão</string>
+    <string name="review_heatmap_previous_year">Ano anterior</string>
+    <string name="review_heatmap_next_year">Ano seguinte</string>
+    <string name="review_heatmap_year">Ano %1$s</string>
+    <string name="review_heatmap_today">Hoje</string>
+    <string name="review_heatmap_scroll_hint">Desliza para percorrer o ano. Toca num dia para ver os detalhes.</string>
+    <string name="review_heatmap_forecast_hint">Os quadrados cinzentos estimam os cartões de revisão pendentes nos próximos 90 dias. Os números mudam à medida que estudas.</string>
+    <string name="review_heatmap_legend">Menos revisões → Mais revisões · Cinzento = previsão · Azul = sequência mantida pelo AnkiQuest · Areia = abaixo do mínimo da sequência</string>
+    <string name="review_heatmap_today_description">%1$s. Hoje</string>
+    <string name="review_heatmap_forecast_unavailable">A previsão abrange os próximos 90 dias.</string>
+    <string name="review_heatmap_protected_day">%1$s · O AnkiQuest manteve a tua sequência</string>
+    <string name="review_heatmap_short_day">%1$s · %2$s de %3$s minutos, abaixo do mínimo da sequência</string>
+    <string name="review_heatmap_short_today">%1$s · %2$s de %3$s minutos para a sequência até agora</string>
+    <string name="review_heatmap_view_reviewed_cards">Ver cartões revistos</string>
+    <string name="review_heatmap_view_due_cards">Ver cartões pendentes</string>
+    <plurals name="review_heatmap_review_count">
+        <item quantity="one">%1$s revisão</item>
+        <item quantity="other">%1$s revisões</item>
+    </plurals>
+    <plurals name="review_heatmap_due_count">
+        <item quantity="one">%1$s cartão de revisão pendente (estimativa)</item>
+        <item quantity="other">%1$s cartões de revisão pendentes (estimativa)</item>
+    </plurals>
+    <plurals name="review_heatmap_streak_days">
+        <item quantity="one">%1$s dia</item>
+        <item quantity="other">%1$s dias</item>
+    </plurals>
+</resources>

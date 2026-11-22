@@ -54,7 +54,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 
 <div style="display:flex;">
 
-1. Create an account on an AnkiQuest server, such as [ankiquest.rationality-munich.com](https://ankiquest.rationality-munich.com). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
+1. Create an account on an AnkiQuest server, such as [ankiquest.org](https://ankiquest.org). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
 2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
@@ -114,7 +114,7 @@ Thanks to our 1400 translators, for allowing us to be available, partially or to
 ## License
 
 * [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
-* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-only.txt) for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-only`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
+* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
 * [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
 * [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/COPYING.LESSER) for the AnkiDroid API

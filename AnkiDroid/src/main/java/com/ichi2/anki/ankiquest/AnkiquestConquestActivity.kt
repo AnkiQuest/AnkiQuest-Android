@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -571,7 +571,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
     /** [boardAttempt], with a card that cannot be found said as such. */
     private suspend fun attempt(work: suspend () -> Unit): Int? =
         try {
-            boardAttempt(work)
+            boardAttempt(work = work)
         } catch (_: AnkiquestCommunity.Missing) {
             R.string.aq_conquest_missing
         }
