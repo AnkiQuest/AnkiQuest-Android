@@ -14,14 +14,14 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - master
   merge_group:
 
 permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -33,9 +33,42 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
+  # 'false' when every changed file is documentation. The globs leave out the app's assets:
+  # AnkiDroid/src/main/assets/ankiquest/release-notes.md ships in the APK and a unit test reads it.
+  # The same list is in every ankiquest_*.yml that skips documentation (.github/tests/docs-only.test.cjs).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.changed.outputs.code }}
+    steps:
+      - id: changed
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        with:
+          docs: |
+            *.md
+            */README.md
+            */*/README.md
+            .agents/**/*.md
+            .github/workflows/README.md
+            .github/ISSUE_TEMPLATE/**
+            .github/pull_request_template.md
+            .idea/**/*.md
+            .oss-scanner/*.md
+            LICENSE*
+            LICENSES/**
+            docs/**
+
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
+  # Skipped for documentation-only changes, which skips the emulator tests after it. A failed
+  # changes job leaves the output empty, so the tests still run.
   matrix_prep:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.result }}
@@ -158,10 +191,10 @@ jobs:
         with:
           # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
           cache-provider: basic
-          # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
-          # Builds on other branches will only read from main branch cache writes
+          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
+          # Builds on other branches will only read from master branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
         # Cache only the per-change emulator: the 16 KB snapshot costs about 2.5 GiB.
       - name: AVD cache
@@ -223,9 +256,9 @@ jobs:
             "${ANDROID_HOME:?}/system-images/android-${SDK_API_LEVEL:?}/${SDK_TARGET:?}/${SDK_ARCH:?}/.installer"
 
       - name: AVD Boot and Snapshot Creation
-        # Warm up the uncached 16 KB and tablet emulators on every run; otherwise only on main cache misses.
+        # Warm up the uncached 16 KB and tablet emulators on every run; otherwise only on master cache misses.
         # Comment the if out to generate snapshots on branch for performance testing
-        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main') }}"
+        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master') }}"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ matrix.api-level }}
@@ -247,10 +280,10 @@ jobs:
 
         # This step is separate so pure install time may be calculated as a step
       - name: Emulator Snapshot After Firstboot Warmup
-        # Always warm up the 16 KB and tablet emulators. The default emulator only needs it on main cache misses.
+        # Always warm up the 16 KB and tablet emulators. The default emulator only needs it on master cache misses.
         # Switch the if statements via comment if generating snapshots for performance testing
         # if: matrix.first-boot-delay != '0'
-        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main') }}"
+        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master') }}"
         env:
           FIRST_BOOT_DELAY: ${{ matrix.first-boot-delay }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0

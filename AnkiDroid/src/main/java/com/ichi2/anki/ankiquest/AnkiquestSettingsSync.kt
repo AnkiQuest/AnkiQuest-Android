@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -407,16 +407,11 @@ internal object AnkiquestSettingsSync {
         body: JSONObject?,
     ): JSONObject? =
         withContext(Dispatchers.IO) {
-            // Checked after the last wait, so a switch turned off during an earlier request stops this one.
+            // Check after dispatch too: the switch can go off while this request waits for IO.
             if (gate(account) != Gate.OPEN) {
                 return@withContext null
             }
-            val request =
-                AnkiquestApi
-                    .request(account, "api/settings/${account.encodedUser}")
-                    .method(method, body?.let(AnkiquestApi::body))
-                    .build()
-            AnkiquestApi.json(account, request)
+            AnkiquestApi.call(account, method, "api/settings/${account.encodedUser}", body)
         }
 
     /** The well-formed entries of an answer's `settings`; values that are whole numbers become [Int] where they fit. */

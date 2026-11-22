@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_download_picture">Bild herunterladen</string>
     <string name="ankiquest_picture_saved">Bild in deiner Galerie gespeichert.</string>
@@ -41,4 +41,21 @@ Ich lerne mit AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_summary">Wenn du einen Stapel für heute abschließt, fragen, welchen Freunden du Bescheid sagen möchtest</string>
     <string name="ankiquest_deck_moment_title">Stapel abgeschlossen</string>
     <string name="ankiquest_deck_moment_body">Ich habe heute mit %1$s fertig gelernt.</string>
+    <plurals name="aq_moment_more">
+        <item quantity="one">Und %d weiterer: wische, um ihn zu sehen</item>
+        <item quantity="other">Und %d weitere: wische, um sie zu sehen</item>
+    </plurals>
+    <string name="aq_moment_position">%1$d von %2$d</string>
+    <string name="ankiquest_share_send_to">Senden an</string>
+    <string name="ankiquest_share_all_friends">Alle Freunde</string>
+    <string name="ankiquest_share_search">Freunde und Gruppen suchen</string>
+    <string name="ankiquest_share_group">Gruppe: %1$s</string>
+    <string name="ankiquest_share_no_match">Kein Freund und keine Gruppe heißt so.</string>
+    <string name="ankiquest_share_note_hint">Nachricht hinzufügen (optional)</string>
+    <string name="ankiquest_share_sending">Wird gesendet…</string>
+    <string name="ankiquest_share_refused">Konnte nicht geteilt werden (%1$s).</string>
+    <string name="ankiquest_share_more_apps">Weitere Apps…</string>
+    <string name="ankiquest_share_targets_failed">Deine Freunde konnten nicht geladen werden. Prüfe deine Verbindung oder teile mit einer anderen App.</string>
+    <string name="ankiquest_share_invite">Freund einladen</string>
+    <string name="ankiquest_share_lonely">Füge Freunde in AnkiQuest hinzu, um deine Momente mit ihnen zu teilen.</string>
 </resources>

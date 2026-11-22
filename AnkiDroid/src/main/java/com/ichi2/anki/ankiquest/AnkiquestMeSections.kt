@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -88,6 +88,19 @@ internal class AnkiquestMeSections(
             context: Context,
             destination: Destination,
         ): Intent = AnkiquestProfileActivity.intent(context).putExtra(EXTRA_SECTION, destination.name)
+
+        /** The heading of a records board of [kind]. */
+        @StringRes
+        internal fun recordLabel(kind: AnkiquestRecords.Kind): Int =
+            when (kind) {
+                AnkiquestRecords.Kind.HOUR -> R.string.aq_profile_best_hour
+                AnkiquestRecords.Kind.DAY -> R.string.aq_profile_best_day
+                AnkiquestRecords.Kind.WEEK -> R.string.aq_profile_best_week
+                AnkiquestRecords.Kind.MONTH -> R.string.aq_profile_best_month
+                AnkiquestRecords.Kind.YEAR -> R.string.aq_profile_best_year
+                AnkiquestRecords.Kind.STREAK -> R.string.review_heatmap_longest_streak
+                AnkiquestRecords.Kind.DAYS -> R.string.review_heatmap_days_studied
+            }
     }
 }
 
@@ -102,7 +115,7 @@ private abstract class MeSection(
     saved: Bundle?,
     initial: AnkiquestMeSections.Destination?,
 ) : ContextWrapper(activity) {
-    protected val views = AnkiquestRecordViews(activity)
+    protected val views = AnkiquestBoardViews(activity)
     protected val scroll: NestedScrollView = activity.findViewById(R.id.aq_board_scroll)
     protected val lifecycleScope get() = activity.lifecycleScope
     val root = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -234,7 +247,7 @@ private class RecordsSection(
             lifecycleScope.launch {
                 var gone = false
                 val problem =
-                    AnkiquestRecordViews.attempt(R.string.aq_challenges_offline, R.string.aq_records_server_error) {
+                    boardAttempt(R.string.aq_challenges_offline, R.string.aq_records_server_error) {
                         val choices = scopes ?: optionalScopes(current)
                         val asked = choices.firstOrNull { it.value == scope }
                         try {
@@ -334,7 +347,7 @@ private class RecordsSection(
     ) {
         val best = board.holders.first()
         val panel = views.card(content, tinted = best.user == me)
-        views.text(panel, getString(AnkiquestRecordsActivity.label(board.kind)), heading = true)
+        views.text(panel, getString(AnkiquestMeSections.recordLabel(board.kind)), heading = true)
         views.text(panel, whenSet(board.kind, best), small = true)
         board.holders.forEachIndexed { index, holder ->
             val lead = index == 0
@@ -365,7 +378,7 @@ private class RecordsSection(
                     small = true,
                 )
             }
-            views.bar(panel, if (best.value > 0) (holder.value * 100 / best.value).toInt() else 0)
+            views.bar(panel, if (best.value > 0) (holder.value * 100 / best.value).toInt() else 0, AnkiquestBoardViews.Bar.THIN)
         }
     }
 
@@ -479,7 +492,7 @@ private class HistorySection(
             lifecycleScope.launch {
                 var gone = false
                 val problem =
-                    AnkiquestRecordViews.attempt(R.string.aq_challenges_offline, R.string.aq_history_server_error) {
+                    boardAttempt(R.string.aq_challenges_offline, R.string.aq_history_server_error) {
                         try {
                             val history = AnkiquestRecords.study(current, asked)
                             if (turn == generation) {

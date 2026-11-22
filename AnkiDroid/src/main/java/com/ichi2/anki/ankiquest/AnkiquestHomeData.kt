@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -190,25 +190,13 @@ internal object AnkiquestHomeData {
         }
 
     /** The companions [account] has unlocked and its progress toward the others (`GET /api/unlocks/{user}`). */
-    suspend fun unlocks(account: HomeAccount): JSONObject =
-        withContext(Dispatchers.IO) {
-            val request = AnkiquestApi.request(account, "api/unlocks/${account.encodedUser}").build()
-            AnkiquestApi.call(account, request) { AnkiquestApi.jsonObject(it) }
-        }
+    suspend fun unlocks(account: HomeAccount): JSONObject = AnkiquestApi.call(account, "GET", "api/unlocks/${account.encodedUser}")
 
     /** Tells the server [account] unlocked [unlock] (`POST /api/unlocks/{user}`); answers as [unlocks]. */
     suspend fun saveUnlock(
         account: HomeAccount,
         unlock: String,
-    ): JSONObject =
-        withContext(Dispatchers.IO) {
-            val request =
-                AnkiquestApi
-                    .request(account, "api/unlocks/${account.encodedUser}")
-                    .post(AnkiquestApi.body(JSONObject().put("unlock", unlock)))
-                    .build()
-            AnkiquestApi.call(account, request) { AnkiquestApi.jsonObject(it) }
-        }
+    ): JSONObject = AnkiquestApi.call(account, "POST", "api/unlocks/${account.encodedUser}", JSONObject().put("unlock", unlock))
 
     suspend fun local(): HomeLocal =
         CollectionManager.withCol {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -157,7 +157,7 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
         day.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(AnkiquestLanguage.locale()))
 
     private fun launch(): AnkiquestProfileActivity =
-        startRegularActivity<AnkiquestProfileActivity>(AnkiquestHistoryActivity.intent(targetContext))
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.HISTORY))
             .also { history -> advanceRobolectricLooperUntil { !history.findViewById<View>(R.id.aq_me_history_loading).isVisible } }
 
     private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =

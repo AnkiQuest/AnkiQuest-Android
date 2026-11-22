@@ -5,14 +5,14 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - master
   merge_group:
 
 permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request cancels its older run. Every other run (main pushes,
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
   # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -24,8 +24,41 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
+  # 'false' when every changed file is documentation. The globs leave out the app's assets:
+  # AnkiDroid/src/main/assets/ankiquest/release-notes.md ships in the APK and a unit test reads it.
+  # The same list is in every ankiquest_*.yml that skips documentation (.github/tests/docs-only.test.cjs).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.changed.outputs.code }}
+    steps:
+      - id: changed
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        with:
+          docs: |
+            *.md
+            */README.md
+            */*/README.md
+            .agents/**/*.md
+            .github/workflows/README.md
+            .github/ISSUE_TEMPLATE/**
+            .github/pull_request_template.md
+            .idea/**/*.md
+            .oss-scanner/*.md
+            LICENSE*
+            LICENSES/**
+            docs/**
+
+  # Skipped for documentation-only changes, which passes the required check. A failed changes
+  # job leaves the output empty, so the lint still runs.
   lintKotlin:
     name: Lint Kotlin
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
@@ -47,10 +80,10 @@ jobs:
         with:
           # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
           cache-provider: basic
-          # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
-          # Builds on other branches will only read from main branch cache writes
+          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
+          # Builds on other branches will only read from master branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
       - name: Test build logic
         run: ./gradlew -p buildSrc test --daemon
@@ -78,6 +111,8 @@ jobs:
   # update workflows/README.md when modifying commands
   lintJavascript:
     name: Lint Javascript
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:

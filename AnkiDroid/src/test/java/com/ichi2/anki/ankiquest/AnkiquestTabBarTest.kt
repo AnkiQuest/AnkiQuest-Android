@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -187,8 +187,8 @@ class AnkiquestTabBarTest : RobolectricTest() {
                 AnkiquestHomeActivity.intent(targetContext),
             )
         val friends = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
-        val feed = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFeedActivity.intent(targetContext))
-        val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
+        val feed = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.feedIntent(targetContext))
+        val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext))
         for (tab in listOf(home, friends, feed, board)) {
             val name = tab::class.java.simpleName
             assertTrue(backControls(tab).isEmpty(), "$name shows no back arrow")

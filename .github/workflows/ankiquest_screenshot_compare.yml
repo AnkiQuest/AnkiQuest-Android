@@ -22,10 +22,16 @@ name: "ankiquest Screenshots: Compare"  # do not rename - referenced by ankiques
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 permissions: {}
+
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
@@ -128,7 +134,7 @@ jobs:
       - name: Stage screenshot diffs
         if: ${{ always() }}
         env:
-          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-main" on push)
+          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-master" on push)
           SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || format('screenshot-diff-{0}', github.ref_name) }}
         run: |
           # Preserve module paths so identically named tests cannot overwrite one another.

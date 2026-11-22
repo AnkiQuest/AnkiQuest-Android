@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -28,11 +28,11 @@ import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestMomentShareTest : RobolectricTest() {
-    private val account = HomeAccount("https://quest.example.test", "hill", "synthetic-token")
+    private val account = HomeAccount("https://quest.example.test", "aldanita", "synthetic-token")
     private val ana = Target.Friend("ana", "Ana")
     private val cerro = Target.Friend("cerro", "Cerro")
     private val club = Target.Group(3, "Spanish club")
-    private val members = listOf(AnkiquestSocial.Person("hill", "Hill"), AnkiquestSocial.Person("ana", "Ana"))
+    private val members = listOf(AnkiquestSocial.Person("aldanita", "Aldana"), AnkiquestSocial.Person("ana", "Ana"))
     private val alone = AnkiquestSocial.Group(4, "Just me", owner = true, invite = "code", members = members.take(1))
     private val overview =
         AnkiquestSocial.Overview(

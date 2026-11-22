@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -14,9 +14,11 @@ import com.ichi2.utils.TruncatedString
 import com.ichi2.utils.copyToClipboard
 import timber.log.Timber
 
-/** AnkiQuest's own pages: the repository, its bug form and its release notes. */
+/** AnkiQuest's own pages: the repositories, the bug form and the release notes. */
 internal object AnkiquestLinks {
     const val REPOSITORY = "https://github.com/AnkiQuest/AnkiQuest-Android"
+    const val SERVER_REPOSITORY = "https://github.com/AnkiQuest/AnkiQuest-Server"
+    const val DESKTOP_REPOSITORY = "https://github.com/AnkiQuest/AnkiQuest-Desktop"
     const val BUG_FORM = "$REPOSITORY/issues/new?template=bug_report_form.yml"
 
     // ankiquest_apk.yml publishes each quest-<n> release here, with AnkiquestReleaseNotes as notes.

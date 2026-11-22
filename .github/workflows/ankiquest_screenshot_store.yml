@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - master
       - dependency-updates
   # On PRs, verify structural changes without publishing the PR as a branch baseline.
   pull_request:
@@ -42,6 +42,14 @@ on:
       - 'tools/compare-screenshot-test.sh'
 
 permissions: {}
+
+# Not latest-wins: every master commit needs its own baseline, since ankiquest_screenshot_compare.yml
+# only compares against the store run of the exact base commit.
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10

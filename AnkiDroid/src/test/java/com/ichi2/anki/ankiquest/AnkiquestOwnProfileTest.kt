@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -84,7 +84,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_USER, "aldanita")
             putString(Ankiquest.PREF_TOKEN, "token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, true)
         }
@@ -109,7 +109,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         hoursLeft: Long,
         minutes: Int = 0,
     ) = JSONObject()
-        .put("display", "Hill")
+        .put("display", "Aldana")
         .put("level", 3)
         .put("xp_total", 120)
         .put("week_xp", 40)
@@ -125,11 +125,11 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         runBlocking {
             registerAliases()
             answer = profile("pending", 12, 2)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
             assertEquals(listOf(Icon.AKI_WORRIED), enabled(), "a streak not studied today worries Aki")
 
             answer = profile("studied", 13, 2)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals(listOf(Icon.AKI_HAPPY), enabled())
             assertEquals("studied", AnkiquestIcon.lastKnown()!!.getString("streak_state"), "the next app start begins from it")
@@ -153,7 +153,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         assertEquals(listOf(Icon.AKI_HAPPY), enabled())
         val widget =
             AnkiquestStreakWidget
-                .views(targetContext, JSONArray(), "hill", now = now)
+                .views(targetContext, JSONArray(), "aldanita", now = now)
                 .apply(targetContext, FrameLayout(targetContext))
         assertEquals("13", widget.findViewById<TextView>(R.id.ankiquest_streak_number).text.toString())
         assertEquals(10, widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress).progress)
@@ -294,7 +294,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             val account = checkNotNull(HomeAccount.current()).scope
             val owner = Any()
             mutex.lock(owner)
-            val upload = launch(Dispatchers.IO) { Ankiquest.uploadPending() }
+            val upload = launch(Dispatchers.IO) { Ankiquest.uploadPending(targetContext) }
             try {
                 // Wait for the queue barrier, then cancel while the upload still cannot run.
                 withTimeout(10_000) {
@@ -304,9 +304,12 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 }
                 upload.cancelAndJoin()
                 mutex.unlock(owner)
-                Ankiquest.uploadPending()
+                Ankiquest.uploadPending(targetContext)
                 val requested = synchronized(paths) { paths.toList() }
-                assertTrue(requested.any { it == "/api/reviews/hill" }, "the next poll must still upload after cancellation: $requested")
+                assertTrue(
+                    requested.any { it == "/api/reviews/aldanita" },
+                    "the next poll must still upload after cancellation: $requested",
+                )
             } finally {
                 upload.cancelAndJoin()
                 if (mutex.holdsLock(owner)) {
@@ -323,8 +326,8 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             val id = shadowOf(manager).createWidget(AnkiquestStreakWidget::class.java, R.layout.widget_ankiquest_streak)
             val row =
                 JSONObject()
-                    .put("user", "hill")
-                    .put("display", "Hill")
+                    .put("user", "aldanita")
+                    .put("display", "Aldana")
                     .put("streak", 12)
                     .put("streak_state", "pending")
                     .put("today_reviews", 0)
@@ -344,7 +347,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             assertEquals("Not studied yet", text(R.id.ankiquest_streak_status))
 
             answer = profile("studied", 13, 2)
-            Ankiquest.uploadPending()
+            Ankiquest.uploadPending(targetContext)
 
             assertEquals("13", text(R.id.ankiquest_streak_number))
             assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), text(R.id.ankiquest_streak_status))
@@ -362,7 +365,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         AnkiquestWidget.onOwnProfile(targetContext, account, profile("studied", 13, 2), now)
         val row =
             JSONObject()
-                .put("user", "hill")
+                .put("user", "aldanita")
                 .put("streak", 20)
                 .put("period", "week")
                 .put("xp", 5)

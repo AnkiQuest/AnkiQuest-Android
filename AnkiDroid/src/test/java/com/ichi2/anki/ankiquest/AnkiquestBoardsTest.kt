@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -50,7 +50,7 @@ class AnkiquestBoardsTest : RobolectricTest() {
     @Test
     fun `a profile reads freezes, records and achievements`() {
         val profile = AnkiquestBoards.parseProfile(JSONObject(PROFILE))
-        assertEquals("Hill", profile.display)
+        assertEquals("Aldana", profile.display)
         assertEquals(2, profile.freezes, "stored freezes count, not the ones protecting today")
         assertEquals(mapOf(AnkiquestBoards.Period.WEEK to 101L), profile.periods)
         assertEquals(AnkiquestBoards.Best(51, 5), profile.records[AnkiquestBoards.Period.HOUR])
@@ -66,15 +66,15 @@ class AnkiquestBoardsTest : RobolectricTest() {
         // Just after the shared reset, a Californian's Sunday still counts toward last week.
         val endsAt = 1_793_200_000_000L
         val json = JSONObject(PROFILE).put("closing_week", JSONObject().put("xp", 1234).put("ends_at", endsAt))
-        val closing = AnkiquestBoards.parseProfile(json).closingWeek
+        val closing = AnkiquestBoards.parseProfile(json).ownWeek
         assertEquals(AnkiquestBoards.ClosingWeek(1234, endsAt), closing)
-        val line = AnkiquestBoards.closingLine(targetContext, closing, endsAt - 1)
+        val line = AnkiquestBoards.ownWeekLine(targetContext, closing, endsAt - 1)
         assertNotNull(line)
         assertTrue(line.startsWith("Last week still counting: 1,234 XP · closes at "), line)
-        assertNull(AnkiquestBoards.closingLine(targetContext, closing, endsAt), "gone once their day ends")
-        assertNull(AnkiquestBoards.parseProfile(JSONObject(PROFILE)).closingWeek, "older servers and most of the week have none")
-        assertNull(AnkiquestBoards.closingLine(targetContext, null, 0))
-        assertNull(AnkiquestBoards.parseClosingWeek(JSONObject().put("closing_week", JSONObject().put("xp", 5))))
+        assertNull(AnkiquestBoards.ownWeekLine(targetContext, closing, endsAt), "gone once their day ends")
+        assertNull(AnkiquestBoards.parseProfile(JSONObject(PROFILE)).ownWeek, "older servers and most of the week have none")
+        assertNull(AnkiquestBoards.ownWeekLine(targetContext, null, 0))
+        assertNull(AnkiquestBoards.parseOwnWeek(JSONObject().put("closing_week", JSONObject().put("xp", 5))))
 
         val rows =
             AnkiquestBoards.parseLeaderboard(
@@ -86,6 +86,33 @@ class AnkiquestBoardsTest : RobolectricTest() {
         assertEquals(70L, rows.first { it.user == "ana" }.closingXp(endsAt - 1))
         assertNull(rows.first { it.user == "ana" }.closingXp(endsAt))
         assertNull(rows.first { it.user == "bo" }.closingXp(0))
+    }
+
+    @Test
+    fun `the next week is read until the board switches`() {
+        // A Berlin Monday at 09:00 counts for the new week; the board switches at 12:00 UTC.
+        val switch = 1_795_435_200_000L
+        val json = JSONObject(PROFILE).put("next_week", JSONObject().put("xp", 1234).put("starts_at", switch))
+        val next = AnkiquestBoards.parseProfile(json).ownWeek
+        assertEquals(AnkiquestBoards.NextWeek(1234, switch), next)
+        val line = AnkiquestBoards.ownWeekLine(targetContext, next, switch - 1)
+        assertNotNull(line)
+        assertTrue(line.startsWith("Next week already counting: 1,234 XP · the board switches at "), line)
+        assertNull(AnkiquestBoards.ownWeekLine(targetContext, next, switch), "gone once the board switches")
+        assertNull(AnkiquestBoards.parseOwnWeek(JSONObject().put("next_week", JSONObject().put("xp", 5))))
+
+        val rows =
+            AnkiquestBoards.parseLeaderboard(
+                JSONArray()
+                    .put(row("ana", week = 0, hour = 0).put("next_xp", 70))
+                    .put(row("bo", week = 5, hour = 0).put("next_xp", JSONObject.NULL)),
+                AnkiquestBoards.Period.WEEK,
+            )
+        val ana = rows.first { it.user == "ana" }
+        assertEquals(70L, ana.nextXp(switch - 1, switch))
+        assertNull(ana.nextXp(switch, switch), "the board has switched")
+        assertNull(ana.nextXp(switch - 1, null), "without /api/week the switch is unknown")
+        assertNull(rows.first { it.user == "bo" }.nextXp(0, switch))
     }
 
     @Test
@@ -116,7 +143,7 @@ class AnkiquestBoardsTest : RobolectricTest() {
                 .put("streak_minutes", 0)
 
         const val PROFILE = """{
-            "user": "hill", "display": "Hill", "level": 2, "xp_total": 101, "xp_into_level": 1, "xp_for_next": 280,
+            "user": "aldanita", "display": "Aldana", "level": 2, "xp_total": 101, "xp_into_level": 1, "xp_for_next": 280,
             "periods": {"week": 101}, "streak": 1, "streak_state": "studied", "freezes": 1, "stored_freezes": 2,
             "freezes_enabled": true, "at_risk": false,
             "today": {"reviews": 5, "minutes": 0, "xp": 101, "streak_minutes": 0},

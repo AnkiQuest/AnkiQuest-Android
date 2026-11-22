@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -8,11 +8,13 @@ import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.core.content.edit
 import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.ichi2.anki.AnkiDroidApp
@@ -50,6 +52,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -58,10 +61,10 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
 class AnkiquestShareSheetTest : RobolectricTest() {
-    private var account = HomeAccount("https://quest.example.test", "hill", "synthetic-token")
+    private var account = HomeAccount("https://quest.example.test", "aldanita", "synthetic-token")
     private val moment = MomentRef.Win(17)
     private val card = AnkiquestShare.Card("Level 54", "I reached level 54.")
-    private val members = listOf(AnkiquestSocial.Person("hill", "Hill"), AnkiquestSocial.Person("ana", "Ana"))
+    private val members = listOf(AnkiquestSocial.Person("aldanita", "Aldana"), AnkiquestSocial.Person("ana", "Ana"))
     private var overview =
         AnkiquestSocial.Overview(
             friends = listOf(AnkiquestSocial.Person("ana", "Ana"), AnkiquestSocial.Person("cerro", "Cerro")),
@@ -121,6 +124,32 @@ class AnkiquestShareSheetTest : RobolectricTest() {
 
         chip(dialog, "All friends").performClick()
         assertFalse(send.isEnabled)
+    }
+
+    @Test
+    fun `Send looks disabled until someone is chosen`() {
+        val (_, dialog) = open()
+        val send = dialog.findViewById<MaterialButton>(R.id.aq_share_send)!!
+        val waiting = looks(send)
+        assertFalse(send.isEnabled)
+
+        chip(dialog, "Ana").performClick()
+        assertTrue(send.isEnabled)
+        val ready = looks(send)
+        assertNotEquals(waiting.first, ready.first, "a disabled Send must not share the enabled background")
+        assertNotEquals(waiting.second, ready.second, "a disabled Send must not share the enabled text colour")
+    }
+
+    @Test
+    fun `the sheet speaks the player's language`() {
+        AnkiDroidApp.sharedPrefs().edit { putString("language", "es-ES") }
+        val (_, dialog) = open()
+        val shown = texts(dialog)
+        assertTrue("Enviar a" in shown, "section title in $shown")
+        assertTrue("Más aplicaciones…" in shown, "other apps in $shown")
+        assertEquals("Todos los amigos", chips(dialog).first().text.toString())
+        assertEquals("Buscar amigos y grupos", dialog.findViewById<EditText>(R.id.aq_share_search)!!.hint.toString())
+        assertEquals("Añadir una nota (opcional)", dialog.findViewById<EditText>(R.id.aq_share_note)!!.hint.toString())
     }
 
     @Test
@@ -196,7 +225,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val delivered = ConcurrentHashMap<String, Long>()
         val requests = CopyOnWriteArrayList<String>()
-        server.createContext("/api/share/hill") { exchange ->
+        server.createContext("/api/share/aldanita") { exchange ->
             requests += "${exchange.requestMethod} ${exchange.requestURI}"
             val answer =
                 if (exchange.requestMethod == "POST") {
@@ -242,7 +271,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             advanceRobolectricLooperUntil { ShadowToast.getTextOfLatestToast() != null }
 
             assertEquals(setOf("cerro"), delivered.keys.toSet(), "the earlier send must survive")
-            assertEquals("DELETE /api/share/hill/17?until=${NOW + DAY + 1}", requests.last())
+            assertEquals("DELETE /api/share/aldanita/17?until=${NOW + DAY + 1}", requests.last())
         } finally {
             server.stop(0)
             unmockkObject(AnkiquestCapabilities)
@@ -284,12 +313,27 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         idle()
         assertTrue(dialog.isShowing)
         val failed = assertIs<State.Picking>(sheet.state)
-        assertEquals(Step.FAILED, failed.step)
+        assertEquals(Step.Failed, failed.step)
         assertEquals(listOf("Ana"), chips(dialog).filter { it.isChecked }.map { it.text.toString() })
         val status = dialog.findViewById<TextView>(R.id.aq_share_status)!!
         assertEquals(targetContext.getString(R.string.ankiquest_share_failed), status.text.toString())
         assertTrue(dialog.findViewById<View>(R.id.aq_share_send)!!.isEnabled)
         assertTrue(exits.isEmpty())
+    }
+
+    @Test
+    fun `a refused send shows the server's reason`() {
+        coEvery { AnkiquestSharing.send(account, moment, any(), any()) } throws AnkiquestHttpException(403, "Cerro is not your friend.")
+        val (sheet, dialog) = open()
+        chip(dialog, "Cerro").performClick()
+        dialog.findViewById<View>(R.id.aq_share_send)!!.performClick()
+        idle()
+        assertTrue(dialog.isShowing)
+        val status = dialog.findViewById<TextView>(R.id.aq_share_status)!!
+        assertTrue(status.isVisible)
+        assertEquals("Couldn’t share it (Cerro is not your friend.).", status.text.toString())
+        assertEquals(Step.Refused("Cerro is not your friend."), assertIs<State.Picking>(sheet.state).step)
+        assertTrue(dialog.findViewById<View>(R.id.aq_share_send)!!.isEnabled)
     }
 
     @Test
@@ -447,6 +491,10 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             .filterIsInstance<TextView>()
             .map { it.text.toString() }
             .toList()
+
+    /** The background and text colour [button] is drawn with in its current state. */
+    private fun looks(button: MaterialButton): Pair<Int, Int> =
+        button.backgroundTintList!!.getColorForState(button.drawableState, 0) to button.currentTextColor
 
     /** Finish the snackbar's animation without reaching its timeout. */
     private fun idle() = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))

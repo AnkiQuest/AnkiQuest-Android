@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-License-Identifier: GPL-3.0-or-later
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -9,7 +9,7 @@ const store = fs.readFileSync(path.join(__dirname, '../workflows/ankiquest_scree
 
 test('each supported target branch produces screenshot baselines on push', () => {
   const branches = store.match(/^  push:\n    branches:\n((?:      - .+\n)+)/m)[1];
-  for (const branch of ['main']) {
+  for (const branch of ['master']) {
     assert.match(branches, new RegExp(`^      - ${branch}$`, 'm'), `${branch} needs its own baseline`);
   }
 });

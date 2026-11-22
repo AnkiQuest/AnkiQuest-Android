@@ -21,6 +21,7 @@ import com.ichi2.anki.lint.rules.FragmentArgumentKeyNamingDetector
 import com.ichi2.anki.lint.rules.FragmentRequestKeyNamingDetector
 import com.ichi2.anki.lint.rules.FragmentResultKeyNamingDetector
 import com.ichi2.anki.lint.rules.HardcodedPreferenceKey
+import com.ichi2.anki.lint.rules.IcuRegexSyntaxDetector
 import com.ichi2.anki.lint.rules.IntentActionNamingDetector
 import com.ichi2.anki.lint.rules.IntentExtraNamingDetector
 import com.ichi2.anki.lint.rules.InvalidStringFormatDetector
@@ -58,6 +59,7 @@ class IssueRegistry : IssueRegistry() {
                 FragmentRequestKeyNamingDetector.ISSUE,
                 FragmentResultKeyNamingDetector.ISSUE,
                 HardcodedPreferenceKey.ISSUE,
+                IcuRegexSyntaxDetector.ISSUE,
                 IntentActionNamingDetector.ISSUE,
                 IntentExtraNamingDetector.ISSUE,
                 JUnitNullAssertionDetector.ISSUE,

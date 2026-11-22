@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -27,6 +27,9 @@ internal object AnkiquestCompanion {
 
     /** The cache name of silhouettes ([AnkiquestArt.filtered]). */
     private const val SILHOUETTE = "silhouette"
+
+    /** The companions this app has art for, as the server names them. */
+    val drawn: List<String> = Choice.entries.filter { it != Choice.NONE }.map { it.id }
 
     /** The companions, in the order the picker shows them; [id] is the value the server stores. */
     enum class Choice(
@@ -218,7 +221,7 @@ internal object AnkiquestCompanion {
             AnkiquestPose.FACE to R.drawable.ankilope_face,
             AnkiquestPose.ASLEEP to R.drawable.ankilope_sleeping,
             AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
-            // Interim: Ankilope has no on-fire art yet, so she studies (hill, 2026-11-18).
+            // Interim: Ankilope has no on-fire art yet, so she studies.
             AnkiquestPose.STREAK to R.drawable.ankilope_study,
             AnkiquestPose.SAD to R.drawable.ankilope_sad,
             AnkiquestPose.HOPEFUL to R.drawable.ankilope_hopeful,

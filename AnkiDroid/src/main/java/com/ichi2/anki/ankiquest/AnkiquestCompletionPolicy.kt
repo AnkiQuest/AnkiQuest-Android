@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -10,7 +10,7 @@ internal object AnkiquestCompletionPolicy {
         now: Long,
         offsetWestMinutes: Int,
         rolloverHour: Int,
-    ): Long = (now - offsetWestMinutes * 60_000L - rolloverHour * 3_600_000L).floorDiv(86_400_000L)
+    ): Long = (now - offsetWestMinutes * 60_000L - rolloverHour * 3_600_000L).floorDiv(DAY_MS)
 
     /**
      * Whether an upload batch must not announce anything. The first upload sends the whole history,

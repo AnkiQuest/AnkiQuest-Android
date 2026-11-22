@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_share">Share</string>
     <string name="ankiquest_download_picture">Download picture</string>
@@ -66,6 +66,8 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_share_no_match">No friend or group has that name.</string>
     <string name="ankiquest_share_note_hint">Add a note (optional)</string>
     <string name="ankiquest_share_sending">Sending…</string>
+    <!-- The server refused a send and said why, for example a friend who has left. -->
+    <string name="ankiquest_share_refused">Couldn’t share it (%1$s).</string>
     <string name="ankiquest_share_more_apps">More apps…</string>
     <string name="ankiquest_share_targets_failed">Couldn’t load your friends. Check your connection, or share with another app.</string>
     <string name="ankiquest_share_invite">Invite a friend</string>

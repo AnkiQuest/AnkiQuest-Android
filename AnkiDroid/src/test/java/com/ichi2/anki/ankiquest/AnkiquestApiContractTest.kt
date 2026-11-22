@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -432,7 +432,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 AnkiquestDailyGoal.ServerGoal.parse(AnkiquestSharing.goal(account)),
             )
             assertEquals("aki", AnkiquestHomeData.companion(account))
-            assertFalse(Ankiquest.streakProtectionEnabled())
+            assertFalse(Ankiquest.setStreakProtection(false))
         }
 
     @Test

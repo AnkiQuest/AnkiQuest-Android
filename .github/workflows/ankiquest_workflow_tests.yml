@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest workflow regression tests
 
 on:
@@ -11,15 +11,13 @@ on:
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
-      - ".github/labels.json"
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
-      - ".github/workflows/ankiquest_*labels.yml"
-      - ".github/workflows/ankiquest_conflicts.yml"
       - ".github/dependabot.yml"
+      - "docs/graphics/banner.toml"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - ".github/workflows/ankiquest_*.yml"
       - ".github/tests/*.test.cjs"
@@ -27,15 +25,19 @@ on:
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
-      - ".github/labels.json"
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
-      - ".github/workflows/ankiquest_*labels.yml"
-      - ".github/workflows/ankiquest_conflicts.yml"
       - ".github/dependabot.yml"
+      - "docs/graphics/banner.toml"
 
 permissions:
   contents: read
+
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
