@@ -20,8 +20,8 @@ class AnkiquestMoveTest : RobolectricTest() {
     @Test
     fun `the running package decides the role`() {
         assertEquals(Role.OLD, Role.of("com.ichi2.anki.quest"))
-        assertEquals(Role.NEW, Role.of("org.ankiquest.anki"))
-        for (other in listOf("com.ichi2.anki", "com.ichi2.anki.debug", "org.ankiquest.anki.debug", "dev.hilll.anki", "")) {
+        assertEquals(Role.NEW, Role.of("org.ankiquest"))
+        for (other in listOf("com.ichi2.anki", "com.ichi2.anki.debug", "org.ankiquest.debug", "org.ankiquest.anki", "dev.hilll.anki", "")) {
             assertEquals(Role.NONE, Role.of(other), other)
         }
     }
@@ -33,7 +33,14 @@ class AnkiquestMoveTest : RobolectricTest() {
 
     @Test
     fun `a caller other than the new package is refused`() {
-        for (caller in listOf(null, "com.ichi2.anki", "com.ichi2.anki.quest", "org.ankiquest.anki.debug", "com.example.thief")) {
+        for (caller in listOf(
+            null,
+            "com.ichi2.anki",
+            "com.ichi2.anki.quest",
+            "org.ankiquest.debug",
+            "org.ankiquest.anki",
+            "com.example.thief",
+        )) {
             assertEquals(Verdict.WRONG_PACKAGE, verdict(caller = caller), caller.toString())
         }
     }
