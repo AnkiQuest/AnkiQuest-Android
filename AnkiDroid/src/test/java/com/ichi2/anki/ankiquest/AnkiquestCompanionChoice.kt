@@ -22,7 +22,7 @@ internal fun chooseCompanion(choice: Choice) {
 internal val ankilopeMoodPoses =
     mapOf(
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
-        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_sleeping,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.ankilope_sad,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
@@ -30,3 +30,9 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
     )
+
+/** Pose names the pinned `streak_moods.json` still uses, by the drawable that AnkiQuest-Art exports for them. */
+private val renamedPoses = mapOf("aki_sleeping" to "aki_asleep")
+
+/** The drawable name for the fixture's pose [name]. */
+internal fun fixturePose(name: String): String = renamedPoses[name] ?: name

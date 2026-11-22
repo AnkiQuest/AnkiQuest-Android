@@ -110,10 +110,9 @@ test("the server baseline is an immutable commit, with explicit example ownershi
     ]);
 });
 
-test("normal contract, fixture and art runs never substitute server master", () => {
+test("normal contract and fixture runs never substitute server master", () => {
     for (const name of [
         "ankiquest_api_contract.yml",
-        "ankiquest_art_check.yml",
         "ankiquest_fixtures.yml",
     ]) {
         const workflow = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
@@ -125,13 +124,9 @@ test("normal contract, fixture and art runs never substitute server master", () 
     }
 });
 
-test("only data workflows accept a manual server ref", () => {
-    // The contract and fixture checks only read server files; the art check builds and runs server
-    // code with a Rust cache shared with master, so a manual ref there could poison the cache.
+test("the data workflows accept a manual server ref", () => {
     for (const name of ["ankiquest_api_contract.yml", "ankiquest_fixtures.yml"]) {
         const workflow = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
         assert.match(workflow, /server_ref:/);
     }
-    const art = fs.readFileSync(path.join(root, ".github/workflows", "ankiquest_art_check.yml"), "utf8");
-    assert.doesNotMatch(art, /workflow_dispatch|server_ref/);
 });

@@ -23,6 +23,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.keeper)
     id("ankidroid.plugins.screenshots")
+    // AnkiQuest: the companion drawables, generated from the art/ submodule.
+    id("ankiquest.art")
     id("idea")
 }
 

@@ -136,6 +136,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          submodules: true
           fetch-depth: 50
 
       - name: Enable KVM group perms
@@ -143,6 +144,11 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+
+      # Builds run AnkiQuest-Art's exporter (art/tools/art-export) for the companion drawables.
+      - name: Set up Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

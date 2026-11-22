@@ -58,6 +58,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
 
       - name: Wait for matching base screenshots
         id: source
@@ -91,6 +93,11 @@ jobs:
           current=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | xargs)
           echo "::notice title=Screenshot CPUs::baseline drawn on ${baseline}; this run on ${current}"
           echo "Baseline drawn on ${baseline}; this run on ${current}." >> "$GITHUB_STEP_SUMMARY"
+
+      # Builds run AnkiQuest-Art's exporter (art/tools/art-export) for the companion drawables.
+      - name: Set up Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

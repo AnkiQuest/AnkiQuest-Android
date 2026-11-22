@@ -185,7 +185,8 @@ class AnkiquestAkiTest : RobolectricTest() {
             val profile = homeProfile(today) ?: continue
             val card = AnkiquestAki.mood(null, profile)
             assertEquals(enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase()), card.mood, name)
-            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(card.image), name)
+            val pose = fixturePose(expected.getString("pose"))
+            assertEquals(pose, targetContext.resources.getResourceEntryName(card.image), name)
             checked++
         }
         assertTrue(checked > 0)

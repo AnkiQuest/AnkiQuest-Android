@@ -87,7 +87,10 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 
 ## Development
 
+The companion drawables are generated at build time from the masters in the [AnkiQuest-Art](https://github.com/AnkiQuest/AnkiQuest-Art) submodule (`art/`), by its Rust exporter. Builds need the submodule and cargo:
+
 ```sh
+git submodule update --init
 ./gradlew ktlintCheck
 ./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'
 node --test .github/tests/*.test.cjs

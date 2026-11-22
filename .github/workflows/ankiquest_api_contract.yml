@@ -75,6 +75,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
 
       - name: Download manually requested server examples
         if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
@@ -88,6 +90,11 @@ jobs:
         shell: bash
         run: |
           node .github/ankiquest_server_snapshot.cjs examples "$RUNNER_TEMP/server-api-examples"
+
+      # Builds run AnkiQuest-Art's exporter (art/tools/art-export) for the companion drawables.
+      - name: Set up Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

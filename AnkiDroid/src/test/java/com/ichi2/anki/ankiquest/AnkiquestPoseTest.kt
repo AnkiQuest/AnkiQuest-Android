@@ -51,7 +51,7 @@ class AnkiquestPoseTest {
         assertEquals(
             listOf(
                 R.drawable.ankilope_face,
-                R.drawable.ankilope_sleeping,
+                R.drawable.ankilope_asleep,
                 R.drawable.ankilope_celebrate,
                 // Interim until her on-fire art exists.
                 R.drawable.ankilope_study,
