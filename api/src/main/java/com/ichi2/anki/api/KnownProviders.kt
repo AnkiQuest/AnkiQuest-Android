@@ -23,7 +23,7 @@ internal object KnownProviders {
         )
 
     /** AnkiQuest, a fork of AnkiDroid: https://github.com/AnkiQuest/AnkiQuest-Android */
-    val ANKIQUEST = ankiQuest("org.ankiquest.anki")
+    val ANKIQUEST = ankiQuest("org.ankiquest")
 
     /**
      * AnkiQuest up to quest-23, installed as com.ichi2.anki.quest. Its provider predates the

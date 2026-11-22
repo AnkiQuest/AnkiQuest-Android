@@ -47,8 +47,9 @@
                 android:description="@string/read_write_permission_description"
                 android:protectionLevel="dangerous"
                 />
-    <!-- The API library declares the providers its clients talk to. AnkiDroid is a provider, not a client -->
-    <uses-permission android:name="org.ankiquest.anki.permission.READ_WRITE_DATABASE" tools:node="remove" />
+    <!-- The API library declares the providers its clients talk to. AnkiQuest is a provider, not a client -->
+    <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE" tools:node="remove" />
+    <uses-permission android:name="org.ankiquest.permission.READ_WRITE_DATABASE" tools:node="remove" />
     <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE" tools:node="remove" />
 
     <supports-screens
@@ -688,10 +689,14 @@
             android:exported="true"
             tools:ignore="ExportedContentProvider"
             >
-            <meta-data android:name="com.ichi2.anki.provider.spec" android:value="2" />
-            <!-- FlashCardsContract.ACTION_FLASHCARDS_PROVIDER: lets API clients find parallel builds -->
+            <!--
+            AnkiQuest's own names for AnkiDroid's provider spec key and discovery action, which the API
+            library also reads (#461): AnkiQuest exposes none of AnkiDroid's contract names.
+            -->
+            <meta-data android:name="org.ankiquest.provider.spec" android:value="2" />
+            <!-- Lets API clients find parallel builds (org.ankiquest.debug) -->
             <intent-filter>
-                <action android:name="com.ichi2.anki.action.FLASHCARDS_PROVIDER" />
+                <action android:name="org.ankiquest.action.FLASHCARDS_PROVIDER" />
             </intent-filter>
         </provider>
         <provider

@@ -211,8 +211,11 @@ internal class AnkiDroidProviderTest {
     }
 }
 
-/** Whether a test provider declares [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER] */
-internal enum class ProviderInterface { DECLARED, NOT_DECLARED }
+/**
+ * Which intent filter a test provider declares: [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER],
+ * AnkiQuest's [ProviderDiscovery.ANKIQUEST_ACTION], or none
+ */
+internal enum class ProviderInterface { DECLARED, DECLARED_BY_ANKIQUEST, NOT_DECLARED }
 
 /** Whether the client app declares a test provider's permission */
 internal enum class PermissionRequest { REQUESTED, NOT_REQUESTED }
@@ -366,13 +369,14 @@ internal object AnkiDroidPackages {
             request(FlashCardsContract.getPermission(packageName))
         }
 
-        // Current builds declare FlashCardsContract.ACTION_FLASHCARDS_PROVIDER on the provider
-        if (filter == ProviderInterface.DECLARED) {
-            manager.addIntentFilterForProvider(
-                ComponentName(packageName, provider.name),
-                IntentFilter(FlashCardsContract.ACTION_FLASHCARDS_PROVIDER),
-            )
-        }
+        // Current builds declare FlashCardsContract.ACTION_FLASHCARDS_PROVIDER on the provider, AnkiQuest its own action
+        val action =
+            when (filter) {
+                ProviderInterface.DECLARED -> FlashCardsContract.ACTION_FLASHCARDS_PROVIDER
+                ProviderInterface.DECLARED_BY_ANKIQUEST -> ProviderDiscovery.ANKIQUEST_ACTION
+                ProviderInterface.NOT_DECLARED -> return
+            }
+        manager.addIntentFilterForProvider(ComponentName(packageName, provider.name), IntentFilter(action))
     }
 
     /**

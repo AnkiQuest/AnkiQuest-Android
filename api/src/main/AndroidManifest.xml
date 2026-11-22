@@ -8,7 +8,7 @@
     <!-- AnkiDroid -->
     <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE"/>
     <!-- AnkiQuest -->
-    <uses-permission android:name="org.ankiquest.anki.permission.READ_WRITE_DATABASE"/>
+    <uses-permission android:name="org.ankiquest.permission.READ_WRITE_DATABASE"/>
     <!-- AnkiQuest up to quest-23 -->
     <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE"/>
 
@@ -17,14 +17,18 @@
         <package android:name="com.ichi2.anki" />
         <provider android:authorities="com.ichi2.anki.flashcards" />
         <!-- AnkiQuest -->
-        <package android:name="org.ankiquest.anki" />
-        <provider android:authorities="org.ankiquest.anki.flashcards" />
+        <package android:name="org.ankiquest" />
+        <provider android:authorities="org.ankiquest.flashcards" />
         <!-- AnkiQuest up to quest-23 -->
         <package android:name="com.ichi2.anki.quest" />
         <provider android:authorities="com.ichi2.anki.quest.flashcards" />
         <!-- Lets AddContentApi.getProviders see AnkiDroid builds and forks on Android 11+ -->
         <intent>
             <action android:name="com.ichi2.anki.action.FLASHCARDS_PROVIDER" />
+        </intent>
+        <!-- AnkiQuest's own builds declare their own action -->
+        <intent>
+            <action android:name="org.ankiquest.action.FLASHCARDS_PROVIDER" />
         </intent>
     </queries>
 

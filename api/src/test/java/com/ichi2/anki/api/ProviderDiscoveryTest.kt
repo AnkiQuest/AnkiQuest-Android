@@ -79,6 +79,32 @@ internal class ProviderDiscoveryTest {
         assertEquals(listOf(RELEASED_QUEST_PACKAGE), providers.map { it.packageName })
     }
 
+    @Test
+    fun findsAnkiQuest() {
+        AnkiDroidPackages.install(
+            QUEST_PACKAGE,
+            Signing.Current(AnkiDroidPackages.ANKIQUEST_RELEASE),
+            authority = "$QUEST_PACKAGE.flashcards",
+        )
+
+        assertEquals(listOf(KnownProviders.ANKIQUEST), providers)
+    }
+
+    /** AnkiQuest declares its own action and spec key, not AnkiDroid's (#461 in AnkiQuest-Android) */
+    @Test
+    fun ankiQuestBuildIsFoundByItsOwnIntentFilter() {
+        AnkiDroidPackages.install(
+            QUEST_DEBUG_PACKAGE,
+            Signing.Current(FORK_KEY),
+            Bundle().apply { putInt("org.ankiquest.provider.spec", 2) },
+            authority = "$QUEST_DEBUG_PACKAGE.flashcards",
+            filter = ProviderInterface.DECLARED_BY_ANKIQUEST,
+        )
+
+        assertEquals(listOf("$QUEST_DEBUG_PACKAGE.flashcards"), providers.map { it.authority })
+        assertEquals(2, AddContentApi(context).apiHostSpecVersion)
+    }
+
     private fun installAnkiDroid(filter: ProviderInterface) {
         AnkiDroidPackages.install(STOCK_PACKAGE, Signing.Current(AnkiDroidPackages.RELEASE), filter = filter)
     }
@@ -99,6 +125,8 @@ internal class ProviderDiscoveryTest {
     companion object {
         private val STOCK_PACKAGE = BuildConfig.ANKI_PACKAGE_NAME
         private const val RELEASED_QUEST_PACKAGE = "com.ichi2.anki.quest"
+        private const val QUEST_PACKAGE = "org.ankiquest"
+        private const val QUEST_DEBUG_PACKAGE = "org.ankiquest.debug"
         private const val FORK_PACKAGE = "org.example.ankifork"
         private const val LATER_FORK_PACKAGE = "org.example.zfork"
         private const val FORK_AUTHORITY = "$FORK_PACKAGE.flashcards"

@@ -652,10 +652,10 @@ public class AddContentApi(
                 AnkiDroidProvider.resolve(context, PackageManager.GET_META_DATA, provider)
                     ?: return ANKIDROID_NOT_INSTALLED
 
-            return if (info.metaData != null &&
-                info.metaData.containsKey(PROVIDER_SPEC_META_DATA_KEY)
-            ) {
-                info.metaData.getInt(PROVIDER_SPEC_META_DATA_KEY)
+            // AnkiQuest names the key after itself; AnkiDroid and other forks use AnkiDroid's
+            val key = PROVIDER_SPEC_META_DATA_KEYS.firstOrNull { info.metaData?.containsKey(it) == true }
+            return if (key != null) {
+                info.metaData.getInt(key)
             } else {
                 DEFAULT_PROVIDER_SPEC_VALUE
             }
@@ -853,7 +853,7 @@ public class AddContentApi(
         public const val READ_WRITE_PERMISSION: String = FlashCardsContract.READ_WRITE_PERMISSION
         public const val DEFAULT_DECK_ID: Long = 1L
         private const val TEST_TAG = "PREVIEW_NOTE"
-        private const val PROVIDER_SPEC_META_DATA_KEY = "com.ichi2.anki.provider.spec"
+        private val PROVIDER_SPEC_META_DATA_KEYS = listOf("com.ichi2.anki.provider.spec", "org.ankiquest.provider.spec")
         private const val DEFAULT_PROVIDER_SPEC_VALUE = 1 // for when meta-data key does not exist
         private const val ANKIDROID_NOT_INSTALLED = -1
         private val PROJECTION =

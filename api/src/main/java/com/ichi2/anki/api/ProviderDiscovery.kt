@@ -12,8 +12,8 @@ import com.ichi2.anki.FlashCardsContract
 
 /**
  * Finds installed apps offering the [FlashCardsContract] content provider: any app whose
- * provider declares [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER], and the [KnownProviders] by
- * their authority.
+ * provider declares [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER] or AnkiQuest's
+ * [ANKIQUEST_ACTION], and the [KnownProviders] by their authority.
  *
  * A known provider is a candidate only if its app passes [AnkiDroidProvider]'s certificate
  * check. Any other app is a candidate whose trust comes from the user's choice, which
@@ -21,6 +21,14 @@ import com.ichi2.anki.FlashCardsContract
  */
 internal object ProviderDiscovery {
     private const val TAG = "AnkiDroidApi"
+
+    /**
+     * The intent filter action AnkiQuest's provider declares instead of
+     * [FlashCardsContract.ACTION_FLASHCARDS_PROVIDER]: AnkiQuest exposes none of AnkiDroid's names.
+     */
+    const val ANKIQUEST_ACTION = "org.ankiquest.action.FLASHCARDS_PROVIDER"
+
+    private val DISCOVERY_ACTIONS = listOf(FlashCardsContract.ACTION_FLASHCARDS_PROVIDER, ANKIQUEST_ACTION)
 
     /** Separates the authorities in [ProviderInfo.authority] */
     private const val AUTHORITY_SEPARATOR = ';'
@@ -39,8 +47,8 @@ internal object ProviderDiscovery {
         // Releases older than FlashCardsContract.ACTION_FLASHCARDS_PROVIDER only answer to their authority
         val listed = known.mapNotNull { manager.resolve(it.authority) }
 
-        // Current AnkiDroid builds, parallel builds and forks declare the intent filter
-        val declared = manager.queryDeclared()
+        // Current AnkiDroid builds, parallel builds and forks declare the intent filter; AnkiQuest its own
+        val declared = DISCOVERY_ACTIONS.flatMap { manager.queryDeclared(it) }
 
         val requested = requestedPermissions(context)
         return (listed + declared)
@@ -118,13 +126,13 @@ internal object ProviderDiscovery {
         return resolveContentProvider(authority, 0)
     }
 
-    private fun PackageManager.queryDeclared(): List<ProviderInfo> {
+    private fun PackageManager.queryDeclared(action: String): List<ProviderInfo> {
         // queryIntentContentProviders was added in API 19
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
             return emptyList()
         }
 
-        val intent = Intent(FlashCardsContract.ACTION_FLASHCARDS_PROVIDER)
+        val intent = Intent(action)
         val matches =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 queryIntentContentProviders(intent, PackageManager.ResolveInfoFlags.of(0L))
