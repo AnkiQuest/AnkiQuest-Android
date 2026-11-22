@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -10,6 +10,10 @@ const workflows = path.join(__dirname, "../workflows");
 // run gets a group of its own (#269).
 const GROUP = "${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}";
 const CANCEL = "${{ github.event_name == 'pull_request' }}";
+
+// Latest-wins generators that never run on a branch push (the README banner) let the newest run
+// for a ref cancel an older one.
+const LATEST = "${{ github.workflow }}-${{ github.ref }}";
 
 // Returns the top-level concurrency settings, or null when there are none.
 function concurrency(text) {
@@ -26,10 +30,17 @@ const files = fs.readdirSync(workflows).filter(name => /^ankiquest_.*\.yml$/.tes
 
 for (const name of files) {
     test(`${name}: a later run never cancels a master push run`, () => {
-        const settings = concurrency(fs.readFileSync(path.join(workflows, name), "utf8"));
+        const text = fs.readFileSync(path.join(workflows, name), "utf8");
+        const settings = concurrency(text);
 
         // Workflows that only queue (cancel-in-progress: false) keep their own group.
         if (settings === null || settings.cancel === "false") {
+            return;
+        }
+
+        if (settings.cancel === "true") {
+            assert.doesNotMatch(text, /^ {2}push:\n {4}branches/m, "a latest-wins workflow may not run on branch pushes");
+            assert.equal(settings.group, LATEST);
             return;
         }
 

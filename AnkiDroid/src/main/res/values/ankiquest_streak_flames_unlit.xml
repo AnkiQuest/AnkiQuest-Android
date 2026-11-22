@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!--
 The flame before today counts. One value for every card and theme: at least 3:1 on white, on black,
 and on both card backgrounds, so it also holds on the transparent widget over any wallpaper.
