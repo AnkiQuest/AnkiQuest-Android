@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <!-- Community reminders (settings › AnkiQuest › Reminders & alerts › Community reminders) -->
     <string name="aq_reminder_gentle_daily" maxLength="41">Gentle daily reminder</string>
