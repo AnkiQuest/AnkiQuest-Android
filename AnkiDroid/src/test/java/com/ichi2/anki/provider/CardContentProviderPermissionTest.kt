@@ -7,9 +7,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.FlashCardsContract
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.compat.CompatHelper.Companion.getPackageInfoCompat
+import com.ichi2.anki.compat.PackageInfoFlagsCompat
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertContains
+import kotlin.test.assertNotNull
 
 @RunWith(AndroidJUnit4::class)
 class CardContentProviderPermissionTest : RobolectricTest() {
@@ -20,7 +23,8 @@ class CardContentProviderPermissionTest : RobolectricTest() {
      */
     @Test
     fun `the app requests its own provider permission`() {
-        val info = targetContext.packageManager.getPackageInfo(BuildConfig.APPLICATION_ID, PackageManager.GET_PERMISSIONS)
+        val flags = PackageInfoFlagsCompat.of(PackageManager.GET_PERMISSIONS.toLong())
+        val info = assertNotNull(targetContext.getPackageInfoCompat(BuildConfig.APPLICATION_ID, flags))
         val requested = info.requestedPermissions.orEmpty().toList()
 
         assertContains(requested, FlashCardsContract.getPermission(BuildConfig.APPLICATION_ID))
