@@ -30,6 +30,6 @@ class AnkiquestLinksTest {
     }
 
     private companion object {
-        const val PACKAGE = "org.ankiquest.anki"
+        const val PACKAGE = "org.ankiquest"
     }
 }

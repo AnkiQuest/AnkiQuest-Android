@@ -61,10 +61,9 @@ val androidTestVariantName = rootProject.extra["androidTestVariantName"] as Stri
 val homePath = System.getProperty("user.home")
 
 /**
- * AnkiQuest: `-Pankiquest` builds AnkiQuest as its own app, `org.ankiquest.anki` (debug builds add
- * `.debug`), because AnkiDroid's maintainers ask forks not to use the `com.ichi2.anki` package.
- * The Kotlin and resource namespace stays `com.ichi2.anki`, so upstream code merges unchanged.
- * It also adds src/quest and the quest version codes. `-PcustomSuffix` still appends as upstream.
+ * AnkiQuest: `-Pankiquest` builds the released app: it adds src/quest (launcher icons, updater) and
+ * the quest version codes. Every build, with or without it, installs as `org.ankiquest` (see
+ * defaultConfig), because AnkiDroid's maintainers ask forks not to use the `com.ichi2.anki` package.
  */
 val ankiquestBuild =
     providers
@@ -75,9 +74,8 @@ val ankiquestBuild =
             }
             true
         }.getOrElse(false)
-val ankiquestApplicationId = "org.ankiquest.anki"
 
-// Builds before org.ankiquest.anki used -PcustomSuffix=quest, which would now give com.ichi2.anki.quest without AnkiQuest's branding.
+// -PcustomSuffix=quest was the AnkiQuest build before -Pankiquest; it would now give org.ankiquest.quest without AnkiQuest's branding.
 if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
     throw GradleException("-PcustomSuffix=quest is no longer the AnkiQuest build; pass -Pankiquest")
 }
@@ -161,11 +159,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ichi2.anki"
-        // AnkiQuest's own package; see ankiquestBuild.
-        if (ankiquestBuild) {
-            applicationId = ankiquestApplicationId
-        }
+        applicationId = "org.ankiquest"
         buildConfigField("Boolean", "CI", (System.getenv("CI") == "true").toString())
         buildConfigField("String", "ACRA_URL", "\"https://ankidroid.org/acra/report\"")
         buildConfigField("String", "BACKEND_VERSION", "\"${libs.versions.ankiBackend.get()}\"")

@@ -311,7 +311,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
 
     @Test
     fun `an apk of another package shows the move instead of installing`() {
-        val shown = download(packageName = "org.ankiquest.anki.other")
+        val shown = download(packageName = "org.ankiquest.other")
         assertEquals(targetContext.getString(R.string.ankiquest_moved_title), shown.title)
     }
 

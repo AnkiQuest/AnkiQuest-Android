@@ -4,16 +4,27 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const PACKAGE = "org.ankiquest.anki";
+const PACKAGE = "org.ankiquest";
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 const gradle = read("AnkiDroid/build.gradle.kts");
 const workflows = [".github/workflows/ankiquest_apk.yml", ".github/workflows/ankiquest_reproducible.yml"];
 
-test("the AnkiQuest build installs as org.ankiquest.anki and keeps the com.ichi2.anki namespace", () => {
-    assert.match(gradle, new RegExp(`val ankiquestApplicationId = "${PACKAGE.replaceAll(".", "\\.")}"`));
-    assert.match(gradle, /if \(ankiquestBuild\) \{\s*applicationId = ankiquestApplicationId\s*\}/);
+test("every build installs as org.ankiquest and keeps the com.ichi2.anki namespace", () => {
+    // hill: "org.ankiquest instead of org.ankiquest.anki"; no build keeps com.ichi2.anki (#461).
+    const ids = [...gradle.matchAll(/\bapplicationId = "([^"]*)"/g)].map((match) => match[1]);
+    assert.deepEqual(ids, [PACKAGE]);
+    assert.match(gradle, /defaultConfig \{\n\s*applicationId = "org\.ankiquest"\n/);
+    assert.doesNotMatch(gradle, /ankiquestApplicationId/);
     assert.match(gradle, /namespace = "com\.ichi2\.anki"\n/);
+});
+
+test("the sync action is AnkiQuest's, not AnkiDroid's", () => {
+    const manifest = read("AnkiDroid/src/main/AndroidManifest.xml");
+    const handler = read("AnkiDroid/src/main/java/com/ichi2/anki/IntentHandler.kt");
+    assert.match(manifest, /<action android:name="org\.ankiquest\.DO_SYNC" \/>/);
+    assert.doesNotMatch(manifest, /com\.ichi2\.anki\.DO_SYNC/);
+    assert.match(handler, /ACTION_DO_SYNC = "org\.ankiquest\.DO_SYNC"/);
 });
 
 test("the AnkiQuest build no longer comes from customSuffix=quest", () => {
@@ -41,6 +52,6 @@ test("nothing hard-codes the old package", () => {
         "AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestLinksTest.kt",
     ];
     for (const file of files) {
-        assert.doesNotMatch(read(file).replace(/^.*Builds before org\.ankiquest\.anki.*$/m, ""), /com\.ichi2\.anki\.quest\b/, file);
+        assert.doesNotMatch(read(file), /com\.ichi2\.anki\.quest\b/, file);
     }
 });

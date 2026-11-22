@@ -55,7 +55,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 <div style="display:flex;">
 
 1. Create an account on an AnkiQuest server, such as [ankiquest.rationality-munich.com](https://ankiquest.rationality-munich.com). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
-2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" (package `org.ankiquest.anki`) and offers later releases itself. Sync your collection through AnkiWeb as usual.
+2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" (package `org.ankiquest`) and offers later releases itself. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
@@ -66,7 +66,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 
 ### Moving from com.ichi2.anki.quest
 
-Earlier releases were the package `com.ichi2.anki.quest`. AnkiDroid's maintainers ask forks not to use AnkiDroid's package name, so AnkiQuest is now `org.ankiquest.anki`, a separate app that cannot update the old one. To move:
+Earlier releases were the package `com.ichi2.anki.quest`. AnkiDroid's maintainers ask forks not to use AnkiDroid's package name, so AnkiQuest is now `org.ankiquest`, a separate app that cannot update the old one. To move:
 
 1. In the old app, sync with AnkiWeb, or export your collection (**Export collection** with scheduling and media).
 2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest).
@@ -74,6 +74,8 @@ Earlier releases were the package `com.ichi2.anki.quest`. AnkiDroid's maintainer
 4. Uninstall the old app once your cards are in the new one.
 
 Obtainium tracks apps by package: remove the old entry and add AnkiQuest again.
+
+Automations (Tasker and similar) that start a sync send the action `org.ankiquest.DO_SYNC`; AnkiDroid's `com.ichi2.anki.DO_SYNC` does not reach AnkiQuest. Apps using the AnkiDroid API find AnkiQuest through `org.ankiquest:api` (provider `org.ankiquest.flashcards`).
 
 ### Verify the APK
 
