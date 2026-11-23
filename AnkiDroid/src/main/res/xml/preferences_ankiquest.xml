@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/ankiquest_screen_title"
@@ -115,6 +115,13 @@
             android:key="@string/ankiquest_sync_settings_key"
             android:summary="@string/ankiquest_sync_settings_summary"
             android:title="@string/ankiquest_sync_settings_title" />
+        <!-- Keep this groundwork hidden until RWKV can schedule cards (#433). -->
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="@string/ankiquest_rwkv_key"
+            android:summary="@string/ankiquest_rwkv_off"
+            android:title="@string/ankiquest_rwkv_title"
+            app:isPreferenceVisible="false" />
         <ListPreference
             android:defaultValue="stable"
             android:entries="@array/ankiquest_update_channel_entries"

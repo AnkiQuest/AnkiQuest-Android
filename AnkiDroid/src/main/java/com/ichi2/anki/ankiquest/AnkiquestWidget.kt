@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -321,7 +321,8 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val before = fresh?.takeIf { it.scope == account.scope }
             fresh = Fresh(account.scope, account.user, profile, now)
             val known = currentBoard(account)
-            val streakChanged = before == null || streakShown(before.profile) != streakShown(profile)
+            val streakChanged =
+                before == null || AnkiquestStreakWidget.streakShown(before.profile) != AnkiquestStreakWidget.streakShown(profile)
             if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false, scope = account.scope))
             // Without standings to put the row in, the leaderboards keep what they show until the poll.
             val shown = known ?: return
@@ -361,18 +362,6 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 offline = false,
                 scope = account.scope,
                 lock = AnkiquestPoll.cachedLock(account.scope),
-            )
-        }
-
-        private fun streakShown(profile: JSONObject): List<Any> {
-            val row = ownRow(profile, null)
-            return listOf(
-                row.optLong("streak"),
-                streakState(row),
-                row.optLong("today_minutes"),
-                row.optLong("streak_minutes"),
-                row.optLong("day_ends_at"),
-                profile.optJSONObject("goal")?.toString().orEmpty(),
             )
         }
 

@@ -22,6 +22,12 @@ Alternately, you may run the actions on your fork of `Anki-Android`.
 
 ## Other Workflows
 
+`lint.yml`, `tests_unit.yml`, `tests_emulator.yml` and the three
+`screenshot_*.yml` workflows are upstream's files with the fork's changes
+(`master` branch, Ubuntu-only pull request runs, concurrency, Gradle retries,
+manual screenshot baselines). Upstream merges conflict on them; keep the
+fork's lines and take upstream's other changes.
+
 The fork's [pinned AnkiQuest server snapshot](../../docs/ankiquest-server-snapshot.md)
 documents `ankiquest_api_contract.yml`, `ankiquest_fixtures.yml` and the daily
 `ankiquest_bump_server.yml`. Normal builds use committed data; server updates

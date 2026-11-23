@@ -1,12 +1,12 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-License-Identifier: GPL-3.0-or-later
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
-const waitForBaseline = require('../ankiquest_screenshot_baseline.js');
+const waitForBaseline = require('../wait_for_screenshot_baseline.js');
 
-const compare = fs.readFileSync(path.join(__dirname, '../workflows/ankiquest_screenshot_compare.yml'), 'utf8').replaceAll('\r\n', '\n');
+const compare = fs.readFileSync(path.join(__dirname, '../workflows/screenshot_compare.yml'), 'utf8').replaceAll('\r\n', '\n');
 
 function step(name) {
   const start = compare.indexOf(`      - name: ${name}\n`);
@@ -19,26 +19,35 @@ function run(id, options = {}) {
   return { id, head_sha: 'base-sha', head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', ...options };
 }
 
-function harness(batches = [[run(42)]], artifacts = {}) {
-  const queries = [], artifactQueries = [], waits = [], messages = [];
+function harness(batches = [[run(42)]], artifacts = {}, legacy = []) {
+  const queries = [], artifactQueries = [], waits = [], messages = [], outputs = {}, compares = [];
+  let primaryQueries = 0;
   const context = {
     repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
     payload: { pull_request: { base: { sha: 'base-sha', ref: 'master' } } },
   };
-  const github = { rest: { actions: {
+  const github = { rest: { repos: {
+    async compareCommitsWithBasehead(query) {
+      compares.push(query);
+      return { data: { merge_base_commit: { sha: 'base-sha' } } };
+    },
+  }, actions: {
     async listWorkflowRuns(query) {
       queries.push(query);
-      return { data: { workflow_runs: batches[Math.min(queries.length - 1, batches.length - 1)] } };
+      const runs = query.workflow_id === 'screenshot_store.yml'
+        ? batches[Math.min(primaryQueries++, batches.length - 1)]
+        : legacy;
+      return { data: { workflow_runs: runs } };
     },
     async listWorkflowRunArtifacts(query) {
       artifactQueries.push(query);
       return { data: { artifacts: artifacts[query.run_id] ?? [{ name: 'screenshot', expired: false }] } };
     },
   } } };
-  const core = { info: message => messages.push(message) };
+  const core = { info: message => messages.push(message), setOutput: (name, value) => { outputs[name] = value; } };
   return {
-    github, context, core, queries, artifactQueries, waits, messages,
+    github, context, core, queries, artifactQueries, waits, messages, outputs, compares,
     sleep: async delay => { waits.push(delay); },
   };
 }
@@ -69,7 +78,7 @@ test('the workflow passes its matching run to the artifact download', async () =
     file => require(path.join(__dirname, '../..', file)));
   assert.equal(result, 42);
   assert.deepEqual(fixture.queries[0], {
-    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', workflow_id: 'ankiquest_screenshot_store.yml',
+    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', workflow_id: 'screenshot_store.yml',
     head_sha: 'base-sha', per_page: 100,
   });
 });
@@ -105,6 +114,28 @@ test('the pushed commit is used when there is no pull request', async () => {
   assert.equal(fixture.queries[0].head_sha, 'push-sha');
 });
 
+test('a merge group waits for the master commit the queue built it on', async () => {
+  // A group's parent can be the group queued ahead of it, which has no baseline.
+  const fixture = harness([[]], {}, [run(42)]);
+  fixture.context.payload = {
+    merge_group: { base_ref: 'refs/heads/master', base_sha: 'queued-sha', head_sha: 'group-sha' },
+  };
+  fixture.context.sha = 'group-sha';
+  fixture.context.ref = 'refs/heads/gh-readonly-queue/master/pr-2-queued-sha';
+  assert.equal(await waitForBaseline(fixture), 42);
+  assert.deepEqual(fixture.compares, [{
+    owner: 'AnkiQuest', repo: 'AnkiQuest-Android', basehead: 'master...group-sha', per_page: 1,
+  }]);
+  assert.ok(fixture.queries.every(query => query.head_sha === 'base-sha'));
+  assert.equal(fixture.outputs.base, 'base-sha');
+});
+
+test('the baseline commit is an output for the error message', async () => {
+  const fixture = harness();
+  await waitForBaseline(fixture);
+  assert.equal(fixture.outputs.base, 'base-sha');
+});
+
 test('stacked PRs wait for their exact base commit instead of falling back to master', async () => {
   const fixture = harness([[run(1, { head_sha: 'master-sha' })], [run(2, { head_branch: 'feature' })]]);
   fixture.context.payload.pull_request.base.ref = 'feature';
@@ -120,6 +151,15 @@ test('a manual recording on another branch can replace an expired artifact for t
   assert.equal(await waitForBaseline(fixture), 49);
   assert.deepEqual(fixture.artifactQueries.map(query => query.run_id), [50, 49]);
   assert.equal(fixture.waits.length, 0);
+});
+
+test('the workflow rename can use an older workflow run only for the exact same base', async () => {
+  const fixture = harness([[]], {}, [run(49, { head_sha: 'other-sha' }), run(48)]);
+  assert.equal(await waitForBaseline(fixture), 48);
+  assert.deepEqual(fixture.queries.map(query => [query.workflow_id, query.head_sha]), [
+    ['screenshot_store.yml', 'base-sha'], ['ankiquest_screenshot_store.yml', 'base-sha'],
+  ]);
+  assert.deepEqual(fixture.artifactQueries.map(query => query.run_id), [48]);
 });
 
 test('a successful PR test or failed store cannot become a baseline', async () => {
@@ -138,8 +178,8 @@ test('a store with no screenshot artifact stays pending', async () => {
 
 test('timeout names the exact commit and a way to regenerate its baseline', async () => {
   const fixture = harness([[]]);
-  await assert.rejects(waitForBaseline(fixture), /base-sha after 30 minutes.*ankiquest_screenshot_store.yml.*branch at that commit/);
-  assert.equal(fixture.queries.length, 60);
+  await assert.rejects(waitForBaseline(fixture), /base-sha after 30 minutes.*screenshot_store.yml.*branch at that commit/);
+  assert.equal(fixture.queries.length, 120);
   assert.equal(fixture.waits.reduce((sum, delay) => sum + delay, 0), 30 * 60 * 1000);
 });
 

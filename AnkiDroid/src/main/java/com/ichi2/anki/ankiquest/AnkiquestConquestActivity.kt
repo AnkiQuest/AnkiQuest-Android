@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -485,7 +485,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         AnkiquestShareSheet(
             this,
             current,
-            AnkiquestSharing.MomentRef.Conquest(card.at),
+            AnkiquestShareSheet.Subject.Known(AnkiquestSharing.MomentRef.Conquest(card.at)),
             picture(current, card),
             elsewhere = { shareElsewhere(current, card) },
             sent = { load() },

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -457,7 +457,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             AnkiquestShareSheet(
                 screen,
                 account,
-                reference,
+                AnkiquestShareSheet.Subject.Known(reference),
                 card,
                 elsewhere = {
                     elsewhere++

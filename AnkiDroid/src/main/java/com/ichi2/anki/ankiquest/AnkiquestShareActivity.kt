@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -140,7 +140,7 @@ class AnkiquestShareActivity : AnkiActivity() {
         AnkiquestShareSheet(
             this,
             account,
-            reference,
+            AnkiquestShareSheet.Subject.Known(reference),
             AnkiquestShare.Card(share.title, share.body, AnkiquestShare.art(intent, share.place)),
             elsewhere = { shareElsewhere(share, null) },
             closed = { if (it != AnkiquestShareSheet.Exit.ELSEWHERE) finish() },
