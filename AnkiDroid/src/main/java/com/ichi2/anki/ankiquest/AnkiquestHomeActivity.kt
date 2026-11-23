@@ -482,10 +482,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
 
     /** The nearest countdown and, with a deck, the cards a day to finish it by then. */
     private fun renderCountdown(countdown: HomeCountdown) {
-        val panel = card()
-        text(panel, getString(R.string.ankiquest_countdowns), small = true)
-        text(panel, AnkiquestCountdownTexts.headline(this, countdown.event, countdown.days), heading = true)
-        AnkiquestCountdownTexts.pace(this, countdown.pace, countdown.event.deck)?.let { text(panel, it, small = true) }
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.ankiquest_countdowns), small = true)
+        views.text(panel, AnkiquestCountdownTexts.headline(this, countdown.event, countdown.days), heading = true)
+        AnkiquestCountdownTexts.pace(this, countdown.pace, countdown.event.deck)?.let { views.text(panel, it, small = true) }
         button(panel, R.string.ankiquest_countdowns_manage) { startActivity(AnkiquestCountdownsActivity.intent(this)) }
     }
 
