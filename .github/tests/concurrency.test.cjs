@@ -36,9 +36,12 @@ const UPSTREAM_OWNED = [
     "tests_unit.yml",
 ];
 
+// The copied labels workflow is tested in AnkiQuest-Dev.
+const COPIED = ["ankiquest_labels.yml"];
+
 const files = fs
     .readdirSync(workflows)
-    .filter(name => /^ankiquest_.*\.yml$/.test(name) || UPSTREAM_OWNED.includes(name));
+    .filter(name => (/^ankiquest_.*\.yml$/.test(name) || UPSTREAM_OWNED.includes(name)) && !COPIED.includes(name));
 
 for (const name of files) {
     test(`${name}: a later run never cancels a master push run`, () => {

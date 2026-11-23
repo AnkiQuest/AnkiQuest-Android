@@ -7,6 +7,29 @@ const PREVIOUS_WORKFLOW = "ankiquest_screenshot_store.yml";
 const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
 
+// The baseline belongs to the PR base, the master commit behind a queue group, or the push itself.
+async function baseCommit({ github, context }) {
+    if (context.payload.pull_request) {
+        return context.payload.pull_request.base;
+    }
+
+    // A group's parent can be an earlier queue group with no recorded screenshots.
+    const group = context.payload.merge_group;
+    if (group) {
+        const ref = group.base_ref.replace(/^refs\/heads\//, "");
+        const {
+            data: { merge_base_commit: mergeBase },
+        } = await github.rest.repos.compareCommitsWithBasehead({
+            ...context.repo,
+            basehead: `${ref}...${group.head_sha}`,
+            per_page: 1,
+        });
+        return { sha: mergeBase.sha, ref };
+    }
+
+    return { sha: context.sha, ref: context.ref.replace(/^refs\/heads\//, "") };
+}
+
 async function runsAt(github, repo, workflow, sha) {
     try {
         // No status filter: status=success can omit a finished run.
@@ -34,10 +57,8 @@ module.exports = async function waitForScreenshotBaseline({
     core,
     sleep = delay => new Promise(resolve => setTimeout(resolve, delay)),
 }) {
-    const base = context.payload.pull_request?.base || {
-        sha: context.sha,
-        ref: context.ref.replace(/^refs\/heads\//, ""),
-    };
+    const base = await baseCommit({ github, context });
+    core.setOutput("base", base.sha);
 
     // Store jobs can overlap or outlive the branch tip. Only this commit's artifact is safe.
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {

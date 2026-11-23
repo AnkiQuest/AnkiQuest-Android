@@ -71,10 +71,7 @@ test("the required unit test job skips steps, never itself", () => {
 test("every workflow that skips documentation is covered", () => {
     const skipping = files.filter(({ text }) => lists(text).length > 0).map(({ name }) => name);
     assert.deepEqual(skipping.sort(), [
-        "ankiquest_api_contract.yml",
         "ankiquest_apk.yml",
-        "ankiquest_art_check.yml",
-        "ankiquest_fixtures.yml",
         "ankiquest_reproducible.yml",
         "lint.yml",
         "tests_emulator.yml",
