@@ -19,8 +19,9 @@ function run(id, options = {}) {
   return { id, head_sha: 'base-sha', head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', ...options };
 }
 
-function harness(batches = [[run(42)]], artifacts = {}) {
+function harness(batches = [[run(42)]], artifacts = {}, legacy = []) {
   const queries = [], artifactQueries = [], waits = [], messages = [];
+  let primaryQueries = 0;
   const context = {
     repo: { owner: 'AnkiQuest', repo: 'AnkiQuest-Android' },
     sha: 'merge-sha', ref: 'refs/pull/1/merge',
@@ -29,7 +30,10 @@ function harness(batches = [[run(42)]], artifacts = {}) {
   const github = { rest: { actions: {
     async listWorkflowRuns(query) {
       queries.push(query);
-      return { data: { workflow_runs: batches[Math.min(queries.length - 1, batches.length - 1)] } };
+      const runs = query.workflow_id === 'screenshot_store.yml'
+        ? batches[Math.min(primaryQueries++, batches.length - 1)]
+        : legacy;
+      return { data: { workflow_runs: runs } };
     },
     async listWorkflowRunArtifacts(query) {
       artifactQueries.push(query);
@@ -122,6 +126,15 @@ test('a manual recording on another branch can replace an expired artifact for t
   assert.equal(fixture.waits.length, 0);
 });
 
+test('the workflow rename can use an older workflow run only for the exact same base', async () => {
+  const fixture = harness([[]], {}, [run(49, { head_sha: 'other-sha' }), run(48)]);
+  assert.equal(await waitForBaseline(fixture), 48);
+  assert.deepEqual(fixture.queries.map(query => [query.workflow_id, query.head_sha]), [
+    ['screenshot_store.yml', 'base-sha'], ['ankiquest_screenshot_store.yml', 'base-sha'],
+  ]);
+  assert.deepEqual(fixture.artifactQueries.map(query => query.run_id), [48]);
+});
+
 test('a successful PR test or failed store cannot become a baseline', async () => {
   const fixture = harness([[
     run(50, { event: 'pull_request' }), run(49, { conclusion: 'failure' }), run(48),
@@ -139,7 +152,7 @@ test('a store with no screenshot artifact stays pending', async () => {
 test('timeout names the exact commit and a way to regenerate its baseline', async () => {
   const fixture = harness([[]]);
   await assert.rejects(waitForBaseline(fixture), /base-sha after 30 minutes.*screenshot_store.yml.*branch at that commit/);
-  assert.equal(fixture.queries.length, 60);
+  assert.equal(fixture.queries.length, 120);
   assert.equal(fixture.waits.reduce((sum, delay) => sum + delay, 0), 30 * 60 * 1000);
 });
 
