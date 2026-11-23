@@ -352,6 +352,28 @@ class AnkiquestMomentsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a minimum card shown before the inbox confirms it gets the server's ids`() {
+        val server = AnkiquestDay.Server(12, "pending", NOW + DAY, 0, NOW - DAY, 0, 0, 10)
+        val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(NOW, 600_000)), NOW))
+        assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
+        val shown = AnkiquestMoments.take(prefs, account).single()
+        assertNull(AnkiquestMoments.confirmed(prefs, account, shown).win, "unconfirmed until the server's notice")
+
+        val secured = celebration(1, "secured", "secured:9", quiet = true)
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = true))
+        val confirmed = AnkiquestMoments.confirmed(prefs, account, shown)
+        assertEquals(71L, confirmed.win)
+        assertEquals(1L, confirmed.notification)
+        assertEquals(shown.key, confirmed.key)
+
+        // Another day's card, or another kind of moment, keeps what it had.
+        val yesterday = shown.copy(key = "minimum:${NOW - 2 * DAY}")
+        assertNull(AnkiquestMoments.confirmed(prefs, account, yesterday).win)
+        val level = moment(shown.key, Kind.LEVEL)
+        assertNull(AnkiquestMoments.confirmed(prefs, account, level).win)
+    }
+
+    @Test
     fun `a 64-day streak whose day counts shows the blazing pose`() {
         // Day 64 counts as the minimum is reached; the card and its picture used the calm minimum pose.
         val server = AnkiquestDay.Server(63, "pending", NOW + DAY, 0, NOW - DAY, 0, 0, 10)
