@@ -22,6 +22,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import anki.decks.DeckTreeNode
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.databinding.FragmentStudyOptionsBinding
 import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
@@ -31,7 +32,7 @@ import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.progress.ViewModelProgress
 import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.testutils.ext.menu
-import com.ichi2.testutils.ext.triggerDeckNotFoundInLimitsMap
+import com.ichi2.testutils.ext.orphanSubdeck
 import com.ichi2.testutils.launchFragmentInContainer
 import com.ichi2.testutils.withFragment
 import com.ichi2.utils.neutralButton
@@ -43,6 +44,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import net.ankiweb.rsdroid.Backend
+import net.ankiweb.rsdroid.BackendFactory
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -51,6 +55,7 @@ import org.robolectric.shadows.ShadowDialog
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -68,6 +73,9 @@ import kotlin.test.assertTrue
  */
 @RunWith(AndroidJUnit4::class)
 class StudyOptionsFragmentTest : RobolectricTest() {
+    @After
+    fun resetBackend() = BackendFactory.setOverride(null)
+
     /** Issue 22249: backend deletion can leave the tablet showing hidden Default. */
     @Test
     @Config(qualifiers = "xlarge")
@@ -293,11 +301,19 @@ class StudyOptionsFragmentTest : RobolectricTest() {
         }
     }
 
-    /** Issue 21981: a refresh must offer recovery when the deck hierarchy is corrupt. */
+    /** Issue 21981: a refresh must offer recovery when the backend reports a corrupt deck hierarchy. */
     @Test
-    fun `corrupt deck hierarchy offers Check database instead of crashing`() =
+    fun `deck not found in limits map offers Check database instead of crashing`() =
         runTest {
-            triggerDeckNotFoundInLimitsMap()
+            val failDeckTree = AtomicBoolean(true)
+            CollectionManager.discardBackend()
+            BackendFactory.setOverride {
+                object : Backend() {
+                    override fun deckTree(now: Long): DeckTreeNode =
+                        if (failDeckTree.get()) throw deckNotFoundInLimitsMap() else super.deckTree(now)
+                }
+            }
+            col.decks.select(addDeck("A").withNote(QueueType.New))
             throwOnShowError = false
 
             withStudyOptions {
@@ -307,8 +323,20 @@ class StudyOptionsFragmentTest : RobolectricTest() {
                 assertEquals(TR.sentenceCase.checkDatabase, dialog.neutralButton?.text)
 
                 dialog.dismiss()
-                col.fixIntegrity()
+                failDeckTree.set(false)
                 refreshAndAwait()
+                val state = assertIs<StudyOptionsState.StudyOptions>(viewModel.state)
+                assertEquals(1, state.data.newCardsToday)
+            }
+        }
+
+    /** Issue 21981: the backend counts an orphaned subdeck under its nearest ancestor. */
+    @Test
+    fun `orphaned subdeck is counted without an error`() =
+        runTest {
+            orphanSubdeck()
+
+            withStudyOptions {
                 val state = assertIs<StudyOptionsState.StudyOptions>(viewModel.state)
                 assertEquals(1, state.data.newCardsToday)
             }
