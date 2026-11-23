@@ -26,13 +26,22 @@ function concurrency(text) {
     return { group: value("group"), cancel: value("cancel-in-progress") };
 }
 
-// ankiquest_labels.yml is a byte-for-byte copy of AnkiQuest-Dev's
-// ankiquest-labels.yml, so its concurrency is decided and tested there.
+// Upstream workflows that carry our changes follow the same rule as ours.
+const UPSTREAM_OWNED = [
+    "lint.yml",
+    "screenshot_comment.yml",
+    "screenshot_compare.yml",
+    "screenshot_store.yml",
+    "tests_emulator.yml",
+    "tests_unit.yml",
+];
+
+// The copied labels workflow is tested in AnkiQuest-Dev.
 const COPIED = ["ankiquest_labels.yml"];
 
 const files = fs
     .readdirSync(workflows)
-    .filter(name => /^ankiquest_.*\.yml$/.test(name) && !COPIED.includes(name));
+    .filter(name => (/^ankiquest_.*\.yml$/.test(name) || UPSTREAM_OWNED.includes(name)) && !COPIED.includes(name));
 
 for (const name of files) {
     test(`${name}: a later run never cancels a master push run`, () => {

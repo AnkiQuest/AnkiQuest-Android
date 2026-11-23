@@ -24,9 +24,11 @@ const DOCS = [
     "docs/**",
 ];
 
+const CONSOLIDATED = ["lint.yml", "tests_emulator.yml", "tests_unit.yml", "screenshot_compare.yml", "screenshot_store.yml"];
+
 const files = fs
     .readdirSync(workflows)
-    .filter(name => /^ankiquest_.*\.yml$/.test(name))
+    .filter(name => /^ankiquest_.*\.yml$/.test(name) || CONSOLIDATED.includes(name))
     .map(name => ({ name, text: fs.readFileSync(path.join(workflows, name), "utf8").replaceAll("\r\n", "\n") }));
 
 // The globs of every `docs: |` input and every paths-ignore list in a workflow.
@@ -58,7 +60,7 @@ for (const { name, text } of files) {
 }
 
 test("the required unit test job skips steps, never itself", () => {
-    const unit = files.find(file => file.name === "ankiquest_tests_unit.yml").text;
+    const unit = files.find(file => file.name === "tests_unit.yml").text;
     const job = unit.slice(unit.indexOf("\n  unit:\n"));
     const condition = job.match(/^ {4}if: (.*)$/m)[1];
     assert.doesNotMatch(condition, /changes/);
@@ -70,9 +72,9 @@ test("every workflow that skips documentation is covered", () => {
     const skipping = files.filter(({ text }) => lists(text).length > 0).map(({ name }) => name);
     assert.deepEqual(skipping.sort(), [
         "ankiquest_apk.yml",
-        "ankiquest_lint.yml",
         "ankiquest_reproducible.yml",
-        "ankiquest_tests_emulator.yml",
-        "ankiquest_tests_unit.yml",
+        "lint.yml",
+        "tests_emulator.yml",
+        "tests_unit.yml",
     ]);
 });
