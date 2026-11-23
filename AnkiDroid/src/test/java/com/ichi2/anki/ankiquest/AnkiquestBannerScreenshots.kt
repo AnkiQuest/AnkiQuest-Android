@@ -53,8 +53,9 @@ import java.time.temporal.ChronoUnit
 /**
  * Phone screens for the README banner (`docs/graphics/logos/banner_readme.png`), drawn from sample
  * decks and players only. Skipped unless `-PreadmeBanner` is given, so the screenshot workflows
- * ignore it: `tools/ankiquest-banner` documents the commands that record these and compose the
- * banner, and `.github/workflows/ankiquest_banner.yml` reruns both for each release.
+ * ignore it. `docs/graphics/banner.toml` holds the command that records these and the banner's
+ * other inputs for AnkiQuest-Dev's `ankiquest-banner`; `.github/workflows/ankiquest_banner.yml`
+ * records and checks them for pull requests and each release.
  */
 class AnkiquestBannerScreenshots : ScreenshotTest() {
     // The reviewer renders a card, which requires a media folder.
