@@ -58,4 +58,5 @@ Ich lerne mit AnkiQuest.</string>
     <string name="ankiquest_share_targets_failed">Deine Freunde konnten nicht geladen werden. Prüfe deine Verbindung oder teile mit einer anderen App.</string>
     <string name="ankiquest_share_invite">Freund einladen</string>
     <string name="ankiquest_share_lonely">Füge Freunde in AnkiQuest hinzu, um deine Momente mit ihnen zu teilen.</string>
+    <string name="ankiquest_share_uploading">Dein Lernen wird hochgeladen…</string>
 </resources>

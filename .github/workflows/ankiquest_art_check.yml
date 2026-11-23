@@ -2,11 +2,14 @@
 name: ankiquest art check
 
 # Runs the server's art exporter against the app's drawables, at the server commit pinned in
-# ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests and
-# pushes, never on a schedule or by hand: a manual server ref would run arbitrary code with the
-# Rust cache shared with master.
+# ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests,
+# merge queue groups and pushes, never on a schedule or by hand: a manual server ref would run
+# arbitrary code with the Rust cache shared with master.
 on:
   pull_request:
+  # Required check: the merge queue waits for it on its merge commit.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [master]
 
