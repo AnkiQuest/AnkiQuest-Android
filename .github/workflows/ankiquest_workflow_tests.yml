@@ -14,6 +14,7 @@ on:
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
+      - "docs/graphics/banner.toml"
       # upstream-backend.test.cjs: files that could name a backend artifact
       - "gradle/**"
       - "**/*.gradle.kts"
@@ -32,6 +33,7 @@ on:
       - ".github/tests/labels.test.cjs"
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
+      - "docs/graphics/banner.toml"
       # upstream-backend.test.cjs: files that could name a backend artifact
       - "gradle/**"
       - "**/*.gradle.kts"
@@ -40,6 +42,12 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:

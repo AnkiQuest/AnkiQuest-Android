@@ -45,6 +45,35 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
+  # 'false' when every changed file is documentation. The globs leave out the app's assets:
+  # AnkiDroid/src/main/assets/ankiquest/release-notes.md ships in the APK and a unit test reads it.
+  # The same list is in every ankiquest_*.yml that skips documentation (.github/tests/docs-only.test.cjs).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.changed.outputs.code }}
+    steps:
+      - id: changed
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        with:
+          docs: |
+            *.md
+            */README.md
+            */*/README.md
+            .agents/**/*.md
+            .github/workflows/README.md
+            .github/ISSUE_TEMPLATE/**
+            .github/pull_request_template.md
+            .idea/**/*.md
+            .oss-scanner/*.md
+            LICENSE*
+            LICENSES/**
+            docs/**
+
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
   matrix_prep:
@@ -109,7 +138,11 @@ jobs:
   # it will run unit tests on whatever OS combinations are desired
   unit:
     name: JUnit Tests (${{ matrix.name }} run ${{ matrix.iteration }})
-    needs: matrix_prep
+    needs: [changes, matrix_prep]
+    # Never skipped: a skipped matrix job reports under its unexpanded name, which leaves the
+    # required "JUnit Tests (ubuntu run 1)" pending. Documentation-only changes skip the steps
+    # instead. A failed changes job leaves the output empty, so the tests still run.
+    if: ${{ !cancelled() && needs.matrix_prep.result == 'success' }}
     # Windows takes about 71 minutes on tests (run 44883059552); 75 cut off
     # the upload after they passed
     timeout-minutes: 90
@@ -122,10 +155,14 @@ jobs:
     #env:
     #  CODACY_TOKEN: ${{ secrets.CODACY_TOKEN }}
     steps:
+      - name: Skip for documentation-only changes
+        if: needs.changes.outputs.code == 'false'
+        run: echo "Only documentation changed, so the unit tests are skipped."
+
       # Work around Ubuntu 26.04's RAM-backed /tmp until the image fix rolls out.
       # https://github.com/actions/runner-images/pull/14814
       - name: Keep /tmp on disk
-        if: runner.os == 'Linux'
+        if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'
         run: |
           if [ "$(findmnt -n -o FSTYPE --target /tmp)" = "tmpfs" ]; then
             sudo systemctl mask tmp.mount
@@ -135,14 +172,14 @@ jobs:
 
       - name: Configure Windows Pagefile
         uses: al-cheb/configure-pagefile-action@9b6da52fb72a3c6147c1aad2df22d8d905681adc # v1.5
-        if: contains(matrix.os, 'windows')
+        if: needs.changes.outputs.code != 'false' && contains(matrix.os, 'windows')
         with:
           minimum-size: 8GB
           maximum-size: 12GB
           disk-root: "C:"
 
       - name: Configure Linux Swap
-        if: runner.os == 'Linux'
+        if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'
         run: |
           sudo fallocate -l 8G /swapfile-ci
           sudo chmod 600 /swapfile-ci
@@ -151,10 +188,12 @@ jobs:
           swapon --show
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code != 'false'
         with:
           fetch-depth: 50
 
       - name: Configure JDK
+        if: needs.changes.outputs.code != 'false'
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: "jetbrains"
@@ -163,6 +202,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Gradle
+        if: needs.changes.outputs.code != 'false'
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         timeout-minutes: 10
         with:
@@ -175,10 +215,11 @@ jobs:
 
       - name: Robolectric SDK cache
         # Linux only; macOS and Windows keep the SDK jars in their setup-gradle cache
-        if: runner.os == 'Linux'
+        if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'
         uses: ./.github/actions/robolectric-sdk-cache
 
       - name: Gradle Dependency Download
+        if: needs.changes.outputs.code != 'false'
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 10
@@ -188,6 +229,7 @@ jobs:
 
         # update workflows/README.md when modifying this step
       - name: Run Unit Tests
+        if: needs.changes.outputs.code != 'false'
         run: ./gradlew jacocoUnitTestReport --daemon
 
 
@@ -234,10 +276,11 @@ jobs:
             **/build/test-results/
 
       - name: Stop Gradle
-        if: contains(matrix.os, 'windows')
+        if: needs.changes.outputs.code != 'false' && contains(matrix.os, 'windows')
         run: ./gradlew --stop
 
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: needs.changes.outputs.code != 'false'
         with:
           verbose: true
           fail_ci_if_error: ${{ github.repository == 'ankidroid/Anki-Android' }} # optional (default = false)
