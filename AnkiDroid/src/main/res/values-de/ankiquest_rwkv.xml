@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_rwkv_title">RWKV-Planer (experimentell)</string>
+    <string name="ankiquest_rwkv_off">Plant Wiederholungen mit einem RWKV-Modell statt mit FSRS. Braucht eine Modelldatei und genug Arbeitsspeicher.</string>
+    <string name="ankiquest_rwkv_no_engine">Nicht verfügbar: Diese Version von AnkiQuest hat noch keine RWKV-Engine. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_unsupported_abi">Nicht verfügbar: Die RWKV-Engine läuft nicht auf dem Prozessor dieses Handys. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für deine Sammlung. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Wähle zuerst eine RWKV-Modelldatei. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_ready">An: RWKV plant deine Wiederholungen.</string>
+</resources>
