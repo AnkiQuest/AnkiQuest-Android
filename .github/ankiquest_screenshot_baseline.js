@@ -6,11 +6,17 @@ const WORKFLOW = "ankiquest_screenshot_store.yml";
 const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
 
-// The commit whose baseline a run compares against: a pull request's base, the master commit a
-// merge queue group was built on, or the pushed commit itself.
+// The commit whose baseline a run compares against: the base a pull request's merge commit was
+// built on, the master commit a merge queue group was built on, or the pushed commit itself.
 async function baseCommit({ github, context }) {
-    if (context.payload.pull_request) {
-        return context.payload.pull_request.base;
+    // The event's base.sha can lag the base branch; the checked-out merge commit's first parent
+    // is the base GitHub merged into.
+    const pullRequest = context.payload.pull_request;
+    if (pullRequest) {
+        const {
+            data: { parents },
+        } = await github.rest.repos.getCommit({ ...context.repo, ref: context.sha });
+        return { sha: parents[0].sha, ref: pullRequest.base.ref };
     }
 
     // A group's parent can be the group queued ahead of it, which never gets a baseline.
