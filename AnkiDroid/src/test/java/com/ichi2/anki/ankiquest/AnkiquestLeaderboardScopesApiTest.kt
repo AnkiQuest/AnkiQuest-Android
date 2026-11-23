@@ -6,15 +6,12 @@ import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
-import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.HttpURLConnection.HTTP_OK
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -89,21 +86,11 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
         block: (HomeAccount, List<Pair<String, String?>>) -> Unit,
     ) {
         val requests = CopyOnWriteArrayList<Pair<String, String?>>()
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            requests.add(exchange.requestURI.toString() to exchange.requestHeaders.getFirst("Authorization"))
-            val body =
-                if (exchange.requestURI.path.startsWith("/api/decks/")) {
-                    settings
-                } else {
-                    "[]"
-                }
-            val bytes = body.toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(HTTP_OK, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+        val server =
+            AnkiquestTestServer { request ->
+                requests.add(request.uri.toString() to request.authorization)
+                TestResponse.json(if (request.path.startsWith("/api/decks/")) settings else "[]")
+            }
 
         // Startup sync must not borrow the fixture's account and add unrelated requests.
         val prefs = AnkiDroidApp.sharedPrefs()
@@ -111,12 +98,12 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
         prefs.edit(commit = true) { putBoolean(AnkiquestSettingsSync.PREF_SWITCH, false) }
         try {
             mockkObject(AnkiquestHomeData)
-            val account = HomeAccount("http://127.0.0.1:${server.address.port}", "hill", "test-token")
+            val account = HomeAccount(server.url, "hill", "test-token")
             every { AnkiquestHomeData.account(any()) } returns account
             block(account, requests)
         } finally {
             unmockkObject(AnkiquestHomeData)
-            server.stop(0)
+            server.close()
 
             // Restore the preference only after the fake account is no longer visible.
             prefs.edit(commit = true) {
