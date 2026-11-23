@@ -2,12 +2,12 @@
 
 package com.ichi2.anki.provider
 
-import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.FlashCardsContract
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.compat.CompatHelper.Companion.getPackageInfoCompat
+import com.ichi2.anki.compat.GET_PERMISSIONS_L
 import com.ichi2.anki.compat.PackageInfoFlagsCompat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,7 +23,7 @@ class CardContentProviderPermissionTest : RobolectricTest() {
      */
     @Test
     fun `the app requests its own provider permission`() {
-        val flags = PackageInfoFlagsCompat.of(PackageManager.GET_PERMISSIONS.toLong())
+        val flags = PackageInfoFlagsCompat.of(GET_PERMISSIONS_L)
         val info = assertNotNull(targetContext.getPackageInfoCompat(BuildConfig.APPLICATION_ID, flags))
         val requested = info.requestedPermissions.orEmpty().toList()
 
