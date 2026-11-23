@@ -2,8 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
@@ -18,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +63,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         val release = AnkiquestUpdater.Release(BuildConfig.ANKIQUEST_RELEASE + 1, "New release", "", 1)
         mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
         try {
+            every { AnkiquestUpdater.source() } returns AnkiquestUpdater.Source.GITHUB
             every { AnkiquestUpdater["available"]() } answers {
                 requested.countDown()
                 check(response.await(10, TimeUnit.SECONDS))
@@ -95,6 +100,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         every { activity.getString(R.string.ankiquest_check_running) } returns "Checking"
         mockkObject(AnkiquestUpdater)
         try {
+            every { AnkiquestUpdater.source() } returns AnkiquestUpdater.Source.GITHUB
             every { AnkiquestUpdater.channel() } answers {
                 if (calls.incrementAndGet() == 1) {
                     checking.countDown()
@@ -140,6 +146,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         server.start()
         mockkObject(AnkiquestUpdater)
         try {
+            every { AnkiquestUpdater.source() } returns AnkiquestUpdater.Source.GITHUB
             every { AnkiquestUpdater.channel() } answers {
                 checks.incrementAndGet()
                 checking.countDown()
@@ -201,6 +208,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         val activity = mockk<Activity>(relaxed = true)
         mockkObject(AnkiquestUpdater)
         try {
+            every { AnkiquestUpdater.source() } returns AnkiquestUpdater.Source.GITHUB
             every { AnkiquestUpdater.channel() } throws CancellationException("check cancelled")
             runBlocking {
                 assertFailsWith<CancellationException> { AnkiquestUpdater.checkNow(activity) }
@@ -208,6 +216,36 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         } finally {
             unmockkObject(AnkiquestUpdater)
         }
+    }
+
+    @Test
+    fun `a build without updates never checks`() {
+        val activity = mockk<Activity>(relaxed = true)
+        every { activity.getString(R.string.ankiquest_updates_off) } returns "Off"
+        mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
+        try {
+            every { AnkiquestUpdater.source() } returns AnkiquestUpdater.Source.NONE
+            every { AnkiquestUpdater["available"]() } answers { error("checked for updates") }
+            assertEquals("Off", runBlocking { AnkiquestUpdater.checkNow(activity) })
+            AnkiquestUpdater.maybeCheck(mockk<DeckPicker>(relaxed = true))
+            verify(exactly = 0) { AnkiquestUpdater["available"]() }
+            verify(exactly = 0) { AnkiquestUpdater["cleanOnce"](any<Context>()) }
+        } finally {
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
+
+    @Test
+    fun `the build names a known update source`() {
+        assertTrue(AnkiquestUpdater.Source.entries.any { it.property == BuildConfig.ANKIQUEST_UPDATES })
+    }
+
+    // CI runs this class with -PankiquestUpdates=github too, so both manifests are checked.
+    @Test
+    fun `only a self-updating build requests the install permission`() {
+        val info = targetContext.packageManager.getPackageInfo(targetContext.packageName, PackageManager.GET_PERMISSIONS)
+        val requested = info.requestedPermissions.orEmpty().contains(Manifest.permission.REQUEST_INSTALL_PACKAGES)
+        assertEquals(AnkiquestUpdater.source() == AnkiquestUpdater.Source.GITHUB, requested)
     }
 
     private val nightlyJson =

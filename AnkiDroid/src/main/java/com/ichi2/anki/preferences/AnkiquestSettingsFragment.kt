@@ -569,6 +569,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             }
             true
         }
+        // Builds without a self-updater hide its settings; their store updates them.
+        val updates = AnkiquestUpdater.source() == AnkiquestUpdater.Source.GITHUB
+        requirePreference<Preference>(R.string.ankiquest_update_channel_key).isVisible = updates
+        requirePreference<Preference>(R.string.ankiquest_check_updates_key).isVisible = updates
         requirePreference<Preference>(R.string.ankiquest_check_updates_key).summary =
             getString(
                 R.string.ankiquest_check_updates_summary,

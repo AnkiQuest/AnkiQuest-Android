@@ -211,6 +211,16 @@ jobs:
           --tests 'com.ichi2.anki.provider.CardContentProviderTest'
           --daemon
 
+      # Unit tests above build without the self-updater (the default). Run the updater tests
+      # once more on a self-updating build, so its install permission is checked too.
+      - name: Test the self-updating build
+        if: matrix.iteration == 1 && matrix.os == 'ubuntu-latest'
+        run: >
+          ./gradlew :AnkiDroid:testPlayDebugUnitTest
+          -PankiquestUpdates=github
+          --tests 'com.ichi2.anki.ankiquest.AnkiquestUpdaterTest'
+          --daemon
+
       - name: Report Unit Test Results
         if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''
         run: python3 .github/report_test_failures.py . --pattern "build/test-results/**/TEST-*.xml" --title "Unit test failures"
