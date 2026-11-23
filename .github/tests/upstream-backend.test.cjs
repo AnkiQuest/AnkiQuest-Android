@@ -59,7 +59,7 @@ test("a build file naming the upstream backend group is found", (t) => {
     const root = tree(t, {
         "gradle/libs.versions.toml": `ankiBackend-core = { module = "${UPSTREAM_BACKEND_GROUP}:anki-backend-core" }\n`,
         "gradle/verification-metadata.xml": `<component group="${UPSTREAM_BACKEND_GROUP}" name="anki-backend-android"/>\n`,
-        "docs/build.md": "Uses org.ankiquest:anki-backend-core.\n",
+        "docs/build.md": "Uses org.ankiquest:ankiquest-backend-core.\n",
         "build/generated.txt": UPSTREAM_BACKEND_GROUP,
     });
     assert.deepEqual(upstreamBackendFiles(root), ["gradle/libs.versions.toml", "gradle/verification-metadata.xml"]);
