@@ -95,6 +95,15 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 node --test .github/tests/*.test.cjs
 ```
 
+The GitHub release APK is built with:
+
+```sh
+SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" ./gradlew :AnkiDroid:assembleFullRelease \
+  -Duniversal-apk=true -PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestUpdates=github
+```
+
+`-PankiquestUpdates=github` builds in the self-updater, which installs new releases from GitHub and requests `REQUEST_INSTALL_PACKAGES`. Without it (`none`, the default) the app neither checks for updates nor requests the permission: use that for store builds (F-Droid, IzzyOnDroid, Play), whose store updates them. Rebuilding the release APK for comparison takes `github`, as in `ankiquest_reproducible.yml`.
+
 AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 
 ## Credits
