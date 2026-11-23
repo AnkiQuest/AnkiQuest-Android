@@ -1,40 +1,14 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest shared fixtures
 
-# Not a required check and not run in the merge queue, so documentation-only changes skip it
-# with paths-ignore. The globs are the documentation list of ankiquest_lint.yml's changes job
-# (.github/tests/docs-only.test.cjs).
 on:
   push:
     branches: [master]
-    paths-ignore:
-      - '*.md'
-      - '*/README.md'
-      - '*/*/README.md'
-      - '.agents/**/*.md'
-      - '.github/workflows/README.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/pull_request_template.md'
-      - '.idea/**/*.md'
-      - '.oss-scanner/*.md'
-      - 'LICENSE*'
-      - 'LICENSES/**'
-      - 'docs/**'
   pull_request:
     branches: [master]
-    paths-ignore:
-      - '*.md'
-      - '*/README.md'
-      - '*/*/README.md'
-      - '.agents/**/*.md'
-      - '.github/workflows/README.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/pull_request_template.md'
-      - '.idea/**/*.md'
-      - '.oss-scanner/*.md'
-      - 'LICENSE*'
-      - 'LICENSES/**'
-      - 'docs/**'
+  # Required check: the merge queue waits for it on its merge commit.
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
     inputs:
       server_ref:
