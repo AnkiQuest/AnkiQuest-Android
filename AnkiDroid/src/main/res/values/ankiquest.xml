@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="ankiquest_dashboard_title" maxLength="41">Leaderboard</string>
+    <string name="ankiquest_streak_protection_summary">On by default. Finish all three daily quests while protection is on to earn one freeze per Anki day, up to 3. One is used automatically for each ended day without reviews. Turning this off pauses earning and use; saved freezes stay.</string>
+    <string name="ankiquest_avatar_key" translatable="false">ankiquestAvatar</string>
+    <string name="ankiquest_avatar_title" maxLength="41">Profile picture</string>
+    <string name="ankiquest_avatar_summary">Choose a picture for your profile, leaderboard and widgets</string>
+    <string name="ankiquest_avatar_choose">Choose picture</string>
+    <string name="ankiquest_avatar_remove">Remove picture</string>
+    <string name="ankiquest_avatar_remove_confirm">Remove your profile picture and use your initial again?</string>
+    <string name="ankiquest_deck_notifications_title" maxLength="41">Deck completion notifications</string>
+    <string name="ankiquest_deck_notifications_empty">Create a regular deck first to set up completion notifications.</string>
+    <string name="ankiquest_deck_notifications_no_people">There are no other players on this server yet.</string>
+    <string name="ankiquest_deck_notifications_choose_people">Select at least one person, or switch sharing off.</string>
+    <string name="ankiquest_deck_notifications_save">@string/save</string>
+    <string name="ankiquest_reply">Reply</string>
+    <string name="ankiquest_reply_context">%1$s\n\nIn reply to: %2$s</string>
+    <string name="ankiquest_nudges_title" maxLength="41">Nudges</string>
+    <string name="ankiquest_nudges_unavailable">Set the server, player and token first</string>
+    <string name="ankiquest_message_alerts_title" maxLength="41">Message and study alerts</string>
+    <string name="ankiquest_nudge_alerts_title" maxLength="41">Nudge alerts</string>
+    <string name="ankiquest_deck_collapse">Collapse subdecks</string>
+    <string name="ankiquest_deck_expand">Expand subdecks</string>
+    <string name="ankiquest_deck_apply_subdecks">Apply to subdecks</string>
+    <string name="ankiquest_reply_cheer">Good job!</string>
+    <string name="ankiquest_reply_hint">Say something nice</string>
+    <string name="ankiquest_reply_sent">Sent to %1$s: %2$s</string>
+    <string name="ankiquest_reply_failed">Could not send \u201c%1$s\u201d. Tap a button to try again.</string>
+    <string-array name="ankiquest_reply_choices">
+        <item>Nice one \ud83d\udd25</item>
+        <item>Keep it up!</item>
+    </string-array>
+    <string name="ankiquest_deck_notifications_next">@string/next_recording</string>
+    <string name="ankiquest_deck_notifications_select_all">All / none</string>
+    <string name="ankiquest_deck_notifications_people_title">Notify these people</string>
+    <plurals name="ankiquest_deck_notifications_saved">
+        <item quantity="zero">No decks are shared any more.</item>
+        <item quantity="one">%d deck is shared.</item>
+        <item quantity="other">%d decks are shared.</item>
+    </plurals>
+    <string name="ankiquest_screen_key" translatable="false">ankiquestScreen</string>
+    <string name="ankiquest_screen_title" translatable="false" maxLength="41">ankiquest</string>
+    <string name="ankiquest_menu_title" translatable="false" maxLength="28">ankiquest</string>
+    <string name="ankiquest_url_key" translatable="false">ankiquestUrl</string>
+    <string name="ankiquest_user_key" translatable="false">ankiquestUser</string>
+    <string name="ankiquest_token_key" translatable="false">ankiquestToken</string>
+    <string name="ankiquest_url_title" maxLength="41">ankiquest server URL</string>
+    <string name="ankiquest_user_title" maxLength="41">ankiquest player</string>
+    <string name="ankiquest_token_title" maxLength="41">ankiquest token</string>
+    <string name="ankiquest_test_key" translatable="false">ankiquestTest</string>
+    <string name="ankiquest_test_title" maxLength="41">Test connection</string>
+    <string name="ankiquest_test_summary">Check the URL, player and token</string>
+    <string name="ankiquest_sign_in_key" translatable="false">ankiquestSignIn</string>
+    <string name="ankiquest_sign_in_title" maxLength="41">Sign in or create account</string>
+    <string name="ankiquest_sign_in_summary">Use a username and password instead of copying a token</string>
+    <string name="ankiquest_sign_in_server">Server</string>
+    <string name="ankiquest_sign_in_user">Username</string>
+    <string name="ankiquest_sign_in_display">Display name (optional)</string>
+    <string name="ankiquest_sign_in_create">Create a new account</string>
+    <string name="ankiquest_sign_in_hint">Usernames use lowercase letters, numbers, - and _. Passwords need at least 10 characters.</string>
+    <string name="ankiquest_sign_in_submit">Sign in</string>
+    <string name="ankiquest_sign_in_submit_create">Create account</string>
+    <string name="ankiquest_sign_in_missing">Fill in the server, username and password.</string>
+    <string name="ankiquest_sign_in_wrong">Username or password not recognized.</string>
+    <string name="ankiquest_sign_in_closed">This server does not take new accounts. Ask whoever runs it for a token.</string>
+    <string name="ankiquest_sign_in_taken">That username is taken. Pick another one.</string>
+    <string name="ankiquest_sign_in_limited">Too many attempts. Try again later.</string>
+    <string name="ankiquest_sign_in_invalid">Check the username (3 to 32 lowercase letters, numbers, - or _) and use a password of at least 10 characters.</string>
+    <string name="ankiquest_sign_in_connecting">Connecting…</string>
+    <string name="ankiquest_sign_in_done">Signed in as %1$s.</string>
+    <string name="ankiquest_check_running">Contacting the server…</string>
+    <string name="ankiquest_check_ok">Connected as %1$s: level %2$d, %3$d XP, %4$d reviews on the server.</string>
+    <string name="ankiquest_check_no_token">No token is set, so reviews are only previewed and not stored. Private servers require your member token.</string>
+    <string name="ankiquest_check_unconfigured">Set the server URL and player first.</string>
+    <string name="ankiquest_check_unauthorized">The server rejected the player or token. Check both for typos.</string>
+    <string name="ankiquest_check_unknown_player">The server does not know this player yet. Set the token so your reviews can be uploaded.</string>
+    <string name="ankiquest_check_http">The server answered with HTTP %1$d.</string>
+    <string name="ankiquest_check_unreachable">Could not find %1$s. Check the URL and your internet connection.</string>
+    <string name="ankiquest_check_bad_url">%1$s is not a valid URL. It should look like https://anki.example.com</string>
+    <string name="ankiquest_check_insecure">%1$s does not use https, so your sign-in could be read on the way. Use an address that starts with https://</string>
+    <string name="ankiquest_check_failed">Could not reach the server: %1$s</string>
+    <string name="ankiquest_widget_label">ankiquest leaderboard</string>
+    <string name="ankiquest_widget_transparent_label">ankiquest leaderboard (transparent)</string>
+    <string name="ankiquest_widget_transparent_description">This week\'s ankiquest leaderboard without a background</string>
+    <string name="ankiquest_widget_description">This week\'s ankiquest leaderboard</string>
+    <string name="ankiquest_widget_level">Lv %1$d</string>
+    <string name="ankiquest_widget_place">Place %1$d</string>
+    <string name="ankiquest_widget_unconfigured">Set up ankiquest in Settings</string>
+    <string name="ankiquest_widget_empty">Nobody has uploaded reviews yet</string>
+    <string name="ankiquest_widget_offline">Could not reach the ankiquest server</string>
+    <string name="ankiquest_check_updates_key" translatable="false">ankiquestCheckUpdates</string>
+    <string name="ankiquest_check_updates_title" maxLength="41">Check for updates</string>
+    <string name="ankiquest_check_updates_summary">Installed: %1$s</string>
+    <string name="ankiquest_local_build">local build</string>
+    <string name="ankiquest_update_none">You have the latest version (%1$s).</string>
+    <string name="ankiquest_update_check_failed">Could not check GitHub for updates. Try again later.</string>
+    <string name="ankiquest_period_hour">this hour</string>
+    <string name="ankiquest_period_day" comment="Daily leaderboard period label, in sentence case">today</string>
+    <string name="ankiquest_period_week">this week</string>
+    <string name="ankiquest_period_month">this month</string>
+    <string name="ankiquest_period_year">this year</string>
+    <string name="ankiquest_period_all">all time</string>
+    <string name="ankiquest_widget_period_title">Which leaderboard?</string>
+    <string name="ankiquest_widget_refresh">Refresh</string>
+    <string name="ankiquest_widget_offline_at">offline · %1$s</string>
+    <string name="ankiquest_widget_settings_title">Leaderboard widget</string>
+    <string name="ankiquest_widget_settings_open">%1$s, widget settings</string>
+    <string name="ankiquest_widget_settings_timeframe">Timeframe</string>
+    <string name="ankiquest_widget_settings_scale">Text size</string>
+    <string name="ankiquest_widget_settings_save">Save widget</string>
+    <string name="ankiquest_widget_settings_groups_loading">Loading your groups…</string>
+    <string name="ankiquest_widget_settings_groups_failed">Your groups could not be loaded</string>
+    <string name="ankiquest_widget_who_global">Global</string>
+    <string name="ankiquest_widget_global_unavailable">This server has no global leaderboard yet</string>
+    <string name="ankiquest_widget_scale_auto">Auto (fits the widget)</string>
+    <string name="ankiquest_widget_scale_small">Small</string>
+    <string name="ankiquest_widget_scale_medium">Medium</string>
+    <string name="ankiquest_widget_scale_large">Large</string>
+    <string name="ankiquest_widget_scale_extra_large">Extra large</string>
+    <string name="ankiquest_update_title">%1$s available</string>
+    <string name="ankiquest_update_message">A new AnkiQuest build is ready (%1$d MB). Your collection is kept.</string>
+    <string name="ankiquest_update_nightly_message">A new nightly build is ready (%1$d MB). Nightly builds are untested and can break. Your collection is kept.</string>
+    <string name="ankiquest_update_channel_key" translatable="false">ankiquestUpdateChannel</string>
+    <string name="ankiquest_update_channel_title" maxLength="41">Update channel</string>
+    <string-array name="ankiquest_update_channel_entries">
+        <item>Stable releases</item>
+        <item>Nightly builds (untested)</item>
+    </string-array>
+    <string-array name="ankiquest_update_channel_values" translatable="false">
+        <item>stable</item>
+        <item>nightly</item>
+    </string-array>
+    <string name="ankiquest_update_install">Update</string>
+    <string name="ankiquest_update_later">@string/button_backup_later</string>
+    <string name="ankiquest_update_downloading">Downloading… %1$d%%</string>
+    <string name="ankiquest_update_failed">The update could not be downloaded. It will be offered again later.</string>
+    <!-- Translations for the separately submitted crop and contextual-reply PRs. -->
+    <string name="ankiquest_avatar_crop_hint" tools:ignore="UnusedResources">Drag to move your picture. Pinch or use the slider to zoom.</string>
+    <string name="ankiquest_avatar_zoom" tools:ignore="UnusedResources">Zoom</string>
+    <string name="ankiquest_avatar_reset" tools:ignore="UnusedResources">@string/reset</string>
+    <string name="ankiquest_avatar_move_left" tools:ignore="UnusedResources">Move picture left</string>
+    <string name="ankiquest_avatar_move_up" tools:ignore="UnusedResources">Move picture up</string>
+    <string name="ankiquest_avatar_move_down" tools:ignore="UnusedResources">Move picture down</string>
+    <string name="ankiquest_avatar_move_right" tools:ignore="UnusedResources">Move picture right</string>
+    <string name="ankiquest_reply_thanks" tools:ignore="UnusedResources">Thanks!</string>
+    <string name="ankiquest_reply_on_it" tools:ignore="UnusedResources">On it!</string>
+    <string-array name="ankiquest_reply_thanks_choices" tools:ignore="UnusedResources">
+        <item>You made my day!</item>
+        <item>I appreciate it!</item>
+    </string-array>
+    <string-array name="ankiquest_reply_nudge_choices" tools:ignore="UnusedResources">
+        <item>Starting now</item>
+        <item>I will study later</item>
+    </string-array>
+    <string name="ankiquest_streak_studied">Studied today</string>
+    <string name="ankiquest_streak_pending">Not studied yet</string>
+    <string name="ankiquest_streak_protected">Streak protected · Not studied yet</string>
+    <string name="ankiquest_streak_unknown">Refresh to see today\'s study status</string>
+    <string name="ankiquest_streak_description">%1$s day streak · %2$s</string>
+    <string name="ankiquest_upload_all_key" translatable="false">ankiquestUploadAll</string>
+    <string name="ankiquest_upload_all_title" maxLength="41">Upload all reviews now</string>
+    <string name="ankiquest_upload_all_summary">Send your whole review history again. The server keeps one copy of each review.</string>
+    <string name="ankiquest_upload_all_progress">Uploading… %1$d of %2$d reviews</string>
+    <string name="ankiquest_upload_all_busy">Your reviews are already being uploaded.</string>
+    <plurals name="ankiquest_upload_all_done">
+        <item quantity="one">Sent %d review.</item>
+        <item quantity="other">Sent %d reviews.</item>
+    </plurals>
+</resources>

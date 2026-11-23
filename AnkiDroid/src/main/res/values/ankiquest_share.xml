@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_share">Share</string>
+    <string name="ankiquest_download_picture">Download picture</string>
+    <string name="ankiquest_picture_saved">Picture saved to your gallery.</string>
+    <string name="ankiquest_picture_failed">Couldn’t save the picture. Check storage access and try again.</string>
+    <string name="ankiquest_share_title">Share this win</string>
+    <string name="ankiquest_share_friends">With my AnkiQuest friends</string>
+    <string name="ankiquest_share_elsewhere">Somewhere else…</string>
+    <string name="ankiquest_share_text">%1$s: %2$s
+Study with me on AnkiQuest: %3$s</string>
+    <string name="ankiquest_share_text_offline">%1$s: %2$s
+I study with AnkiQuest.</string>
+    <string name="ankiquest_share_nobody">Nobody new got it: your friends already have it, or you have no friends in AnkiQuest yet.</string>
+    <string name="ankiquest_share_failed">Couldn’t share it. Check your connection and try again.</string>
+    <plurals name="ankiquest_share_sent">
+        <item quantity="one">Shared with %d friend</item>
+        <item quantity="other">Shared with %d friends</item>
+    </plurals>
+    <string name="ankiquest_share_account_changed">This win belongs to an AnkiQuest account that is no longer signed in.</string>
+    <string name="ankiquest_cheer">🎉 Cheer</string>
+    <string name="ankiquest_cheer_sent">🎉 You cheered: %1$s</string>
+    <string name="ankiquest_moments_decks_key" translatable="false">ankiquestMomentsDecks</string>
+    <string name="ankiquest_moments_decks_title" maxLength="41">Finished decks</string>
+    <string name="ankiquest_moments_decks_summary">Set per deck: choose the decks and who hears when you finish them</string>
+    <string name="ankiquest_share_friends_target">AnkiQuest friends</string>
+    <string name="ankiquest_share_card_title">Share your conquered card</string>
+    <string name="ankiquest_share_card_explanation">Want to show what the card was? Friends and anyone with the link will see this text. Leave the box unticked to share without it.</string>
+    <string name="ankiquest_share_card_include">Show the card</string>
+    <string name="ankiquest_share_card_hint">What the card says</string>
+    <string name="ankiquest_share_next">Share…</string>
+    <string name="ankiquest_share_card_failed">Couldn’t save the card’s text, so nothing was shared. Check your connection and try again.</string>
+    <string name="ankiquest_deck_share_title">You finished %1$s for today. Tell friends?</string>
+    <string name="ankiquest_deck_share_send">Tell them</string>
+    <string name="ankiquest_deck_share_not_now">Not now</string>
+    <string name="ankiquest_deck_share_never">Don’t ask again</string>
+    <string name="ankiquest_deck_share_never_done">You won’t be asked again. Turn it back on in AnkiQuest settings under Friends &amp; sharing.</string>
+    <string name="ankiquest_deck_share_nobody">Nobody new heard it: they were told today already, or they turned off deck alerts.</string>
+    <string name="ankiquest_deck_share_unsupported">Your AnkiQuest server can’t share finished decks yet.</string>
+    <string name="ankiquest_deck_share_ask_title" maxLength="41">Ask to share finished decks</string>
+    <string name="ankiquest_deck_share_ask_summary">When you finish a deck for the day, ask which friends to tell</string>
+    <string name="ankiquest_deck_share_ask_key" translatable="false">ankiquestAskToShareDecks</string>
+    <!-- Below a moment card when several moments wait: the others are a swipe away. -->
+    <plurals name="aq_moment_more">
+        <item quantity="one">And %d more: swipe to see it</item>
+        <item quantity="other">And %d more: swipe to see them</item>
+    </plurals>
+    <!-- Below a moment card while swiping through several: "2 of 3". -->
+    <string name="aq_moment_position">%1$d of %2$d</string>
+    <!-- The share sheet: a moment's picture, AnkiQuest friends and groups to send it to, and other apps. -->
+    <item name="aq_share_targets" type="id" />
+    <item name="aq_share_search" type="id" />
+    <item name="aq_share_note" type="id" />
+    <item name="aq_share_status" type="id" />
+    <item name="aq_share_send" type="id" />
+    <item name="aq_share_more" type="id" />
+    <item name="aq_share_deck_name" type="id" />
+    <string name="ankiquest_deck_moment_title">Deck complete</string>
+    <string name="ankiquest_deck_moment_body">I finished my %1$s studies for today.</string>
+    <string name="ankiquest_share_send_to">Send to</string>
+    <string name="ankiquest_share_all_friends">All friends</string>
+    <string name="ankiquest_share_search">Search friends and groups</string>
+    <!-- Spoken for a group's chip in the share sheet, so it is not taken for a friend. -->
+    <string name="ankiquest_share_group">Group: %1$s</string>
+    <string name="ankiquest_share_no_match">No friend or group has that name.</string>
+    <string name="ankiquest_share_note_hint">Add a note (optional)</string>
+    <string name="ankiquest_share_sending">Sending…</string>
+    <!-- The server refused a send and said why, for example a friend who has left. -->
+    <string name="ankiquest_share_refused">Couldn’t share it (%1$s).</string>
+    <!-- Share sheet status while the server has not confirmed the streak day yet; friends cannot be chosen until then. -->
+    <string name="ankiquest_share_uploading">Uploading your study…</string>
+    <string name="ankiquest_share_more_apps">More apps…</string>
+    <string name="ankiquest_share_targets_failed">Couldn’t load your friends. Check your connection, or share with another app.</string>
+    <string name="ankiquest_share_invite">Invite a friend</string>
+    <string name="ankiquest_share_lonely">Add friends in AnkiQuest to send them your moments.</string>
+</resources>

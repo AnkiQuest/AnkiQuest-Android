@@ -1,0 +1,75 @@
+name: Labels
+
+# The labelling AnkiQuest repositories share, from AnkiQuest-Dev's reusable
+# workflows: the label set (labels.json there), "Has Conflicts", "Needs
+# Review", "New contributor", area labels from .github/labeler.yml and
+# "Needs Triage" on issues. Nothing here checks out or runs pull request code.
+
+on:
+  push:
+    branches: [master]
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, closed]
+  pull_request_review:
+    types: [submitted, dismissed]
+  issues:
+    types: [opened, reopened, labeled, closed]
+  # A merge queue group has no pull request to label. Every job is skipped
+  # there, which counts as passing, so the queue never waits for them.
+  merge_group:
+    types: [checks_requested]
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The newest event of a kind on one issue or pull request replaces an older
+# run: labels follow the latest state. The event and action are in the
+# group so a review or ready_for_review never cancels the conflict scan a
+# push started.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.action }}-${{ github.event.issue.number || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  labels:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/labels.yml@master
+    permissions:
+      contents: read
+      issues: write
+
+  # A job named scan: the rulesets require that check name, which a job calling
+  # a reusable workflow would not report. Skipped in merge groups, which counts
+  # as passing.
+  scan:
+    if: >-
+      github.repository_owner == 'AnkiQuest'
+      && (contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name)
+        || (github.event_name == 'pull_request_target'
+          && contains(fromJSON('["opened", "reopened", "synchronize"]'), github.event.action)))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: AnkiQuest/AnkiQuest-Dev/.github/actions/conflict-scan@master
+
+  # Pull request events label one pull request; schedule and
+  # workflow_dispatch sweep every open one.
+  pull-requests:
+    if: contains(fromJSON('["pull_request_target", "pull_request_review", "schedule", "workflow_dispatch"]'), github.event_name)
+    uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/pr-labels.yml@master
+    permissions:
+      contents: read
+      pull-requests: write
+
+  issues:
+    if: github.event_name == 'issues'
+    uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/issue-labels.yml@master
+    permissions:
+      contents: read
+      issues: write

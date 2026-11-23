@@ -3,6 +3,7 @@
 package com.ichi2.anki.preferences
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
@@ -12,11 +13,15 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.text.parseAsHtml
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
+import com.ichi2.anki.ankiquest.AnkiquestIcon
+import com.ichi2.anki.ankiquest.AnkiquestLinks
+import com.ichi2.anki.ankiquest.AnkiquestUpdater
+import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.destinations.ChangelogDestination
 import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.common.utils.android.showThemedToast
@@ -26,14 +31,9 @@ import com.ichi2.anki.scheduling.Fsrs
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.ui.internationalization.sentenceCase
-import com.ichi2.utils.IntentUtil
-import com.ichi2.utils.TruncatedString
 import com.ichi2.utils.VersionUtils.pkgVersionName
-import com.ichi2.utils.copyToClipboard
 import com.ichi2.utils.show
 import dev.androidbroadcast.vbpd.viewBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,23 +42,6 @@ import net.ankiweb.rsdroid.BuildConfig as BackendBuildConfig
 class AboutFragment : Fragment(R.layout.fragment_about) {
     @VisibleForTesting
     val binding by viewBinding(FragmentAboutBinding::bind)
-
-    private val aboutContributorsSpannable: CharSequence
-        get() {
-            val contributorsLink = getString(R.string.link_contributors)
-            val contributingGuideLink = getString(R.string.link_contribution)
-            val strRes =
-                if (BuildConfig.SHOW_DONATE_LINKS) {
-                    CommonString.about_contributors_description
-                } else {
-                    CommonString.about_contributors_description_no_donate
-                }
-            return getString(
-                strRes,
-                contributorsLink,
-                contributingGuideLink,
-            ).parseAsHtml()
-        }
 
     override fun onViewCreated(
         view: View,
@@ -70,7 +53,13 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             SimpleDateFormat(DateFormat.getBestDateTimePattern(Locale.getDefault(), "d MMM yyyy"))
                 .format(Date(BuildConfig.BUILD_TIME))
 
-        binding.version.text = pkgVersionName
+        binding.version.text = AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build)
+        val entries = resources.getStringArray(R.array.ankiquest_update_channel_entries)
+        val values = resources.getStringArray(R.array.ankiquest_update_channel_values)
+        val channel = AnkiquestUpdater.channel().name.lowercase()
+        val channelLabel = entries.getOrNull(values.indexOf(channel)) ?: channel
+        binding.updateChannel.text = getString(R.string.ankiquest_about_channel, channelLabel)
+        binding.ankidroidVersion.text = getString(R.string.ankiquest_about_based_on, pkgVersionName)
         binding.backendVersion.text =
             "(anki " + BackendBuildConfig.ANKI_DESKTOP_VERSION + " / " + BackendBuildConfig.ANKI_COMMIT_HASH.subSequence(0, 8) + ")"
         binding.fsrsVersion.text = Fsrs.displayVersion ?.let { version ->
@@ -80,21 +69,37 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         // Logo secret
         binding.appLogo.setOnClickListener(DeveloperOptionsSecretClickListener(this))
 
-        // Contributors text
+        // Contributors text: this app, the server and the desktop add-on each have a repository
+        val repository = AnkiquestLinks.REPOSITORY
         binding.contributorsDescription.apply {
-            text = aboutContributorsSpannable
+            text =
+                getString(
+                    R.string.ankiquest_about_credits,
+                    getString(R.string.link_contributors),
+                    repository,
+                    AnkiquestLinks.SERVER_REPOSITORY,
+                    AnkiquestLinks.DESKTOP_REPOSITORY,
+                ).parseAsHtml()
             movementMethod = LinkMovementMethod.getInstance()
         }
 
-        // License text
+        // License text, with the credit Anki-tan's CC BY-SA licence asks for
         val gplLicenseLink = getString(R.string.licence_wiki)
         val agplLicenseLink = getString(R.string.link_agpl_wiki)
-        val sourceCodeLink = getString(R.string.link_source)
+        val sourceCodeLink = sourceLink(repository)
         val dependencyLicenseLink = getString(R.string.dependency_license_wiki)
+        val ankiTan =
+            getString(
+                R.string.ankiquest_about_anki_tan,
+                getString(R.string.ankiquest_link_anki_tan),
+                getString(R.string.ankiquest_link_shigeyuki),
+                getString(R.string.ankiquest_link_cc_by_sa),
+            )
         binding.licenseDescription.apply {
             text =
                 (
-                    getString(CommonString.license_description, gplLicenseLink, agplLicenseLink, sourceCodeLink) + "<br>" +
+                    getString(R.string.ankiquest_about_license, gplLicenseLink, agplLicenseLink, sourceCodeLink) + "<br>" +
+                        ankiTan + "<br>" +
                         getString(CommonString.other_licenses, dependencyLicenseLink)
                 ).parseAsHtml()
             movementMethod = LinkMovementMethod.getInstance()
@@ -112,32 +117,52 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             binding.donateDescription.isVisible = false
         }
 
-        binding.rateAnkiDroid.setOnClickListener {
-            IntentUtil.tryOpenIntent(requireActivity(), AnkiDroidApp.getMarketIntent(requireContext()))
+        // Rate AnkiQuest and the bug form open in a browser; both changelogs are in the app
+        binding.rateAnkiquest.setOnClickListener {
+            requireActivity().openAnkiquestLink(AnkiquestLinks.rateUrl(requireContext()))
         }
-
+        binding.ankiquestChangelog.setOnClickListener {
+            startActivity(AnkiquestChangelogActivity.intent(requireContext()))
+        }
         binding.openChangelog.setOnClickListener {
             navigate(ChangelogDestination)
         }
+        binding.reportBug.setOnClickListener {
+            requireActivity().openAnkiquestLink(AnkiquestLinks.BUG_FORM)
+        }
 
         binding.copyDebugInfo.text = TR.sentenceCase.copyDebugInfo
-        binding.copyDebugInfo.setOnClickListener { copyDebugInfo() }
+        binding.copyDebugInfo.setOnClickListener {
+            launchCatchingTask { DebugInfoService.copyReport(requireContext()) }
+        }
     }
 
-    /**
-     * Copies debug info (from [DebugInfoService.getDebugInfo]) to the clipboard
-     */
-    private fun copyDebugInfo() {
-        launchCatchingTask {
-            val debugInfo =
-                withContext(Dispatchers.IO) {
-                    DebugInfoService.getDebugInfo(requireContext())
+    override fun onResume() {
+        super.onResume()
+        val context = requireContext()
+        val manager = context.packageManager
+        // The launcher icon can change while this screen is in the background.
+        val icon =
+            if (AnkiquestIcon.available(context)) {
+                val component = manager.getLaunchIntentForPackage(context.packageName)?.component
+                try {
+                    component?.let(manager::getActivityIcon)
+                } catch (_: PackageManager.NameNotFoundException) {
+                    null
                 }
-            requireContext().copyToClipboard(
-                TruncatedString.from(debugInfo),
-                failureMessageId = CommonString.about_ankidroid_error_copy_debug_info,
-            )
+            } else {
+                null
+            }
+        if (icon != null) {
+            binding.appLogo.setImageDrawable(icon)
+        } else {
+            binding.appLogo.setImageResource(R.drawable.aki_face)
         }
+    }
+
+    private fun sourceLink(repository: String): String {
+        val commit = BuildConfig.GIT_COMMIT_HASH
+        return if (commit.matches(Regex("[0-9a-f]{7,64}"))) "$repository/tree/$commit" else repository
     }
 
     /**

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_me">Me</string>
+    <string name="ankiquest_nav_today" comment="Today navigation destination, in title case" maxLength="28">Today</string>
+    <string name="ankiquest_nav_friends" maxLength="28">Friends</string>
+    <string name="ankiquest_nav_decks" maxLength="28">Decks</string>
+    <string name="ankiquest_open_today_key" translatable="false">ankiquestOpenToday</string>
+    <string name="ankiquest_open_today_title" maxLength="41">Open Today on launch</string>
+    <string name="ankiquest_open_today_summary">Start with study and friend goals. Turn off to open your deck library.</string>
+    <string name="ankiquest_summary_title">Your study session</string>
+    <string name="ankiquest_summary_body">%1$d reviews · %2$s\n%3$d cards still available in this deck.\n\nSaved on this device. Shared progress updates after upload.</string>
+    <string name="ankiquest_summary_under_minute">less than a minute</string>
+    <plurals name="ankiquest_summary_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <string name="ankiquest_summary_continue">Continue studying</string>
+    <string name="ankiquest_summary_progress">View progress</string>
+    <string name="ankiquest_summary_dont_show_again">Don’t show this again</string>
+    <string name="ankiquest_missing_deck">This deck is no longer available. Choose another deck.</string>
+    <string name="ankiquest_deck_ready_later">No cards are ready in this deck right now. Choose another deck or come back later.</string>
+</resources>

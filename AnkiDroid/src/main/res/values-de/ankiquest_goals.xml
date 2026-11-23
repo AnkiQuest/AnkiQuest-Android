@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_goal_setup_failed">Das Tagesziel konnte nicht gespeichert werden. Versuche es erneut.</string>
+    <string name="aq_goal_today">Heutiges Ziel</string>
+    <string name="aq_goal_minimum_minutes">Minimum für die Lernserie: heute %1$d Minuten wiederholen</string>
+    <string name="aq_goal_minimum_any">Jede Wiederholung heute hält deine Lernserie am Leben.</string>
+    <string name="aq_goal_minimum_minutes_done">Lernserie gesichert: Du hast heute die %1$d Minuten geschafft.</string>
+    <string name="aq_goal_minimum_any_done">Lernserie gesichert: Heute zählt für deine Serie.</string>
+    <string name="aq_goal_progress_cards">%1$d von %2$d Karten</string>
+    <string name="aq_goal_progress_minutes">%1$d von %2$d Minuten</string>
+    <string name="aq_goal_daily">Tagesziel: %1$s</string>
+    <string name="aq_goal_backlog_explained">Die heute fälligen Karten plus %1$d deiner %2$d überfälligen Karten. Verbleibende Tage im Plan: %3$d.</string>
+    <string name="aq_goal_done_title">Tagesziel erreicht! 🎉</string>
+    <string name="aq_goal_time_left">Noch ~%1$d Min.</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d Min.</string>
+    <string name="aq_goal_streak_syncing">Wird synchronisiert…</string>
+    <string name="aq_goal_minimum_syncing">Deine heutigen Wiederholungen sind noch auf dem Weg zum Server. Die Lernserie ist gesichert, sobald der Server sie zählt.</string>
+    <string name="aq_goal_streak_safe">Heute zählt ✓</string>
+    <string name="aq_streak_minimum_title">Lernserie für heute gesichert</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s Tag in Folge</item>
+        <item quantity="other">%s Tage in Folge</item>
+    </plurals>
+    <string name="aq_goal_streak_any">Einmal wiederholen rettet deine Serie</string>
+    <string name="ankiquest_streak_short">Heute %1$d von %2$d Minuten</string>
+    <string name="ankiquest_goal_cards_title">Karten pro Tag</string>
+    <string name="ankiquest_goal_minutes_title">Minuten pro Tag</string>
+    <string name="ankiquest_goal_title">Tagesziel</string>
+    <string name="ankiquest_goal_setup_title">Wähle dein Tagesziel</string>
+    <string name="ankiquest_goal_mode_backlog">Rückstand in einer Anzahl Tage abbauen</string>
+    <string name="ankiquest_goal_off">Kein Tagesziel</string>
+    <string name="ankiquest_goal_custom">Eigener Wert</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">%1$d bis %2$d</string>
+    <string name="ankiquest_goal_invalid">Wähle eine Zahl von %1$d bis %2$d.</string>
+    <string name="ankiquest_goal_estimating">Wird für deine Sammlung berechnet …</string>
+    <string name="ankiquest_goal_estimate_failed">Deine Sammlung konnte nicht gelesen werden, daher gibt es keine Schätzung.</string>
+    <string name="ankiquest_goal_estimate_off">Kein Ziel: Jede Wiederholung zählt trotzdem für deine Lernserie.</string>
+    <string name="ankiquest_goal_estimate_cards">Karten heute: %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Zeit heute: %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Rückstand abgebaut in %d Tag</item>
+        <item quantity="other">Rückstand abgebaut in %d Tagen</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Rückstand abgebaut: nie, allein deine Wiederholungen ergeben %d Karte pro Tag</item>
+        <item quantity="other">Rückstand abgebaut: nie, allein deine Wiederholungen ergeben %d Karten pro Tag</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Damit dein Rückstand schrumpft, lerne mindestens %d Karte pro Tag.</item>
+        <item quantity="other">Damit dein Rückstand schrumpft, lerne mindestens %d Karten pro Tag.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Nichts überfällig. Pro Tag wird etwa %d Karte fällig.</item>
+        <item quantity="other">Nichts überfällig. Pro Tag werden etwa %d Karten fällig.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">Wird gespeichert …</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Rückstand in %d Tag abbauen</item>
+        <item quantity="other">Rückstand in %d Tagen abbauen</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d Karte pro Tag</item>
+        <item quantity="other">%d Karten pro Tag</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d Minute pro Tag</item>
+        <item quantity="other">%d Minuten pro Tag</item>
+    </plurals>
+    <string name="ankiquest_streak_widget_label">AnkiQuest-Lernserie</string>
+    <string name="ankiquest_streak_widget_description">Deine Lernserie als große Zahl mit deinem Begleiter</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">Tag Lernserie</item>
+        <item quantity="other">Tage Lernserie</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">Akis Laune im App-Symbol</string>
+    <string name="ankiquest_mood_icon_summary">Das Symbol lächelt, sobald heute zählt, sorgt sich spät am Tag und zeigt einen Schutz, wenn einer dich schützt. Das Symbol ändert sich, sobald du die App verlässt. Manche Launcher blenden das Symbol beim Wechsel kurz aus.</string>
+    <string name="aq_goal_streak_safe_unsent">Heute zählt ✓ · noch nicht hochgeladen</string>
+    <string name="aq_goal_minimum_unsent">AnkiQuest zählt deine Wiederholungen, sobald sie hochgeladen sind.</string>
+    <string name="aq_goal_streak_safe_offline">Heute zählt ✓ · wartet auf Verbindung</string>
+    <string name="aq_goal_streak_safe_signed_out">Heute zählt ✓ · zum Hochladen neu anmelden</string>
+    <string name="aq_goal_streak_safe_server">Heute zählt ✓ · Serverfehler, erneuter Versuch folgt</string>
+    <string name="aq_goal_streak_safe_refused">Heute zählt ✓ · Hochladen abgelehnt</string>
+    <string name="aq_goal_streak_safe_cert_expired">Heute zählt ✓ · das Zertifikat des Servers ist abgelaufen, erneuter Versuch folgt</string>
+    <string name="aq_goal_streak_safe_cert_self_signed">Heute zählt ✓ · das Zertifikat des Servers ist selbst signiert, erneuter Versuch folgt</string>
+    <string name="aq_goal_streak_safe_cert_wrong_host">Heute zählt ✓ · das Zertifikat des Servers gilt für eine andere Adresse, erneuter Versuch folgt</string>
+    <string name="aq_goal_streak_safe_cert_unverified">Heute zählt ✓ · das Zertifikat des Servers konnte nicht geprüft werden, erneuter Versuch folgt</string>
+    <string name="aq_goal_upload_signed_out">Der Server hat die Anmeldung dieses Geräts abgelehnt. Melde dich in den AnkiQuest-Einstellungen erneut an.</string>
+    <string name="aq_goal_upload_refused">„Verbindung testen“ in den AnkiQuest-Einstellungen zeigt den Grund.</string>
+</resources>

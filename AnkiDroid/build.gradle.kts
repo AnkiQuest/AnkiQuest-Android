@@ -7,7 +7,7 @@ import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.isCoverageEnabled
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Locale
 import java.util.Properties
 import java.util.regex.Pattern
@@ -73,9 +73,28 @@ val gitCommitHash =
         .map { it.trim() }
 
 /**
+ * The newest upstream AnkiDroid commit merged into this build: `git merge-base HEAD <ankidroid main>`.
+ * Shown in the debug info. CI passes it via -PupstreamCommit=<sha>, because a clone may lack the
+ * upstream remote and fetching it here would make the build depend on the network. "unknown" otherwise.
+ */
+val upstreamCommitHash =
+    providers
+        .gradleProperty("upstreamCommit")
+        .map { sha ->
+            if (!sha.matches(Regex("[0-9a-f]{40}"))) {
+                throw GradleException("upstreamCommit must be a full commit hash")
+            }
+            sha
+        }.orElse("unknown")
+
+/**
  * Epoch millis of the build. Displayed on the 'About' screen.
  *
- * CI passes the real time via -PbuildTime=<epoch> # example: 1776422957000
+ * Taken from, in order:
+ * - -PbuildTime=<epoch millis> # example: 1776422957000
+ * - SOURCE_DATE_EPOCH, in epoch seconds, which reproducible builds set to the commit time
+ *   (https://reproducible-builds.org/specs/source-date-epoch/)
+ * - the start of today in UTC, so that builds on the same day match in any time zone
  *
  * This value is captured in the configuration cache, so it can be stale when the cache is reused.
  */
@@ -83,10 +102,14 @@ val buildTimeMillis =
     providers
         .gradleProperty("buildTime")
         .orElse(
+            providers.environmentVariable("SOURCE_DATE_EPOCH").map { seconds ->
+                (seconds.trim().toLong() * 1000).toString()
+            },
+        ).orElse(
             providers.provider {
                 LocalDate
-                    .now()
-                    .atStartOfDay(ZoneId.systemDefault())
+                    .now(ZoneOffset.UTC)
+                    .atStartOfDay(ZoneOffset.UTC)
                     .toInstant()
                     .toEpochMilli()
                     .toString()
@@ -95,6 +118,12 @@ val buildTimeMillis =
 
 android {
     namespace = "com.ichi2.anki"
+
+    // AGP writes a dependency list into the APK signing block, encrypted for Google Play with a
+    // random key, so two builds of the same commit differed (#352). App bundles keep it for Play.
+    dependenciesInfo {
+        includeInApk = false
+    }
 
     buildFeatures {
         buildConfig = true
@@ -116,9 +145,12 @@ android {
         buildConfigField("String", "BACKEND_VERSION", "\"${libs.versions.ankiBackend.get()}\"")
         buildConfigField("Boolean", "ENABLE_LEAK_CANARY", "false")
         buildConfigField("String", "GIT_COMMIT_HASH", "\"${gitCommitHash.get()}\"")
+        buildConfigField("String", "UPSTREAM_COMMIT_HASH", "\"${upstreamCommitHash.get()}\"")
         buildConfigField("long", "BUILD_TIME", buildTimeMillis.get())
         // whether UI elements linking to external donation pages are shown ('play' hides them)
         buildConfigField("Boolean", "SHOW_DONATE_LINKS", "true")
+        buildConfigField("int", "ANKIQUEST_RELEASE", (project.findProperty("ankiquestRelease") ?: "0").toString())
+        buildConfigField("int", "ANKIQUEST_NIGHTLY", (project.findProperty("ankiquestNightly") ?: "0").toString())
         resValue("string", "app_name", "AnkiDroid")
 
         // The version number is of the form:
@@ -148,6 +180,25 @@ android {
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "com.ichi2.testutils.NewCollectionPathTestRunner"
+
+        // Quest tags have their own monotonic upgrade sequence, independent of
+        // the upstream beta version. Keep the eight-digit ABI-split budget.
+        // quest-<n> is 5nnnn000; nightly builds after it add their commit count,
+        // so both channels install over each other in order.
+        // Assigned through `this.`, so upstream's validateVersionCode still sees one versionCode literal.
+        if ((project.findProperty("customSuffix") ?: "").toString().replaceFirst(Regex("^\\.*"), "") == "quest") {
+            val questRelease = (project.findProperty("ankiquestRelease") ?: "0").toString()
+            val questNightly = (project.findProperty("ankiquestNightly") ?: "0").toString()
+            if (!questRelease.matches(Regex("[0-9]{1,5}")) || questRelease.toInt() > 49999) {
+                throw GradleException("ankiquestRelease must be a release number from 0 to 49999")
+            }
+            if (!questNightly.matches(Regex("[0-9]{1,3}"))) {
+                throw GradleException("ankiquestNightly must be a commit count from 0 to 999")
+            }
+            if (questRelease.toInt() > 0) {
+                this.versionCode = 50000000 + questRelease.toInt() * 1000 + questNightly.toInt()
+            }
+        }
 
         // GA4 Measurement Protocol api_secret. Sourced from `local.properties`
         // (ANALYTICS_API_KEY) or the ANALYTICS_API_KEY env var; falls back to
@@ -335,6 +386,8 @@ android {
                         test.systemProperty("screenshot.theme", theme)
                         test.systemProperty("screenshot.device", device)
                         test.systemProperty("screenshot.accessibilityScan", project.hasProperty("accessibilityScan"))
+                        // Screens for the README banner: see docs/graphics/banner.toml
+                        test.systemProperty("screenshot.banner", project.hasProperty("readmeBanner"))
                     }
                     // Ensures that no EmptyApplication test relies on AnkiDroidApp
                     //  by only running EmptyApplication tests
@@ -364,6 +417,14 @@ android {
         resources {
             excludes += listOf("META-INF/DEPENDENCIES")
         }
+    }
+}
+
+// AnkiQuest: the quest build (-PcustomSuffix=quest) adds src/quest, with the launcher icon and the updater's install permission.
+if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
+    androidComponents.onVariants { variant ->
+        variant.sources.res?.addStaticSourceDirectory("src/quest/res")
+        variant.sources.manifests.addStaticManifestFile("src/quest/AndroidManifest.xml")
     }
 }
 
@@ -765,6 +826,7 @@ dependencies {
     implementation(libs.androidx.browser)
     implementation(libs.androidx.concurrent.futures.ktx)
     implementation(libs.androidx.core)
+    implementation(libs.androidx.core.remoteviews)
     implementation(libs.androidx.draganddrop)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.fragment.ktx)
@@ -889,6 +951,8 @@ dependencies {
     androidTestImplementation(libs.kotlin.test)
     androidTestImplementation(libs.kotlin.test.junit)
     androidTestImplementation(libs.androidx.fragment.testing)
+    // AnkiquestDeviceTest runs the poll worker on the emulator
+    androidTestImplementation(libs.androidx.work.testing)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)

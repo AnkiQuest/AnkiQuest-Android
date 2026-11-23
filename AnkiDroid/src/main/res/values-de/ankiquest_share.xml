@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_download_picture">Bild herunterladen</string>
+    <string name="ankiquest_picture_saved">Bild in deiner Galerie gespeichert.</string>
+    <string name="ankiquest_picture_failed">Das Bild konnte nicht gespeichert werden. Prüfe den Speicherzugriff und versuche es erneut.</string>
+    <string name="ankiquest_share">Teilen</string>
+    <string name="ankiquest_share_title">Diesen Erfolg teilen</string>
+    <string name="ankiquest_share_friends">Mit meinen AnkiQuest-Freunden</string>
+    <string name="ankiquest_share_elsewhere">Woanders …</string>
+    <string name="ankiquest_share_text">%1$s: %2$s
+Lern mit mir auf AnkiQuest: %3$s</string>
+    <string name="ankiquest_share_text_offline">%1$s: %2$s
+Ich lerne mit AnkiQuest.</string>
+    <string name="ankiquest_share_nobody">Niemand Neues hat es bekommen: Deine Freunde haben es schon, oder du hast noch keine Freunde in AnkiQuest.</string>
+    <string name="ankiquest_share_failed">Teilen hat nicht geklappt. Prüfe deine Verbindung und versuch es noch einmal.</string>
+    <plurals name="ankiquest_share_sent">
+        <item quantity="one">Mit %d Freund geteilt</item>
+        <item quantity="other">Mit %d Freunden geteilt</item>
+    </plurals>
+    <string name="ankiquest_share_account_changed">Dieser Erfolg gehört zu einem AnkiQuest-Konto, das nicht mehr angemeldet ist.</string>
+    <string name="ankiquest_cheer">🎉 Jubeln</string>
+    <string name="ankiquest_cheer_sent">🎉 Du hast gejubelt: %1$s</string>
+    <string name="ankiquest_moments_decks_title">Abgeschlossene Stapel</string>
+    <string name="ankiquest_moments_decks_summary">Pro Stapel einstellbar: Wähle die Stapel und wer erfährt, wenn du sie schaffst</string>
+    <string name="ankiquest_share_friends_target">AnkiQuest-Freunde</string>
+    <string name="ankiquest_share_card_title">Gemeisterte Karte teilen</string>
+    <string name="ankiquest_share_card_explanation">Möchtest du zeigen, was auf der Karte stand? Freunde und alle mit dem Link sehen diesen Text. Lass das Kästchen leer, um ohne ihn zu teilen.</string>
+    <string name="ankiquest_share_card_include">Karte zeigen</string>
+    <string name="ankiquest_share_card_hint">Was auf der Karte steht</string>
+    <string name="ankiquest_share_next">Teilen…</string>
+    <string name="ankiquest_share_card_failed">Der Text der Karte konnte nicht gespeichert werden, deshalb wurde nichts geteilt. Prüfe deine Verbindung und versuch es noch einmal.</string>
+    <string name="ankiquest_deck_share_title">Du hast %1$s für heute abgeschlossen. Freunden Bescheid sagen?</string>
+    <string name="ankiquest_deck_share_send">Bescheid sagen</string>
+    <string name="ankiquest_deck_share_not_now">Jetzt nicht</string>
+    <string name="ankiquest_deck_share_never">Nicht mehr fragen</string>
+    <string name="ankiquest_deck_share_never_done">Du wirst nicht mehr gefragt. Unter „Freunde und Teilen“ in den AnkiQuest-Einstellungen kannst du es wieder einschalten.</string>
+    <string name="ankiquest_deck_share_nobody">Niemand Neues hat es erfahren: Sie wurden heute schon benachrichtigt oder haben Stapel-Benachrichtigungen ausgeschaltet.</string>
+    <string name="ankiquest_deck_share_unsupported">Dein AnkiQuest-Server kann abgeschlossene Stapel noch nicht teilen.</string>
+    <string name="ankiquest_deck_share_ask_title">Teilen fertiger Stapel anbieten</string>
+    <string name="ankiquest_deck_share_ask_summary">Wenn du einen Stapel für heute abschließt, fragen, welchen Freunden du Bescheid sagen möchtest</string>
+    <string name="ankiquest_deck_moment_title">Stapel abgeschlossen</string>
+    <string name="ankiquest_deck_moment_body">Ich habe heute mit %1$s fertig gelernt.</string>
+    <plurals name="aq_moment_more">
+        <item quantity="one">Und %d weiterer: wische, um ihn zu sehen</item>
+        <item quantity="other">Und %d weitere: wische, um sie zu sehen</item>
+    </plurals>
+    <string name="aq_moment_position">%1$d von %2$d</string>
+    <string name="ankiquest_share_send_to">Senden an</string>
+    <string name="ankiquest_share_all_friends">Alle Freunde</string>
+    <string name="ankiquest_share_search">Freunde und Gruppen suchen</string>
+    <string name="ankiquest_share_group">Gruppe: %1$s</string>
+    <string name="ankiquest_share_no_match">Kein Freund und keine Gruppe heißt so.</string>
+    <string name="ankiquest_share_note_hint">Nachricht hinzufügen (optional)</string>
+    <string name="ankiquest_share_sending">Wird gesendet…</string>
+    <string name="ankiquest_share_refused">Konnte nicht geteilt werden (%1$s).</string>
+    <string name="ankiquest_share_more_apps">Weitere Apps…</string>
+    <string name="ankiquest_share_targets_failed">Deine Freunde konnten nicht geladen werden. Prüfe deine Verbindung oder teile mit einer anderen App.</string>
+    <string name="ankiquest_share_invite">Freund einladen</string>
+    <string name="ankiquest_share_lonely">Füge Freunde in AnkiQuest hinzu, um deine Momente mit ihnen zu teilen.</string>
+    <string name="ankiquest_share_uploading">Dein Lernen wird hochgeladen…</string>
+</resources>

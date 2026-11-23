@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aki_welcome">Aki está aqui para te ajudar. Um cartão, um pequeno passo.</string>
+    <string name="aki_complete">Já terminaste os cartões por agora. Bom trabalho!</string>
+    <string name="aki_streak">Estudaste hoje. Vale a pena preservar esse progresso.</string>
+    <string name="aki_protected">Uma proteção salvou a tua sequência. Um novo começo espera por ti.</string>
+    <plurals name="aki_streak_waiting">
+        <item quantity="one">Ainda não estudaste hoje. A tua sequência de %d dia continua à espera.</item>
+        <item quantity="many">Ainda não estudaste hoje. A tua sequência de %d dias continua à espera.</item>
+        <item quantity="other">Ainda não estudaste hoje. A tua sequência de %d dias continua à espera.</item>
+    </plurals>
+</resources>

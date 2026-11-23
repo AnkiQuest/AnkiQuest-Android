@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_goal_setup_failed">Não foi possível guardar o objetivo diário. Tenta novamente.</string>
+    <string name="aq_goal_today">Meta de hoje</string>
+    <string name="aq_goal_minimum_minutes">Mínimo para a sequência: %1$d minutos de revisão hoje</string>
+    <string name="aq_goal_minimum_any">Qualquer revisão hoje mantém sua sequência.</string>
+    <string name="aq_goal_minimum_minutes_done">Sequência garantida: você atingiu o mínimo de %1$d minutos de hoje.</string>
+    <string name="aq_goal_minimum_any_done">Sequência garantida: hoje conta para sua sequência.</string>
+    <string name="aq_goal_progress_cards">%1$d de %2$d cartões</string>
+    <string name="aq_goal_progress_minutes">%1$d de %2$d minutos</string>
+    <string name="aq_goal_daily">Meta diária: %1$s</string>
+    <string name="aq_goal_backlog_explained">Os cartões de hoje mais %1$d dos teus %2$d cartões atrasados. Dias que faltam no plano: %3$d.</string>
+    <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
+    <string name="aq_goal_time_left">Faltam ~%1$d min</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_syncing">A sincronizar…</string>
+    <string name="aq_goal_minimum_syncing">As revisões de hoje ainda estão a caminho do servidor. A sequência fica garantida quando o servidor as contar.</string>
+    <string name="aq_goal_streak_safe">Hoje conta ✓</string>
+    <string name="aq_streak_minimum_title">Sequência garantida por hoje</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s dia de sequência</item>
+        <item quantity="other">%s dias de sequência</item>
+    </plurals>
+    <string name="aq_goal_streak_any">Revise uma vez para manter sua sequência</string>
+    <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
+    <string name="ankiquest_goal_cards_title">Cartões por dia</string>
+    <string name="ankiquest_goal_minutes_title">Minutos por dia</string>
+    <string name="ankiquest_goal_title">Meta diária</string>
+    <string name="ankiquest_goal_setup_title">Escolhe a tua meta diária</string>
+    <string name="ankiquest_goal_mode_backlog">Recuperar o atraso num número de dias</string>
+    <string name="ankiquest_goal_off">Sem meta diária</string>
+    <string name="ankiquest_goal_custom">Outro</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d dia</item>
+        <item quantity="other">%d dias</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">De %1$d a %2$d</string>
+    <string name="ankiquest_goal_invalid">Escolhe um número de %1$d a %2$d.</string>
+    <string name="ankiquest_goal_estimating">A calcular o que isto significa para a tua coleção…</string>
+    <string name="ankiquest_goal_estimate_failed">Não foi possível ler a tua coleção, por isso não há estimativas.</string>
+    <string name="ankiquest_goal_estimate_off">Sem meta: cada revisão continua a contar para a tua sequência.</string>
+    <string name="ankiquest_goal_estimate_cards">Cartões hoje: %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Tempo hoje: %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Atraso recuperado em %d dia</item>
+        <item quantity="other">Atraso recuperado em %d dias</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Atraso recuperado: nunca, só as tuas revisões já somam %d cartão por dia</item>
+        <item quantity="other">Atraso recuperado: nunca, só as tuas revisões já somam %d cartões por dia</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Para reduzir o atraso, estuda pelo menos %d cartão por dia.</item>
+        <item quantity="other">Para reduzir o atraso, estuda pelo menos %d cartões por dia.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Nada em atraso. Cerca de %d cartão fica para rever por dia.</item>
+        <item quantity="other">Nada em atraso. Cerca de %d cartões ficam para rever por dia.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">A guardar…</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Recuperar o atraso em %d dia</item>
+        <item quantity="other">Recuperar o atraso em %d dias</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d cartão por dia</item>
+        <item quantity="other">%d cartões por dia</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d minuto por dia</item>
+        <item quantity="other">%d minutos por dia</item>
+    </plurals>
+    <string name="ankiquest_streak_widget_label">Sequência AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Sua sequência em destaque com seu companheiro</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">dia de sequência</item>
+        <item quantity="other">dias de sequência</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">O humor da Aki no ícone</string>
+    <string name="ankiquest_mood_icon_summary">O ícone sorri quando hoje já conta, se preocupa no fim do dia e mostra um protetor quando ele te cobre. O ícone muda depois que você sai do aplicativo. Alguns launchers escondem o ícone por um instante ao trocar.</string>
+    <string name="aq_goal_streak_safe_unsent">Hoje conta ✓ · ainda não enviado</string>
+    <string name="aq_goal_minimum_unsent">O AnkiQuest conta suas revisões assim que forem enviadas.</string>
+    <string name="aq_goal_streak_safe_offline">Hoje conta ✓ · à espera de ligação</string>
+    <string name="aq_goal_streak_safe_signed_out">Hoje conta ✓ · inicia sessão de novo para enviar</string>
+    <string name="aq_goal_streak_safe_server">Hoje conta ✓ · erro do servidor, nova tentativa em breve</string>
+    <string name="aq_goal_streak_safe_refused">Hoje conta ✓ · envio recusado</string>
+    <string name="aq_goal_streak_safe_cert_expired">Hoje conta ✓ · o certificado do servidor expirou, nova tentativa em breve</string>
+    <string name="aq_goal_streak_safe_cert_self_signed">Hoje conta ✓ · o certificado do servidor é autoassinado, nova tentativa em breve</string>
+    <string name="aq_goal_streak_safe_cert_wrong_host">Hoje conta ✓ · o certificado do servidor é de outro endereço, nova tentativa em breve</string>
+    <string name="aq_goal_streak_safe_cert_unverified">Hoje conta ✓ · não foi possível verificar o certificado do servidor, nova tentativa em breve</string>
+    <string name="aq_goal_upload_signed_out">O servidor recusou a sessão deste dispositivo. Inicia sessão de novo nas definições do AnkiQuest.</string>
+    <string name="aq_goal_upload_refused">«Testar ligação» nas definições do AnkiQuest indica o motivo.</string>
+</resources>

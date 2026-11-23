@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: ankiquest shared fixtures
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  # Required check: the merge queue waits for it on its merge commit.
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+    inputs:
+      server_ref:
+        description: "Optional server branch, tag or commit to compare; blank checks the committed pin"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the immutable server pin or manual override
+        id: server-ref
+        env:
+          SERVER_REF: ${{ inputs.server_ref }}
+        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AnkiQuest/AnkiQuest-Server
+          ref: ${{ steps.server-ref.outputs.ref }}
+          path: server
+          persist-credentials: false
+          sparse-checkout: |
+            docs/api/examples
+            tests/fixtures
+
+      - name: Verify committed examples and shared fixtures
+        if: inputs.server_ref == ''
+        run: node .github/ankiquest_server_snapshot.cjs verify server
+
+      - name: Compare with the manually requested server data
+        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
+        shell: bash
+        run: node .github/ankiquest_server_snapshot.cjs compare server

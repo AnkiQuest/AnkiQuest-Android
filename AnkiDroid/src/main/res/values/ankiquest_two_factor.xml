@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_two_factor_key" translatable="false">ankiquestTwoFactor</string>
+    <!-- The same words as the website and the add-on. -->
+    <string name="ankiquest_two_factor_title" maxLength="41">Two-factor authentication</string>
+    <string name="ankiquest_two_factor_summary">Set it up or turn it off on the website.</string>
+    <string name="ankiquest_two_factor_code">Authenticator code or recovery code</string>
+    <string name="ankiquest_two_factor_asked">Enter the code from your authenticator app.</string>
+    <string name="ankiquest_two_factor_refused">That code is not right.</string>
+    <string name="ankiquest_two_factor_locked">Too many wrong codes. Try again in 15 minutes.</string>
+</resources>

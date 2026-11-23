@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/ankiquest_companion_title"
+    android:key="@string/ankiquest_companion_screen_key">
+    <!-- Shown only while the choice is loading, cannot be read, or needs an account. -->
+    <Preference
+        android:key="@string/ankiquest_companion_status_key"
+        android:persistent="false"
+        android:selectable="false"
+        app:isPreferenceVisible="false" />
+    <com.ichi2.anki.preferences.AnkiquestCompanionPicker
+        android:key="@string/ankiquest_companion_picker_key"
+        android:persistent="false" />
+</PreferenceScreen>

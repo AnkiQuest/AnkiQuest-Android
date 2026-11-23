@@ -39,7 +39,15 @@ class LicenseHeaderExistsTest {
     private val spdxApacheHeader =
         "// SPDX-License-Identifier: Apache-2.0"
 
+    @Language("JAVA")
+    private val spdxAgplHeader =
+        "// SPDX-License-Identifier: AGPL-3.0-or-later"
+
     // invalid
+    @Language("JAVA")
+    private val spdxAgplOnlyHeader =
+        "// SPDX-License-Identifier: AGPL-3.0-only"
+
     @Language("JAVA")
     private val spdxOldGplHeader =
         "// SPDX-License-Identifier: GPL-3.0"
@@ -116,6 +124,16 @@ class LicenseHeaderExistsTest {
     }
 
     @Test
+    fun fileWithSpdxAgplLicenseHeaderPasses() {
+        lint()
+            .allowMissingSdk()
+            .files(create(spdxAgplHeader))
+            .issues(LicenseHeaderExists.ISSUE)
+            .run()
+            .expectClean()
+    }
+
+    @Test
     fun fileWithGplAndCopyrightHeaderPasses() {
         lint()
             .allowMissingSdk()
@@ -131,6 +149,17 @@ class LicenseHeaderExistsTest {
             .allowMissingSdk()
             .allowCompilationErrors()
             .files(create(spdxOldGplHeader))
+            .issues(LicenseHeaderExists.ISSUE)
+            .run()
+            .expectErrorCount(1)
+    }
+
+    @Test
+    fun fileWithSpdxAgplOnlyHeaderFails() {
+        lint()
+            .allowMissingSdk()
+            .allowCompilationErrors()
+            .files(create(spdxAgplOnlyHeader))
             .issues(LicenseHeaderExists.ISSUE)
             .run()
             .expectErrorCount(1)

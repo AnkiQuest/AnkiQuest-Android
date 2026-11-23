@@ -1,0 +1,176 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: ankiquest APK
+
+# A documentation-only push to master builds no nightly, with paths-ignore: this is not a required
+# check and does not run in the merge queue. GitHub does not apply path filters to tag pushes, so
+# every quest-* tag still builds. The globs are the documentation list of ankiquest_lint.yml's
+# changes job (.github/tests/docs-only.test.cjs); they leave out the release notes in the app's
+# assets, which ship in the APK.
+on:
+  push:
+    branches: [master]
+    tags: ["quest-*"]
+    paths-ignore:
+      - '*.md'
+      - '*/README.md'
+      - '*/*/README.md'
+      - '.agents/**/*.md'
+      - '.github/workflows/README.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - '.idea/**/*.md'
+      - '.oss-scanner/*.md'
+      - 'LICENSE*'
+      - 'LICENSES/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ankiquest-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: "jetbrains"
+          java-version: "21"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+
+      - name: Release number
+        id: release
+        run: |
+          nightly=0
+          if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then
+            number="${GITHUB_REF#refs/tags/quest-}"
+            [[ "$number" =~ ^[0-9]+$ ]] || { echo "::error::tag must be quest-<number>"; exit 1; }
+          elif tag=$(git describe --tags --match 'quest-[0-9]*' --abbrev=0 HEAD 2>/dev/null); then
+            number="${tag#quest-}"
+            nightly=$(git rev-list --count --first-parent "$tag..HEAD")
+            if [ "$nightly" -gt 999 ]; then
+              echo "::error::$nightly commits since $tag; tag a release so nightly builds keep upgrading"
+              exit 1
+            fi
+          else
+            number=0
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "nightly=$nightly" >> "$GITHUB_OUTPUT"
+
+      # The newest upstream AnkiDroid commit merged into this build, for the debug info.
+      # Upstream merges keep upstream history, so the merge base with upstream main is that commit.
+      - name: Upstream commit
+        id: upstream
+        run: |
+          git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
+          sha=$(git merge-base HEAD FETCH_HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble
+        run: |
+          echo "fatal_warnings=false" >> local.properties
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
+            -PankiquestRelease=${{ steps.release.outputs.number }} \
+            -PankiquestNightly=${{ steps.release.outputs.nightly }} \
+            -PupstreamCommit=${{ steps.upstream.outputs.sha }}
+          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
+
+      - name: Sign with the AnkiQuest release key
+        id: sign
+        env:
+          ANKIQUEST_KEYSTORE: ${{ secrets.ANKIQUEST_KEYSTORE }}
+          ANKIQUEST_KEY_PASSWORD: ${{ secrets.ANKIQUEST_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANKIQUEST_KEYSTORE" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then
+              echo "::error::ANKIQUEST_KEYSTORE is required to sign a release"
+              exit 1
+            fi
+            echo "::warning::No ANKIQUEST_KEYSTORE; this build stays on the public fallback key"
+            exit 0
+          fi
+          echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$apksigner" sign \
+            --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
+            --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
+            --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
+            AnkiQuest.apk
+          rm -f "$RUNNER_TEMP/ankiquest.jks"
+          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiQuest.apk | grep -q "CN=AnkiQuest"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Version code
+        id: version
+        env:
+          RELEASE: ${{ steps.release.outputs.number }}
+          NIGHTLY: ${{ steps.release.outputs.nightly }}
+        run: |
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          version_code=$("$aapt2" dump badging AnkiQuest.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          echo "versionCode $version_code (quest-$RELEASE + $NIGHTLY)"
+          if [ "$RELEASE" -gt 0 ] && [ "$version_code" -ne $((50000000 + RELEASE * 1000 + NIGHTLY)) ]; then
+            echo "::error::versionCode $version_code does not match quest-$RELEASE + $NIGHTLY"
+            exit 1
+          fi
+          echo "code=$version_code" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ankiquest
+          path: AnkiQuest.apk
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/quest-')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+            --title "AnkiQuest ${{ steps.release.outputs.number }}" \
+            --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
+
+      - name: Publish nightly
+        if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE: ${{ steps.release.outputs.number }}
+          NIGHTLY: ${{ steps.release.outputs.nightly }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          jq -n --argjson release "$RELEASE" --argjson nightly "$NIGHTLY" --argjson version_code "$VERSION_CODE" \
+            --arg commit "$GITHUB_SHA" --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson size "$(stat -c %s AnkiQuest.apk)" \
+            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
+            > nightly.json
+          gh release delete nightly --yes --cleanup-tag || true
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk nightly.json \
+            --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "AnkiQuest nightly" \
+            --notes "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."

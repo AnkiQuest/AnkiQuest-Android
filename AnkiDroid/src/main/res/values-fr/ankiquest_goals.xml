@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_goal_setup_failed">Impossible d’enregistrer l’objectif quotidien. Réessaie.</string>
+    <string name="aq_goal_today">Objectif du jour</string>
+    <string name="aq_goal_minimum_minutes">Minimum pour la série : %1$d minutes de révision aujourd’hui</string>
+    <string name="aq_goal_minimum_any">Une seule révision aujourd’hui suffit pour garder ta série.</string>
+    <string name="aq_goal_minimum_minutes_done">Série assurée : tu as atteint le minimum de %1$d minutes.</string>
+    <string name="aq_goal_minimum_any_done">Série assurée : aujourd’hui compte pour ta série.</string>
+    <string name="aq_goal_progress_cards">%1$d cartes sur %2$d</string>
+    <string name="aq_goal_progress_minutes">%1$d minutes sur %2$d</string>
+    <string name="aq_goal_daily">Objectif du jour : %1$s</string>
+    <string name="aq_goal_backlog_explained">Les cartes du jour plus %1$d de tes %2$d cartes en retard. Jours restants dans ton plan : %3$d.</string>
+    <string name="aq_goal_done_title">Objectif du jour atteint ! 🎉</string>
+    <string name="aq_goal_time_left">Encore ~%1$d min</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_syncing">Synchronisation…</string>
+    <string name="aq_goal_minimum_syncing">Tes révisions du jour sont encore en route vers le serveur. La série est assurée dès que le serveur les compte.</string>
+    <string name="aq_goal_streak_safe">Aujourd’hui compte ✓</string>
+    <string name="aq_streak_minimum_title">Série assurée pour aujourd’hui</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s jour de série</item>
+        <item quantity="other">%s jours de série</item>
+    </plurals>
+    <string name="aq_goal_streak_any">Une révision et ta série est sauvée</string>
+    <string name="ankiquest_streak_short">%1$d minutes sur %2$d aujourd’hui</string>
+    <string name="ankiquest_goal_cards_title">Cartes par jour</string>
+    <string name="ankiquest_goal_minutes_title">Minutes par jour</string>
+    <string name="ankiquest_goal_title">Objectif du jour</string>
+    <string name="ankiquest_goal_setup_title">Choisis ton objectif quotidien</string>
+    <string name="ankiquest_goal_mode_backlog">Rattraper mon retard en un nombre de jours</string>
+    <string name="ankiquest_goal_off">Pas d’objectif quotidien</string>
+    <string name="ankiquest_goal_custom">Autre</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d jour</item>
+        <item quantity="other">%d jours</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">De %1$d à %2$d</string>
+    <string name="ankiquest_goal_invalid">Choisis un nombre de %1$d à %2$d.</string>
+    <string name="ankiquest_goal_estimating">Calcul de ce que cela représente pour ta collection…</string>
+    <string name="ankiquest_goal_estimate_failed">Impossible de lire ta collection, donc pas d’estimation.</string>
+    <string name="ankiquest_goal_estimate_off">Sans objectif : chaque révision compte toujours pour ta série.</string>
+    <string name="ankiquest_goal_estimate_cards">Cartes aujourd’hui : %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Temps aujourd’hui : %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Retard rattrapé en %d jour</item>
+        <item quantity="other">Retard rattrapé en %d jours</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Retard rattrapé : jamais, tes révisions seules font déjà %d carte par jour</item>
+        <item quantity="other">Retard rattrapé : jamais, tes révisions seules font déjà %d cartes par jour</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Pour réduire ton retard, étudie au moins %d carte par jour.</item>
+        <item quantity="other">Pour réduire ton retard, étudie au moins %d cartes par jour.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Rien en retard. Environ %d carte arrive à échéance chaque jour.</item>
+        <item quantity="other">Rien en retard. Environ %d cartes arrivent à échéance chaque jour.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">Enregistrement…</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Rattraper le retard en %d jour</item>
+        <item quantity="other">Rattraper le retard en %d jours</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d carte par jour</item>
+        <item quantity="other">%d cartes par jour</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d minute par jour</item>
+        <item quantity="other">%d minutes par jour</item>
+    </plurals>
+    <string name="ankiquest_streak_widget_label">Série AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Ta série en grand avec ton compagnon</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">jour de série</item>
+        <item quantity="other">jours de série</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">L’humeur d’Aki sur l’icône</string>
+    <string name="ankiquest_mood_icon_summary">L’icône sourit quand la journée compte, s’inquiète tard le soir et montre une protection quand elle te couvre. L’icône change quand tu quittes l’application. Certains lanceurs masquent brièvement l’icône pendant le changement.</string>
+    <string name="aq_goal_streak_safe_unsent">Aujourd’hui compte ✓ · pas encore envoyé</string>
+    <string name="aq_goal_minimum_unsent">AnkiQuest compte tes révisions une fois envoyées.</string>
+    <string name="aq_goal_streak_safe_offline">Aujourd’hui compte ✓ · en attente de connexion</string>
+    <string name="aq_goal_streak_safe_signed_out">Aujourd’hui compte ✓ · reconnecte-toi pour envoyer</string>
+    <string name="aq_goal_streak_safe_server">Aujourd’hui compte ✓ · erreur du serveur, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_refused">Aujourd’hui compte ✓ · envoi refusé</string>
+    <string name="aq_goal_streak_safe_cert_expired">Aujourd’hui compte ✓ · le certificat du serveur a expiré, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_cert_self_signed">Aujourd’hui compte ✓ · le certificat du serveur est auto-signé, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_cert_wrong_host">Aujourd’hui compte ✓ · le certificat du serveur est celui d’une autre adresse, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_cert_unverified">Aujourd’hui compte ✓ · impossible de vérifier le certificat du serveur, nouvel essai prévu</string>
+    <string name="aq_goal_upload_signed_out">Le serveur a refusé la connexion de cet appareil. Reconnecte-toi dans les réglages AnkiQuest.</string>
+    <string name="aq_goal_upload_refused">« Tester la connexion » dans les réglages AnkiQuest indique pourquoi.</string>
+</resources>

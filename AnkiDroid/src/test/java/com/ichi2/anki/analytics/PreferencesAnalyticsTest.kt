@@ -7,6 +7,7 @@ import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.AnkiquestAnalyticsExclusions
 import com.ichi2.anki.preferences.PreferenceTestUtils
 import com.ichi2.testutils.EmptyApplication
 import org.hamcrest.MatcherAssert.assertThat
@@ -90,7 +91,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.pref_allow_dangerous_js_api, // allow_dangerous_js_api
             // Security-sensitive settings (GHSL-2026-085)
             R.string.pref_allow_card_external_launch_key, // allowCardExternalLaunch
-        ).toStringResourceSet()
+        ).toStringResourceSet() + AnkiquestAnalyticsExclusions.keys(targetContext)
 
     @Test
     fun `The include and excluded prefs lists don't share elements`() {

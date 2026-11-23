@@ -5,10 +5,13 @@ package com.ichi2.anki
 import android.content.Intent
 import android.view.View
 import androidx.core.content.edit
+import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.android.view.locationInWindow
+import com.ichi2.anki.ankiquest.awaitDeckHolder
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.libanki.DeckId
@@ -17,7 +20,6 @@ import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackupManagerTestUtilities
 import com.ichi2.testutils.dispatchInsets
-import com.ichi2.testutils.lastItemView
 import com.ichi2.testutils.scrollToEnd
 import com.ichi2.testutils.simulateKeyboard
 import kotlinx.coroutines.flow.first
@@ -235,11 +237,15 @@ class DeckPickerScreenshotTest : ScreenshotTest() {
         simulateKeyboard()
     }
 
-    /** Scrolls to the end, then back so the last deck's name is centered on the 'Studied' line */
+    /** Centers the last deck's name on the 'Studied' line, excluding the heatmap footer. */
     private fun DeckPicker.scrollLastDeckOntoStudiedLine() {
         val list = deckPickerBinding.decks
-        list.scrollToEnd()
-        val lastDeck = list.lastItemView
+        val deckAdapter = (list.adapter as ConcatAdapter).adapters.filterIsInstance<DeckAdapter>().single()
+        advanceRobolectricLooperUntil { deckAdapter.currentList.isNotEmpty() }
+        val lastDeckId = deckAdapter.currentList.last().did
+        val lastDeckPosition = deckAdapter.itemCount - 1
+        (list.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(lastDeckPosition, 0)
+        val lastDeck = awaitDeckHolder(lastDeckId).itemView
         val studiedLine = deckPickerBinding.reviewSummaryTextView
         list.scrollBy(0, lastDeck.contentCenterYInWindow - studiedLine.contentCenterYInWindow)
         advanceRobolectricLooper()
@@ -279,7 +285,7 @@ class DeckPickerScreenshotTest : ScreenshotTest() {
      * Waits until the deck list's [RecyclerView] has rendered [deckIds] as expanded.
      */
     private fun DeckPicker.awaitDecksRenderedExpanded(vararg deckIds: DeckId) {
-        val adapter = this.deckPickerBinding.decks.adapter as DeckAdapter
+        val adapter = (deckPickerBinding.decks.adapter as ConcatAdapter).adapters.filterIsInstance<DeckAdapter>().single()
         advanceRobolectricLooperUntil(
             lazyMessage = {
                 "Decks ${deckIds.toList()} not rendered as expanded. Displayed: " +

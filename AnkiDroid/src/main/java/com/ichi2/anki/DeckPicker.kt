@@ -101,6 +101,10 @@ import com.ichi2.anki.android.back.exitViaDoubleTapBackCallback
 import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.android.view.locationInWindow
+import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
+import com.ichi2.anki.ankiquest.AnkiquestDeckShare
+import com.ichi2.anki.ankiquest.AnkiquestNavigation
+import com.ichi2.anki.ankiquest.AnkiquestStudySession
 import com.ichi2.anki.common.android.AdaptionUtil
 import com.ichi2.anki.common.android.animationDisabled
 import com.ichi2.anki.common.android.appContext
@@ -506,6 +510,8 @@ open class DeckPicker :
     // ANDROID ACTIVITY METHODS
     // ----------------------------------------------------------------------------
 
+    private var ankiquestNavigationMode: Boolean? = null
+
     /** Called when the activity is first created.  */
     @Throws(SQLException::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -565,11 +571,12 @@ open class DeckPicker :
 
         // create inherited navigation drawer layout here so that it can be used by parent class
         initNavigationDrawer()
-        if (bottomNavigationEnabled) {
+        if (bottomNavigationEnabled && !AnkiquestNavigation.enabled()) {
             disableDrawerSwipe()
             disableDrawerIndicator()
         }
         setupBottomNavigation()
+        ankiquestNavigationMode = AnkiquestNavigation.enabled()
         setupEdgeToEdge()
         title = resources.getString(R.string.app_name)
 
@@ -597,7 +604,7 @@ open class DeckPicker :
             )
         // The first list may arrive after RecyclerView restores its view hierarchy.
         deckListAdapter.stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
-        deckPickerBinding.decks.adapter = deckListAdapter
+        deckPickerBinding.decks.adapter = AnkiquestDeckPickerHooks.deckListAdapter(this, deckListAdapter)
         if (bottomNavigationEnabled) {
             deckPickerBinding.decks.addItemDecoration(
                 DeckHierarchyLinesDecoration(this, deckListAdapter),
@@ -1167,6 +1174,7 @@ open class DeckPicker :
                 dismissAllDialogFragments()
                 openScheduleReminders(deckId)
             }
+            DeckPickerContextMenuOption.SHARE_WITH_FRIENDS -> AnkiquestDeckShare.choose(this, deckId)
         }
     }
 
@@ -1305,6 +1313,7 @@ open class DeckPicker :
         // activity (see StudyOptionsFragment), and the menu host dispatches creation,
         // preparation and selection to them. This activity never drives a fragment's menu.
         menuInflater.inflate(R.menu.deck_picker, menu)
+        AnkiquestDeckPickerHooks.decorateMenu(this, menu)
         menu.findItem(R.id.deck_picker_action_filter)?.let {
             toolbarSearchItem = it
             setupSearchIcon(it)
@@ -1515,6 +1524,7 @@ open class DeckPicker :
         if (drawerToggle.onOptionsItemSelected(item)) {
             return true
         }
+        if (AnkiquestDeckPickerHooks.onOptionsItemSelected(this, item, ::openCardBrowser)) return true
         when (item.itemId) {
             R.id.action_undo -> {
                 Timber.i("DeckPicker:: Undo button pressed")
@@ -1615,6 +1625,7 @@ open class DeckPicker :
     }
 
     private fun processReviewResults(resultCode: Int) {
+        if (AnkiquestDeckPickerHooks.onReviewResult(this, resultCode, ::openReviewer)) return
         if (resultCode == AbstractFlashcardViewer.RESULT_NO_MORE_CARDS) {
             launchCatchingTask {
                 val state = withCol { currentDeckStudyState() }
@@ -1631,8 +1642,10 @@ open class DeckPicker :
         // As `loadDeckCounts` is cancelled in `migrate()`
         val message = dialogHandler.popMessage()
         super.onResume()
+        if (AnkiquestDeckPickerHooks.recreateIfNavigationChanged(this, ankiquestNavigationMode)) return
         if (navDrawerIsReady() && hasCollectionStoragePermissions()) {
             refreshState()
+            AnkiquestDeckPickerHooks.refreshGoal(this)
         }
         viewModel.onScreenResumed()
         message?.let { dialogHandler.sendStoredMessage(it) }
@@ -1762,6 +1775,7 @@ open class DeckPicker :
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (AnkiquestDeckPickerHooks.dispatchNavigationKey(this, event)) return true
         if (!bottomNavigationEnabled || event.action != KeyEvent.ACTION_DOWN || !event.isAltPressed) {
             return super.dispatchKeyEvent(event)
         }
@@ -1938,6 +1952,9 @@ open class DeckPicker :
      */
     private fun onFinishedStartup() {
         launchCatchingTask {
+            val ankiquestHandled =
+                AnkiquestDeckPickerHooks.onFinishedStartup(this@DeckPicker, ::openReviewer) { automaticSync(runInBackground = true) }
+            if (ankiquestHandled) return@launchCatchingTask
             if (!automaticSync()) {
                 BackupPromptDialog.showIfAvailable(this@DeckPicker)
             }
@@ -2288,6 +2305,7 @@ open class DeckPicker :
 
         // otherwise, we need to launch the activity
         Timber.i("Opening Study Options")
+        AnkiquestStudySession.start()
         reviewLauncher.navigate(StudyOptionsDestination)
     }
 
@@ -2495,6 +2513,7 @@ open class DeckPicker :
 
     private fun openReviewer() {
         Timber.i("Opening Reviewer")
+        AnkiquestStudySession.start()
         reviewLauncher.navigate(ReviewDeckDestination.CurrentDeck)
     }
 
@@ -2544,7 +2563,8 @@ open class DeckPicker :
             fun bottomNavShortcut(
                 keys: String,
                 destination: NavigationItem,
-            ) = if (bottomNavigationEnabled) shortcut(keys, destination.shortcutLabel) else null
+            ) = AnkiquestDeckPickerHooks.navigationShortcut(this, keys, destination)
+                ?: if (bottomNavigationEnabled) shortcut(keys, destination.shortcutLabel) else null
 
             return ShortcutGroup(
                 listOfNotNull(
@@ -2625,6 +2645,7 @@ open class DeckPicker :
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         this.intent = intent
+        AnkiquestDeckPickerHooks.onNewIntent(this, ankiquestNavigationMode, ::openReviewer)
         if (intent.hasExtra(EXTRA_SYNC_FROM_LOGIN)) {
             Timber.i("Sync requested from Login")
             this.syncOnResume = true

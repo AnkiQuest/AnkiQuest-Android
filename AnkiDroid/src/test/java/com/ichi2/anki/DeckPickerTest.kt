@@ -49,6 +49,9 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.DeckPickerFloatingActionMenu.CloseAnimation
+import com.ichi2.anki.ankiquest.awaitDeckHolder
+import com.ichi2.anki.ankiquest.awaitInitialDeckHolder
+import com.ichi2.anki.ankiquest.deckRowsAdapter
 import com.ichi2.anki.browser.CardBrowserFragment
 import com.ichi2.anki.browser.CardBrowserViewModel.RowSelection
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -86,7 +89,6 @@ import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.Destination
 import com.ichi2.anki.utils.ext.defaultConfig
 import com.ichi2.anki.utils.ext.dismissAllDialogFragments
-import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackendEmulatingOpenConflict
 import com.ichi2.testutils.BackupManagerTestUtilities
 import com.ichi2.testutils.common.Flaky
@@ -174,7 +176,7 @@ class DeckPickerTest : RobolectricTest() {
         assertThat(col.sched.deckDueTree().find(DEFAULT_DECK_ID), nullValue())
 
         deckPicker {
-            advanceRobolectricLooperUntil { deckPickerBinding.decks.adapter?.itemCount == 1 }
+            advanceRobolectricLooperUntil { visibleDeckCount == 1 }
             shadowOf(this).clearNextStartedActivities()
 
             assertTrue(onKeyUp(KeyEvent.KEYCODE_S, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_S)))
@@ -191,7 +193,7 @@ class DeckPickerTest : RobolectricTest() {
         val filtered = col.decks.newFiltered("Filtered")
 
         deckPicker {
-            advanceRobolectricLooperUntil { deckPickerBinding.decks.adapter?.itemCount == 2 }
+            advanceRobolectricLooperUntil { visibleDeckCount == 2 }
             shadowOf(this).clearNextStartedActivities()
 
             assertTrue(onKeyUp(KeyEvent.KEYCODE_S, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_S)))
@@ -625,19 +627,13 @@ class DeckPickerTest : RobolectricTest() {
         return supportFragmentManager.findFragmentByTag("browser") as CardBrowserFragment
     }
 
-    private fun DeckPicker.longPressDeck(name: String): View {
-        val decks = deckPickerBinding.decks
-        val adapter = decks.adapter as DeckAdapter
-        // Background list diffs can finish after the initial main looper drain.
-        advanceRobolectricLooperUntil(lazyMessage = { "Deck '$name' was not laid out" }) {
-            val position = adapter.currentList.indexOfFirst { it.lastDeckNameComponent == name }
-            position >= 0 && decks.findViewHolderForAdapterPosition(position) != null
+    private fun DeckPicker.longPressDeck(deckId: DeckId): View {
+        val adapter = deckRowsAdapter
+        awaitInitialDeckHolder(deckId).itemView.performLongClick()
+        advanceRobolectricLooperUntil {
+            viewModel.focusedDeck == deckId && adapter.currentList.any { it.did == deckId && it.isSelected }
         }
-        val deck = adapter.currentList.single { it.lastDeckNameComponent == name }
-        val position = adapter.currentList.indexOf(deck)
-        decks.findViewHolderForAdapterPosition(position)!!.itemView.performLongClick()
-        advanceRobolectricLooperUntil { adapter.currentList[position].isSelected }
-        return decks.findViewHolderForAdapterPosition(position)!!.itemView
+        return awaitDeckHolder(deckId).itemView
     }
 
     private fun keyDownEvent(
@@ -1333,12 +1329,12 @@ class DeckPickerTest : RobolectricTest() {
     @Test
     fun `long pressed deck is highlighted on phones`() {
         val initiallySelectedDeck = addDeck("Initially selected")
-        addDeck("Long pressed")
+        val longPressedDeck = addDeck("Long pressed")
         col.decks.select(initiallySelectedDeck)
 
         deckPicker {
             assumeTrue("Not running on tablet", !fragmented)
-            val selectedDeck = longPressDeck("Long pressed")
+            val selectedDeck = longPressDeck(longPressedDeck)
 
             assertThat(
                 shadowOf(selectedDeck.background).createdFromResId,
@@ -1377,7 +1373,7 @@ class DeckPickerTest : RobolectricTest() {
             assertThat("deck focus is set", viewModel.focusedDeck, equalTo(emptyDeck))
 
             // ACT: open up the Deck Context Menu
-            longPressDeck("With Cards")
+            longPressDeck(deckWithCards)
 
             // ASSERT
             assertThat("unbury is visible: one card is buried", col.sched.haveBuried())

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_two_factor_title">Autenticação de dois fatores</string>
+    <string name="ankiquest_two_factor_summary">Configura-a ou desativa-a no site.</string>
+    <string name="ankiquest_two_factor_code">Código da aplicação de autenticação ou código de recuperação</string>
+    <string name="ankiquest_two_factor_asked">Introduz o código da tua aplicação de autenticação.</string>
+    <string name="ankiquest_two_factor_refused">Esse código não está certo.</string>
+    <string name="ankiquest_two_factor_locked">Demasiados códigos errados. Tenta novamente daqui a 15 minutos.</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_share_deck_title">Deck name</string>
+    <string name="aq_share_deck_edit">Deck: %1$s</string>
+    <string name="aq_share_deck_help">Choose a name or type your own. It stays on this device until you share it.</string>
+    <string name="aq_share_deck_omit">No deck name</string>
+    <string name="aq_share_deck_failed">Could not save the deck name.</string>
+    <string name="aq_share_deck_unavailable">The deck name is unavailable on this device.</string>
+</resources>

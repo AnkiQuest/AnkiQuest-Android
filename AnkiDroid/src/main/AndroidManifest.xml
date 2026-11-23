@@ -352,6 +352,74 @@
             android:label="@string/pref_cat_about_title"
             android:exported="false"
             />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestHomeActivity"
+            android:label="@string/ankiquest_screen_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestFriendsActivity"
+            android:label="@string/ankiquest_nav_friends"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestFeedActivity"
+            android:label="@string/aq_home_activity"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestChallengesActivity"
+            android:label="@string/aq_challenges_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestRecordsActivity"
+            android:label="@string/aq_records_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestHistoryActivity"
+            android:label="@string/aq_history_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestGalleryActivity"
+            android:label="@string/ankiquest_download_picture"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestShareActivity"
+            android:label="@string/ankiquest_share_title"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            />
+
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity"
+            android:label="@string/ankiquest_dashboard_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestProfileActivity"
+            android:label="@string/aq_profile_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestCalendarActivity"
+            android:label="@string/aq_calendar_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestConquestActivity"
+            android:label="@string/aq_profile_conquest"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestChangelogActivity"
+            android:label="@string/ankiquest_changelog"
+            android:exported="false"
+            />
 
         <activity-alias
             android:name="com.ichi2.anki.AnkiCardContextMenuAction"
@@ -465,6 +533,66 @@
         <receiver
             android:name="com.ichi2.anki.receiver.ExportSharedReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestReplyReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestWidgetConfig"
+            android:label="@string/ankiquest_widget_settings_title"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestWidget"
+            android:label="@string/ankiquest_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_provider_ankiquest" />
+        </receiver>
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestWidgetRefreshReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestTransparentWidget"
+            android:label="@string/ankiquest_widget_transparent_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_provider_ankiquest_transparent" />
+        </receiver>
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestStreakWidget"
+            android:label="@string/ankiquest_streak_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_provider_ankiquest_streak" />
+        </receiver>
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestClearStreakWidget"
+            android:label="@string/ankiquest_streak_clear_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_provider_ankiquest_streak_clear" />
+        </receiver>
 
         <receiver
             android:name="com.ichi2.anki.receiver.SdCardReceiver"

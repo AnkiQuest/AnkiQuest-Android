@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <style name="AnkiquestStreakProgress" parent="@android:style/Widget.ProgressBar.Horizontal">
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:indeterminate">false</item>
+        <item name="android:minHeight">0dp</item>
+        <!-- The platform's 48dp minimum would widen the 2x2 number column the meters share. -->
+        <item name="android:minWidth">0dp</item>
+    </style>
+    <color name="ankiquest_streak_warm">#FF7A2F</color>
+    <color name="ankiquest_streak_amber">#E7C45D</color>
+    <color name="ankiquest_streak_blue">#7BBDF0</color>
+    <color name="ankiquest_streak_gray">#A2A6AC</color>
+    <color name="ankiquest_streak_warm_track">#6A3A22</color>
+    <color name="ankiquest_streak_amber_track">#615836</color>
+    <color name="ankiquest_streak_blue_track">#3B566B</color>
+    <color name="ankiquest_streak_gray_track">#484D54</color>
+</resources>

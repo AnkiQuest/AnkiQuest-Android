@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_two_factor_title">Zwei-Faktor-Authentifizierung</string>
+    <string name="ankiquest_two_factor_summary">Richte sie auf der Website ein oder schalte sie aus.</string>
+    <string name="ankiquest_two_factor_code">Code aus der Authenticator-App oder Wiederherstellungscode</string>
+    <string name="ankiquest_two_factor_asked">Gib den Code aus deiner Authenticator-App ein.</string>
+    <string name="ankiquest_two_factor_refused">Dieser Code ist nicht richtig.</string>
+    <string name="ankiquest_two_factor_locked">Zu viele falsche Codes. Versuche es in 15 Minuten erneut.</string>
+</resources>

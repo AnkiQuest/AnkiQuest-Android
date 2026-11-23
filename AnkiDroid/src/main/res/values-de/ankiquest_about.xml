@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_about_channel">Update-Kanal: %1$s</string>
+    <string name="ankiquest_about_based_on">Basiert auf AnkiDroid %1$s</string>
+    <string name="ankiquest_about_credits"><![CDATA[Basiert auf <a href=\"%1$s\">AnkiDroid und der Arbeit seiner Mitwirkenden</a>. Gepflegt von float3 und den Mitwirkenden an <a href=\"%2$s\">AnkiQuest für Android</a>, am <a href=\"%3$s\">AnkiQuest-Server</a> und am <a href=\"%4$s\">AnkiQuest-Desktop-Add-on</a>.]]></string>
+    <string name="ankiquest_about_license"><![CDATA[AnkiDroid steht unter der <a href=\"%1$s\">GPL-3.0</a>. Die AnkiQuest-Erweiterungen stehen unter der <a href=\"%2$s\">AGPL-3.0</a>. Die gesamte App wird unter der AGPL-3.0 verbreitet. <a href=\"%3$s\">Quellcode dieses Builds</a>.]]></string>
+    <string name="ankiquest_about_anki_tan"><![CDATA[<a href=\"%1$s\">Anki-tan</a> von <a href=\"%2$s\">Shigeyuki</a>, <a href=\"%3$s\">CC BY-SA 4.0</a>.]]></string>
+    <string name="ankiquest_rate">AnkiQuest bewerten</string>
+    <string name="ankiquest_changelog">AnkiQuest-Änderungsprotokoll</string>
+    <string name="ankiquest_all_releases">Alle Versionen</string>
+    <string name="ankiquest_ankidroid_changelog">AnkiDroid-Änderungsprotokoll</string>
+    <string name="ankiquest_about_report_bug">Fehler melden</string>
+    <string name="ankiquest_link_copied">Keine App kann den Link öffnen. Link kopiert.</string>
+    <string name="ankiquest_debug_info_title">Debug-Informationen kopieren</string>
+</resources>

@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestDeckRow
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.common.utils.ext.requireAutoMirroredDrawable
 import com.ichi2.anki.databinding.ItemDeckBinding
@@ -168,6 +169,8 @@ class DeckAdapter(
         // Set deck name and colour. Filtered decks have their own colour
         binding.deckName.text = node.lastDeckNameComponent
         binding.deckName.setTextColor(if (node.filtered) deckNameDynColor else deckNameDefaultColor)
+
+        AnkiquestDeckRow.bind(binding, node)
 
         // Set the card counts and their colors
         binding.deckNew.text = node.newCount.toString()

@@ -33,6 +33,8 @@ class AcraBuildConfigTest {
             buildConfig.keys().asSequence().toList(),
             containsInAnyOrder(
                 "ACRA_URL",
+                "ANKIQUEST_NIGHTLY",
+                "ANKIQUEST_RELEASE",
                 "APPLICATION_ID",
                 "BACKEND_VERSION",
                 "BUILD_TIME",
@@ -43,6 +45,7 @@ class AcraBuildConfigTest {
                 "FLAVOR",
                 "GIT_COMMIT_HASH",
                 "SHOW_DONATE_LINKS",
+                "UPSTREAM_COMMIT_HASH",
                 "VERSION_CODE",
                 "VERSION_NAME",
             ),

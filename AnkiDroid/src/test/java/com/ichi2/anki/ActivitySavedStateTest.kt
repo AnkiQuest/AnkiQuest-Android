@@ -3,6 +3,12 @@
 package com.ichi2.anki
 
 import androidx.activity.ComponentActivity
+import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
+import com.ichi2.anki.ankiquest.AnkiquestGalleryActivity
+import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
+import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
+import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
+import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.instantnoteeditor.InstantNoteEditorActivity
 import com.ichi2.testutils.ActivityList
 import com.ichi2.testutils.ActivityList.ActivityLaunchParam
@@ -58,6 +64,11 @@ class ActivitySavedStateTest(
                 .filter { ComponentActivity::class.java.isAssignableFrom(it.activity) }
                 // TODO: Re-enable once the instant editor delivers its LiveData note type before opening the dialog.
                 .filterNot { it.activity == InstantNoteEditorActivity::class.java }
+                // Finishes on the way up without an account, see AllActivitiesRecreationTest.finishesDuringStartup.
+                .filterNot { it.activity == AnkiquestShareActivity::class.java || it.activity == AnkiquestGalleryActivity::class.java }
+                // Compatibility redirects own no persistent screen; Friends and Me restoration are tested instead.
+                .filterNot { it.activity == AnkiquestFeedActivity::class.java || it.activity == AnkiquestLeaderboardActivity::class.java }
+                .filterNot { it.activity == AnkiquestRecordsActivity::class.java || it.activity == AnkiquestHistoryActivity::class.java }
                 .map { arrayOf(it.simpleName, it) }
     }
 }

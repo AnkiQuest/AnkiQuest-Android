@@ -29,6 +29,21 @@ import com.ichi2.anki.SingleFragmentActivity
 import com.ichi2.anki.StoragePermissionSet
 import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.account.AccountActivity
+import com.ichi2.anki.ankiquest.AnkiquestCalendarActivity
+import com.ichi2.anki.ankiquest.AnkiquestChallengesActivity
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
+import com.ichi2.anki.ankiquest.AnkiquestConquestActivity
+import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
+import com.ichi2.anki.ankiquest.AnkiquestFriendsActivity
+import com.ichi2.anki.ankiquest.AnkiquestGalleryActivity
+import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
+import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
+import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
+import com.ichi2.anki.ankiquest.AnkiquestProfileActivity
+import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
+import com.ichi2.anki.ankiquest.AnkiquestShare
+import com.ichi2.anki.ankiquest.AnkiquestShareActivity
+import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
 import com.ichi2.anki.browser.IdsFile
 import com.ichi2.anki.instantnoteeditor.InstantNoteEditorActivity
 import com.ichi2.anki.libanki.Note
@@ -125,6 +140,24 @@ object ActivityList {
             get(DeckPickerWidgetConfig::class.java, normalIntent = { intentForWidgetConfig() }),
             get(CardAnalysisWidgetConfig::class.java) { intentForWidgetConfig() },
             get(AccountActivity::class.java, normalIntent = { AccountActivity.getIntent(targetContext) }),
+            get(AnkiquestHomeActivity::class.java),
+            get(AnkiquestFeedActivity::class.java),
+            get(AnkiquestFriendsActivity::class.java),
+            get(AnkiquestChallengesActivity::class.java),
+            get(AnkiquestRecordsActivity::class.java),
+            get(AnkiquestHistoryActivity::class.java),
+            get(AnkiquestGalleryActivity::class.java),
+            get(AnkiquestShareActivity::class.java) {
+                Intent(it, AnkiquestShareActivity::class.java)
+                    .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")
+                    .putExtra(AnkiquestShare.EXTRA_PLACE, 1)
+            },
+            get(AnkiquestWidgetConfig::class.java) { intentForWidgetConfig() },
+            get(AnkiquestLeaderboardActivity::class.java),
+            get(AnkiquestProfileActivity::class.java),
+            get(AnkiquestCalendarActivity::class.java),
+            get(AnkiquestConquestActivity::class.java) { AnkiquestConquestActivity.intent(it, "hill", 1_793_097_000_000L) },
+            get(AnkiquestChangelogActivity::class.java),
         )
 
     private fun intentForCardTemplateBrowserAppearanceEditor(): Intent {

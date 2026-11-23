@@ -1,0 +1,226 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package com.ichi2.anki.ankiquest
+
+import androidx.core.content.edit
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Choice
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Load
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Settings
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.testutils.EmptyApplication
+import org.json.JSONObject
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(application = EmptyApplication::class)
+class AnkiquestDailyGoalTest {
+    private val prefs = RuntimeEnvironment.getApplication().sharedPrefs().also { it.edit { clear() } }
+
+    @Test
+    fun `the default goal is today's cards plus the backlog spread over thirty days`() {
+        val goal = AnkiquestDailyGoal.goal(Load(day = 5, studiedCards = 0, minutes = 0, dueToday = 40, backlog = 300), Settings())
+        assertEquals(10, goal.extra)
+        assertEquals(50, goal.target)
+        assertEquals(300, goal.backlog)
+        assertEquals(30, goal.daysLeft)
+    }
+
+    @Test
+    fun `the backlog is spread over the days left in the plan`() {
+        val load = Load(5, studiedCards = 0, minutes = 0, dueToday = 40, backlog = 300, studyDay = 20_400)
+        val plan = Settings(backlogDays = 30, since = 20_390)
+        val goal = AnkiquestDailyGoal.goal(load, plan)
+        assertEquals(20, goal.daysLeft)
+        assertEquals(15, goal.extra)
+        assertEquals(55, goal.target)
+        val lastDay = AnkiquestDailyGoal.goal(load.copy(backlog = 7), plan.copy(since = 20_371))
+        assertEquals(1, lastDay.daysLeft)
+        assertEquals(7, lastDay.extra, "the last day takes what is left")
+        val ended = AnkiquestDailyGoal.goal(load, plan.copy(since = 20_370))
+        assertEquals(30, ended.daysLeft, "a plan that ran out starts again")
+    }
+
+    @Test
+    fun `cards studied before the goal is set stay part of it`() {
+        val goal = AnkiquestDailyGoal.goal(Load(5, studiedCards = 25, minutes = 9, dueToday = 15, backlog = 100), Settings())
+        assertEquals(25 + 15 + 4, goal.target)
+    }
+
+    @Test
+    fun `custom goals use the chosen number`() {
+        val load = Load(5, 0, 0, 40, 300)
+        assertEquals(50, AnkiquestDailyGoal.goal(load, Settings(Mode.CARDS, cards = 50)).target)
+        assertEquals(15, AnkiquestDailyGoal.goal(load, Settings(Mode.MINUTES, minutes = 15)).target)
+    }
+
+    @Test
+    fun `the goal is fixed for the day so studying does not move it`() {
+        val morning = AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs)
+        val evening = AnkiquestDailyGoal.status(Load(5, 70, 30, 0, 270), prefs)
+        assertEquals(50, morning.goal.target)
+        assertEquals(50, evening.goal.target)
+        assertTrue(evening.goalDone)
+        val tomorrow = AnkiquestDailyGoal.status(Load(6, 0, 0, 20, 280), prefs)
+        assertEquals(30, tomorrow.goal.target)
+    }
+
+    @Test
+    fun `the day's goal is kept for each account`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+        }
+        assertEquals(50, AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs).goal.target)
+        prefs.edit { putString(Ankiquest.PREF_USER, "hill") }
+        assertEquals(40, AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 300), prefs).goal.target)
+        prefs.edit { putString(Ankiquest.PREF_USER, "cerro") }
+        assertEquals(50, AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 300), prefs).goal.target)
+    }
+
+    @Test
+    fun `an old daily backlog percentage becomes the closest plan length`() {
+        prefs.edit {
+            putString(AnkiquestDailyGoal.PREF_MODE, "backlog")
+            putString(AnkiquestDailyGoal.PREF_BACKLOG_PERCENT, "20")
+        }
+        assertEquals(Choice(Mode.BACKLOG, 14), AnkiquestDailyGoal.localChoice(prefs))
+        prefs.edit { putString(AnkiquestDailyGoal.PREF_BACKLOG_PERCENT, "10") }
+        assertEquals(Choice.DEFAULT, AnkiquestDailyGoal.localChoice(prefs))
+    }
+
+    @Test
+    fun `changing the goal setting works it out again`() {
+        AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs)
+        prefs.edit {
+            putString(AnkiquestDailyGoal.PREF_MODE, "minutes")
+            putInt(AnkiquestDailyGoal.PREF_MINUTES, 25)
+        }
+        val status = AnkiquestDailyGoal.status(Load(5, 10, 12, 30, 300), prefs)
+        assertEquals(Mode.MINUTES, status.mode)
+        assertEquals(25, status.goal.target)
+        assertEquals(12, status.progress)
+    }
+
+    @Test
+    fun `the streak minimum follows the server's minutes`() {
+        AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject().put("streak_minutes", 10)), prefs)
+        val short = AnkiquestDailyGoal.status(Load(5, 8, 6, 30, 0), prefs)
+        assertEquals(10, short.streakMinutes)
+        assertFalse(short.minimumDone)
+    }
+
+    @Test
+    fun `the streak is secured by the server's verdict, or by unsent reviews the server's way`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+            putString(Ankiquest.PREF_TOKEN, "token")
+        }
+        val now = TimeManager.time.intTimeMS()
+        val server =
+            AnkiquestDay.Server(
+                streak = 4,
+                streakState = "pending",
+                dayEndsAt = now + 3_600_000,
+                lastReviewId = now - 60_000,
+                startsAt = now - 3_600_000,
+                reviews = 3,
+                timeMs = 540_000,
+                streakMinutes = 10,
+            )
+        val short = AnkiquestDailyGoal.status(Load(5, 30, 25, 30, 0, server = server), prefs)
+        assertFalse(short.secured, "the server has 9 of 10 minutes, whatever the collection says")
+        assertTrue(short.syncing)
+        assertEquals(9, short.streakProgress)
+
+        val unsent = listOf(AnkiquestDay.Review(now - 30_000, 60_000))
+        val secured = AnkiquestDailyGoal.status(Load(5, 30, 25, 30, 0, server = server, unsent = unsent), prefs)
+        assertTrue(secured.secured, "the unsent minute reaches the server's minimum by its own rule")
+        assertTrue(secured.awaitingUpload)
+        assertFalse(secured.syncing)
+
+        val confirmed =
+            short.withServerDay(
+                JSONObject()
+                    .put("streak", 5)
+                    .put("streak_state", "studied")
+                    .put("day_ends_at", now + 3_600_000)
+                    .put("last_review_id", now)
+                    .put(
+                        "today",
+                        JSONObject()
+                            .put("starts_at", now - 3_600_000)
+                            .put("reviews", 4)
+                            .put("time_ms", 600_000)
+                            .put("streak_minutes", 10),
+                    ),
+                now,
+            )
+        assertTrue(confirmed.secured)
+        assertFalse(confirmed.awaitingUpload)
+    }
+
+    @Test
+    fun `today is only called secured once the server counts it`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+            putString(Ankiquest.PREF_TOKEN, "token")
+        }
+        val now = TimeManager.time.intTimeMS()
+        val done = Load(5, 109, 13, 30, 0)
+
+        fun day(
+            state: String,
+            endsAt: Long = now + 3_600_000,
+        ) = JSONObject()
+            .put("streak_state", state)
+            .put("day_ends_at", endsAt)
+            .put("today", JSONObject().put("streak_minutes", 10).put("reviews", 55).put("minutes", 6))
+
+        val unheard = AnkiquestDailyGoal.status(done, prefs)
+        assertTrue(unheard.minimumDone)
+        assertFalse(unheard.secured, "the server has said nothing about today yet")
+        assertTrue(unheard.syncing)
+
+        AnkiquestDailyGoal.remember(day("pending"), prefs)
+        val pending = AnkiquestDailyGoal.status(done, prefs)
+        assertFalse(pending.secured, "this device counted the day, the server did not")
+        assertTrue(pending.syncing)
+
+        AnkiquestDailyGoal.remember(day("studied"), prefs)
+        assertTrue(AnkiquestDailyGoal.status(done, prefs).secured)
+        assertTrue(AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 0), prefs).secured, "the server's count includes other devices")
+
+        AnkiquestDailyGoal.remember(day("studied", endsAt = now - 1), prefs)
+        assertTrue(AnkiquestDailyGoal.status(done, prefs).syncing, "yesterday's verdict says nothing about today")
+
+        assertTrue(AnkiquestDailyGoal.withProfile(pending, day("studied"), prefs, now).secured, "a fresh profile decides")
+        assertTrue(AnkiquestDailyGoal.withProfile(unheard, day("pending"), prefs, now).syncing)
+
+        prefs.edit { putString(Ankiquest.PREF_TOKEN, "") }
+        assertTrue(AnkiquestDailyGoal.status(done, prefs).secured, "without a token the server stores nothing, so this device decides")
+    }
+
+    @Test
+    fun `another account never inherits the streak minimum`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+        }
+        AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject().put("streak_minutes", 10)), prefs)
+        prefs.edit { putString(Ankiquest.PREF_USER, "hill") }
+        assertEquals(0, AnkiquestDailyGoal.streakMinutes(prefs))
+        prefs.edit { putString(Ankiquest.PREF_USER, "cerro") }
+        assertEquals(10, AnkiquestDailyGoal.streakMinutes(prefs))
+    }
+}

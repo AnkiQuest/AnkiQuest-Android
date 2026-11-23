@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_companion_key" translatable="false">ankiquestCompanion</string>
+    <string name="ankiquest_companion_screen_key" translatable="false">ankiquestCompanionScreen</string>
+    <string name="ankiquest_companion_status_key" translatable="false">ankiquestCompanionStatus</string>
+    <string name="ankiquest_companion_picker_key" translatable="false">ankiquestCompanionPicker</string>
+    <string name="ankiquest_companion_title" maxLength="41">Study companion</string>
+    <string name="ankiquest_companion_summary">Choose Aki, Ankilope, or no companion. Synced across devices.</string>
+    <string name="ankiquest_companion_aki" translatable="false">Aki</string>
+    <string name="ankiquest_companion_ankilope" translatable="false">Ankilope</string>
+    <!-- A purple cow, earned by studying; art is still to come (float3/ankiquest#88). -->
+    <string name="ankiquest_companion_cow" translatable="false">Bluma</string>
+    <string name="ankiquest_companion_none">No companion</string>
+    <string name="ankiquest_companion_signed_out">Sign in to choose a companion.</string>
+    <!-- A locked companion: how to earn it and how far the player is. Same wording as the desktop add-on. -->
+    <string name="ankiquest_companion_level_goal">Reach level %1$d</string>
+    <string name="ankiquest_companion_level_progress">Level %1$d of %2$d</string>
+    <string name="ankiquest_companion_hours_goal">Study for %1$d hours in total</string>
+    <string name="ankiquest_companion_hours_progress">%1$d of %2$d hours</string>
+    <!-- Tapping a companion toward its chibi Easter egg: how many taps are left. Same wording as the desktop add-on. -->
+    <plurals name="ankiquest_companion_chibi_hint">
+        <item quantity="one">You are %1$d tap away from chibi</item>
+        <item quantity="other">You are %1$d taps away from chibi</item>
+    </plurals>
+</resources>

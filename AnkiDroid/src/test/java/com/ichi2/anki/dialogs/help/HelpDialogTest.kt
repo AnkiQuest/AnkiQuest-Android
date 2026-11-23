@@ -17,6 +17,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.dialogs.help.HelpItem.Action.Rate
 import io.mockk.mockk
 import io.mockk.verify
@@ -199,9 +200,9 @@ class HelpDialogTest {
             pressBackUnconditionally()
             // start the second submenu
             onView(withText(CommonString.help_title_get_help)).inRoot(isDialog()).perform(click())
-            // the feedback url is being shown
+            // the AnkiQuest bug form is being shown
             onView(withText(CommonString.help_item_report_bug)).inRoot(isDialog()).perform(click())
-            verify(exactly = 1) { mockActionDispatcher.onOpenUrl(AnkiDroidApp.feedbackUrl) }
+            verify(exactly = 1) { mockActionDispatcher.onOpenUrl(AnkiquestLinks.BUG_FORM) }
             // a report is sent
             onView(withText(CommonString.help_title_send_exception))
                 .inRoot(isDialog())

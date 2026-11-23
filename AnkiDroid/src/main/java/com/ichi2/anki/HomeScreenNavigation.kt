@@ -19,6 +19,8 @@ import com.google.android.material.behavior.HideViewOnScrollBehavior
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.color.MaterialColors
 import com.ichi2.anki.BottomNavController.NavigationItem
+import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
+import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.browser.CardBrowserFragment
 import com.ichi2.anki.browser.CardBrowserViewModel
 import com.ichi2.anki.browser.IdsFile
@@ -40,7 +42,7 @@ fun setupBottomNavigation() {
     if (deckPicker.supportFragmentManager.findFragmentByTag(NavigationItem.BROWSER.tag) != null) {
         ensureBrowserViewModel()
     }
-    if (!deckPicker.bottomNavigationEnabled) return
+    if (!deckPicker.bottomNavigationEnabled && (!AnkiquestNavigation.enabled() || deckPicker.fragmented)) return
 
     val binding = deckPicker.binding
     val bottomNav = checkNotNull(binding.bottomNavigation)
@@ -108,6 +110,9 @@ fun setupBottomNavigation() {
         ViewCompat.requestApplyInsets(deckPicker.deckPickerBinding.root)
     }
 
+    val contentWrapper = checkNotNull(binding.deckPickerContentWrapper)
+    if (AnkiquestDeckPickerHooks.setupBottomNavigation(deckPicker, bottomNav, fragmentContainer, contentWrapper)) return
+
     NavigationItem.populateMenu(bottomNav, deckPicker)
 
     deckPicker.onBackPressedDispatcher.addCallback(deckPicker, deckPicker.bottomNavBackCallback)
@@ -154,6 +159,7 @@ internal fun BottomNavigationView.selectTab(item: NavigationItem) {
 
 context(deckPicker: DeckPicker)
 fun showRestoredBottomNavTab() {
+    if (AnkiquestDeckPickerHooks.showRestoredBottomNavTab(deckPicker)) return
     val item = selectedBottomNavItem() ?: return
     showTab(item)
 }

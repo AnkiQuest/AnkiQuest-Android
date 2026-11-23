@@ -21,6 +21,7 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.InitialActivity
 import com.ichi2.anki.OnErrorListener
 import com.ichi2.anki.StoragePermissionSet
+import com.ichi2.anki.ankiquest.AnkiquestDeckListStates
 import com.ichi2.anki.common.destinations.BrowserDestination
 import com.ichi2.anki.common.destinations.DeckOptionsDestination
 import com.ichi2.anki.common.destinations.NoteEditorDestination
@@ -121,13 +122,16 @@ class DeckPickerViewModel :
      */
     private val flowOfRefreshDeckList = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    private val dailyDeckStates = MutableStateFlow<Map<DeckId, com.ichi2.anki.ankiquest.DailyDeckState>>(emptyMap())
+
     val flowOfDeckList =
         combineTransform(
             flowOfDeckDueTree,
             flowOfDeckSearchQuery,
             flowOfFocusedDeck,
             flowOfRefreshDeckList.onStart { emit(Unit) },
-        ) { tree, query, _, _ ->
+            dailyDeckStates,
+        ) { tree, query, _, _, daily ->
             if (tree == null) {
                 emit(FlattenedDeckList.empty)
                 return@combineTransform
@@ -151,7 +155,7 @@ class DeckPickerViewModel :
 
             emit(
                 FlattenedDeckList(
-                    data = tree.filterAndFlattenDisplay(DeckFilters.create(query), currentDeckId),
+                    data = tree.filterAndFlattenDisplay(DeckFilters.create(query), currentDeckId).map { it.withDailyState(daily[it.did]) },
                     hasSubDecks = tree.children.any { it.children.any() },
                 ),
             )
@@ -485,7 +489,9 @@ class DeckPickerViewModel :
             viewModelScope.launch(Dispatchers.IO) {
                 Timber.d("Refreshing deck list")
                 withCol {
-                    dueTree = sched.deckDueTree()
+                    val deckDueTree = sched.deckDueTree()
+                    dailyDeckStates.value = AnkiquestDeckListStates.load(this, deckDueTree)
+                    dueTree = deckDueTree
                     flowOfCollectionHasNoCards.value = isEmpty
                 }
 

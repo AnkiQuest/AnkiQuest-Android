@@ -18,6 +18,7 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.ankiActivity
+import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.analytics.AnalyticsEvent.LinkClicked
 import com.ichi2.anki.common.analytics.LinkAction
@@ -331,7 +332,7 @@ internal val childHelpMenuItems =
             analyticsId = LinkAction.OPENED_REPORT_BUG,
             id = 201,
             parentId = 2,
-            action = OpenUrl(AnkiDroidApp.feedbackUrl),
+            action = OpenUrl(AnkiquestLinks.BUG_FORM),
         ),
         HelpItem(
             titleResId = CommonString.help_title_send_exception,

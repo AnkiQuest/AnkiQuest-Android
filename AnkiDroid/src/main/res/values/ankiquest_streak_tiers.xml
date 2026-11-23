@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <plurals name="ankiquest_streak_milestone">
+        <item quantity="one">%1$d day to %2$d 🔥</item>
+        <item quantity="other">%1$d days to %2$d 🔥</item>
+    </plurals>
+    <!-- Replaces the milestone line while today does not count yet. Short, so it stays on one line beside Aki. -->
+    <string name="ankiquest_streak_nudge">Study today to keep it</string>
+</resources>

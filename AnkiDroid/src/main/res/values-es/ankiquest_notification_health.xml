@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_health_title">Estado de las notificaciones</string>
+    <string name="ankiquest_health_permission">Permiso de notificaciones: %1$s</string>
+    <string name="ankiquest_health_messages">Avisos de mensajes: %1$s</string>
+    <string name="ankiquest_health_nudges">Avisos de toques: %1$s</string>
+    <string name="ankiquest_health_last_sync">Última sincronización de mensajes: %1$s</string>
+    <string name="ankiquest_health_allowed">Permitido</string>
+    <string name="ankiquest_health_blocked">Bloqueado en los ajustes de Android</string>
+    <string name="ankiquest_health_never">Nunca para esta cuenta</string>
+    <string name="ankiquest_health_permission_settings">Abrir permisos de notificaciones</string>
+</resources>

@@ -1,20 +1,32 @@
+> Anki is hard, free and effective.
+>
+> Duolingo is easy, commercial and ineffective.
+>
+> If you ask a random successful language learner what software to use they'll probably suggest Anki.
+>
+> —lsusr, [Invisible Choices, Made by Default](https://www.lesswrong.com/s/3xKXGh9RXaYTYZYgZ/p/k6nncsXAZD3bK6fe3)
+
 <p align="center">
 <img alt="" src="docs/graphics/logos/banner_readme.png"/>
 </p>
 
-<a href="https://github.com/ankidroid/Anki-Android/releases"><img src="https://img.shields.io/github/v/release/ankidroid/Anki-Android" alt="release"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/actions"><img src="https://img.shields.io/github/checks-status/ankidroid/Anki-Android/main?label=build" alt="build"/></a>
-<a href="https://opencollective.com/ankidroid"><img src="https://img.shields.io/opencollective/all/ankidroid" alt="Open Collective backers and sponsors"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/issues"><img src="https://img.shields.io/github/commit-activity/m/ankidroid/Anki-Android" alt="commit-activity"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/network/members"><img src="https://img.shields.io/github/forks/ankidroid/Anki-Android" alt="forks"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/stargazers"><img src="https://img.shields.io/github/stars/ankidroid/Anki-Android" alt="stars"/></a>
-<a href="https://crowdin.com/project/ankidroid"><img src="https://badges.crowdin.net/ankidroid/localized.svg"></img></a>
-<a href="https://github.com/ankidroid/Anki-Android/graphs/contributors"><img src="https://img.shields.io/github/contributors/ankidroid/Anki-Android" alt="contributors"/></a>
-<a href="https://discord.gg/qjzcRTx"><img src="https://img.shields.io/discord/368267295601983490"></img></a>
-<a href="https://github.com/ankidroid/Anki-Android/blob/main/COPYING"><img src="https://img.shields.io/github/license/ankidroid/Anki-Android" alt="license"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/releases"><img src="https://img.shields.io/github/v/release/AnkiQuest/AnkiQuest-Android" alt="release"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/actions"><img src="https://img.shields.io/github/checks-status/AnkiQuest/AnkiQuest-Android/master?label=build" alt="build"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/commits/master"><img src="https://img.shields.io/github/commit-activity/m/AnkiQuest/AnkiQuest-Android" alt="commit-activity"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/graphs/contributors"><img src="https://img.shields.io/github/contributors/AnkiQuest/AnkiQuest-Android" alt="contributors"/></a>
+<a href="https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING"><img src="https://img.shields.io/github/license/AnkiQuest/AnkiQuest-Android" alt="license"/></a>
 
-# AnkiDroid
-An official port of the open source [Anki](https://apps.ankiweb.net/index.html) spaced repetition flashcard system to Android. Memorize anything with AnkiDroid!
+# AnkiQuest-Android
+
+[AnkiDroid](https://github.com/ankidroid/Anki-Android), the Android port of the open source [Anki](https://apps.ankiweb.net/index.html) spaced repetition flashcard system, with AnkiQuest built in.
+
+AnkiQuest leaves Anki's scheduling unchanged and adds streaks, friends and leaderboards to keep you studying.
+
+AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clients send review history without card content; sharing a conquered card label or a deck copy is an explicit choice. AnkiQuest has three repositories:
+
+- [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server): the server and its website.
+- [AnkiQuest-Desktop](https://github.com/AnkiQuest/AnkiQuest-Desktop): the Anki desktop add-on.
+- [AnkiQuest-Android](https://github.com/AnkiQuest/AnkiQuest-Android): the Android app, a fork of AnkiDroid.
 
 <img src="docs/graphics/logos/ankidroid_logo.png" align="right" width="40%" height="100%"></img>
 
@@ -22,10 +34,12 @@ An official port of the open source [Anki](https://apps.ankiweb.net/index.html) 
 
 <div style="display:flex;">
  
+- AnkiQuest: XP, streaks, quests, records and a leaderboard widget
 - Night mode
 - Whiteboard 
 - Progress widget
 - Detailed statistics
+- [Review heatmap beneath the deck list](docs/review-heatmap.md)
 - Syncing with AnkiWeb
 - Write answers (optional)
 - Text-to-speech integration
@@ -36,52 +50,50 @@ An official port of the open source [Anki](https://apps.ankiweb.net/index.html) 
 
 </div>
 
-Install
----------
+## Install
+
 <div style="display:flex;">
 
-<a href="https://play.google.com/store/apps/details?id=com.ichi2.anki&utm_source=global_co&utm_medium=prtnr&utm_content=Mar2515&utm_campaign=PartBadge&pcampaignid=MKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1">
-    <img alt="Get it on Google Play" height="80"
-        src="docs/graphics/logos/google-badge.png" /></a>
+1. Create an account on an AnkiQuest server, such as [ankiquest.org](https://ankiquest.org). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
+2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
+3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
-<a href="https://f-droid.org/repository/browse/?fdid=com.ichi2.anki">
-    <img alt="Get it on F-Droid" height="80"
-        src="docs/graphics/logos/f-droid-badge.png"></a>
-
-<a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/ankidroid/Anki-Android">
+<a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
     <img alt="Get it on Obtainium" height="80"
         src="https://github.com/user-attachments/assets/713d71c5-3dec-4ec4-a3f2-8d28d025a9c6"/></a>
 
 </div>
 
-Signing certificate fingerprint to [verify](https://developer.android.com/studio/command-line/apksigner#usage-verify) the APK:
+### Verify the APK
+
+Signing certificate fingerprints of the AnkiQuest release key (`CN=AnkiQuest, O=float3`):
+
 ```
-SHA-256: 2071534f0f4b5e54ae952dd275d70da6e3459ee69909d2ab1b4843c4c5b21a45 
-SHA-1: f24e06a3657b190a12671100402df32d7b9b3d36
+SHA-256: B3:97:A6:1E:CF:AF:0F:E3:54:DA:61:17:72:51:5E:68:3C:CB:6F:D0:E9:52:D4:77:B8:B3:BC:A4:9E:6C:49:0D
+SHA-1:   74:A5:0A:AA:20:37:2D:88:B2:B7:42:64:66:34:7B:9F:7C:28:31:E9
 ```
 
-Wiki
-----
-View [Wiki](https://github.com/ankidroid/Anki-Android/wiki)
+Compare the fingerprint with one of:
 
-Help
-----
-Check the [user manual](https://docs.ankidroid.org/) and the wiki for usage instructions. See the [help page](https://docs.ankidroid.org/help.html) 
-for how to submit a bug report or contact a project member, etc.
+- [AppVerifier](https://github.com/soupslurpr/AppVerifier) or [Obtainium](https://github.com/ImranR98/Obtainium), which show the installed app's signing certificate.
+- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. Look for `CN=AnkiQuest, O=float3`, the v3 signer for Android 9 and newer. Recent build-tools label it `V3.0 Signer`.
 
-Contribute
-----------
-You can contribute to AnkiDroid by beta testing, translating, or submitting code. 
-See the [contribution wiki page](https://github.com/ankidroid/Anki-Android/wiki/Contributing) for more info.
+Releases and nightlies are signed with the same key, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml). The key replaced a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`, SHA-256 `0A:8E:BE:EA:…:E4:2A`) through key rotation, which Android supports from 9 on. That key's password is public, so its fingerprint proves nothing:
 
-Join Us On
-----------
+- On Android 7 and 8, and in the v1/v2 signatures `keytool -printcert -jarfile` reads, the APK shows only the test key.
+- Builds without the release key (forks, workflow runs without the signing secret) are signed with the test key only. Don't install them as AnkiQuest.
 
-<a href="https://discord.gg/qjzcRTx"><img src="docs/graphics/logos/discord_logo_color.svg" height="46px"/></a>
-<a href="https://www.reddit.com/r/Anki"><img src="docs/graphics/logos/reddit_logo_color.png" height="50px"/></a>
-<a href="https://www.facebook.com/AnkiDroid/"><img src="docs/graphics/logos/facebook_logo_color.png" height="50px"/></a>
-<a href="https://x.com/ankidroid"><img src="docs/graphics/logos/twitter_logo.png" height="50px"/></a>
-<a href="https://forums.ankiweb.net/"><img src="/docs/graphics/logos/anki_forums_logo.png" height="50px"/></a>
+For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
+
+## Development
+
+```sh
+./gradlew ktlintCheck
+./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'
+node --test .github/tests/*.test.cjs
+```
+
+AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 
 ## Credits
 <!--- Do not rename this section. AnkiDroid contains a deep link to the section
@@ -89,32 +101,20 @@ header - see https://github.com/ankidroid/Anki-Android/pull/11803 --->
 
 ### Code Contributors
 
-Thanks to these awesome code contributors who keep this project going
+AnkiQuest for Android is built on the work of [AnkiDroid's contributors](https://github.com/ankidroid/Anki-Android/graphs/contributors). See also [this fork's contributors](https://github.com/AnkiQuest/AnkiQuest-Android/graphs/contributors).
 
-<a href="https://github.com/ankidroid/Anki-Android/graphs/contributors"><img src="https://opencollective.com/ankidroid/contributors.svg?width=890&button=false" /></a>
+### Art
 
-### [Sponsors](https://opencollective.com/ankidroid#sponsor)
-<a href="https://opencollective.com/ankidroid#sponsor" target="_blank">
-  <img alt="AnkiDroid Sponsors" src="https://opencollective.com/Ankidroid/sponsors.svg?width=890" />
-</a>
-
-### [Backers](https://opencollective.com/ankidroid#backer)
-
-A big thank you to each of our backers 🙏
-<a href="https://opencollective.com/Ankidroid#backers" target="_blank"><img width=110 src="https://opencollective.com/Ankidroid/backers/badge.svg?"></a>
-
-<p>Your generous donations mean the world to us, and we can't express our gratitude enough. Your support fuels our mission and helps us make a real difference</p>
-
-<a href="https://opencollective.com/Ankidroid/donate" target="_blank">
-  <img alt="Donate to AnkiDroid" src="https://opencollective.com/Ankidroid/donate/button@2x.png?color=blue" width=200 />
-</a>
+Anki-tan (`anki_tan_*.webp`) is by [Shigeyuki](https://www.patreon.com/Shigeyuki), from the [Anki-tan asset pack](https://shigeyukey.github.io/shige-addons-wiki/Anki-tan.html), licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Derivatives of her art are CC BY-SA 4.0 too. See [docs/branding/anki-tan.md](docs/branding/anki-tan.md).
 
 ### [Translators](https://crowdin.com/project/ankidroid/activity-stream)
 
 Thanks to our 1400 translators, for allowing us to be available, partially or totally, in 99 languages as of July 2022.
 
-License
--------
-* [GPL-3.0 License](https://github.com/ankidroid/Anki-Android/blob/main/COPYING)
+## License
+
+* [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
+* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
-* [LGPL-3.0 License](https://github.com/ankidroid/Anki-Android/blob/main/api/COPYING.LESSER) for the AnkiDroid API
+* [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
+* [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/COPYING.LESSER) for the AnkiDroid API
