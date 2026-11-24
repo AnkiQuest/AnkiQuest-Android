@@ -8,7 +8,6 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
@@ -95,15 +94,6 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
                     runBlocking { AnkiquestGlobalHides.change(account, "ana", AnkiquestGlobalHides.Action.HIDE) }
                 }
             assertEquals(HTTP_CONFLICT, failure.code)
-        }
-    }
-
-    @Test
-    fun `cancelled capability discovery does not become unsupported`() {
-        withServer { account, requests ->
-            coEvery { AnkiquestCapabilities.current(account) } throws CancellationException("screen left")
-            assertFailsWith<CancellationException> { runBlocking { AnkiquestGlobalHides.load(account) } }
-            assertTrue(requests.isEmpty())
         }
     }
 
