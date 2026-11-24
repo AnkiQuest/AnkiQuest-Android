@@ -15,7 +15,6 @@ import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -24,8 +23,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -37,8 +34,10 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestServerGoalTest : RobolectricTest() {
-    private lateinit var server: HttpServer
-    private val requests = CopyOnWriteArrayList<Triple<String, String, JSONObject?>>()
+    private lateinit var server: AnkiquestTestServer
+    private val requests get() = server.requests.map { Triple(it.method, it.path, json(it)) }
+
+    private fun json(request: TestRequest) = request.body.takeIf { it.isNotBlank() }?.let(::JSONObject)
 
     @Volatile private var goal =
         JSONObject()
@@ -61,46 +60,40 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     @Before
     fun startServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val text = exchange.requestBody.bufferedReader().use { it.readText() }
-            val body = text.takeIf { it.isNotBlank() }?.let(::JSONObject)
-            val route = "${exchange.requestMethod} ${exchange.requestURI.path}"
-            requests += Triple(exchange.requestMethod, exchange.requestURI.path, body)
-            val (status, answer) =
-                when (route) {
-                    "GET /api/goal/hill" -> 200 to goal
-                    "PUT /api/goal/hill" ->
-                        if (body!!.optInt("value", 1) > 5000) {
-                            400 to JSONObject().put("error", "Pick 1 to 5000 cards.")
-                        } else {
-                            goal =
-                                JSONObject()
-                                    .put("mode", body.getString("mode"))
-                                    .put("value", body.optInt("value", goal.optInt("value")))
-                                    .put("since", today)
-                                    .put("chosen", true)
-                            200 to goal
+        server =
+            AnkiquestTestServer { request ->
+                val body = json(request)
+                val route = "${request.method} ${request.path}"
+                val (status, answer) =
+                    when (route) {
+                        "GET /api/goal/hill" -> 200 to goal
+                        "PUT /api/goal/hill" ->
+                            if (body!!.optInt("value", 1) > 5000) {
+                                400 to JSONObject().put("error", "Pick 1 to 5000 cards.")
+                            } else {
+                                goal =
+                                    JSONObject()
+                                        .put("mode", body.getString("mode"))
+                                        .put("value", body.optInt("value", goal.optInt("value")))
+                                        .put("since", today)
+                                        .put("chosen", true)
+                                200 to goal
+                            }
+                        "POST /api/goal/hill/reached" -> reachedStatus to JSONObject()
+                        "GET /api/sharing/hill" -> 200 to sharing
+                        "PUT /api/sharing/hill" -> {
+                            val policies = sharing.getJSONObject("policies")
+                            val changed = body!!.getJSONObject("policies")
+                            for (kind in changed.keys()) policies.put(kind, changed.getString(kind))
+                            if (body.has("daily_cap")) sharing.put("daily_cap", body.getInt("daily_cap"))
+                            200 to sharing
                         }
-                    "POST /api/goal/hill/reached" -> reachedStatus to JSONObject()
-                    "GET /api/sharing/hill" -> 200 to sharing
-                    "PUT /api/sharing/hill" -> {
-                        val policies = sharing.getJSONObject("policies")
-                        val changed = body!!.getJSONObject("policies")
-                        for (kind in changed.keys()) policies.put(kind, changed.getString(kind))
-                        if (body.has("daily_cap")) sharing.put("daily_cap", body.getInt("daily_cap"))
-                        200 to sharing
+                        else -> 404 to JSONObject()
                     }
-                    else -> 404 to JSONObject()
-                }
-            val bytes = answer.toString().toByteArray()
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+                TestResponse.json(answer, status)
+            }
         prefs.edit {
-            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
             putString(AnkiquestPreferences.PREF_USER, "hill")
             putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
@@ -108,7 +101,9 @@ class AnkiquestServerGoalTest : RobolectricTest() {
 
     @After
     fun stopServer() {
-        if (::server.isInitialized) server.stop(0)
+        if (::server.isInitialized) {
+            server.close()
+        }
         SharedPreferencesTestHook.override = null
     }
 

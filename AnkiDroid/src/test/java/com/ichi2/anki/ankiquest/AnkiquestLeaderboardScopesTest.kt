@@ -112,7 +112,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         click(screen, R.string.ankiquest_widget_who_global)
         click(screen, R.string.aq_board_month)
         screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
         val heading =
             screen.window.decorView.allViews.filterIsInstance<TextView>().first {
                 it.text ==
@@ -120,9 +120,9 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
             }
         heading.performClick()
         heading.performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
         controller.recreate()
-        awaitBoard(controller.get())
+        controller.get().awaitBoard()
         coVerify(atLeast = 4) { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.MONTH, AnkiquestBoards.Source.Global) }
         assertTrue(controller.get().findViewById<View>(R.id.aq_friends_board_content).isVisible)
     }
@@ -140,7 +140,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         coVerify { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.YEAR, AnkiquestBoards.Source.Group(9)) }
         coVerify(exactly = 1) { AnkiquestSocial.overview(identity) }
         controller.recreate()
-        awaitBoard(controller.get())
+        controller.get().awaitBoard()
         coVerify(atLeast = 2) { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.YEAR, AnkiquestBoards.Source.Group(9)) }
     }
 
@@ -169,7 +169,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
             .first { it.text == screen.getString(R.string.ankiquest_dashboard_title) }
             .performClick()
         controller.recreate()
-        awaitBoard(controller.get())
+        controller.get().awaitBoard()
         assertFalse(controller.get().findViewById<View>(R.id.aq_friends_board_content).isVisible)
         coVerify(exactly = 2) { AnkiquestBoards.leaderboard(identity, any(), any()) }
     }
@@ -181,7 +181,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         click(screen, R.string.aq_board_scope_group)
         coEvery { AnkiquestSocial.overview(identity) } returns overview().copy(groups = emptyList())
         screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
         assertTrue(screen.getString(R.string.aq_board_group_missing) in labels(screen))
         coVerify(atLeast = 2) { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Friends) }
     }
@@ -204,7 +204,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         assertFalse(screen.getString(R.string.ankiquest_widget_who_global) in labels(screen))
         coEvery { AnkiquestBoards.hasScopes(identity) } returns true
         screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
         assertTrue(screen.getString(R.string.ankiquest_widget_who_global) in labels(screen))
     }
 
@@ -276,7 +276,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
                 .stop()
                 .start()
                 .resume()
-            awaitBoard(controller.get())
+            controller.get().awaitBoard()
             waiting.complete(true)
             advanceRobolectricLooper()
             assertFalse(controller.get().getString(R.string.ankiquest_widget_who_global) in labels(controller.get()))
@@ -299,16 +299,8 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
             AnkiquestFriendsActivity::class.java,
             AnkiquestFriendsSections.boardIntent(targetContext),
         ).also { controller ->
-            awaitBoard(controller.get())
+            controller.get().awaitBoard()
         }
-
-    private fun awaitBoard(screen: AnkiquestFriendsActivity) {
-        advanceRobolectricLooperUntil {
-            !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
-        }
-        advanceRobolectricLooper()
-    }
 
     private fun control(
         screen: AnkiquestFriendsActivity,
@@ -329,7 +321,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         label: String,
     ) {
         control(screen, label).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
     }
 
     private fun labels(screen: AnkiquestFriendsActivity): List<String> =

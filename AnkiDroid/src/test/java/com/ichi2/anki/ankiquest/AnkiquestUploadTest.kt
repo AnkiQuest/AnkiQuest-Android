@@ -16,7 +16,6 @@ import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -31,7 +30,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.util.TimeZone
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
@@ -47,10 +45,11 @@ private const val PREF_LEGACY_RECENT = "ankiquestRecentUploads"
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestUploadTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var url: String
     private var unsharedDeck = 0L
-    private val requests = CopyOnWriteArrayList<UploadRequest>()
+    private val requests get() =
+        server.requests.map { UploadRequest(it.method, it.path, it.authorization, it.body.takeIf(String::isNotEmpty)?.let(::JSONObject)) }
 
     @Volatile
     private var enabledDeck = "1"
@@ -90,42 +89,29 @@ class AnkiquestUploadTest : RobolectricTest() {
         addBasicNote()
         col.sched.answerCard(col.sched.card!!, Rating.EASY)
         unsharedDeck = col.decks.id("Geography")
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val body = exchange.requestBody.bufferedReader().use { it.readText() }
-            val path = exchange.requestURI.path
-            requests.add(
-                UploadRequest(
-                    exchange.requestMethod,
-                    path,
-                    exchange.requestHeaders.getFirst("Authorization"),
-                    body.takeIf { it.isNotEmpty() }?.let(::JSONObject),
-                ),
-            )
-            val settings = path.startsWith("/api/decks/")
-            if (settings && exchange.requestMethod == "POST" && replyOwner == ReplyOwner.CHANGED) {
-                configureAccount("other", "second-token")
+        server =
+            AnkiquestTestServer { request ->
+                val path = request.path
+                val settings = path.startsWith("/api/decks/")
+                if (settings && request.method == "POST" && replyOwner == ReplyOwner.CHANGED) {
+                    configureAccount("other", "second-token")
+                }
+                val answering = path.startsWith("/api/reply/")
+                val response =
+                    when {
+                        settings -> deckSettings()
+                        answering -> JSONObject().put("sent_to", "Aldana")
+                        else -> profile()
+                    }
+                val status =
+                    when {
+                        settings -> settingsStatus
+                        answering -> replyStatus
+                        else -> reviewStatus
+                    }
+                TestResponse.json(response, status)
             }
-            val answering = path.startsWith("/api/reply/")
-            val response =
-                when {
-                    settings -> deckSettings()
-                    answering -> JSONObject().put("sent_to", "Aldana")
-                    else -> profile()
-                }
-            val bytes = response.toString().toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            val status =
-                when {
-                    settings -> settingsStatus
-                    answering -> replyStatus
-                    else -> reviewStatus
-                }
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
-        url = "http://127.0.0.1:${server.address.port}"
+        url = server.url
         configureAccount("cerro", "first-token")
         AnkiDroidApp.sharedPrefs().edit {
             remove(PREF_LEGACY_MARK)
@@ -136,7 +122,9 @@ class AnkiquestUploadTest : RobolectricTest() {
     @After
     fun stopServer() {
         try {
-            if (::server.isInitialized) server.stop(0)
+            if (::server.isInitialized) {
+                server.close()
+            }
         } finally {
             unmockkObject(AnkiquestWidget)
             SharedPreferencesTestHook.override = null
@@ -248,7 +236,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `account changes use the new authenticated sharing selection`() =
         runBlocking {
             uploadReviews()
-            requests.clear()
+            server.requests.clear()
             configureAccount("other", "second-token")
             enabledDeck = unsharedDeck.toString()
 
@@ -264,7 +252,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `disabling sharing is respected on the next review upload`() =
         runBlocking {
             uploadReviews()
-            requests.clear()
+            server.requests.clear()
             enabledDeck = ""
 
             uploadReviews()
@@ -290,7 +278,7 @@ class AnkiquestUploadTest : RobolectricTest() {
 
             assertEquals(1, reviewUpload().getJSONArray("reviews").length())
             assertEquals("Bearer first-token", requests.single { it.path == "/api/reviews/cerro" }.authorization)
-            requests.clear()
+            server.requests.clear()
 
             Ankiquest.uploadPending(targetContext)
 
@@ -364,14 +352,14 @@ class AnkiquestUploadTest : RobolectricTest() {
         runBlocking {
             Ankiquest.uploadPending(targetContext)
             val mark = uploadedIds().single()
-            requests.clear()
+            server.requests.clear()
             // Answered elsewhere three days ago and brought in by AnkiWeb: older than the mark and the undo window.
             val synced = mark - 3 * DAY_MS
             insertReview(synced)
 
             Ankiquest.uploadPending(targetContext)
             assertEquals(emptyList<Long>(), uploadedIds(), "an ordinary upload only sends what follows the mark")
-            requests.clear()
+            server.requests.clear()
 
             Ankiquest.uploadAfterSync()
             assertTrue(synced in uploadedIds())
@@ -382,14 +370,14 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `answers after a sync are still sent one upload at a time`() =
         runBlocking {
             Ankiquest.uploadAfterSync()
-            requests.clear()
+            server.requests.clear()
             addBasicNote("second")
             col.sched.answerCard(col.sched.card!!, Rating.GOOD)
             val answered = col.db.queryLongScalar("select max(id) from revlog")
 
             Ankiquest.uploadPending(targetContext)
             assertEquals(listOf(answered), uploadedIds())
-            requests.clear()
+            server.requests.clear()
 
             Ankiquest.uploadPending(targetContext)
             assertEquals(emptyList<Long>(), uploadedIds(), "nothing is sent twice")
@@ -412,7 +400,7 @@ class AnkiquestUploadTest : RobolectricTest() {
         runBlocking {
             Ankiquest.uploadPending(targetContext)
             val mark = uploadedIds().single()
-            requests.clear()
+            server.requests.clear()
             val old = mark - 30 * DAY_MS
             insertReview(old)
             val seen = CopyOnWriteArrayList<Pair<Int, Int>>()
@@ -436,13 +424,13 @@ class AnkiquestUploadTest : RobolectricTest() {
         runBlocking {
             Ankiquest.uploadPending(targetContext)
             val kept = uploadedIds().single()
-            requests.clear()
+            server.requests.clear()
             // A row the window query does not return, though it is still in the revlog.
             col.db.execute("update revlog set type = 4 where id = ?", kept)
 
             Ankiquest.uploadPending(targetContext)
             assertEquals(0, reviewUpload().getJSONArray("deleted").length())
-            requests.clear()
+            server.requests.clear()
 
             col.db.execute("delete from revlog where id = ?", kept)
             Ankiquest.uploadPending(targetContext)

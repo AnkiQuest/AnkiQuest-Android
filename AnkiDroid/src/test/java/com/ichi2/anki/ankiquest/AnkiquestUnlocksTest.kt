@@ -12,7 +12,6 @@ import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Found
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Milestone
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Progress
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,7 +19,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -34,11 +32,11 @@ import kotlin.test.assertTrue
  */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestUnlocksTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var account: HomeAccount
 
     /** Each request as "METHOD path body", and the companion header of each companion save. */
-    private val requests = CopyOnWriteArrayList<String>()
+    private val requests get() = server.requests.map { "${it.method} ${it.path} ${it.body}".trim() }
     private val companionHeaders = CopyOnWriteArrayList<String?>()
 
     // What the fake server holds.
@@ -57,54 +55,45 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     @Before
     fun serve() {
         AnkiquestCapabilities.forgetMemory()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.path
-            val sent = exchange.requestBody.bufferedReader().use { it.readText() }
-            requests += "${exchange.requestMethod} $path $sent".trim()
-            var status = OK
-            val answer =
-                when {
-                    path == "/api/capabilities" -> JSONObject().put("version", 1).put("features", JSONArray(features))
-                    path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features -> {
-                        // A reported unlock is granted; the server no longer checks taps.
-                        if (sent.isNotEmpty()) {
-                            unlocks = unlocks + JSONObject(sent).getString("unlock")
-                        }
-                        unlocksAnswer()
-                    }
-                    path.startsWith("/api/companion/") -> {
-                        if (sent.isNotEmpty()) {
-                            val header = exchange.requestHeaders.getFirst(COMPANIONS_HEADER)
-                            companionHeaders += header
-                            val chosen = JSONObject(sent).getString("companion")
-                            if (refuses(chosen, header)) {
-                                status = CONFLICT
-                            } else {
-                                companion = chosen
+        server =
+            AnkiquestTestServer { request ->
+                val path = request.path
+                val sent = request.body
+                var status = OK
+                val answer =
+                    when {
+                        path == "/api/capabilities" -> JSONObject().put("version", 1).put("features", JSONArray(features))
+                        path.startsWith("/api/unlocks/") && AnkiquestUnlocks.FEATURE in features -> {
+                            // A reported unlock is granted; the server no longer checks taps.
+                            if (sent.isNotEmpty()) {
+                                unlocks = unlocks + JSONObject(sent).getString("unlock")
                             }
+                            unlocksAnswer()
                         }
-                        beforeCompanionAnswer()
-                        JSONObject().put("companion", companion)
+                        path.startsWith("/api/companion/") -> {
+                            if (sent.isNotEmpty()) {
+                                val header = request.headers.getFirst(COMPANIONS_HEADER)
+                                companionHeaders += header
+                                val chosen = JSONObject(sent).getString("companion")
+                                if (refuses(chosen, header)) {
+                                    status = CONFLICT
+                                } else {
+                                    companion = chosen
+                                }
+                            }
+                            beforeCompanionAnswer()
+                            JSONObject().put("companion", companion)
+                        }
+                        else -> null
                     }
-                    else -> null
-                }
-            val bytes = answer?.toString()?.toByteArray()
-            if (bytes == null) {
-                exchange.sendResponseHeaders(NOT_FOUND, -1)
-            } else {
-                exchange.sendResponseHeaders(status, bytes.size.toLong())
-                exchange.responseBody.use { it.write(bytes) }
+                answer?.let { TestResponse(status, it.toString().toByteArray()) }
             }
-            exchange.close()
-        }
-        server.start()
         account = signIn("cerro")
     }
 
     @After
     fun stop() {
-        runCatching { server.stop(0) }
+        runCatching { server.close() }
         AnkiquestCapabilities.forgetMemory()
     }
 
@@ -156,7 +145,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     private fun signIn(user: String): HomeAccount {
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(AnkiquestPreferences.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
             putString(AnkiquestPreferences.PREF_USER, user)
             putString(AnkiquestPreferences.PREF_TOKEN, "token-$user")
         }
@@ -424,7 +413,6 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     private companion object {
         const val ANKI_TAN = "anki_tan"
         const val OK = 200
-        const val NOT_FOUND = 404
         const val CONFLICT = 409
         const val MILESTONES = "companion_milestones"
         const val COMPANIONS_HEADER = "X-AnkiQuest-Companions"

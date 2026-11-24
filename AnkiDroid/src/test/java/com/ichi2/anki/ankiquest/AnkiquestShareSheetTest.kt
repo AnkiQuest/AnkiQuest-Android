@@ -29,7 +29,6 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing.MomentRef
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyAnkiActivity
-import com.sun.net.httpserver.HttpServer
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -45,10 +44,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowToast
 import java.io.IOException
-import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -81,8 +78,8 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Before
     fun prepare() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare, HomeAccount.Companion)
-        every { HomeAccount.current(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
+        every { AnkiquestHomeData.account(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
     }
@@ -90,7 +87,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare, HomeAccount.Companion)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
         TimeManager.reset()
     }
 
@@ -222,38 +219,35 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Test
     fun `Undo on a second send preserves the first recipient`() {
         // Model the server's contract: no selector retracts the whole win; until names one send.
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val delivered = ConcurrentHashMap<String, Long>()
-        val requests = CopyOnWriteArrayList<String>()
-        server.createContext("/api/share/aldanita") { exchange ->
-            requests += "${exchange.requestMethod} ${exchange.requestURI}"
-            val answer =
-                if (exchange.requestMethod == "POST") {
-                    val body = JSONObject(exchange.requestBody.bufferedReader().use { it.readText() })
-                    val who = body.getJSONObject("to").getJSONArray("friends").getString(0)
-                    val until = NOW + DAY + delivered.size
-                    delivered[who] = until
-                    JSONObject().put("recipients", 1).put("win", 17).put("undo_until", until)
-                } else {
-                    val until =
-                        exchange.requestURI.rawQuery
-                            ?.removePrefix("until=")
-                            ?.toLong()
-                    val removed = delivered.filterValues { until == null || it == until }.keys
-                    removed.forEach(delivered::remove)
-                    JSONObject().put("retracted", removed.size)
+        val server =
+            AnkiquestTestServer { request ->
+                if (!request.path.startsWith("/api/share/aldanita")) {
+                    return@AnkiquestTestServer null
                 }
-            val bytes = answer.toString().toByteArray()
-            exchange.sendResponseHeaders(HTTP_OK, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-            exchange.close()
-        }
-        server.start()
+                val answer =
+                    if (request.method == "POST") {
+                        val body = JSONObject(request.body)
+                        val who = body.getJSONObject("to").getJSONArray("friends").getString(0)
+                        val until = NOW + DAY + delivered.size
+                        delivered[who] = until
+                        JSONObject().put("recipients", 1).put("win", 17).put("undo_until", until)
+                    } else {
+                        val until =
+                            request.uri.rawQuery
+                                ?.removePrefix("until=")
+                                ?.toLong()
+                        val removed = delivered.filterValues { until == null || it == until }.keys
+                        removed.forEach(delivered::remove)
+                        JSONObject().put("retracted", removed.size)
+                    }
+                TestResponse(bytes = answer.toString().toByteArray())
+            }
         unmockkObject(AnkiquestSharing)
         mockkObject(AnkiquestCapabilities)
         every { AnkiquestCapabilities.has(any(), any()) } returns true
-        account = account.copy(server = "http://127.0.0.1:${server.address.port}")
-        every { HomeAccount.current(any()) } returns account
+        account = account.copy(server = server.url)
+        every { AnkiquestHomeData.account(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
         try {
             val (_, first, screen) = open()
@@ -271,9 +265,9 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             advanceRobolectricLooperUntil { ShadowToast.getTextOfLatestToast() != null }
 
             assertEquals(setOf("cerro"), delivered.keys.toSet(), "the earlier send must survive")
-            assertEquals("DELETE /api/share/aldanita/17?until=${NOW + DAY + 1}", requests.last())
+            assertEquals("DELETE /api/share/aldanita/17?until=${NOW + DAY + 1}", server.requests.last().toString())
         } finally {
-            server.stop(0)
+            server.close()
             unmockkObject(AnkiquestCapabilities)
         }
     }
@@ -379,7 +373,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Test
     fun `a finished deck keeps its edited Unicode name in the picture and chosen send`() {
         val symbol = "\uD83C\uDF31"
-        val name = symbol.repeat(AnkiquestCardLabels.MAX_LABEL)
+        val name = symbol.repeat(AnkiquestShare.MAX_LABEL)
         val reference = MomentRef.Deck("7", "Japanese")
         coEvery { AnkiquestSharing.send(account, reference.copy(name = name), any(), any()) } returns AnkiquestSharing.Sent(1, 91, null)
         val (_, dialog) = open(reference = reference)
@@ -457,7 +451,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
             AnkiquestShareSheet(
                 screen,
                 account,
-                reference,
+                AnkiquestShareSheet.Subject.Known(reference),
                 card,
                 elsewhere = {
                     elsewhere++
@@ -513,7 +507,6 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     private companion object {
         const val SEND_TIMEOUT_SECONDS = 10L
         const val POLL_MS = 10L
-        const val HTTP_OK = 200
         const val NOW = 1_793_183_460_000L
         const val DAY = 24L * 60 * 60 * 1000
     }

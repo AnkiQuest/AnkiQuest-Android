@@ -140,7 +140,7 @@ class AnkiquestShareActivity : AnkiActivity() {
         AnkiquestShareSheet(
             this,
             account,
-            reference,
+            AnkiquestShareSheet.Subject.Known(reference),
             AnkiquestShare.Card(share.title, share.body, AnkiquestShare.art(intent, share.place)),
             elsewhere = { shareElsewhere(share, null) },
             closed = { if (it != AnkiquestShareSheet.Exit.ELSEWHERE) finish() },

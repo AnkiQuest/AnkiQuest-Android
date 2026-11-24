@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_rwkv_title">Agendador RWKV (experimental)</string>
+    <string name="ankiquest_rwkv_off">Agenda as revisões com um modelo RWKV em vez do FSRS. Precisa de um ficheiro de modelo e de memória suficiente.</string>
+    <string name="ankiquest_rwkv_no_engine">Indisponível: esta versão do AnkiQuest ainda não tem motor RWKV. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_unsupported_abi">Indisponível: o motor RWKV não funciona no processador deste telemóvel. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Indisponível: este telemóvel tem pouca memória para a tua coleção. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_no_model">Indisponível: escolhe primeiro um ficheiro de modelo RWKV. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_ready">Ativado: o RWKV agenda as tuas revisões.</string>
+</resources>

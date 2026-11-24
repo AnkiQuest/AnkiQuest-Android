@@ -15,7 +15,6 @@ import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -34,8 +33,6 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -49,9 +46,9 @@ import kotlin.test.assertTrue
 class AnkiquestPollTest : RobolectricTest() {
     private enum class ReminderReply { NORMAL, FAIL, CHANGE_ACCOUNT }
 
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var url: String
-    private val requests = CopyOnWriteArrayList<String>()
+    private val requests get() = server.requests.map { it.path }
 
     @Volatile
     private var inboxStatus = 200
@@ -97,52 +94,47 @@ class AnkiquestPollTest : RobolectricTest() {
         every { AnkiquestNotifier.onProfile(any(), any(), any()) } just Runs
         every { AnkiquestNotifier.onDeckCompletions(any(), any(), any(), any()) } just Runs
 
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.path
-            requests.add(path)
-            if (path == "/api/avatars" && switchAccountDuringAvatars) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
-            }
-            if (path == "/api/avatars" && replaceBoardDuringAvatars) {
-                val fetchedAt = cacheKey(AnkiquestPoll.PREF_CACHE_AT)
-                AnkiDroidApp.sharedPrefs().edit {
-                    putLong(fetchedAt, AnkiDroidApp.sharedPrefs().getLong(fetchedAt, 0) + 1)
-                    putString(cacheKey(AnkiquestPoll.PREF_CACHE), "[{\"user\":\"newer\"}]")
+        server =
+            AnkiquestTestServer { request ->
+                val path = request.path
+                if (path == "/api/avatars" && switchAccountDuringAvatars) {
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
                 }
-            }
-            val inbox = path.startsWith("/api/notifications/")
-            val reminders = path == "/api/community/reminders/cerro"
-            if (reminders && reminderReply == ReminderReply.CHANGE_ACCOUNT) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
-            }
-            if (inbox && switchAccountDuringInbox) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
-            }
-            val status =
-                when {
-                    inbox -> inboxStatus
-                    path == "/api/leaderboard" -> leaderboardStatus
-                    path == "/api/avatars" -> avatarStatus
-                    path.startsWith("/api/reviews/") -> reviewStatus
-                    reminders && reminderReply == ReminderReply.FAIL -> java.net.HttpURLConnection.HTTP_UNAVAILABLE
-                    else -> 200
+                if (path == "/api/avatars" && replaceBoardDuringAvatars) {
+                    val fetchedAt = cacheKey(AnkiquestPoll.PREF_CACHE_AT)
+                    AnkiDroidApp.sharedPrefs().edit {
+                        putLong(fetchedAt, AnkiDroidApp.sharedPrefs().getLong(fetchedAt, 0) + 1)
+                        putString(cacheKey(AnkiquestPoll.PREF_CACHE), "[{\"user\":\"newer\"}]")
+                    }
                 }
-            val response =
-                when {
-                    inbox -> inboxBody
-                    path == "/api/leaderboard" -> "[]"
-                    path == "/api/profile/cerro" -> profileBody
-                    path == "/api/community/reminders/cerro" -> reminderBody
-                    else -> "{}"
+                val inbox = path.startsWith("/api/notifications/")
+                val reminders = path == "/api/community/reminders/cerro"
+                if (reminders && reminderReply == ReminderReply.CHANGE_ACCOUNT) {
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
                 }
-            val bytes = response.toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
-        url = "http://127.0.0.1:${server.address.port}"
+                if (inbox && switchAccountDuringInbox) {
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
+                }
+                val status =
+                    when {
+                        inbox -> inboxStatus
+                        path == "/api/leaderboard" -> leaderboardStatus
+                        path == "/api/avatars" -> avatarStatus
+                        path.startsWith("/api/reviews/") -> reviewStatus
+                        reminders && reminderReply == ReminderReply.FAIL -> java.net.HttpURLConnection.HTTP_UNAVAILABLE
+                        else -> 200
+                    }
+                val response =
+                    when {
+                        inbox -> inboxBody
+                        path == "/api/leaderboard" -> "[]"
+                        path == "/api/profile/cerro" -> profileBody
+                        path == "/api/community/reminders/cerro" -> reminderBody
+                        else -> "{}"
+                    }
+                TestResponse.json(response, status)
+            }
+        url = server.url
         AnkiDroidApp.sharedPrefs().edit {
             putString(AnkiquestPreferences.PREF_URL, url)
             putString(AnkiquestPreferences.PREF_USER, "cerro")
@@ -220,7 +212,9 @@ class AnkiquestPollTest : RobolectricTest() {
 
     @After
     fun stopPollingServer() {
-        if (::server.isInitialized) server.stop(0)
+        if (::server.isInitialized) {
+            server.close()
+        }
         unmockkObject(AnkiquestWidget, AnkiquestNotifier)
         SharedPreferencesTestHook.override = null
     }
@@ -253,7 +247,7 @@ class AnkiquestPollTest : RobolectricTest() {
             val capabilities = requests.indexOf("/api/capabilities")
             assertTrue(capabilities > requests.indexOfFirst { it.startsWith("/api/notifications/") })
             assertFalse(AnkiquestCapabilities.has(assertNotNull(AnkiquestHomeData.account()), "cookie_session"))
-            requests.clear()
+            server.requests.clear()
             assertEquals(Result.success(), worker().doWork())
             assertTrue(requests.none { it == "/api/capabilities" }, "fresh capabilities are not asked again")
         }
@@ -341,7 +335,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `inbox network failure requests worker retry`() =
         runBlocking {
-            server.stop(0)
+            server.close()
 
             assertEquals(Result.retry(), worker().doWork())
         }

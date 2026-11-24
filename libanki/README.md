@@ -29,6 +29,6 @@ One of the following annotations should be used on all new public code:
 - [`anki:proto`](https://github.com/ankitects/anki/tree/main/proto) - function definitions, exposed
  via `.backend` (`net.ankiweb.rsdroid.Backend`).
 - [`anki:rslib`](https://github.com/ankitects/anki/tree/main/rslib) - the implementation of the functions (Rust-based).
-- [Anki-Android-Backend](https://github.com/ankidroid/Anki-Android-Backend/) - packages the Rust backend (`rsdroid`); generates Kotlin code 
+- [AnkiQuest-Android-Backend](https://github.com/AnkiQuest/AnkiQuest-Android-Backend/) (fork of [Anki-Android-Backend](https://github.com/ankidroid/Anki-Android-Backend/)) - packages the Rust backend (`rsdroid`); generates Kotlin code 
   from types in `anki:proto` and defines an Android-based database abstraction.
 

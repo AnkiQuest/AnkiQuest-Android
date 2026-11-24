@@ -25,7 +25,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +41,6 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -60,10 +57,12 @@ import kotlin.test.assertTrue
 @Category(EmptyApplicationCategory::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class AnkiquestAvatarsTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var url: String
-    private val requests = CopyOnWriteArrayList<String>()
-    private val authorizations = CopyOnWriteArrayList<String>()
+
+    /** Each request as "METHOD uri", and the authorization it sent, empty for none. */
+    private val requests get() = server.requests.map { it.toString() }
+    private val authorizations get() = server.requests.map { it.authorization.orEmpty() }
 
     @Volatile
     private var revisions = JSONObject().put("cerro", "1")
@@ -96,47 +95,8 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     fun startServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         photo = png()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.path
-            requests.add("${exchange.requestMethod} ${exchange.requestURI}")
-            val authorization = exchange.requestHeaders.getFirst("Authorization").orEmpty()
-            authorizations.add(authorization)
-            if (path == "/api/avatars") {
-                pauseManifest?.let { (started, release) ->
-                    started.countDown()
-                    check(release.await(10, TimeUnit.SECONDS)) { "Test did not release the manifest" }
-                }
-            }
-            if (path == "/api/avatars" && changeTokenAfterManifest) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
-            }
-            val body =
-                when {
-                    exchange.requestMethod == "POST" -> {
-                        posted = exchange.requestBody.readBytes()
-                        "{\"revision\":\"9\"}".toByteArray()
-                    }
-                    exchange.requestMethod == "DELETE" -> ByteArray(0)
-                    path == "/api/avatars" -> revisions.toString().toByteArray()
-                    else -> photo
-                }
-            val status =
-                when {
-                    exchange.requestMethod == "GET" && authorization != "Bearer test-token" &&
-                        ((path == "/api/avatars" && protectedManifest) || (path.startsWith("/api/avatar/") && protectedPhotos)) -> 401
-                    exchange.requestMethod == "DELETE" -> 204
-                    path == "/api/avatars" || exchange.requestMethod == "POST" -> 200
-                    else -> photoStatus
-                }
-            if (changeTokenAfterMutation && exchange.requestMethod in listOf("POST", "DELETE")) {
-                AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
-            }
-            exchange.sendResponseHeaders(status, if (status == 204) -1 else body.size.toLong())
-            exchange.responseBody.use { if (status != 204) it.write(body) }
-        }
-        server.start()
-        url = "http://127.0.0.1:${server.address.port}"
+        server = AnkiquestTestServer(::answer)
+        url = server.url
         AnkiDroidApp.sharedPrefs().edit {
             putString(AnkiquestPreferences.PREF_URL, url)
             putString(AnkiquestPreferences.PREF_USER, "cerro")
@@ -144,9 +104,46 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         }
     }
 
+    /** The avatar API as the test set it up: manifest, photos and changes. */
+    private fun answer(request: TestRequest): TestResponse {
+        val path = request.path
+        val authorization = request.authorization.orEmpty()
+        if (path == "/api/avatars") {
+            pauseManifest?.let { (started, release) ->
+                started.countDown()
+                check(release.await(10, TimeUnit.SECONDS)) { "Test did not release the manifest" }
+            }
+        }
+        if (path == "/api/avatars" && changeTokenAfterManifest) {
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
+        }
+        val body =
+            when {
+                request.method == "POST" -> {
+                    posted = request.bytes
+                    "{\"revision\":\"9\"}".toByteArray()
+                }
+                request.method == "DELETE" -> null
+                path == "/api/avatars" -> revisions.toString().toByteArray()
+                else -> photo
+            }
+        val status =
+            when {
+                request.method == "GET" && authorization != "Bearer test-token" &&
+                    ((path == "/api/avatars" && protectedManifest) || (path.startsWith("/api/avatar/") && protectedPhotos)) -> 401
+                request.method == "DELETE" -> 204
+                path == "/api/avatars" || request.method == "POST" -> 200
+                else -> photoStatus
+            }
+        if (changeTokenAfterMutation && request.method in listOf("POST", "DELETE")) {
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
+        }
+        return TestResponse(status, body)
+    }
+
     @After
     fun stopServer() {
-        server.stop(0)
+        server.close()
         SharedPreferencesTestHook.override = null
     }
 
@@ -329,8 +326,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         runBlocking {
             val captured = assertNotNull(AnkiquestAvatars.account())
             AnkiquestAvatars.save(captured, createBitmap(64, 64))
-            requests.clear()
-            authorizations.clear()
+            server.requests.clear()
             changeTokenAfterMutation = true
             assertFailsWith<AnkiquestAvatars.AccountChanged> { AnkiquestAvatars.remove(captured) }
             assertEquals(listOf("DELETE /api/avatar/cerro"), requests.toList())

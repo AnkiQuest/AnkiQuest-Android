@@ -66,7 +66,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
 
     @Test
     fun `every streak mood shows Ankilope's own pose`() {
-        // hill's report: a freeze used yesterday showed Ankilope's study pose although her frozen pose exists.
+        // Regression: a freeze used yesterday showed Ankilope's study pose although her frozen pose exists.
         for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
             chooseCompanion(choice)
             for ((mood, expected) in ankilopeMoodPoses) {

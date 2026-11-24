@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_rwkv_key" translatable="false">ankiquestRwkv</string>
+    <string name="ankiquest_rwkv_title" maxLength="41">RWKV scheduler (experimental)</string>
+    <string name="ankiquest_rwkv_off">Schedule reviews with an RWKV model instead of FSRS. Needs a model file and enough memory.</string>
+    <string name="ankiquest_rwkv_no_engine">Not available: this version of AnkiQuest has no RWKV engine yet. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_unsupported_abi">Not available: the RWKV engine doesn\'t run on this phone\'s processor. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Not available: this phone has too little memory for your collection. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_no_model">Not available: choose an RWKV model file first. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_ready">On: RWKV schedules your reviews.</string>
+</resources>
