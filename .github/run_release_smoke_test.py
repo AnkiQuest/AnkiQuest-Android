@@ -9,16 +9,35 @@ import sys
 import xml.etree.ElementTree as ET
 
 RESULTS = Path("baselineprofile/build/outputs/androidTest-results/connected")
-SMOKE_TEST = [
+SMOKE_TEST_BASE = [
     "./gradlew",
     ":baselineprofile:connectedBenchmarkBenchmarkAndroidTest",
     "-Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.baselineprofile.ReleaseSmokeTest",
     "-Pandroid.testInstrumentationRunnerArguments.releaseSmokeTest=true",
-    "-x",
-    "lintVitalPlayRelease",
+]
+SMOKE_TEST_TAIL = [
     "--daemon",
     "--stacktrace",
 ]
+
+
+def smoke_test_command():
+    # Newer Android Gradle plugin versions have no lintVitalPlayRelease task, and
+    # -x naming a missing task fails the whole selection, so the exclusion is only
+    # passed when the task exists.
+    try:
+        tasks = subprocess.run(
+            ["./gradlew", ":AnkiDroid:tasks", "--all", "--quiet"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout
+        has_lint_vital = "lintVitalPlayRelease" in tasks
+    except OSError:
+        has_lint_vital = False
+    return SMOKE_TEST_BASE + (
+        ["-x", "lintVitalPlayRelease"] if has_lint_vital else []
+    ) + SMOKE_TEST_TAIL
 UNFINISHED_TEST_ERROR = b"Test failed with status -1"
 
 
@@ -75,7 +94,7 @@ def has_test_result():
 
 def run_smoke_test():
     shutil.rmtree(RESULTS, ignore_errors=True)
-    return subprocess.run(SMOKE_TEST).returncode
+    return subprocess.run(smoke_test_command()).returncode
 
 
 def main():
