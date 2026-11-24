@@ -20,7 +20,6 @@ import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
-import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -49,7 +48,6 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
-import java.net.InetSocketAddress
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -58,8 +56,8 @@ import kotlin.test.assertTrue
 @Config(sdk = [33])
 class AnkiquestOwnProfileTest : RobolectricTest() {
     private val hour = 3_600_000L
-    private lateinit var server: HttpServer
-    private val paths = mutableListOf<String>()
+    private lateinit var server: AnkiquestTestServer
+    private val paths get() = server.requests.map { it.path }
 
     @Volatile
     private var answer: JSONObject = JSONObject()
@@ -70,20 +68,12 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         every { AnkiquestPoll.refreshNow(any()) } just Runs
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         AnkiquestWidget.forgetFresh()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            exchange.requestBody.use { it.readBytes() }
-            val path = exchange.requestURI.path
-            synchronized(paths) { paths.add(path) }
-            val body = if (path.startsWith("/api/decks/")) JSONObject().put("decks", JSONArray()) else answer
-            val bytes = body.toString().toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+        server =
+            AnkiquestTestServer { request ->
+                TestResponse.json(if (request.path.startsWith("/api/decks/")) JSONObject().put("decks", JSONArray()) else answer)
+            }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "aldanita")
             putString(Ankiquest.PREF_TOKEN, "token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, true)
@@ -96,7 +86,9 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             // The application scope outlives an individual test's server and preferences.
             runBlocking { drainReviewJobs() }
         } finally {
-            if (::server.isInitialized) server.stop(0)
+            if (::server.isInitialized) {
+                server.close()
+            }
             AnkiquestWidget.forgetFresh()
             unmockkObject(AnkiquestPoll)
             SharedPreferencesTestHook.override = null
@@ -133,7 +125,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
 
             assertEquals(listOf(Icon.AKI_HAPPY), enabled())
             assertEquals("studied", AnkiquestIcon.lastKnown()!!.getString("streak_state"), "the next app start begins from it")
-            assertEquals(0, synchronized(paths) { paths.count { it.startsWith("/api/profile") } }, "the upload's answer is enough")
+            assertEquals(0, paths.count { it.startsWith("/api/profile") }, "the upload's answer is enough")
             verify(exactly = 0) { AnkiquestPoll.refreshNow(any()) }
         }
 
@@ -218,7 +210,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 }
                 release.complete(Unit)
                 drainReviewJobs()
-                val requested = synchronized(paths) { paths.toList() }
+                val requested = paths
                 assertTrue(requested.none { it.contains("other") }, "old review work requested the next account: $requested")
             } finally {
                 release.complete(Unit)
@@ -257,7 +249,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 }
                 mutex.unlock(owner)
                 drainReviewJobs()
-                val requested = synchronized(paths) { paths.toList() }
+                val requested = paths
                 assertTrue(requested.none { it.contains("other") }, "waiting upload changed accounts: $requested")
             } finally {
                 release.complete(Unit)
@@ -305,7 +297,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 upload.cancelAndJoin()
                 mutex.unlock(owner)
                 Ankiquest.uploadPending(targetContext)
-                val requested = synchronized(paths) { paths.toList() }
+                val requested = paths
                 assertTrue(
                     requested.any { it == "/api/reviews/aldanita" },
                     "the next poll must still upload after cancellation: $requested",
@@ -353,7 +345,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), text(R.id.ankiquest_streak_status))
             assertEquals(
                 1,
-                synchronized(paths) { paths.count { it.startsWith("/api/") && !it.startsWith("/api/decks/") } },
+                paths.count { it.startsWith("/api/") && !it.startsWith("/api/decks/") },
                 "only the upload",
             )
         }

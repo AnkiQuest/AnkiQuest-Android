@@ -19,7 +19,6 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
-import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -37,7 +36,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -50,7 +48,7 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
 class AnkiquestWidgetLockTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
 
     /** The rows `/api/leaderboard` answers. */
     @Volatile
@@ -85,26 +83,20 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
         }
 
         // Every locked answer carries the header; only the board's rows matter here.
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val body =
-                when {
-                    exchange.requestURI.path == "/api/leaderboard" -> board.toString()
-                    // A server with scopes answers the Global setting with the player's decks.
-                    exchange.requestURI.path.startsWith("/api/decks/") -> JSONObject().put(AnkiquestBoards.GLOBAL_SETTING, true).toString()
-                    else -> "{}"
-                }
-            val bytes = body.toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            if (uploaded == Uploaded.NOT_YET) {
-                exchange.responseHeaders.set(AnkiquestLock.HEADER, "upload_first")
+        server =
+            AnkiquestTestServer { request ->
+                val body =
+                    when {
+                        request.path == "/api/leaderboard" -> board
+                        // A server with scopes answers the Global setting with the player's decks.
+                        request.path.startsWith("/api/decks/") -> JSONObject().put(AnkiquestBoards.GLOBAL_SETTING, true)
+                        else -> "{}"
+                    }
+                val lock = if (uploaded == Uploaded.NOT_YET) mapOf(AnkiquestLock.HEADER to "upload_first") else emptyMap()
+                TestResponse.json(body, headers = lock)
             }
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "aldanita")
             putString(Ankiquest.PREF_TOKEN, "aldanita-token")
         }
@@ -114,7 +106,7 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
     fun stopServer() {
         try {
             if (::server.isInitialized) {
-                server.stop(0)
+                server.close()
             }
         } finally {
             AnkiquestWidget.forgetFresh()
@@ -158,7 +150,7 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
             AnkiquestPoll.run(targetContext)
 
             // The next poll cannot reach the server, so the widget draws the cached board.
-            server.stop(0)
+            server.close()
             AnkiquestPoll.run(targetContext)
 
             assertEquals(targetContext.getString(R.string.aq_upload_first), shown(id).last())

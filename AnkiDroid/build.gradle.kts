@@ -5,6 +5,7 @@ import com.android.build.api.variant.FilterConfiguration.FilterType
 import com.ichi2.anki.gradle.UpstreamCommit
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
+import com.ichi2.anki.gradle.addAnkiBackendDependencies
 import com.ichi2.anki.gradle.isCoverageEnabled
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
@@ -869,27 +870,7 @@ dependencies {
     debugImplementation(libs.androidx.fragment.testing.manifest)
 
     // Backend libraries
-
-    implementation(libs.protobuf.kotlin.lite) // This is required when loading from a file
-
-    // TODO: migrate to `addAnkiBackendDependencies(...)` when this is a gradle.kts file
-    val localProperties = Properties()
-    if (project.rootProject.file("local.properties").exists()) {
-        localProperties.load(project.rootProject.file("local.properties").inputStream())
-    }
-    if (localProperties["local_backend"] == "true") {
-        // Local artifacts have no Maven metadata, so both the core JAR and Android AAR are needed.
-        implementation(
-            files(
-                rootProject.file("../Anki-Android-Backend/rsdroid/build/libs/rsdroid.jar"),
-                rootProject.file("../Anki-Android-Backend/rsdroid-android/build/outputs/aar/rsdroid-android-release.aar"),
-            ),
-        )
-        testImplementation(files(rootProject.file("../Anki-Android-Backend/rsdroid-testing/build/libs/rsdroid-testing.jar")))
-    } else {
-        implementation(libs.ankiBackend.backend)
-        testImplementation(libs.ankiBackend.testing)
-    }
+    addAnkiBackendDependencies(project)
 
     // May need a resolution strategy for support libs to our versions
     implementation(libs.acra.limiter)

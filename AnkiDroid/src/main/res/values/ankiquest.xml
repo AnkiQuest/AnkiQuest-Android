@@ -98,8 +98,8 @@
     <string name="ankiquest_update_check_failed">Could not check GitHub for updates. Try again later.</string>
     <string name="ankiquest_period_hour">this hour</string>
     <string name="ankiquest_period_day" comment="Daily leaderboard period label, in sentence case">today</string>
-    <string name="ankiquest_period_week">this week</string>
-    <string name="ankiquest_period_month">this month</string>
+    <string name="ankiquest_period_week" comment="Weekly leaderboard period label, used inside a sentence">this week</string>
+    <string name="ankiquest_period_month" comment="Monthly leaderboard period label, used inside a sentence">this month</string>
     <string name="ankiquest_period_year">this year</string>
     <string name="ankiquest_period_all">all time</string>
     <string name="ankiquest_widget_period_title">Which leaderboard?</string>

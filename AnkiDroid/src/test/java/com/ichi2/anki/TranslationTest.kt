@@ -383,6 +383,11 @@ class TranslationTest : JvmTest() {
             setOf(
                 "launcherOff", // "Off" - unrelated to CommonString.full_screen_off
                 "launcherOn", // "On" - unrelated to CommonString.reminder_troubleshooting_status_on
+                // AnkiQuest-Anki's FSRS and RWKV deck options, unrelated to the XML strings with the same text
+                "deckConfigCopySettings", // "Settings" - CommonString.settings
+                "deckConfigRwkvComparisonAgreementUnavailable", // "Unavailable" - CommonString.card_browser_order_section_unavailable
+                "deckConfigRwkvModelNotUsed", // "Not used" - CommonString.custom_sync_server_summary_none_of_the_two_servers_used
+                "deckConfigRwkvModelSmall", // "Small" - CommonString.html_size_code_small
                 // "Advanced Settings" - this upstream string is Title Case; CommonString.add_edit_reminder_advanced_label
                 // is both unrelated and sentence case (per AnkiDroid convention)
                 "deckConfigAdvancedSettings",
