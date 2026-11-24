@@ -4,82 +4,89 @@ package com.ichi2.anki.gradle
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.process.ExecOperations
-import javax.inject.Inject
+import java.io.InputStream
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
 
 /**
- * Writes the companions' drawables from the masters in the AnkiQuest-Art submodule, with its
- * `tools/art-export` (`android <res-dir>`): `<res-dir>/drawable-nodpi/<name>.webp`.
+ * unpacks the companions' drawables from the pinned AnkiQuest-Art release:
+ * `ankiquest-art.json` names the release tag and the SHA-256 of `android-drawables.zip`,
+ * whose `drawable-nodpi/<name>.webp` entries and licences become the generated res
+ * directory. Art is never a submodule of this repository.
  *
- * The same masters give the same bytes on every run; Linux output is canonical.
+ * The pin selects the bytes, so the same pin gives the same drawables on every run.
  */
-abstract class ExportAnkiquestArt
-    @Inject
-    constructor(
-        private val exec: ExecOperations,
-    ) : DefaultTask() {
-        /** The AnkiQuest-Art checkout. */
-        @get:Internal
-        abstract val art: DirectoryProperty
+abstract class ExportAnkiquestArt : DefaultTask() {
+    /** `ankiquest-art.json`, with the release tag and the zip hashes. */
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val pin: RegularFileProperty
 
-        /** `manifest.json`, the masters and the exporter's sources. */
-        @get:InputFiles
-        @get:PathSensitive(PathSensitivity.RELATIVE)
-        abstract val sources: ConfigurableFileCollection
+    /** Where the download is kept between runs. */
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
 
-        /** The cargo executable. */
-        @get:Input
-        abstract val cargo: Property<String>
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val downloadDir: DirectoryProperty
 
-        /** Cargo's target directory, kept out of the submodule and shared by every variant (cargo locks it). */
-        @get:Internal
-        abstract val cargoTarget: DirectoryProperty
+    @TaskAction
+    fun export() {
+        val pinText = pin.get().asFile.readText()
+        val tag = pinText.regexGroup("\"tag\"\\s*:\\s*\"([^\"]+)\"") ?: throw GradleException("ankiquest-art.json has no tag")
+        val sha = pinText.regexGroup("\"android-drawables.zip\"\\s*:\\s*\"([0-9a-f]{64})\"")
+            ?: throw GradleException("ankiquest-art.json has no android-drawables.zip hash")
+        val url = "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/$tag/android-drawables.zip"
 
-        /** The generated res directory. */
-        @get:OutputDirectory
-        abstract val outputDir: DirectoryProperty
-
-        @TaskAction
-        fun export() {
-            val root = art.get().asFile
-            if (!root.resolve(MANIFEST).isFile) {
-                throw GradleException("$root has no $MANIFEST: run `git submodule update --init`")
+        val downloads = downloadDir.get().asFile.apply { mkdirs() }
+        val zip = downloads.resolve("android-drawables.zip")
+        if (!zip.isFile || zip.sha256() != sha) {
+            downloads.listFiles()?.forEach { it.delete() }
+            val request = HttpRequest.newBuilder(URI.create(url)).GET().build()
+            val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofFile(zip.toPath()))
+            if (response.statusCode() != 200) {
+                throw GradleException("Downloading $url answered ${response.statusCode()}")
             }
-
-            // Start from an empty directory, so a removed export leaves no stale drawable.
-            val out = outputDir.get().asFile
-            out.deleteRecursively()
-            out.mkdirs()
-
-            exec.exec {
-                commandLine(
-                    cargo.get(),
-                    "run",
-                    "--locked",
-                    "--release",
-                    "--quiet",
-                    "--manifest-path",
-                    root.resolve(EXPORTER).path,
-                    "--",
-                    "android",
-                    out.path,
-                )
-                environment("CARGO_TARGET_DIR", cargoTarget.get().asFile.path)
+            if (zip.sha256() != sha) {
+                zip.delete()
+                throw GradleException("android-drawables.zip of $tag: SHA-256 ${zip.sha256()}, the pin expects $sha")
             }
         }
 
-        companion object {
-            const val MANIFEST = "manifest.json"
-            const val EXPORTER = "tools/art-export/Cargo.toml"
+        // Start from an empty directory, so a removed drawable leaves no stale entry.
+        val out = outputDir.get().asFile
+        out.deleteRecursively()
+        out.mkdirs()
+        ZipInputStream(zip.inputStream().buffered()).use { stream ->
+            while (true) {
+                val entry = stream.nextEntry ?: break
+                if (entry.isDirectory) continue
+                if (entry.name.contains("..")) throw GradleException("bad entry in android-drawables.zip: ${entry.name}")
+                val target = out.resolve(entry.name)
+                if (!target.canonicalFile.startsWith(out.canonicalFile)) {
+                    throw GradleException("bad entry in android-drawables.zip: ${entry.name}")
+                }
+                target.parentFile?.mkdirs()
+                target.outputStream().use { stream.copyTo(it) }
+            }
         }
     }
+
+    private fun String.regexGroup(pattern: String): String? =
+        Regex(pattern).find(this)?.groupValues?.get(1)
+
+    private fun java.io.File.sha256(): String =
+        MessageDigest.getInstance("SHA-256").digest(readBytes()).joinToString("") { "%02x".format(it) }
+}

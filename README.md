@@ -87,10 +87,9 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 
 ## Development
 
-The companion drawables are generated at build time from the masters in the [AnkiQuest-Art](https://github.com/AnkiQuest/AnkiQuest-Art) submodule (`art/`), by its Rust exporter. Builds need the submodule and cargo:
+The companion drawables are unpacked at build time from the pinned [AnkiQuest-Art](https://github.com/AnkiQuest/AnkiQuest-Art) release that [`ankiquest-art.json`](ankiquest-art.json) names (`android-drawables.zip`, SHA-256 checked); AnkiQuest-Sync bumps the pin on every Art release. The first build downloads it:
 
 ```sh
-git submodule update --init
 ./gradlew ktlintCheck
 ./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'
 node --test .github/tests/*.test.cjs

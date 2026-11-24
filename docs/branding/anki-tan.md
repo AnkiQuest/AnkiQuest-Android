@@ -25,7 +25,7 @@ The app does not offer her as a companion yet: she lacks a frozen pose
 | monochrome (themed icon) | `anki_tan_icon_mono` | line art of `emoji/Ankitan_00_smile.png` |
 
 The drawables are generated at build time from the masters in the
-AnkiQuest-Art submodule (`art/`) by its `tools/art-export`.
+pinned AnkiQuest-Art release (`android-drawables.zip`, SHA-256 checked against `ankiquest-art.json`).
 The adaptive icons in `AnkiDroid/src/quest/res/` inset her app icon by 10%
 so its frame stays outside the launcher's mask, and the faces by 18%, inside
 the 72dp safe zone, as Aki's are.

@@ -17,7 +17,7 @@ beside this document. The artwork ships inside the app and works offline.
 
 The pictures are generated at build time as `drawable-nodpi/aki_*.webp`,
 downscaled to about three times their largest display size, from the masters
-in the AnkiQuest-Art submodule (`art/`).
+in the pinned AnkiQuest-Art release (`android-drawables.zip`, via `ankiquest-art.json`).
 Use welcome for introductions, review for studying, celebrate for confirmed
 completion, streak for today's studying, freeze for confirmed streak
 protection, winner for completed quests or records, and face for compact

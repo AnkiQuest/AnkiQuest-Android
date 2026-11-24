@@ -209,6 +209,19 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             return last.takeIf { it.optLong("day_ends_at") == dayEndsAt }
         }
 
+        /** What the streak widget shows of [profile]; when it changes, the widget is drawn again. */
+        internal fun streakShown(profile: JSONObject): List<Any> {
+            val row = AnkiquestWidget.ownRow(profile, null)
+            return listOf(
+                row.optLong("streak"),
+                AnkiquestWidget.streakState(row),
+                row.optLong("today_minutes"),
+                row.optLong("streak_minutes"),
+                row.optLong("day_ends_at"),
+                profile.optJSONObject("goal")?.toString().orEmpty(),
+            )
+        }
+
         /** Draws your row of [board] into every placed streak widget; null means not configured. */
         fun render(
             context: Context,

@@ -1,10 +1,28 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest APK
 
+# A documentation-only push to master builds no nightly, with paths-ignore: this is not a required
+# check and does not run in the merge queue. GitHub does not apply path filters to tag pushes, so
+# every quest-* tag still builds. The globs are the documentation list of ankiquest_lint.yml's
+# changes job (.github/tests/docs-only.test.cjs); they leave out the release notes in the app's
+# assets, which ship in the APK.
 on:
   push:
     branches: [master]
     tags: ["quest-*"]
+    paths-ignore:
+      - '*.md'
+      - '*/README.md'
+      - '*/*/README.md'
+      - '.agents/**/*.md'
+      - '.github/workflows/README.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - '.idea/**/*.md'
+      - '.oss-scanner/*.md'
+      - 'LICENSE*'
+      - 'LICENSES/**'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:

@@ -10,7 +10,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,8 +19,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -45,9 +42,12 @@ class AnkiquestFeedTest : RobolectricTest() {
         val body: String,
     )
 
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var account: HomeAccount
-    private val requests = CopyOnWriteArrayList<Seen>()
+    private val requests get() = server.requests.map(::seen)
+
+    private fun seen(request: TestRequest) =
+        Seen(request.method, request.uri.rawPath, request.uri.rawQuery, request.authorization, request.body)
 
     /** Answers by path; anything else is 404. */
     @Volatile private var answer: (Seen) -> Answer = { Answer(404, "") }
@@ -55,26 +55,13 @@ class AnkiquestFeedTest : RobolectricTest() {
     @Before
     fun prepare() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val seen =
-                Seen(
-                    exchange.requestMethod,
-                    exchange.requestURI.rawPath,
-                    exchange.requestURI.rawQuery,
-                    exchange.requestHeaders.getFirst("Authorization"),
-                    exchange.requestBody.use { it.readBytes().decodeToString() },
-                )
-            requests += seen
-            val reply = answer(seen)
-            val bytes = reply.body.toByteArray()
-            exchange.sendResponseHeaders(reply.status, if (bytes.isEmpty()) -1 else bytes.size.toLong())
-            if (bytes.isNotEmpty()) exchange.responseBody.use { it.write(bytes) }
-            exchange.close()
-        }
-        server.start()
+        server =
+            AnkiquestTestServer { request ->
+                val reply = answer(seen(request))
+                TestResponse(reply.status, reply.body.toByteArray())
+            }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "member name")
             putString(Ankiquest.PREF_TOKEN, "member-test-token")
         }
@@ -83,7 +70,7 @@ class AnkiquestFeedTest : RobolectricTest() {
 
     @After
     fun stop() {
-        server.stop(0)
+        server.close()
         SharedPreferencesTestHook.override = null
     }
 
@@ -146,7 +133,7 @@ class AnkiquestFeedTest : RobolectricTest() {
             assertEquals("limit=50&category=deck_completions&unread_only=true&before=40", seen.query)
             assertEquals("Bearer member-test-token", seen.authorization)
 
-            requests.clear()
+            server.requests.clear()
             assertFalse(AnkiquestFeed.page(account).unfiltered)
             assertEquals("limit=50", requests.single().query)
         }
@@ -199,7 +186,7 @@ class AnkiquestFeedTest : RobolectricTest() {
             assertEquals(listOf(200, 200, 50), requests.map { JSONObject(it.body).getJSONArray("ids").length() })
             assertTrue(requests.all { it.method == "POST" && it.path == "/api/activity/member%20name/read" })
 
-            requests.clear()
+            server.requests.clear()
             AnkiquestFeed.markAllRead(account, 42)
             assertEquals("""{"through":42}""", requests.single().body)
         }
