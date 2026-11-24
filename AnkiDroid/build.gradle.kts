@@ -410,8 +410,8 @@ android {
         enable = true
     }
 
-    // AnkiQuest: master's copy of the study time fixture lives with the app test that reads it;
-    // every other pinned example and shared fixture lives with :ankiquest-core.
+    // AnkiQuest: the pinned server examples and shared fixtures live with :ankiquest-core.
+    sourceSets["test"].resources.srcDir("../ankiquest-core/src/test/resources")
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
