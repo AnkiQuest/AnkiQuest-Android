@@ -560,7 +560,8 @@ internal object AnkiquestMomentCard {
             val open = waiting as? Waiting.Sheet ?: return
             val moment = moments.firstOrNull { it.key == open.key }?.let(::confirmed) ?: return
             val signedIn = current() ?: return
-            val ref = reference(moment)?.takeIf { AnkiquestMomentShare.available(signedIn, it) } ?: return
+            // The refuse() gate at share time already ruled out a server too old for this.
+            val ref = reference(moment) ?: return
             waiting = Waiting.None
             open.sheet.confirm(ref)
         }
