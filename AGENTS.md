@@ -193,3 +193,12 @@ AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 - **README banner and social preview.** `ankiquest-banner --server <AnkiQuest-Server checkout> --record` (AnkiQuest-Dev's shared tool) regenerates `docs/graphics/logos/banner_readme.png` and `social_preview.png` from `docs/graphics/banner.toml`: it records `AnkiquestBannerScreenshots` with Roborazzi (sample data, pinned clock, fixed device), then draws five phones and the duo master at the pinned server commit. The `ankiquest README banner` workflow records the screens, passes them to AnkiQuest-Dev's `banner.yml`, fails a pull request that touches the images or their inputs unless the committed images have the drawn pixels, and proposes new images for each release. The store screenshots in `fastlane/` are still upstream AnkiDroid's.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `master` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
 - **Checks to run** before pushing: `./gradlew ktlintCheck` and the unit tests you touched (`./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'`). Leave the full suites to CI.
+
+## Upstream guidance
+
+From [ankidroid/Anki-Android](https://github.com/ankidroid/Anki-Android)'s AGENTS.md, kept here so the fork still follows the originating project's own rules where AnkiQuest's do not override them; this job refreshes the wording when upstream changes it.
+
+- Follow the repository's [AI policy](AI_POLICY.md).
+- Keep changes focused on the requested task. Avoid unrelated refactors, formatting, and settings changes.
+- Keep branch history linear. Do not create merge commits.
+- For bug fixes, write a regression test that fails for the expected reason before the fix, then confirm it passes with the fix.

@@ -64,7 +64,7 @@ test("the required unit test job skips steps, never itself", () => {
     const job = unit.slice(unit.indexOf("\n  unit:\n"));
     const condition = job.match(/^ {4}if: (.*)$/m)[1];
     assert.doesNotMatch(condition, /changes/);
-    assert.match(job, /^ {8}run: \.\/gradlew jacocoUnitTestReport/m);
+    assert.match(job, /^ {8}run: \.\/gradlew :AnkiDroid:jacocoCiUnitTestReports --daemon/m);
     assert.match(job, /- name: Run Unit Tests\n {8}if: needs\.changes\.outputs\.code != 'false'\n/);
 });
 
