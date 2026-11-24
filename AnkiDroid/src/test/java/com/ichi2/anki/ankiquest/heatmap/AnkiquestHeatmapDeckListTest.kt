@@ -181,7 +181,7 @@ class AnkiquestHeatmapDeckListTest : RobolectricTest() {
             }
 
         fun submit(deckList: List<DisplayDeckNode>) {
-            deckAdapter.submit(deckList, hasSubDecks = false)
+            deckAdapter.submit(deckList, hasSubDecks = false, onListCommitted = {})
             advanceRobolectricLooperUntil { deckAdapter.currentList == deckList }
         }
 

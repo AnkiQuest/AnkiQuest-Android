@@ -5,8 +5,9 @@ package com.ichi2.anki
 import android.content.Intent
 import androidx.core.content.edit
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.recyclerview.widget.ConcatAdapter
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooperUntil
-import com.ichi2.anki.ankiquest.deckRowsAdapter
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
 import com.ichi2.anki.deckpicker.DeckPickerViewModel.StartupResponse
@@ -14,6 +15,7 @@ import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
 import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
 import com.ichi2.anki.libanki.DeckId
+import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackupManagerTestUtilities
 
 // TODO: move to testFixtures once RobolectricTest is moved
@@ -50,9 +52,23 @@ fun DeckPickerViewModel.awaitStartup() =
         startupJob?.isActive != true && flowOfStartupResponse.value !is StartupResponse.Success
     }
 
+fun DeckPicker.awaitStartup() {
+    if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+        viewModel.awaitStartup()
+    }
+}
+
+/** The deck list's [DeckAdapter], which may be wrapped in a [ConcatAdapter] with other sections. */
+val DeckPicker.deckAdapter: DeckAdapter
+    get() =
+        when (val adapter = deckPickerBinding.decks.adapter) {
+            is ConcatAdapter -> adapter.adapters.filterIsInstance<DeckAdapter>().single()
+            else -> adapter as DeckAdapter
+        }
+
 /** Waits for the adapter to display the expected decks, including background list diffs. */
 fun DeckPicker.awaitVisibleDecks(expectedDeckIds: List<DeckId>) {
-    val adapter = deckRowsAdapter
+    val adapter = deckAdapter
     advanceRobolectricLooperUntil(
         lazyMessage = { "Expected visible decks $expectedDeckIds, but found ${adapter.currentList.map { it.did }}" },
     ) {
