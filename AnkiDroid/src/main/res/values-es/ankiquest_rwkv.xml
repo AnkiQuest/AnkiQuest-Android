@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_rwkv_title">Planificador RWKV (experimental)</string>
+    <string name="ankiquest_rwkv_off">Programa los repasos con un modelo RWKV en lugar de FSRS. Necesita un archivo de modelo y memoria suficiente.</string>
+    <string name="ankiquest_rwkv_no_engine">No disponible: esta versión de AnkiQuest aún no tiene motor RWKV. La programación no cambia.</string>
+    <string name="ankiquest_rwkv_unsupported_abi">No disponible: el motor RWKV no funciona con el procesador de este teléfono. La programación no cambia.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">No disponible: este teléfono tiene poca memoria para tu colección. La programación no cambia.</string>
+    <string name="ankiquest_rwkv_no_model">No disponible: primero elige un archivo de modelo RWKV. La programación no cambia.</string>
+    <string name="ankiquest_rwkv_ready">Activado: RWKV programa tus repasos.</string>
+</resources>
