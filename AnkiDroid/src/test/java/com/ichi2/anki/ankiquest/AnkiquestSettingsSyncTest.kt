@@ -681,7 +681,7 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
     fun `a failed sync offers nothing yet`() =
         runBlocking {
             signInWithSignedOutList()
-            server.stop(0)
+            server.close()
 
             AnkiquestSettingsSync.sync(targetContext, Trigger.START)
 
