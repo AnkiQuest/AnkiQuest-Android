@@ -290,7 +290,12 @@ object CollectionManager {
         combining: Boolean = true,
     ): String {
         // bypass the lock, as the type answer code is heavily nested in non-suspend functions
-        return getBackend().compareAnswer(expected, given, combining)
+        return getBackend().compareAnswer(
+            expected = expected,
+            provided = given,
+            combining = combining,
+            ignoreCase = false,
+        )
     }
 
     /**
