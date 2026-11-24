@@ -9,7 +9,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.acraCoreConfigBuilder
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.exception.UserSubmittedException
-import com.sun.net.httpserver.HttpServer
 import okhttp3.Request
 import okhttp3.Response
 import org.acra.ReportField
@@ -30,7 +29,6 @@ import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.net.HttpURLConnection.HTTP_FORBIDDEN
-import java.net.InetSocketAddress
 import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -322,18 +320,13 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         answer: String,
         read: (Response) -> Any,
     ): String {
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val bytes = answer.toByteArray()
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+        val server = AnkiquestTestServer { TestResponse(bytes = answer.toByteArray()) }
         try {
-            val request = Request.Builder().url("http://127.0.0.1:${server.address.port}/").build()
-            return trace(assertFailsWith<JSONException> { AnkiquestApi.call(request) { read(it) } })
+            val request = Request.Builder().url("${server.url}/").build()
+            val error = assertFailsWith<JSONException> { AnkiquestApi.call(request) { read(it) } }
+            return StringWriter().also { error.printStackTrace(PrintWriter(it)) }.toString()
         } finally {
-            server.stop(0)
+            server.close()
         }
     }
 
