@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
 import com.ichi2.anki.deckpicker.DeckPickerViewModel.FlattenedDeckList
-import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackupManagerTestUtilities
 import io.mockk.every
 import io.mockk.mockkObject
@@ -171,7 +170,7 @@ class DeckPickerScrollStateTest : RobolectricTest() {
         val intermediate = col.decks.id("Test Deck 03")
         val activity = launch().get()
         val viewModel = activity.viewModel
-        val adapter = list(activity).adapter as DeckAdapter
+        val adapter = activity.deckAdapter
         val initialRefresh = viewModel.updateDeckList()
         advanceRobolectricLooperUntil {
             initialRefresh.isCompleted && adapter.itemCount == 81 &&

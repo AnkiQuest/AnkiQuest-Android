@@ -39,7 +39,11 @@ class DeckHierarchyLinesDecorationTest : RobolectricTest() {
             val deckAdapter = deckPicker.deckAdapter
             deckPicker.viewModel.toggleDeckExpand(math)
             advanceRobolectricLooperUntil(lazyMessage = { "Math was not expanded" }) {
-                deckAdapter.currentList.any { it.depth == 1 } && list.childCount == deckAdapter.itemCount
+                deckAdapter.currentList.any { it.depth == 1 } &&
+                    !list.hasPendingAdapterUpdates() &&
+                    (0 until list.childCount).any { position ->
+                        list.getChildViewHolder(list.getChildAt(position)).bindingAdapter === deckAdapter
+                    }
             }
             val decoration = DeckHierarchyLinesDecoration(deckPicker, deckAdapter)
             val unwrapped = decoration.recordDrawing(list)
