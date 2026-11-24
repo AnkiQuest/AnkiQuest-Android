@@ -87,7 +87,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         lock = null
         answer = JSONArray().put(AnkiquestBoardsTest.row("hill", 40, 2)).put(AnkiquestBoardsTest.row("cerro", 90, 5))
         screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
 
         val words = labels(screen)
         assertFalse(targetContext.getString(R.string.aq_upload_first) in words)
