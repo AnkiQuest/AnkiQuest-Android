@@ -4,6 +4,8 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 
 **Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 
+**Study time.** Me has a Study time section: today, this week, this month, total and per study day, from this collection's review history, uploaded or not.
+
 **Friends, Group and Global leaderboards.** The leaderboard switches between Friends, one of your groups and Global, with the server's ranks. Your own row says when it is not shown to others. On Global, "Hide for me" removes a player from your board only; they are not notified. "Hidden players" lists them, each with "Show again". "Show me on the global leaderboard" under Settings → AnkiQuest → Sharing decides whether you are listed.
 
 **Undo.** Muting someone, pausing or resuming streak protection, and saving deck sharing now take effect at once and offer Undo. Undoing a change to several decks gives each deck back its previous recipients.

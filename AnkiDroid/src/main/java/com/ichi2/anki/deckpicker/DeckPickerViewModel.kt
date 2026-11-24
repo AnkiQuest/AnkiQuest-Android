@@ -57,11 +57,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.ankiweb.rsdroid.BackendException
 import net.ankiweb.rsdroid.RustCleanup
 import net.ankiweb.rsdroid.exceptions.BackendInvalidInputException.BackendCollectionNotOpenException
 import net.ankiweb.rsdroid.exceptions.BackendNetworkException
@@ -77,6 +79,7 @@ class DeckPickerViewModel :
     OnErrorListener,
     HasProgress<DeckPickerProgress> {
     override val progressManager = ProgressManager<DeckPickerProgress>()
+    override val onError = Channel<Exception>(Channel.BUFFERED)
 
     val flowOfStartupResponse = MutableStateFlow<StartupResponse?>(null)
 
@@ -122,25 +125,39 @@ class DeckPickerViewModel :
     private val dailyDeckStates = MutableStateFlow<Map<DeckId, com.ichi2.anki.ankiquest.DailyDeckState>>(emptyMap())
 
     val flowOfDeckList =
-        combine(
+        combineTransform(
             flowOfDeckDueTree,
             flowOfDeckSearchQuery,
             flowOfFocusedDeck,
             flowOfRefreshDeckList.onStart { emit(Unit) },
             dailyDeckStates,
         ) { tree, query, _, _, daily ->
-            if (tree == null) return@combine FlattenedDeckList.empty
+            if (tree == null) {
+                emit(FlattenedDeckList.empty)
+                return@combineTransform
+            }
 
             // TODO: use flowOfFocusedDeck once it's set on all instances
             // This flow can outlive the visible screen. Do not reopen the collection just to redraw it.
             val currentDeckId =
-                withOpenColOrNull { decks.current().id }
-                    ?: return@combine FlattenedDeckList.empty
+                try {
+                    withOpenColOrNull { decks.current().id }
+                } catch (e: BackendException) {
+                    onError.send(e)
+                    // Keep the previous deck list and retry on the next update.
+                    return@combineTransform
+                }
+            if (currentDeckId == null) {
+                emit(FlattenedDeckList.empty)
+                return@combineTransform
+            }
             Timber.i("currentDeckId: %d", currentDeckId)
 
-            FlattenedDeckList(
-                data = tree.filterAndFlattenDisplay(DeckFilters.create(query), currentDeckId).map { it.withDailyState(daily[it.did]) },
-                hasSubDecks = tree.children.any { it.children.any() },
+            emit(
+                FlattenedDeckList(
+                    data = tree.filterAndFlattenDisplay(DeckFilters.create(query), currentDeckId).map { it.withDailyState(daily[it.did]) },
+                    hasSubDecks = tree.children.any { it.children.any() },
+                ),
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, initialValue = FlattenedDeckList.empty)
 
@@ -155,7 +172,6 @@ class DeckPickerViewModel :
     val emptyCardsNotification = MutableSharedFlow<EmptyCardsResult>(extraBufferCapacity = 1)
     val flowOfDestination = MutableSharedFlow<Destination>(extraBufferCapacity = 1)
     val flowOfNavigate = MutableSharedFlow<NavigateDestination>(extraBufferCapacity = 1)
-    override val onError = Channel<Exception>(Channel.BUFFERED)
     val flowOfExportDeck = MutableSharedFlow<DeckId>()
     val flowOfCreateShortcut = MutableSharedFlow<ShortcutData>()
     val flowOfDisableShortcuts = MutableSharedFlow<List<String>>()

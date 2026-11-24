@@ -215,16 +215,30 @@ jobs:
       - name: Raise Gradle Heap
         # The release smoke build can run out of heap while packaging (#22741).
         # Every Gradle step in this job shares one daemon, so this applies to all of them.
+        # A configuration-cache entry restored from the Gradle user home answers task
+        # selection with the graph of an older build and fails packaging with
+        # "Task 'lintVitalPlayRelease' not found" in seconds. The user home cannot
+        # override it: the project's gradle.properties wins over the user home's, so
+        # every Gradle invocation below passes --no-configuration-cache on the command
+        # line.
         run: echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" >> "$GRADLE_USER_HOME/gradle.properties"
 
       - name: Warm Gradle Cache
-        # This makes sure we fetch gradle network resources with a retry
+        # This makes sure we fetch gradle network resources with a retry.
+        # Newer Android Gradle plugin versions have no lintVitalPlayRelease task,
+        # and -x naming a missing task fails the whole selection, so the exclusion
+        # is only passed when the task exists.
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 15
           retry_wait_seconds: 60
           max_attempts: 3
-          command: ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark -x lintVitalPlayRelease --daemon
+          command: >-
+            if ./gradlew :AnkiDroid:tasks --all --quiet | grep -q lintVitalPlayRelease; then
+            ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark
+            -x lintVitalPlayRelease --daemon --no-configuration-cache; else
+            ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark
+            --daemon --no-configuration-cache; fi
 
       - name: Install Android Emulator
         # Retry to work around https://github.com/ReactiveCircus/android-emulator-runner/issues/496
@@ -337,7 +351,13 @@ jobs:
         run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected adb-log.txt --title "Emulator test failures" --suite ":AnkiDroid:connectedPlayReleaseAndroidTest"
 
       - name: Build Release Smoke Test
-        run: TEST_RELEASE_BUILD=false ./gradlew packagePlayRelease :baselineprofile:packageBenchmarkBenchmark -x lintVitalPlayRelease --daemon --stacktrace
+        run: |
+          TASKS=$(./gradlew :AnkiDroid:tasks --all --quiet || true)
+          EXTRA=()
+          if grep -q lintVitalPlayRelease <<<"$TASKS"; then
+            EXTRA+=(-x lintVitalPlayRelease)
+          fi
+          TEST_RELEASE_BUILD=false ./gradlew packagePlayRelease :baselineprofile:packageBenchmarkBenchmark "${EXTRA[@]}" --daemon --stacktrace --no-configuration-cache
 
       - name: Run Release Smoke Test
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -428,5 +448,6 @@ jobs:
 
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
+          flags: emulator
           verbose: true
           fail_ci_if_error: ${{ github.repository == 'ankidroid/Anki-Android' }} # optional (default = false)
