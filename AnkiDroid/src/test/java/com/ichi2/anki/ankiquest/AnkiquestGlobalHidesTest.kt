@@ -4,21 +4,22 @@ package com.ichi2.anki.ankiquest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
-import com.sun.net.httpserver.HttpServer
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.HttpURLConnection.HTTP_CONFLICT
 import java.net.HttpURLConnection.HTTP_OK
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -98,41 +99,40 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
         }
     }
 
+    @Test
+    fun `cancelled capability discovery does not become unsupported`() {
+        withServer { account, requests ->
+            coEvery { AnkiquestCapabilities.current(account) } throws CancellationException("screen left")
+            assertFailsWith<CancellationException> { runBlocking { AnkiquestGlobalHides.load(account) } }
+            assertTrue(requests.isEmpty())
+        }
+    }
+
     private fun withServer(
         status: Int = HTTP_OK,
         responseOwner: ResponseOwner = ResponseOwner.CURRENT,
         block: (HomeAccount, List<Request>) -> Unit,
     ) {
         val requests = CopyOnWriteArrayList<Request>()
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        val account = HomeAccount("http://127.0.0.1:${server.address.port}", "hill", "test-token")
-        val current = AtomicReference(account)
-        server.createContext("/") { exchange ->
-            requests.add(
-                Request(
-                    exchange.requestMethod,
-                    exchange.requestURI.path,
-                    exchange.requestHeaders.getFirst("Authorization"),
-                    exchange.requestBody.bufferedReader().use { it.readText() },
-                ),
-            )
-            if (responseOwner == ResponseOwner.CHANGED) {
-                current.set(account.copy(user = "other", token = "other-token"))
+        val current = AtomicReference<HomeAccount>()
+        val server =
+            AnkiquestTestServer { request ->
+                requests.add(Request(request.method, request.path, request.authorization, request.body))
+                if (responseOwner == ResponseOwner.CHANGED) {
+                    current.set(current.get().copy(user = "other", token = "other-token"))
+                }
+                TestResponse.json("""[{"user":"ana","display":"Ana"}]""", status)
             }
-            val body = """[{"user":"ana","display":"Ana"}]""".toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(status, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
-            exchange.close()
-        }
-        server.start()
-        mockkObject(AnkiquestHomeData)
+        val account = HomeAccount(server.url, "hill", "test-token")
+        current.set(account)
+        mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
         every { AnkiquestHomeData.account(any()) } answers { current.get() }
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf("global_leaderboard_hide")
         try {
             block(account, requests)
         } finally {
-            unmockkObject(AnkiquestHomeData)
-            server.stop(0)
+            unmockkObject(AnkiquestHomeData, AnkiquestCapabilities)
+            server.close()
         }
     }
 }

@@ -46,12 +46,13 @@ import java.net.HttpURLConnection.HTTP_CONFLICT
  * The one share sheet every Share button opens:
  * the moment's picture and words, AnkiQuest friends and groups to send it to with a note, and
  * "More apps…" for Android's share sheet ([elsewhere]). Sending closes the sheet and offers Undo
- * while the server allows it.
+ * while the server allows it. A streak card the server has not confirmed yet opens it as
+ * [Subject.Uploading]: friends are shown but cannot be chosen until [confirm] gives the moment.
  */
 internal class AnkiquestShareSheet(
     private val host: FragmentActivity,
     private val account: HomeAccount,
-    private var moment: MomentRef,
+    private var subject: Subject,
     private var card: AnkiquestShare.Card,
     private val elsewhere: (AnkiquestShare.Card) -> Unit,
     private val sent: (Sent) -> Unit = {},
@@ -61,11 +62,22 @@ internal class AnkiquestShareSheet(
 ) {
     enum class Slot { INDEPENDENT, POST_STUDY }
 
+    /** What the sheet sends: a moment the server has, or a streak card whose day it has not confirmed yet. */
+    sealed interface Subject {
+        data class Known(
+            val ref: MomentRef,
+        ) : Subject
+
+        data object Uploading : Subject
+    }
+
     /** How the sheet was left; [SENT] is reported once its Undo is gone. */
     enum class Exit { CANCELLED, ELSEWHERE, SENT }
 
-    /** Where sending stands while friends and groups are being picked. */
+    /** Where sending stands while friends and groups are being picked; [Uploading] waits for the server. */
     sealed class Step {
+        data object Uploading : Step()
+
         data object Choosing : Step()
 
         data object Sending : Step()
@@ -109,7 +121,7 @@ internal class AnkiquestShareSheet(
     private val targets = LinearLayout(host).apply { orientation = LinearLayout.VERTICAL }
     private val search = field(R.id.aq_share_search, R.string.ankiquest_share_search)
     private val note = field(R.id.aq_share_note, R.string.ankiquest_share_note_hint)
-    private val deckName = if (moment is MomentRef.Deck) field(R.id.aq_share_deck_name, R.string.aq_share_deck_title) else null
+    private val deckName = if (deck() != null) field(R.id.aq_share_deck_name, R.string.aq_share_deck_title) else null
     private lateinit var caption: TextView
     private var previewJob: Job? = null
     private lateinit var status: TextView
@@ -156,13 +168,15 @@ internal class AnkiquestShareSheet(
         views.text(words, card.title, heading = true).apply { ViewCompat.setAccessibilityHeading(this, false) }
         caption = views.text(words, card.body, small = true).apply { isVisible = card.body.isNotEmpty() }
 
-        deckName?.let { field ->
+        val finished = deck()
+        if (deckName != null && finished != null) {
+            val field = deckName
             field.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
-            field.setText((moment as MomentRef.Deck).name)
+            field.setText(finished.name)
             content.addView(field, wide())
             field.doAfterTextChanged { text ->
                 val name = text?.toString()?.trim().orEmpty()
-                moment = (moment as MomentRef.Deck).copy(name = name)
+                subject = Subject.Known(finished.copy(name = name))
                 card = card.copy(body = language.getString(R.string.ankiquest_deck_moment_body, name))
                 caption.text = card.body
                 drawPreview()
@@ -188,7 +202,7 @@ internal class AnkiquestShareSheet(
         send.id = R.id.aq_share_send
         more = views.button(content, language.getString(R.string.ankiquest_share_more_apps)) { leave() }
         more.id = R.id.aq_share_more
-        if (slot == Slot.POST_STUDY && moment is MomentRef.Deck) {
+        if (slot == Slot.POST_STUDY && finished != null) {
             views.button(content, language.getString(R.string.ankiquest_deck_share_never)) {
                 AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDeckShare.PREF_ASK, false) }
                 dialog.dismiss()
@@ -210,6 +224,24 @@ internal class AnkiquestShareSheet(
         }
 
     private fun wide() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+    /** The finished deck this sheet shares, which the player may rename; null for any other moment. */
+    private fun deck(): MomentRef.Deck? = (subject as? Subject.Known)?.ref as? MomentRef.Deck
+
+    /** Friends can be chosen once the server has the moment. */
+    private fun opening(): Step = if (subject is Subject.Uploading) Step.Uploading else Step.Choosing
+
+    /** The server confirmed the day: the moment can now be sent, so friends become choosable. */
+    fun confirm(ref: MomentRef) {
+        if (subject !is Subject.Uploading) {
+            return
+        }
+        subject = Subject.Known(ref)
+        val picking = state as? State.Picking ?: return
+        if (picking.step == Step.Uploading) {
+            update(picking.copy(step = Step.Choosing))
+        }
+    }
 
     /** Draws the picture on the phone; the server's picture only goes to other apps. */
     private fun drawPreview() {
@@ -237,7 +269,7 @@ internal class AnkiquestShareSheet(
             state =
                 try {
                     val found = AnkiquestMomentShare.targets(account)
-                    if (found.isEmpty()) State.Lonely else State.Picking(found, Choice.Nobody, Step.Choosing)
+                    if (found.isEmpty()) State.Lonely else State.Picking(found, Choice.Nobody, opening())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -269,16 +301,19 @@ internal class AnkiquestShareSheet(
         send.isVisible = picking != null
 
         // While sending, nothing can change and the sheet stays open until the server answers.
+        // While uploading, friends wait for the server but the note and other apps can be used.
         val sending = picking?.step == Step.Sending
+        val uploading = picking?.step == Step.Uploading
         dialog.setCancelable(!sending)
         search.isEnabled = !sending
         note.isEnabled = !sending
-        val named = (moment as? MomentRef.Deck)?.name?.isNotBlank() != false
+        val named = deck()?.name?.isNotBlank() != false
         more.isEnabled = !sending && named
         deckName?.isEnabled = !sending
-        send.isEnabled = picking != null && picking.choice != Choice.Nobody && !sending && named
+        send.isEnabled = picking != null && picking.choice != Choice.Nobody && !sending && !uploading && named
         val message =
             when (val step = picking?.step) {
+                Step.Uploading -> language.getString(R.string.ankiquest_share_uploading)
                 Step.Sending -> language.getString(R.string.ankiquest_share_sending)
                 Step.Failed -> language.getString(R.string.ankiquest_share_failed)
                 is Step.Refused -> language.getString(R.string.ankiquest_share_refused, step.reason)
@@ -291,7 +326,7 @@ internal class AnkiquestShareSheet(
 
     /** "All friends", then every friend and group that matches the search. */
     private fun chips(picking: State.Picking) {
-        val enabled = picking.step != Step.Sending
+        val enabled = picking.step != Step.Sending && picking.step != Step.Uploading
         val group = ChipGroup(host).apply { id = R.id.aq_share_targets }
         group.addView(
             views.toggle(language.getString(R.string.ankiquest_share_all_friends), picking.choice == Choice.Everyone, enabled) {
@@ -316,7 +351,7 @@ internal class AnkiquestShareSheet(
 
     private fun choose(choice: Choice) {
         val picking = state as? State.Picking ?: return
-        if (picking.step == Step.Sending) {
+        if (picking.step == Step.Sending || picking.step == Step.Uploading) {
             return
         }
         update(picking.copy(choice = choice, step = Step.Choosing))
@@ -341,6 +376,7 @@ internal class AnkiquestShareSheet(
 
     private fun submit() {
         val picking = state as? State.Picking ?: return
+        val moment = (subject as? Subject.Known)?.ref ?: return
         if (picking.choice == Choice.Nobody || picking.step == Step.Sending) {
             return
         }

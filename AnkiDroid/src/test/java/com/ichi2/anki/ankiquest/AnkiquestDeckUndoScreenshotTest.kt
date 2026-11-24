@@ -16,6 +16,7 @@ import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import com.ichi2.anki.preferences.PreferencesFragment
 import com.ichi2.anki.withDeckPicker
+import com.ichi2.testutils.setSystemAnimationsEnabled
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.justRun
@@ -46,6 +47,9 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareSharing() {
+        // The snackbar slides in and the deck list's add button moves up with it; the capture must
+        // not depend on how far that has got (#379). Without animations both are in their final place.
+        setSystemAnimationsEnabled(false)
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, "https://anki.example.test")
             putString(Ankiquest.PREF_USER, "hill")

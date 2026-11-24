@@ -10,7 +10,6 @@ import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,8 +19,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -30,10 +27,10 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestCapabilitiesTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var account: HomeAccount
     private val clock = MockTime(1_750_000_000_000)
-    private val requests = CopyOnWriteArrayList<Pair<String, String?>>()
+    private val requests get() = server.requests.map { it.path to it.authorization }
 
     @Volatile private var status = 200
 
@@ -44,21 +41,13 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.resetWith(clock)
         AnkiquestCapabilities.forgetMemory()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            requests += exchange.requestURI.path to exchange.requestHeaders.getFirst("Authorization")
-            val bytes = body.toByteArray()
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-            exchange.close()
-        }
-        server.start()
-        account = HomeAccount("http://127.0.0.1:${server.address.port}", "cerro", "secret")
+        server = AnkiquestTestServer { TestResponse(status, body.toByteArray()) }
+        account = HomeAccount(server.url, "cerro", "secret")
     }
 
     @After
     fun stop() {
-        runCatching { server.stop(0) }
+        runCatching { server.close() }
         AnkiquestCapabilities.forgetMemory()
         SharedPreferencesTestHook.override = null
     }
@@ -125,7 +114,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
             AnkiquestCapabilities.refresh(account)
             status = 503
             assertEquals(setOf("activity", "cookie_session", "wins"), AnkiquestCapabilities.refresh(account))
-            server.stop(0)
+            server.close()
             assertEquals(setOf("activity", "cookie_session", "wins"), AnkiquestCapabilities.refresh(account))
         }
 
@@ -159,7 +148,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
             body = """{"version":1,"features":["wins"]}"""
             assertEquals(setOf("wins"), AnkiquestCapabilities.current(account.copy(user = "hill", token = "other")))
             assertEquals(2, requests.size)
-            val elsewhere = account.copy(server = "http://127.0.0.1:${server.address.port}/other")
+            val elsewhere = account.copy(server = "${server.url}/other")
             assertFalse(AnkiquestCapabilities.has(elsewhere, "wins"))
             AnkiquestCapabilities.current(elsewhere)
             assertEquals("/other/api/capabilities", requests.last().first)

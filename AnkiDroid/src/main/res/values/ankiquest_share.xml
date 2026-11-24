@@ -61,6 +61,8 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_share_sending">Sending…</string>
     <!-- The server refused a send and said why, for example a friend who has left. -->
     <string name="ankiquest_share_refused">Couldn’t share it (%1$s).</string>
+    <!-- Share sheet status while the server has not confirmed the streak day yet; friends cannot be chosen until then. -->
+    <string name="ankiquest_share_uploading">Uploading your study…</string>
     <string name="ankiquest_share_more_apps">More apps…</string>
     <string name="ankiquest_share_targets_failed">Couldn’t load your friends. Check your connection, or share with another app.</string>
     <string name="ankiquest_share_invite">Invite a friend</string>
