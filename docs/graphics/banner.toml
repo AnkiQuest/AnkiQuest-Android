@@ -1,0 +1,57 @@
+# Inputs of the README banner and the social preview. AnkiQuest-Dev's
+# ankiquest-banner draws both from them; see the README.
+
+title = "AnkiQuest"
+tagline = "Study together, keep your streak"
+
+# Records the five screens with Roborazzi (AnkiquestBannerScreenshots:
+# sample decks and players, pinned clock, 360x780dp at xhdpi).
+record = ["./gradlew", ":AnkiDroid:recordRoborazziPlayDebug", "-Pscreenshot", "-PreadmeBanner", "--tests", "*AnkiquestBannerScreenshots*"]
+
+readme = "docs/graphics/logos/banner_readme.png"
+social = "docs/graphics/logos/social_preview.png"
+
+# The pose master, in the AnkiQuest-Server checkout. Shorter than on the
+# other banners, so the phones start below it.
+[companion]
+pose = "static/duo/friends.png"
+height = 116
+
+# Back to front, so nearer phones cover the ones behind them. Left to
+# right: a card being reviewed, the deck list, Today in front, the week
+# leaderboard and a profile.
+
+[[screen]]
+frame = "phone"
+shot = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/1_reviewer.png"
+x = 28
+y = 124
+width = 240
+
+[[screen]]
+frame = "phone"
+shot = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/5_profile.png"
+x = 988
+y = 124
+width = 240
+
+[[screen]]
+frame = "phone"
+shot = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/2_decks.png"
+x = 268
+y = 124
+width = 240
+
+[[screen]]
+frame = "phone"
+shot = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/4_leaderboard.png"
+x = 748
+y = 124
+width = 240
+
+[[screen]]
+frame = "phone"
+shot = "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/3_today.png"
+x = 508
+y = 124
+width = 240

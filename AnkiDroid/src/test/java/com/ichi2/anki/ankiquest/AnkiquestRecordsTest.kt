@@ -10,7 +10,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,9 +19,7 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.time.LocalDate
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -39,9 +36,9 @@ class AnkiquestRecordsTest : RobolectricTest() {
         val authorization: String?,
     )
 
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var account: HomeAccount
-    private val requests = CopyOnWriteArrayList<Seen>()
+    private val requests get() = server.requests.map(::seen)
 
     /** Answers status and body by path; anything else is 404. */
     @Volatile private var answer: (Seen) -> Pair<Int, String> = { 404 to "" }
@@ -49,28 +46,24 @@ class AnkiquestRecordsTest : RobolectricTest() {
     @Before
     fun prepare() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val seen = Seen(exchange.requestURI.rawPath, exchange.requestURI.rawQuery, exchange.requestHeaders.getFirst("Authorization"))
-            requests += seen
-            val (status, body) = answer(seen)
-            val bytes = body.toByteArray()
-            exchange.sendResponseHeaders(status, if (bytes.isEmpty()) -1 else bytes.size.toLong())
-            if (bytes.isNotEmpty()) exchange.responseBody.use { it.write(bytes) }
-            exchange.close()
-        }
-        server.start()
+        server =
+            AnkiquestTestServer { request ->
+                val (status, body) = answer(seen(request))
+                TestResponse(status, body.toByteArray())
+            }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "member name")
             putString(Ankiquest.PREF_TOKEN, "member-test-token")
         }
         account = AnkiquestHomeData.account()!!
     }
 
+    private fun seen(request: TestRequest) = Seen(request.uri.rawPath, request.uri.rawQuery, request.authorization)
+
     @After
     fun stop() {
-        server.stop(0)
+        server.close()
         SharedPreferencesTestHook.override = null
     }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_study_time_title">Tiempo de estudio</string>
+    <string name="aq_study_time_intro">Tiempo dedicado a responder tarjetas en esta colección, se haya subido o no. Los días empiezan a la hora de «El día siguiente comienza a las» de Anki y las semanas, el lunes.</string>
+    <string name="aq_study_time_today">Hoy</string>
+    <string name="aq_study_time_week">Esta semana</string>
+    <string name="aq_study_time_month">Este mes</string>
+    <string name="aq_study_time_total">Total</string>
+    <string name="aq_study_time_average">Por día de estudio</string>
+    <string name="aq_study_time_minutes">%1$d min</string>
+    <string name="aq_study_time_hours">%1$d h %2$d min</string>
+    <string name="aq_study_time_loading">Cargando el tiempo de estudio…</string>
+    <string name="aq_study_time_error">No se pudo leer el tiempo de estudio (%1$s).</string>
+    <string name="aq_study_time_empty">Aún no hay repasos en esta colección.</string>
+</resources>
