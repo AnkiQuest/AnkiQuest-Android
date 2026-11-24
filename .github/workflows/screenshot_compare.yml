@@ -17,24 +17,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "🛠️ Screenshots: Compare"  # do not rename - referenced by screenshot_comment.yml
+name: "ankiquest Screenshots: Compare"  # do not rename - referenced by screenshot_comment.yml
 
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
+  # The merge queue checks the group against the baseline of the master commit it was built on.
+  merge_group:
+    types: [checks_requested]
 
 permissions: {}
 
+concurrency:
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
   compare-screenshot-test:
     name: compare
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Allow the matching store job to finish before building the comparison.
+    timeout-minutes: 70
 
     permissions:
       contents: read # for clone
@@ -55,6 +68,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Wait for matching base screenshots
+        id: source
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const waitForBaseline = require('./.github/wait_for_screenshot_baseline.js');
+            return await waitForBaseline({ github, context, core });
+
+      - name: Download base branch screenshots
+        id: baseline
+        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
+        with:
+          name: screenshot
+          run_id: ${{ steps.source.outputs.result }}
+          allow_forks: false
+          if_no_artifact_found: fail
+
+      - name: Explain unavailable baseline
+        if: ${{ failure() && (steps.source.outcome == 'failure' || steps.baseline.outcome == 'failure') }}
+        env:
+          BASE_SHA: ${{ steps.source.outputs.base || github.sha }}
+        run: |
+          echo "::error::Screenshot comparison did not run: no downloadable baseline for ${BASE_SHA}. Run ankiquest Screenshots: Store Baseline on a branch at that commit, then rerun this check."
+          echo "Screenshot comparison needs a successful, unexpired baseline for commit ${BASE_SHA}. Run **ankiquest Screenshots: Store Baseline** on a branch at that commit, then rerun this check. A different commit is never used as a fallback." >> "$GITHUB_STEP_SUMMARY"
+
+      # Native rendering can differ between CPU models: name both, so CPU-only diffs can be told apart.
+      - name: Report renderer CPUs
+        run: |
+          baseline=$(cat AnkiDroid/build/outputs/roborazzi/cpu.txt 2>/dev/null || echo unknown)
+          current=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | xargs)
+          echo "::notice title=Screenshot CPUs::baseline drawn on ${baseline}; this run on ${current}"
+          echo "Baseline drawn on ${baseline}; this run on ${current}." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -70,6 +116,9 @@ jobs:
           cache-provider: basic
           gradle-version: wrapper
 
+      - name: Robolectric SDK cache
+        uses: ./.github/actions/robolectric-sdk-cache
+
       - name: Warm Gradle Cache
         # Keep compilation here: robolectricSdkDownload only downloads SDK jars.
         # Compiling resolves test dependencies within the retry (Issue 21682).
@@ -80,20 +129,6 @@ jobs:
           max_attempts: 3
           command: ./gradlew robolectricSdkDownload compileScreenshotTests -Pscreenshot --daemon
 
-      - name: Wait for matching base screenshots
-        id: baseline
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const waitForBaseline = require('./.github/wait_for_screenshot_baseline.js');
-            return await waitForBaseline({ github, context, core });
-
-      - name: Download base branch screenshots
-        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
-        with:
-          name: screenshot
-          run_id: ${{ steps.baseline.outputs.result }}
-
       - name: Compare screenshots
         id: compare-screenshot-test
         run: |
@@ -102,8 +137,8 @@ jobs:
       - name: Stage screenshot diffs
         if: ${{ always() }}
         env:
-          # Folder name inside the artifact (e.g. "screenshot-diff-pr-12345" on PRs, "screenshot-diff-main" on push)
-          SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || format('screenshot-diff-{0}', github.ref_name) }}
+          # Folder name inside the artifact for a PR, a merge group, or a push.
+          SUBDIR: ${{ github.event_name == 'pull_request' && format('screenshot-diff-pr-{0}', github.event.number) || github.event_name == 'merge_group' && 'screenshot-diff-merge-group' || format('screenshot-diff-{0}', github.ref_name) }}
         run: |
           # Preserve module paths so identically named tests cannot overwrite one another.
           mkdir -p "screenshot-diff/$SUBDIR"

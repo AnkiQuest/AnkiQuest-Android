@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_study_time_title">Lernzeit</string>
+    <string name="aq_study_time_intro">Zeit, die du in dieser Sammlung mit dem Beantworten von Karten verbracht hast, hochgeladen oder nicht. Tage beginnen zur Stunde von Ankis „Nächster Tag beginnt um“, Wochen am Montag.</string>
+    <string name="aq_study_time_today">Heute</string>
+    <string name="aq_study_time_week">Diese Woche</string>
+    <string name="aq_study_time_month">Diesen Monat</string>
+    <string name="aq_study_time_total">Gesamt</string>
+    <string name="aq_study_time_average">Pro Lerntag</string>
+    <string name="aq_study_time_minutes">%1$d Min.</string>
+    <string name="aq_study_time_hours">%1$d Std. %2$d Min.</string>
+    <string name="aq_study_time_loading">Lernzeit wird geladen…</string>
+    <string name="aq_study_time_error">Lernzeit konnte nicht gelesen werden (%1$s).</string>
+    <string name="aq_study_time_empty">Noch keine Wiederholungen in dieser Sammlung.</string>
+</resources>
