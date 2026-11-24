@@ -12,7 +12,6 @@ import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -22,7 +21,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -34,8 +32,8 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestServerMoveTest : RobolectricTest() {
-    private lateinit var old: HttpServer
-    private lateinit var main: HttpServer
+    private lateinit var old: AnkiquestTestServer
+    private lateinit var main: AnkiquestTestServer
     private lateinit var oldUrl: String
     private lateinit var mainUrl: String
     private val mainRequests = CopyOnWriteArrayList<Pair<String, String?>>()
@@ -58,7 +56,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
                 mainRequests += path to authorization
                 if (path == "/api/devices/cerro" && authorization == "Bearer secret") mainStatus to """{"devices":[]}""" else 401 to "{}"
             }
-        mainUrl = "http://127.0.0.1:${main.address.port}"
+        mainUrl = main.url
         old =
             serve { path, _ ->
                 if (path == "/api/capabilities") {
@@ -72,7 +70,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
                     404 to "{}"
                 }
             }
-        oldUrl = "http://127.0.0.1:${old.address.port}"
+        oldUrl = old.url
         publicUrl = "$mainUrl/"
         prefs.edit {
             putString(Ankiquest.PREF_URL, oldUrl)
@@ -83,23 +81,17 @@ class AnkiquestServerMoveTest : RobolectricTest() {
 
     @After
     fun stop() {
-        runCatching { old.stop(0) }
-        runCatching { main.stop(0) }
+        runCatching { old.close() }
+        runCatching { main.close() }
         AnkiquestServerMove.acceptable = { it.isHttps }
         AnkiquestCapabilities.forgetMemory()
         SharedPreferencesTestHook.override = null
     }
 
-    private fun serve(answer: (String, String?) -> Pair<Int, String>): HttpServer =
-        HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
-            createContext("/") { exchange ->
-                val (status, body) = answer(exchange.requestURI.path, exchange.requestHeaders.getFirst("Authorization"))
-                val bytes = body.toByteArray()
-                exchange.sendResponseHeaders(status, bytes.size.toLong())
-                exchange.responseBody.use { it.write(bytes) }
-                exchange.close()
-            }
-            start()
+    private fun serve(answer: (String, String?) -> Pair<Int, String>) =
+        AnkiquestTestServer { request ->
+            val (status, body) = answer(request.path, request.authorization)
+            TestResponse(status, body.toByteArray())
         }
 
     private fun account() = assertNotNull(HomeAccount.current(prefs))
@@ -189,7 +181,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
         runBlocking {
             val before = account()
             remember(before)
-            main.stop(0)
+            main.close()
             AnkiquestCapabilities.refresh(before)
             assertEquals(oldUrl, prefs.getString(Ankiquest.PREF_URL, null))
             assertEquals(1234L, prefs.getLong("ankiquestUploadedThrough:${before.notificationAccount}", 0L))

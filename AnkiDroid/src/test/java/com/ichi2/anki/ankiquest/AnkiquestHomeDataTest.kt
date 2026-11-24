@@ -9,7 +9,6 @@ import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -20,8 +19,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -35,32 +32,28 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestHomeDataTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var account: HomeAccount
-    private val requests = CopyOnWriteArrayList<Pair<String, String?>>()
-    private val languages = CopyOnWriteArrayList<String?>()
+
+    /** Each request as sent with its authorization, and the language it asked for. */
+    private val requests get() = server.requests.map { it.uri.toString() to it.authorization }
+    private val languages get() = server.requests.map { it.headers.getFirst("Accept-Language") }
 
     @Volatile private var status = 200
 
     @Before
     fun prepare() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        account = HomeAccount("http://127.0.0.1:${server.address.port}", "member name", "secret")
-        server.createContext("/") { exchange ->
-            requests += exchange.requestURI.toString() to exchange.requestHeaders.getFirst("Authorization")
-            languages += exchange.requestHeaders.getFirst("Accept-Language")
-            if (status == 302) exchange.responseHeaders.set("Location", "/elsewhere")
-            val bytes = "{\"user\":\"member name\",\"level\":2}".toByteArray()
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-            exchange.close()
-        }
-        server.start()
+        server =
+            AnkiquestTestServer {
+                val location = if (status == 302) mapOf("Location" to "/elsewhere") else emptyMap()
+                TestResponse(status, "{\"user\":\"member name\",\"level\":2}".toByteArray(), location)
+            }
+        account = HomeAccount(server.url, "member name", "secret")
     }
 
     @After
     fun stop() {
-        server.stop(0)
+        server.close()
     }
 
     @Test
@@ -76,7 +69,7 @@ class AnkiquestHomeDataTest : RobolectricTest() {
         runBlocking {
             assertEquals(2, AnkiquestHomeData.profile(account).getInt("level"))
             assertEquals(listOf("/api/profile/member%20name" to "Bearer secret"), requests.toList())
-            requests.clear()
+            server.requests.clear()
             AnkiquestHomeData.profile(account.copy(token = ""))
             assertNull(requests.single().second, "a public server is read anonymously")
         }
