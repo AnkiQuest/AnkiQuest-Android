@@ -127,7 +127,12 @@ open class Scheduler(
     fun describeNextStates(states: SchedulingStates): List<String> = col.backend.describeNextStates(states)
 
     private val queuedCards: QueuedCards
-        get() = col.backend.getQueuedCards(fetchLimit = 1, intradayLearningOnly = false)
+        get() =
+            col.backend.getQueuedCards(
+                fetchLimit = 1,
+                intradayLearningOnly = false,
+                skipSchedulingStates = false,
+            )
 
     open fun answerCard(
         info: CurrentQueueState,
