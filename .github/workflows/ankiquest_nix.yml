@@ -56,6 +56,6 @@ jobs:
       # makes aapt2 run without a /lib64 loader.
       run: |
         export GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000"
-        # The shared check does not check out submodules; the build reads the art/ masters.
-        git submodule update --init --depth 1 art
+        # The companion drawables come from the pinned release; aapt2 needs the art masters
+        # in res, which the export task unpacks from the release assets.
         ./gradlew --no-daemon assemblePlayDebug
