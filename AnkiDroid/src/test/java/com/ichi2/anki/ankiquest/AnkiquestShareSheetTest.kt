@@ -373,7 +373,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Test
     fun `a finished deck keeps its edited Unicode name in the picture and chosen send`() {
         val symbol = "\uD83C\uDF31"
-        val name = symbol.repeat(AnkiquestShare.MAX_LABEL)
+        val name = symbol.repeat(AnkiquestCardLabels.MAX_LABEL)
         val reference = MomentRef.Deck("7", "Japanese")
         coEvery { AnkiquestSharing.send(account, reference.copy(name = name), any(), any()) } returns AnkiquestSharing.Sent(1, 91, null)
         val (_, dialog) = open(reference = reference)
