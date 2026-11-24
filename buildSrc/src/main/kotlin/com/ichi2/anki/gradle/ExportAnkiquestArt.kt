@@ -54,8 +54,10 @@ abstract class ExportAnkiquestArt : DefaultTask() {
         val zip = downloads.resolve("android-drawables.zip")
         if (!zip.isFile || zip.sha256() != sha) {
             downloads.listFiles()?.forEach { it.delete() }
+            // The release download answers 302 to the object storage; follow it.
+            val client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()
             val request = HttpRequest.newBuilder(URI.create(url)).GET().build()
-            val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofFile(zip.toPath()))
+            val response = client.send(request, HttpResponse.BodyHandlers.ofFile(zip.toPath()))
             if (response.statusCode() != 200) {
                 throw GradleException("Downloading $url answered ${response.statusCode()}")
             }
