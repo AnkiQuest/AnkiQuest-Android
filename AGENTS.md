@@ -113,7 +113,7 @@ Write new code in Rust, or TypeScript for the web, when the platform allows it. 
 ankitects/anki                  --pr-->  AnkiQuest/AnkiQuest-Anki master
                                              | git submodule
 ankidroid/Anki-Android-Backend  --pr-->  AnkiQuest/AnkiQuest-Android-Backend master
-                                             | Maven Central: org.ankiquest:anki-backend-android
+                                             | Maven Central: org.ankiquest:ankiquest-backend-android
 ankidroid/Anki-Android          --pr-->  AnkiQuest/AnkiQuest-Android master  --HTTPS-->  AnkiQuest-Server
                                              | content provider, through org.ankiquest:api
 sypianski/garmanki              --pr-->  AnkiQuest/AnkiQuest-GarmAnki master
@@ -124,7 +124,7 @@ KamWithK/AnkiconnectAndroid     --pr-->  AnkiQuest/AnkiQuest-AnkiConnectAndroid 
 The full, generated map of every repository, upstream, package, submodule and shared workflow, with pinned versions and what is out of date, is <https://ankiquest.github.io/wiring.mmd> (Mermaid source) and <https://ankiquest.github.io/wiring.html> (rendered); read it when a change crosses repositories.
 
 - **Every fork** has one branch of ours, `master`: upstream's default branch plus our changes, consolidated. Upstream comes in through the sync job's pull request, merged as a merge commit; never squash or rebase it. Work from `master` and open pull requests against it.
-- **Core forks** (AnkiQuest-Anki, AnkiQuest-Android-Backend): AnkiQuest-Anki `master` is ankitects/anki `main` plus the RWKV engine and FSRS-7 carried from JSchoreels' and kuma3's forks. AnkiQuest-Android-Backend `master` is upstream plus kuma3's backend wiring, with its `anki` submodule on a commit of AnkiQuest-Anki `master`; it publishes `org.ankiquest:anki-backend-android`, `anki-backend-core` and `anki-android-backend-testing` to Maven Central on a `*-ankiquest.*` tag.
+- **Core forks** (AnkiQuest-Anki, AnkiQuest-Android-Backend): AnkiQuest-Anki `master` is ankitects/anki `main` plus the RWKV engine and FSRS-7 carried from JSchoreels' and kuma3's forks. AnkiQuest-Android-Backend `master` is upstream plus kuma3's backend wiring, with its `anki` submodule on a commit of AnkiQuest-Anki `master`; it publishes `org.ankiquest:ankiquest-backend-android`, `ankiquest-backend-core` and `ankiquest-android-backend-testing` to Maven Central on a `*-ankiquest.*` tag.
 - **Third-party app forks** (AnkiQuest-GarmAnki, AnkiQuest-Android-MCP, AnkiQuest-AnkiConnectAndroid): `master` is our version, with CI, Nix and the AnkiQuest API library `org.ankiquest:api` (coming). The branches `ankidroid-provider-check` and `ankiquest-support` stay ready to propose upstream: upstream's style and languages, no AnkiQuest-only changes. Keep upstream's languages for upstream's code in every fork.
 - **Sync job** (AnkiQuest-Sync, daily and on demand): opens one pull request per fork from upstream's default branch, and lists the conflicting files. The `watch` job opens an issue in the fork a watched source feeds when it moves past the reviewed commit or version: JSchoreels/anki, JSchoreels/fsrs-rs, open-spaced-repetition/fsrs-rs, kuma3's core, backend and app, and new upstream backend versions (`watched.json`). The `agents` job opens the `AGENTS.md` pull requests.
 - **Shared Nix and CI.** Every repository has a `flake.nix` whose dev shell, pinned toolchain and formatter come from AnkiQuest-Dev, taken as an input; never pin a toolchain in a repository's own flake. Workflows used by more than one repository are reusable workflows in AnkiQuest-Dev (`.github/workflows/`), called with `uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/<name>.yml@master`.
@@ -193,3 +193,12 @@ AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 - **README banner and social preview.** `ankiquest-banner --server <AnkiQuest-Server checkout> --record` (AnkiQuest-Dev's shared tool) regenerates `docs/graphics/logos/banner_readme.png` and `social_preview.png` from `docs/graphics/banner.toml`: it records `AnkiquestBannerScreenshots` with Roborazzi (sample data, pinned clock, fixed device), then draws five phones and the duo master at the pinned server commit. The `ankiquest README banner` workflow records the screens, passes them to AnkiQuest-Dev's `banner.yml`, fails a pull request that touches the images or their inputs unless the committed images have the drawn pixels, and proposes new images for each release. The store screenshots in `fastlane/` are still upstream AnkiDroid's.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `master` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
 - **Checks to run** before pushing: `./gradlew ktlintCheck` and the unit tests you touched (`./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'`). Leave the full suites to CI.
+
+## Upstream guidance
+
+From [ankidroid/Anki-Android](https://github.com/ankidroid/Anki-Android)'s AGENTS.md, kept here so the fork still follows the originating project's own rules where AnkiQuest's do not override them; this job refreshes the wording when upstream changes it.
+
+- Follow the repository's [AI policy](AI_POLICY.md).
+- Keep changes focused on the requested task. Avoid unrelated refactors, formatting, and settings changes.
+- Keep branch history linear. Do not create merge commits.
+- For bug fixes, write a regression test that fails for the expected reason before the fix, then confirm it passes with the fix.

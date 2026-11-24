@@ -217,6 +217,11 @@ class ForegroundMediaNetworkTest : RobolectricTest() {
             conflictDialog().getButton(DialogInterface.BUTTON_POSITIVE).performClick()
             advanceRobolectricLooperUntil { Prefs.lastSyncTime != 0L }
         }
+        // The conflict path enqueues the media worker after lastSyncTime is set; the gap
+        // between the two causes the work lookup to fail on slow runners.
+        advanceRobolectricLooperUntil(lazyMessage = { "the media worker was not enqueued" }) {
+            manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().any { !it.state.isFinished }
+        }
         return manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().single { !it.state.isFinished }
     }
 
