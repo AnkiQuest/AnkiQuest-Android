@@ -404,8 +404,6 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     fun `a streak card shown before the server confirms the day can still go to friends`() {
         mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), any()) } returns null
-        every { AnkiquestMomentShare.available(any()) } returns true
-        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
@@ -469,8 +467,6 @@ class AnkiquestSessionCardTest : RobolectricTest() {
     fun `sharing a streak card before the server confirms the day waits for the upload`() {
         mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), any()) } returns null
-        every { AnkiquestMomentShare.available(any()) } returns true
-        every { AnkiquestMomentShare.available(any(), any()) } returns true
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)

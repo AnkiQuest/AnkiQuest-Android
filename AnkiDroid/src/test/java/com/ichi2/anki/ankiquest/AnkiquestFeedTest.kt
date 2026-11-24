@@ -141,7 +141,7 @@ class AnkiquestFeedTest : RobolectricTest() {
     fun `a missing feed is an error, not the notification list`() {
         answer = { Answer(404, "") }
         for (before in listOf(null, 7L)) {
-            requests.clear()
+            server.requests.clear()
             val error = assertFailsWith<AnkiquestHttpException> { runBlocking { AnkiquestFeed.page(account, before = before) } }
             assertEquals(404, error.code)
             assertEquals(listOf("/api/activity/member%20name"), requests.map { it.path })
