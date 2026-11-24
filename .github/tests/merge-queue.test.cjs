@@ -12,9 +12,9 @@ const REQUIRED = [
     "ankiquest_api_contract.yml",
     "ankiquest_art_check.yml",
     "ankiquest_fixtures.yml",
-    "ankiquest_lint.yml",
-    "ankiquest_screenshot_compare.yml",
-    "ankiquest_tests_unit.yml",
+    "lint.yml",
+    "screenshot_compare.yml",
+    "tests_unit.yml",
 ];
 
 // The `on:` block of a workflow.
@@ -26,7 +26,7 @@ function triggers(text) {
 
 for (const name of REQUIRED) {
     test(`${name}: runs for every merge queue group`, () => {
-        const on = triggers(fs.readFileSync(path.join(workflows, name), "utf8"));
+        const on = triggers(fs.readFileSync(path.join(workflows, name), "utf8").replaceAll("\r\n", "\n"));
         const group = on.match(/^ {2}merge_group:\n((?: {4}.*\n)*)/m);
         assert.ok(group, "no merge_group trigger");
 
