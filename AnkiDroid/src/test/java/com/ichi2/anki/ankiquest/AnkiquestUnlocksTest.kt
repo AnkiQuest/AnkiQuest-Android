@@ -55,6 +55,18 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     @Before
     fun serve() {
         AnkiquestCapabilities.forgetMemory()
+        server =
+            AnkiquestTestServer { request ->
+                val path = request.path
+                val sent = request.body
+                var status = OK
+                val answer =
+                    when {
+                        path == "/api/capabilities" -> JSONObject().put("version", 1).put("features", JSONArray(features))
+                        path.startsWith("/api/unlocks/") && UNLOCKS in features -> {
+                            // A reported unlock is granted; the server no longer checks taps.
+                            if (sent.isNotEmpty()) {
+                                unlocks = unlocks + JSONObject(sent).getString("unlock")
                             }
                             unlocksAnswer()
                         }
