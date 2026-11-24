@@ -570,7 +570,7 @@ object CollectionManager {
             ensureClosedInner()
             ensureBackendInner()
             try {
-                importCollectionPackage(backend!!, collectionPathInValidFolder(), colpkgPath)
+                importCollectionPackage(backend!!, collectionFilesTestOverride ?: collectionPathInValidFolder(), colpkgPath)
             } catch (importError: Exception) {
                 try {
                     ensureOpenInner()
