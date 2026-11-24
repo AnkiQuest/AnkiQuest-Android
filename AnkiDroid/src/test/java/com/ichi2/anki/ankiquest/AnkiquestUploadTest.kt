@@ -427,7 +427,7 @@ class AnkiquestUploadTest : RobolectricTest() {
             val old = mark - 30 * DAY_MS
             insertReview(old)
             assertEquals(AnkiquestEaseResend.State.PENDING, easeResend(), "the first upload went to a server without the button")
-            requests.clear()
+            server.requests.clear()
             cacheFeatures(AnkiquestEaseResend.FEATURE)
 
             Ankiquest.uploadAfterSync()
@@ -440,7 +440,7 @@ class AnkiquestUploadTest : RobolectricTest() {
             assertTrue((0 until reviews.length()).all { reviews.getJSONObject(it).has("ease") })
             assertEquals(AnkiquestEaseResend.State.DONE, easeResend())
             assertEquals(mark, AnkiDroidApp.sharedPrefs().getLong("$PREF_LEGACY_MARK:$url/cerro", 0), "the mark stays")
-            requests.clear()
+            server.requests.clear()
 
             Ankiquest.uploadAfterSync()
             assertTrue(reviewUploads().none { old in ids(it) }, "the history is not sent a second time")
@@ -463,7 +463,7 @@ class AnkiquestUploadTest : RobolectricTest() {
     fun `an upload after each answer does not ask the server for the resend`() =
         runBlocking {
             Ankiquest.uploadPending(targetContext)
-            requests.clear()
+            server.requests.clear()
             addBasicNote("second")
             col.sched.answerCard(col.sched.card!!, Rating.GOOD)
 
