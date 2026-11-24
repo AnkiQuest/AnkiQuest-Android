@@ -2867,7 +2867,7 @@ class ContentProviderTest : InstrumentedTest() {
 
 /**
  * [uri] at this build's provider: [FlashCardsContract]'s URIs name AnkiDroid's authority, and this
- * app's provider is `<applicationId>.flashcards` (`org.ankiquest.flashcards`, #461).
+ * app's provider is `<applicationId>.flashcards` (`org.ankiquest.ankidroid.flashcards`, #461).
  */
 private fun own(uri: Uri): Uri = uri.buildUpon().authority(FlashCardsContract.getAuthority(BuildConfig.APPLICATION_ID)).build()
 

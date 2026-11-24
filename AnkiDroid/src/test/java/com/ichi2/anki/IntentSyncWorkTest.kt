@@ -33,7 +33,7 @@ class IntentSyncWorkTest : RobolectricTest() {
     fun `sync intent leaves pending background sync intact`() {
         val workId = enqueueSync()
 
-        val activity = launchIntent("org.ankiquest.DO_SYNC")
+        val activity = launchIntent("org.ankiquest.ankidroid.DO_SYNC")
 
         assertThat(workManager.getWorkInfoById(workId).get()!!.state, equalTo(WorkInfo.State.ENQUEUED))
         assertThat("a duplicate sync must not open the collection in DeckPicker", shadowOf(activity).nextStartedActivity, nullValue())
@@ -46,7 +46,7 @@ class IntentSyncWorkTest : RobolectricTest() {
                 withLeaseForTest(operation) {
                     val lease = CollectionManager.collectionLease
 
-                    val activity = launchIntent("org.ankiquest.DO_SYNC")
+                    val activity = launchIntent("org.ankiquest.ankidroid.DO_SYNC")
 
                     assertThat(
                         "a duplicate $operation intent must not open DeckPicker",
@@ -62,7 +62,7 @@ class IntentSyncWorkTest : RobolectricTest() {
     fun `sync intent checks foreground sync after the work query completes`() =
         runTest {
             withPendingSyncQuery { results ->
-                Robolectric.buildActivity(IntentHandler::class.java, Intent("org.ankiquest.DO_SYNC")).use { controller ->
+                Robolectric.buildActivity(IntentHandler::class.java, Intent("org.ankiquest.ankidroid.DO_SYNC")).use { controller ->
                     controller.create().start().resume()
                     val activity = controller.get()
                     assertThat(results.subscriptionCount.value, equalTo(1))
@@ -88,18 +88,18 @@ class IntentSyncWorkTest : RobolectricTest() {
 
     @Test
     fun `sync intent opens DeckPicker when no sync is pending`() {
-        val activity = launchIntent("org.ankiquest.DO_SYNC")
+        val activity = launchIntent("org.ankiquest.ankidroid.DO_SYNC")
         val intent = shadowOf(activity).nextStartedActivity
 
         assertThat(intent.component!!.className, equalTo(DeckPicker::class.java.name))
-        assertThat(intent.action, equalTo("org.ankiquest.DO_SYNC"))
+        assertThat(intent.action, equalTo("org.ankiquest.ankidroid.DO_SYNC"))
     }
 
     @Test
     fun `finishing the handler before the work query completes prevents navigation`() =
         runTest {
             withPendingSyncQuery { results ->
-                Robolectric.buildActivity(IntentHandler::class.java, Intent("org.ankiquest.DO_SYNC")).use { controller ->
+                Robolectric.buildActivity(IntentHandler::class.java, Intent("org.ankiquest.ankidroid.DO_SYNC")).use { controller ->
                     controller.create().start().resume()
                     val activity = controller.get()
                     assertThat(results.subscriptionCount.value, equalTo(1))
@@ -116,7 +116,7 @@ class IntentSyncWorkTest : RobolectricTest() {
     fun `destroying the handler cancels its pending work query`() =
         runTest {
             withPendingSyncQuery { results ->
-                Robolectric.buildActivity(IntentHandler::class.java, Intent("org.ankiquest.DO_SYNC")).use { controller ->
+                Robolectric.buildActivity(IntentHandler::class.java, Intent("org.ankiquest.ankidroid.DO_SYNC")).use { controller ->
                     controller.create().start().resume()
                     val activity = controller.get()
                     assertThat(results.subscriptionCount.value, equalTo(1))

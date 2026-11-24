@@ -4,17 +4,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const PACKAGE = "org.ankiquest";
+const PACKAGE = "org.ankiquest.ankidroid";
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 const gradle = read("AnkiDroid/build.gradle.kts");
 const workflows = [".github/workflows/ankiquest_apk.yml", ".github/workflows/ankiquest_reproducible.yml"];
 
-test("every build installs as org.ankiquest and keeps the com.ichi2.anki namespace", () => {
-    // hill: "org.ankiquest instead of org.ankiquest.anki"; no build keeps com.ichi2.anki (#461).
+test("every build installs as org.ankiquest.ankidroid and keeps the com.ichi2.anki namespace", () => {
+    // hill: "org.ankiquest.ankidroid"; no build keeps com.ichi2.anki (#461).
     const ids = [...gradle.matchAll(/\bapplicationId = "([^"]*)"/g)].map((match) => match[1]);
     assert.deepEqual(ids, [PACKAGE]);
-    assert.match(gradle, /defaultConfig \{\n\s*applicationId = "org\.ankiquest"\n/);
+    assert.match(gradle, /defaultConfig \{\n\s*applicationId = "org\.ankiquest\.ankidroid"\n/);
     assert.doesNotMatch(gradle, /ankiquestApplicationId/);
     assert.match(gradle, /namespace = "com\.ichi2\.anki"\n/);
 });
@@ -22,9 +22,9 @@ test("every build installs as org.ankiquest and keeps the com.ichi2.anki namespa
 test("the sync action is AnkiQuest's, not AnkiDroid's", () => {
     const manifest = read("AnkiDroid/src/main/AndroidManifest.xml");
     const handler = read("AnkiDroid/src/main/java/com/ichi2/anki/IntentHandler.kt");
-    assert.match(manifest, /<action android:name="org\.ankiquest\.DO_SYNC" \/>/);
+    assert.match(manifest, /<action android:name="org\.ankiquest\.ankidroid\.DO_SYNC" \/>/);
     assert.doesNotMatch(manifest, /com\.ichi2\.anki\.DO_SYNC/);
-    assert.match(handler, /ACTION_DO_SYNC = "org\.ankiquest\.DO_SYNC"/);
+    assert.match(handler, /ACTION_DO_SYNC = "org\.ankiquest\.ankidroid\.DO_SYNC"/);
 });
 
 test("the AnkiQuest build no longer comes from customSuffix=quest", () => {

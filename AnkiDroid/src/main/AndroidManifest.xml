@@ -237,7 +237,7 @@
 
             <!-- Tasker DO_SYNC intent: AnkiQuest's own action, not AnkiDroid's (#461) -->
             <intent-filter>
-                <action android:name="org.ankiquest.DO_SYNC" />
+                <action android:name="org.ankiquest.ankidroid.DO_SYNC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

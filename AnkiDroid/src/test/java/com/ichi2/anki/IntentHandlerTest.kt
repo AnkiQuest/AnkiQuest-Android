@@ -47,7 +47,7 @@ class IntentHandlerTest {
 
     @Test
     fun syncIntentReturnsSync() {
-        val intent = Intent("org.ankiquest.DO_SYNC")
+        val intent = Intent("org.ankiquest.ankidroid.DO_SYNC")
 
         val expected = getLaunchType(intent)
 

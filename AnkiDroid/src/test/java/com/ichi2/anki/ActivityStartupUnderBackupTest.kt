@@ -119,7 +119,7 @@ $stackTrace""",
                 .map { x: ActivityLaunchParam ->
                     arrayOf(x, x.simpleName)
                 }.collect(Collectors.toList()) +
-                listOf(Intent.ACTION_MAIN, "org.ankiquest.DO_SYNC").map { action ->
+                listOf(Intent.ACTION_MAIN, "org.ankiquest.ankidroid.DO_SYNC").map { action ->
                     arrayOf(
                         ActivityLaunchParam.get(IntentHandler::class.java) { Intent(action) },
                         "IntentHandler $action",

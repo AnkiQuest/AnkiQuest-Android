@@ -62,7 +62,7 @@ val homePath = System.getProperty("user.home")
 
 /**
  * AnkiQuest: `-Pankiquest` builds the released app: it adds src/quest (launcher icons, updater) and
- * the quest version codes. Every build, with or without it, installs as `org.ankiquest` (see
+ * the quest version codes. Every build, with or without it, installs as `org.ankiquest.ankidroid` (see
  * defaultConfig), because AnkiDroid's maintainers ask forks not to use the `com.ichi2.anki` package.
  */
 val ankiquestBuild =
@@ -75,7 +75,7 @@ val ankiquestBuild =
             true
         }.getOrElse(false)
 
-// -PcustomSuffix=quest was the AnkiQuest build before -Pankiquest; it would now give org.ankiquest.quest without AnkiQuest's branding.
+// -PcustomSuffix=quest was the AnkiQuest build before -Pankiquest; it would now give org.ankiquest.ankidroid.quest without AnkiQuest's branding.
 if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
     throw GradleException("-PcustomSuffix=quest is no longer the AnkiQuest build; pass -Pankiquest")
 }
@@ -159,7 +159,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "org.ankiquest"
+        applicationId = "org.ankiquest.ankidroid"
         buildConfigField("Boolean", "CI", (System.getenv("CI") == "true").toString())
         buildConfigField("String", "ACRA_URL", "\"https://ankidroid.org/acra/report\"")
         buildConfigField("String", "BACKEND_VERSION", "\"${libs.versions.ankiBackend.get()}\"")
