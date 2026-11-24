@@ -724,7 +724,7 @@ internal object AnkiquestMomentCard {
             val subject =
                 when {
                     ref != null -> AnkiquestShareSheet.Subject.Known(ref)
-                    ref == null && AnkiquestMoments.unconfirmed(moment) ->
+                    AnkiquestMoments.unconfirmed(moment) ->
                         AnkiquestShareSheet.Subject.Uploading
                     else -> {
                         elsewhere(moment)
