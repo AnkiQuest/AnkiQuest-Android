@@ -10,11 +10,10 @@ import com.ichi2.anki.libanki.QueueType
 import com.ichi2.anki.libanki.testutils.AnkiTest
 import com.ichi2.anki.observability.undoableOp
 
-/** Corrupts the deck hierarchy so the next scheduler queue/count fetch throws "deck not found in limits map". */
-fun AnkiTest.triggerDeckNotFoundInLimitsMap() {
+/** Corrupts the deck hierarchy: deletes A::B but keeps A::B::C and its new card, then selects A. */
+fun AnkiTest.orphanSubdeck() {
     addDeck("A::B::C").withNote(QueueType.New)
     val parentDeckId = col.decks.idForName("A::B")!!
-    // Drop A::B without removing A::B::C, leaving it without an entry in the limits map.
     col.db.execute("delete from decks where id = ?", parentDeckId)
     col.decks.select(col.decks.idForName("A")!!)
 }
