@@ -4,8 +4,11 @@
 
 const WORKFLOW = "screenshot_store.yml";
 const PREVIOUS_WORKFLOW = "ankiquest_screenshot_store.yml";
-const ATTEMPTS = 60;
 const RETRY_MS = 30_000;
+// The baseline build can outlast a 30-minute wait (under Maven Central
+// throttling it needed 25 minutes for the build alone), so allow 55 minutes.
+const ATTEMPTS = 110;
+const WAIT_MINUTES = (ATTEMPTS * RETRY_MS) / 60_000;
 
 // The baseline belongs to the PR base, the master commit behind a queue group, or the push itself.
 async function baseCommit({ github, context }) {
@@ -98,7 +101,7 @@ module.exports = async function waitForScreenshotBaseline({
         await sleep(RETRY_MS);
     }
     throw new Error(
-        `No successful screenshot baseline for ${base.sha} after 30 minutes. ` +
+        `No successful screenshot baseline for ${base.sha} after ${WAIT_MINUTES} minutes. ` +
             `Run ${WORKFLOW} on a branch at that commit, then rerun this check.`,
     );
 };

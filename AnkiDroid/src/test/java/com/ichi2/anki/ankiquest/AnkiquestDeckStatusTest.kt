@@ -109,7 +109,7 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
                 .deckDueTree()
                 .filterAndFlattenDisplay(DeckFilters.create(""), 1)
                 .map { it.withDailyState(states[it.did]) }
-        adapter.submit(nodes, hasSubDecks = false)
+        adapter.submit(nodes, hasSubDecks = false, onListCommitted = {})
         advanceRobolectricLooperUntil { adapter.currentList == nodes }
         list.measure(
             View.MeasureSpec.makeMeasureSpec(480, View.MeasureSpec.EXACTLY),

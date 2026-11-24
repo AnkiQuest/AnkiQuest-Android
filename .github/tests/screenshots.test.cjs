@@ -198,9 +198,9 @@ test('a store with no screenshot artifact stays pending', async () => {
 
 test('timeout names the exact commit and a way to regenerate its baseline', async () => {
   const fixture = harness([[]]);
-  await assert.rejects(waitForBaseline(fixture), /base-sha after 30 minutes.*screenshot_store.yml.*branch at that commit/);
-  assert.equal(fixture.queries.length, 120);
-  assert.equal(fixture.waits.reduce((sum, delay) => sum + delay, 0), 30 * 60 * 1000);
+  await assert.rejects(waitForBaseline(fixture), /base-sha after 55 minutes.*screenshot_store.yml.*branch at that commit/);
+  assert.equal(fixture.queries.length, 220);
+  assert.equal(fixture.waits.reduce((sum, delay) => sum + delay, 0), 55 * 60 * 1000);
 });
 
 test('GitHub errors fail without trying a different baseline', async () => {
