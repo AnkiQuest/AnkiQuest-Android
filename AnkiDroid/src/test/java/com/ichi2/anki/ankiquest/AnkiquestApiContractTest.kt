@@ -14,7 +14,6 @@ import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
-import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -32,8 +31,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
+import java.net.HttpURLConnection.HTTP_NOT_FOUND
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -49,11 +47,15 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [32])
 class AnkiquestApiContractTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var url: String
-    private val requests = CopyOnWriteArrayList<String>()
-    private val shareRetractions = CopyOnWriteArrayList<String>()
-    private val shareBodies = CopyOnWriteArrayList<JSONObject>()
+
+    /** Each request as "METHOD path"; the shares taken back, as sent; the shares sent. */
+    private val requests get() = server.requests.map { "${it.method} ${it.path}" }
+    private val shareRetractions get() = shares("DELETE").map { it.uri.toString() }
+    private val shareBodies get() = shares("POST").map { JSONObject(it.body) }
+
+    private fun shares(method: String) = server.requests.filter { it.method == method && it.path.startsWith("/api/share/") }
 
     private enum class UndoServer { LEGACY, SCOPED }
 
@@ -72,32 +74,17 @@ class AnkiquestApiContractTest : RobolectricTest() {
         every { AnkiquestShare.picture(any()) } returns null
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.resetWith(MockTime(EXAMPLE_NOW))
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.path
-            requests += "${exchange.requestMethod} $path"
-            if (exchange.requestMethod == "DELETE" && path.startsWith("/api/share/")) {
-                shareRetractions += exchange.requestURI.toString()
+        server =
+            AnkiquestTestServer { request ->
+                val lock = if (uploaded == Uploaded.NOT_YET) mapOf(AnkiquestLock.HEADER to "upload_first") else emptyMap()
+                val body = route(request.method, request.path, request.body, request.uri.query)?.let(::example)
+                if (body == null) {
+                    TestResponse(HTTP_NOT_FOUND, headers = lock)
+                } else {
+                    TestResponse.json(body, headers = lock)
+                }
             }
-            val sent = exchange.requestBody.bufferedReader().use { it.readText() }
-            if (exchange.requestMethod == "POST" && path.startsWith("/api/share/")) {
-                shareBodies += JSONObject(sent)
-            }
-            val body = route(exchange.requestMethod, path, sent, exchange.requestURI.query)?.let(::example)?.toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            if (uploaded == Uploaded.NOT_YET) {
-                exchange.responseHeaders.set(AnkiquestLock.HEADER, "upload_first")
-            }
-            if (body == null) {
-                exchange.sendResponseHeaders(404, -1)
-            } else {
-                exchange.sendResponseHeaders(200, body.size.toLong())
-                exchange.responseBody.use { it.write(body) }
-            }
-            exchange.close()
-        }
-        server.start()
-        url = "http://127.0.0.1:${server.address.port}"
+        url = server.url
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, url)
             putString(Ankiquest.PREF_USER, "hill")
@@ -108,7 +95,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @After
     fun stopServer() {
         try {
-            if (::server.isInitialized) server.stop(0)
+            if (::server.isInitialized) {
+                server.close()
+            }
         } finally {
             unmockkObject(AnkiquestWidget, AnkiquestShare)
             SharedPreferencesTestHook.override = null
