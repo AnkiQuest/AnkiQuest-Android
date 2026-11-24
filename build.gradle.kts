@@ -6,6 +6,7 @@ import com.ichi2.anki.gradle.GitHubActionsTestListener
 import com.ichi2.anki.gradle.TestSummaryService
 import com.ichi2.anki.gradle.configureRobolectricJvm
 import com.ichi2.anki.gradle.registerJacocoLibraryVariants
+import com.ichi2.anki.gradle.rejectUpstreamBackend
 import com.ichi2.anki.gradle.reportBackendTempLibraries
 import com.slack.keeper.optInToKeeper
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -79,6 +80,8 @@ val RUST_BACKEND_MAX_COPIES = 12
 
 // Here we extract per-module "best practices" settings to a single top-level evaluation
 subprojects {
+    rejectUpstreamBackend()
+
     configurations.configureEach {
         resolutionStrategy.eachDependency {
             if (requested.group == "androidx.core" && requested.name == "core-ktx") {

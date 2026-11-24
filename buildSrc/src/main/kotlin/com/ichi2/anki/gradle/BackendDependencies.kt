@@ -8,10 +8,13 @@ import java.io.File
 import java.util.Properties
 
 // The Anki backend (rsdroid) is consumed either as locally-built artifacts in
-// ../Anki-Android-Backend (when `local_backend=true` in local.properties) or as
-// the published library from the version catalog.
+// ../AnkiQuest-Android-Backend (when `local_backend=true` in local.properties) or
+// as the published library from the version catalog.
 
-// Paths within the `Anki-Android-Backend` checkout, which sits beside the repo root.
+// Directory of the AnkiQuest-Android-Backend checkout, which sits beside the repo root.
+private const val BACKEND_CHECKOUT = "AnkiQuest-Android-Backend"
+
+// Paths within the backend checkout.
 private const val RSDROID_JAR =
     "rsdroid/build/libs/rsdroid.jar"
 private const val RSDROID_ANDROID_AAR =
@@ -24,7 +27,7 @@ private const val RSDROID_TESTING_JAR =
  * artifacts and the published version-catalog libraries based on `local_backend` in
  * `local.properties`.
  *
- * See https://github.com/ankidroid/Anki-Android-Backend/
+ * See https://github.com/AnkiQuest/AnkiQuest-Android-Backend/
  */
 // TODO: use context parameters when we compile kts with Kotlin 2.4.0
 fun DependencyHandlerScope.addAnkiBackendDependencies(project: Project) {
@@ -85,8 +88,7 @@ private fun Project.addBackendArtifact(
     vararg localPaths: String,
 ) {
     if (useLocalBackend) {
-        // ../Anki-Android-Backend
-        val backendCheckout = File(rootProject.projectDir.parentFile, "Anki-Android-Backend")
+        val backendCheckout = File(rootProject.projectDir.parentFile, BACKEND_CHECKOUT)
         // Local artifacts have no Maven metadata, so Android consumers also need the Android AAR.
         dependencies.add(configuration, files(localPaths.map { File(backendCheckout, it) }))
     } else {

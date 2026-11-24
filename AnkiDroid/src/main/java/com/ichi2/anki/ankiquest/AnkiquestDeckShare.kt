@@ -309,7 +309,7 @@ internal object AnkiquestDeckShare {
             AnkiquestShareSheet(
                 context,
                 account,
-                reference,
+                AnkiquestShareSheet.Subject.Known(reference),
                 card,
                 elsewhere = { chosen ->
                     context.lifecycleScope.launch {

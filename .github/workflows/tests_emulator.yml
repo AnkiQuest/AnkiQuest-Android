@@ -1,4 +1,4 @@
-name: 🛠️ Emulator Tests
+name: ankiquest Emulator Tests
 
 on:
   schedule:
@@ -13,31 +13,62 @@ on:
         type: number
   pull_request:
   push:
-    # Ignore merge queue branches on push; avoids merge_group+push concurrency race since ref is same
-    branches-ignore:
-      - 'gh-readonly-queue/**'
-      # Dependabot branches are already checked by the pull_request trigger.
-      - 'dependabot/**'
-      # Crowdin translations are already checked by the pull_request trigger.
-      - 'i18n_sync'
+    branches:
+      - master
   merge_group:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'scheduled' || 'ci' }}
-  cancel-in-progress: true
+  # A newer push to a pull request cancels its older run. Every other run (master pushes,
+  # schedules, dispatches, merge queue) gets a group of its own and always finishes (#269).
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
+  # 'false' when every changed file is documentation. The globs leave out the app's assets:
+  # AnkiDroid/src/main/assets/ankiquest/release-notes.md ships in the APK and a unit test reads it.
+  # The same list is in every ankiquest_*.yml that skips documentation (.github/tests/docs-only.test.cjs).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.changed.outputs.code }}
+    steps:
+      - id: changed
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        with:
+          docs: |
+            *.md
+            */README.md
+            */*/README.md
+            .agents/**/*.md
+            .github/workflows/README.md
+            .github/ISSUE_TEMPLATE/**
+            .github/pull_request_template.md
+            .idea/**/*.md
+            .oss-scanner/*.md
+            LICENSE*
+            LICENSES/**
+            docs/**
+
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
+  # Skipped for documentation-only changes, which skips the emulator tests after it. A failed
+  # changes job leaves the output empty, so the tests still run.
   matrix_prep:
-    # Do not run the scheduled jobs on forks
-    if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.result }}
@@ -160,10 +191,10 @@ jobs:
         with:
           # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
           cache-provider: basic
-          # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
-          # Builds on other branches will only read from main branch cache writes
+          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
+          # Builds on other branches will only read from master branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
         # Cache only the per-change emulator: the 16 KB snapshot costs about 2.5 GiB.
       - name: AVD cache
@@ -184,16 +215,30 @@ jobs:
       - name: Raise Gradle Heap
         # The release smoke build can run out of heap while packaging (#22741).
         # Every Gradle step in this job shares one daemon, so this applies to all of them.
+        # A configuration-cache entry restored from the Gradle user home answers task
+        # selection with the graph of an older build and fails packaging with
+        # "Task 'lintVitalPlayRelease' not found" in seconds. The user home cannot
+        # override it: the project's gradle.properties wins over the user home's, so
+        # every Gradle invocation below passes --no-configuration-cache on the command
+        # line.
         run: echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" >> "$GRADLE_USER_HOME/gradle.properties"
 
       - name: Warm Gradle Cache
-        # This makes sure we fetch gradle network resources with a retry
+        # This makes sure we fetch gradle network resources with a retry.
+        # Newer Android Gradle plugin versions have no lintVitalPlayRelease task,
+        # and -x naming a missing task fails the whole selection, so the exclusion
+        # is only passed when the task exists.
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 15
           retry_wait_seconds: 60
           max_attempts: 3
-          command: ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark --daemon
+          command: >-
+            if ./gradlew :AnkiDroid:tasks --all --quiet | grep -q lintVitalPlayRelease; then
+            ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark
+            -x lintVitalPlayRelease --daemon --no-configuration-cache; else
+            ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark
+            --daemon --no-configuration-cache; fi
 
       - name: Install Android Emulator
         # Retry to work around https://github.com/ReactiveCircus/android-emulator-runner/issues/496
@@ -225,9 +270,9 @@ jobs:
             "${ANDROID_HOME:?}/system-images/android-${SDK_API_LEVEL:?}/${SDK_TARGET:?}/${SDK_ARCH:?}/.installer"
 
       - name: AVD Boot and Snapshot Creation
-        # Warm up the uncached 16 KB and tablet emulators on every run; otherwise only on main cache misses.
+        # Warm up the uncached 16 KB and tablet emulators on every run; otherwise only on master cache misses.
         # Comment the if out to generate snapshots on branch for performance testing
-        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main') }}"
+        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master') }}"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ matrix.api-level }}
@@ -249,10 +294,10 @@ jobs:
 
         # This step is separate so pure install time may be calculated as a step
       - name: Emulator Snapshot After Firstboot Warmup
-        # Always warm up the 16 KB and tablet emulators. The default emulator only needs it on main cache misses.
+        # Always warm up the 16 KB and tablet emulators. The default emulator only needs it on master cache misses.
         # Switch the if statements via comment if generating snapshots for performance testing
         # if: matrix.first-boot-delay != '0'
-        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main') }}"
+        if: "${{ matrix.target == 'google_apis_ps16k' || matrix.device == 'tablet' || (steps.avd-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/master') }}"
         env:
           FIRST_BOOT_DELAY: ${{ matrix.first-boot-delay }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -305,8 +350,42 @@ jobs:
         if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/**/TEST-*.xml') != ''
         run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected adb-log.txt --title "Emulator test failures" --suite ":AnkiDroid:connectedPlayReleaseAndroidTest"
 
+      # Only the quest build (-PcustomSuffix=quest) has the launcher aliases, so the run above skips
+      # AnkiquestIconAliasTest. Debug, so R8 cannot remove what only the test calls.
+      - name: Run Quest Launcher Icon Test
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        timeout-minutes: 20
+        env:
+          TEST_RELEASE_BUILD: false
+        with:
+          api-level: ${{ matrix.api-level }}
+          force-avd-creation: false
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
+          ram-size: ${{ env.EMULATOR_RAM_SIZE }}
+          pre-emulator-launch-script: ${{ env.EMULATOR_PRE_LAUNCH_SCRIPT }}
+          sdcard-path-or-size: 100M
+          disable-animations: true
+          # The run above leaves its release-signed test APK installed for coverage; a debug-signed one
+          # cannot replace it (INSTALL_FAILED_UPDATE_INCOMPATIBLE), so remove it first.
+          script: |
+            ./gradlew :AnkiDroid:uninstallAll --daemon
+            bash .github/with_emulator_log.sh adb-log.txt ./gradlew :AnkiDroid:connectedPlayDebugAndroidTest -PcustomSuffix=quest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.ankiquest.AnkiquestIconAliasTest -Pandroid.testInstrumentationRunnerArguments.ankiquestQuestBuild=true --daemon
+
+      - name: Report Quest Launcher Icon Test Results
+        if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/debug/**/TEST-*.xml') != ''
+        run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected/debug adb-log.txt --title "Quest launcher icon test failures" --suite ":AnkiDroid:connectedPlayDebugAndroidTest"
+
       - name: Build Release Smoke Test
-        run: TEST_RELEASE_BUILD=false ./gradlew packagePlayRelease :baselineprofile:packageBenchmarkBenchmark -x lintVitalPlayRelease --daemon --stacktrace
+        run: |
+          TASKS=$(./gradlew :AnkiDroid:tasks --all --quiet || true)
+          EXTRA=()
+          if grep -q lintVitalPlayRelease <<<"$TASKS"; then
+            EXTRA+=(-x lintVitalPlayRelease)
+          fi
+          TEST_RELEASE_BUILD=false ./gradlew packagePlayRelease :baselineprofile:packageBenchmarkBenchmark "${EXTRA[@]}" --daemon --stacktrace --no-configuration-cache
 
       - name: Run Release Smoke Test
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -397,5 +476,6 @@ jobs:
 
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
+          flags: emulator
           verbose: true
           fail_ci_if_error: ${{ github.repository == 'ankidroid/Anki-Android' }} # optional (default = false)
