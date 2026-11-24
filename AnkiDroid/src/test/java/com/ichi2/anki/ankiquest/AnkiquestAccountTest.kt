@@ -5,46 +5,41 @@ package com.ichi2.anki.ankiquest
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestAccountTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var url: String
-    private val received = CopyOnWriteArrayList<Pair<String, JSONObject>>()
+
+    /** Each request's path and JSON body. */
+    private val received get() = server.requests.map { it.path to JSONObject(it.body) }
 
     @Before
     fun startServer() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val body = JSONObject(exchange.requestBody.readBytes().decodeToString())
-            received += exchange.requestURI.path to body
-            val (status, answer) =
-                when {
-                    exchange.requestURI.path == "/api/accounts/tokens" && body.getString("user") == "two" -> secondFactor(body)
-                    exchange.requestURI.path == "/api/accounts/tokens" && body.getString("password") == "right password" ->
-                        200 to JSONObject().put("user", body.getString("user")).put("token", "device-token")
-                    exchange.requestURI.path == "/api/accounts/tokens" -> 401 to JSONObject().put("error", "no")
-                    body.getString("user") == "taken" -> 409 to JSONObject().put("error", "taken")
-                    else -> 201 to JSONObject().put("user", body.getString("user")).put("token", "first-token")
-                }
-            val bytes = answer.toString().toByteArray()
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
-        url = "http://127.0.0.1:${server.address.port}"
+        server =
+            AnkiquestTestServer { request ->
+                val body = JSONObject(request.body)
+                val (status, answer) =
+                    when {
+                        request.path == "/api/accounts/tokens" && body.getString("user") == "two" -> secondFactor(body)
+                        request.path == "/api/accounts/tokens" && body.getString("password") == "right password" ->
+                            200 to JSONObject().put("user", body.getString("user")).put("token", "device-token")
+                        request.path == "/api/accounts/tokens" -> 401 to JSONObject().put("error", "no")
+                        body.getString("user") == "taken" -> 409 to JSONObject().put("error", "taken")
+                        else -> 201 to JSONObject().put("user", body.getString("user")).put("token", "first-token")
+                    }
+                TestResponse(status, answer.toString().toByteArray())
+            }
+        url = server.url
     }
 
     /** An account with two-factor authentication on, answering as docs/mobile-api.md in AnkiQuest-Server describes. */
@@ -61,7 +56,7 @@ class AnkiquestAccountTest : RobolectricTest() {
 
     @After
     fun stopServer() {
-        server.stop(0)
+        server.close()
     }
 
     private fun credentials(

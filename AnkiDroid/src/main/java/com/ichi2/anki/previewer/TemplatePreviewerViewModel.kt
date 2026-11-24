@@ -27,7 +27,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
-import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.VisibleForTesting
 
 class TemplatePreviewerViewModel(
@@ -274,8 +273,11 @@ class TemplatePreviewerViewModel(
         }
 
     companion object {
-        @Language("HTML")
-        private const val EMPTY_FRONT_LINK = """<a href='https://docs.ankiweb.net/templates/errors.html#front-of-card-is-blank'>"""
+        /**
+         * End of the help link the backend adds to a blank front. Only the anchor is matched,
+         * because the backend changes the docs URL before it (docs.ankiweb.net moved the page).
+         */
+        private const val EMPTY_FRONT_LINK = "#front-of-card-is-blank'>"
     }
 }
 
