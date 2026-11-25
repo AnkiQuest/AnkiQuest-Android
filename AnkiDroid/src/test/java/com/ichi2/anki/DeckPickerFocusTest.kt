@@ -5,6 +5,7 @@ package com.ichi2.anki
 import android.os.Looper
 import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.ankiquest.deckRowsAdapter
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.widgets.DeckAdapter
@@ -186,7 +187,8 @@ class DeckPickerFocusTest : RobolectricTest() {
 
     private fun DeckPicker.deckRow(deckId: DeckId): View {
         val decks = deckPickerBinding.decks
-        val adapter = decks.adapter as DeckAdapter
+        // The fork wraps the deck rows in a ConcatAdapter with the heatmap footer, after them.
+        val adapter = deckRowsAdapter
         val position = { adapter.currentList.indexOfFirst { it.did == deckId } }
         advanceRobolectricLooperUntil { position() >= 0 && decks.findViewHolderForAdapterPosition(position()) != null }
         return (decks.findViewHolderForAdapterPosition(position()) as DeckAdapter.ViewHolder).binding.deckLayout
