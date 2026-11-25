@@ -15,4 +15,5 @@
         <item quantity="many">Estás a %1$d toques de chibi</item>
         <item quantity="other">Estás a %1$d toques de chibi</item>
     </plurals>
+    <string name="ankiquest_companion_signed_out">Inicia sesión para elegir un compañero.</string>
 </resources>

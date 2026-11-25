@@ -15,4 +15,5 @@
         <item quantity="many">Tu es à %1$d appuis de chibi</item>
         <item quantity="other">Tu es à %1$d appuis de chibi</item>
     </plurals>
+    <string name="ankiquest_companion_signed_out">Connecte-toi pour choisir un compagnon.</string>
 </resources>

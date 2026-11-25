@@ -42,10 +42,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write
+      contents: write # publishes the release and the nightly
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
@@ -55,9 +56,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # No Gradle cache: the release and the nightly are built from a clean
+      # cache, so nothing a cache entry holds can reach the published APK.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
-          cache-provider: basic
+          cache-disabled: true
 
       - name: Release number
         id: release
@@ -89,13 +92,17 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Assemble
+        env:
+          RELEASE: ${{ steps.release.outputs.number }}
+          NIGHTLY: ${{ steps.release.outputs.nightly }}
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
             -PcustomSuffix=quest -PcustomName="AnkiQuest" \
-            -PankiquestRelease=${{ steps.release.outputs.number }} \
-            -PankiquestNightly=${{ steps.release.outputs.nightly }} \
-            -PupstreamCommit=${{ steps.upstream.outputs.sha }}
+            -PankiquestRelease="$RELEASE" \
+            -PankiquestNightly="$NIGHTLY" \
+            -PupstreamCommit="$UPSTREAM_SHA"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
       - name: Sign with the AnkiQuest release key
@@ -148,17 +155,18 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/quest-')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE: ${{ steps.release.outputs.number }}
         run: |
           # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
           gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
-            --title "AnkiQuest ${{ steps.release.outputs.number }}" \
+            --title "AnkiQuest $RELEASE" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
-      - name: Publish nightly
+      - name: Nightly manifest
+        id: nightly
         if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}
           NIGHTLY: ${{ steps.release.outputs.nightly }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
@@ -168,9 +176,16 @@ jobs:
             --argjson size "$(stat -c %s AnkiQuest.apk)" \
             '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
             > nightly.json
-          gh release delete nightly --yes --cleanup-tag || true
           cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk nightly.json \
-            --prerelease --latest=false --target "$GITHUB_SHA" \
-            --title "AnkiQuest nightly" \
-            --notes "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."
+
+      # Updates the release in place and retries the release API; see the action.
+      - name: Publish nightly
+        if: steps.nightly.outcome == 'success'
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/nightly-release@master
+        with:
+          title: AnkiQuest nightly
+          notes: "Built from ${{ github.sha }} after quest-${{ steps.release.outputs.number }}. Untested: pick the nightly update channel in AnkiQuest settings to get these."
+          files: |
+            AnkiQuest.apk
+            AnkiDroid-Quest.apk
+            nightly.json

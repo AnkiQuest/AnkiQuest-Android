@@ -111,4 +111,7 @@
         <item quantity="other">%1$s finalmente aprendeu «%2$s», um cartão que tinha esquecido %3$d vezes. 🏆</item>
     </plurals>
     <string name="aq_conquest_share_deck">Do meu baralho «%1$s».</string>
+    <string name="aq_conquest_deck">Do teu baralho %1$s</string>
+    <string name="aq_conquest_popup_card">«%1$s»</string>
+    <string name="aq_conquest_popup_open">Ver o cartão</string>
 </resources>

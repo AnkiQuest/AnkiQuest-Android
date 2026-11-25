@@ -1,8 +1,13 @@
 name: Remove Assignees
 
 on:
-  pull_request_target:
+  # Needs the base repository's token to edit issues after a merge. The job
+  # checks out nothing and reads only the event payload and the API.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [ closed ]
+
+permissions:
+  contents: read
 
 jobs:
   merge_job:
@@ -19,7 +24,7 @@ jobs:
           script: |
 
             const variables = {
-              _url: "https://github.com/ankidroid/${{ github.event.repository.name }}/pull/${{ github.event.pull_request.number }}"
+              _url: `https://github.com/ankidroid/${context.repo.repo}/pull/${context.payload.pull_request.number}`
             };
 
             const query = `query($_url:URI!) {

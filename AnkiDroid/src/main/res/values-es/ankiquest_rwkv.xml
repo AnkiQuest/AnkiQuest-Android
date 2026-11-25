@@ -8,4 +8,20 @@
     <string name="ankiquest_rwkv_not_enough_memory">No disponible: este teléfono tiene poca memoria para tu colección. La programación no cambia.</string>
     <string name="ankiquest_rwkv_no_model">No disponible: primero elige un archivo de modelo RWKV. La programación no cambia.</string>
     <string name="ankiquest_rwkv_ready">Activado: RWKV programa tus repasos.</string>
+
+    <string name="ankiquest_rwkv_forecast_title">Previsión RWKV</string>
+    <string name="ankiquest_rwkv_forecast_note">si dejas de repasar ahora</string>
+    <string name="ankiquest_rwkv_forecast_now">vencidas %1$d | cerca %2$d | seguras %3$d</string>
+    <string name="ankiquest_rwkv_forecast_later">vencidas %1$d · +%2$d en 1 h · +%3$d en 3 h · %4$d para mañana</string>
+    <string name="ankiquest_rwkv_recall_title">Recuerdo RWKV ahora</string>
+    <plurals name="ankiquest_rwkv_recall_below">
+        <item quantity="one">%1$d de %2$d tarjeta (%3$s) por debajo de %4$s</item>
+        <item quantity="many">%1$d de %2$d tarjetas (%3$s) por debajo de %4$s</item>
+        <item quantity="other">%1$d de %2$d tarjetas (%3$s) por debajo de %4$s</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_recall_below_targets">
+        <item quantity="one">%1$d de %2$d tarjeta (%3$s) por debajo de su retención deseada</item>
+        <item quantity="many">%1$d de %2$d tarjetas (%3$s) por debajo de su retención deseada</item>
+        <item quantity="other">%1$d de %2$d tarjetas (%3$s) por debajo de su retención deseada</item>
+    </plurals>
 </resources>

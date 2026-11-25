@@ -59,6 +59,7 @@
     <string name="ankiquest_sign_in_display">Display name (optional)</string>
     <string name="ankiquest_sign_in_create">Create a new account</string>
     <string name="ankiquest_sign_in_hint">Usernames use lowercase letters, numbers, - and _. Passwords need at least 10 characters.</string>
+    <string name="ankiquest_sign_in_public_hint">Anyone can open your profile and you are listed on the global leaderboard.</string>
     <string name="ankiquest_sign_in_submit">Sign in</string>
     <string name="ankiquest_sign_in_submit_create">Create account</string>
     <string name="ankiquest_sign_in_missing">Fill in the server, username and password.</string>

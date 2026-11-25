@@ -50,6 +50,7 @@
     <string name="ankiquest_sign_in_display">Nom affiché (facultatif)</string>
     <string name="ankiquest_sign_in_create">Créer un nouveau compte</string>
     <string name="ankiquest_sign_in_hint">Les noms d’utilisateur utilisent des minuscules, des chiffres, - et _. Les mots de passe font au moins 10 caractères.</string>
+    <string name="ankiquest_sign_in_public_hint">Tout le monde peut ouvrir ton profil et tu figures dans le classement général.</string>
     <string name="ankiquest_sign_in_submit">Se connecter</string>
     <string name="ankiquest_sign_in_submit_create">Créer le compte</string>
     <string name="ankiquest_sign_in_missing">Remplis le serveur, le nom d’utilisateur et le mot de passe.</string>
@@ -138,4 +139,18 @@
         <item quantity="other">%d révisions envoyées.</item>
     </plurals>
     <string name="aq_server_outdated">Mets à jour ton serveur AnkiQuest</string>
+    <string name="ankiquest_widget_settings_title">Widget de classement</string>
+    <string name="ankiquest_widget_settings_open">%1$s, réglages du widget</string>
+    <string name="ankiquest_widget_settings_save">Enregistrer le widget</string>
+    <string name="ankiquest_widget_settings_scale">Taille du texte</string>
+    <string name="ankiquest_widget_settings_timeframe">Période</string>
+    <string name="ankiquest_widget_settings_groups_failed">Tes groupes n’ont pas pu être chargés</string>
+    <string name="ankiquest_widget_settings_groups_loading">Chargement de tes groupes…</string>
+    <string name="ankiquest_widget_scale_auto">Auto (s’adapte au widget)</string>
+    <string name="ankiquest_widget_scale_extra_large">Très grand</string>
+    <string name="ankiquest_widget_scale_large">Grand</string>
+    <string name="ankiquest_widget_scale_medium">Moyen</string>
+    <string name="ankiquest_widget_scale_small">Petit</string>
+    <string name="ankiquest_widget_global_unavailable">Ce serveur n’a pas encore de classement général</string>
+    <string name="ankiquest_widget_who_global">Général</string>
 </resources>

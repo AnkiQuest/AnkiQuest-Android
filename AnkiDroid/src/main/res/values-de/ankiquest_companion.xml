@@ -14,4 +14,5 @@
         <item quantity="one">Du bist %1$d Tipp von Chibi entfernt</item>
         <item quantity="other">Du bist %1$d Tipps von Chibi entfernt</item>
     </plurals>
+    <string name="ankiquest_companion_signed_out">Melde dich an, um einen Begleiter zu wählen.</string>
 </resources>
