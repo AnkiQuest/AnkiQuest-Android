@@ -188,7 +188,8 @@ internal class RwkvModelStore(
     fun stored(): List<RwkvLockEntry> = lock.filter { checked(it, file(it), RwkvVerify.SIZE) }
 
     private fun read(input: BufferedInputStream): List<RwkvLockEntry> {
-        // A release zip starts with a local file header.
+        // A release zip starts with a local file header. BufferedInputStream supports mark and
+        // reset, and its buffer is far larger than the header.
         input.mark(ZIP_MAGIC.size)
         val head = ByteArray(ZIP_MAGIC.size)
         var read = 0
@@ -259,8 +260,9 @@ internal class RwkvModelStore(
         entry: RwkvLockEntry,
         tmp: File,
     ) {
+        // The same file imported again is already in place under its hash: keep it.
         val target = file(entry)
-        if (!tmp.renameTo(target)) {
+        if (!checked(entry, target, RwkvVerify.HASH) && !tmp.renameTo(target)) {
             throw IOException("could not store the RWKV model")
         }
         val keep = lock.filter { it.size == entry.size }.map { file(it).name }.toSet()

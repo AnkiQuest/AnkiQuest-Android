@@ -77,6 +77,18 @@ class AnkiquestRwkvModelsTest {
     }
 
     @Test
+    fun `importing the same files again keeps them`() {
+        store.import(smallTwoHead.inputStream())
+        store.import(smallInstant.inputStream())
+
+        assertEquals(RwkvImport.Imported(listOf(lock[0])), store.import(smallTwoHead.inputStream()))
+        val zip = zip("a/weights.f32.bin" to smallInstant, "b/weights.f32.bin" to smallInstant)
+        assertEquals(RwkvImport.Imported(listOf(lock[1], lock[1])), store.import(zip.inputStream()))
+        assertEquals(listOf(lock[0], lock[1]), store.stored())
+        assertEquals(2, dir.listFiles().orEmpty().size, "no temporary file is left")
+    }
+
+    @Test
     fun `importing another size deletes the old size's files`() {
         store.import(smallTwoHead.inputStream())
         store.import(smallInstant.inputStream())
