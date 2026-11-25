@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.graphics.drawable.BitmapDrawable
 import android.view.ContextThemeWrapper
 import android.widget.ImageView
 import androidx.core.content.edit
@@ -20,10 +21,11 @@ import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import com.ichi2.anki.common.android.R as CommonR
 
@@ -53,11 +55,11 @@ class AnkiquestMoodTest : RobolectricTest() {
             val streak = today.getInt("streak")
             val goal = if (today.getBoolean("goal_reached")) Goal.REACHED else Goal.OPEN
 
-            // The mood from today's verdict, then the pose for that mood by drawable name.
+            // The mood from today's verdict, then the pose for that mood by name.
             val state = named<State>(today.getString("state"))
             val mood = AnkiquestMood.of(state, today.getInt("reviews"), streak, today.getInt("frozen_days"), goal)
             assertEquals(named<Mood>(expected.getString("mood")), mood, name)
-            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak)), name)
+            assertEquals(fixturePose(expected.getString("pose")), AnkiquestMood.pose(mood, streak).id, name)
         }
     }
 
@@ -85,7 +87,7 @@ class AnkiquestMoodTest : RobolectricTest() {
                 }
             }
         }
-        assertEquals(listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone), AnkiquestMood.poses(Mood.FIRE, 365))
+        assertEquals(listOf(AnkiquestPose.STREAK_LEGEND, AnkiquestPose.STREAK_MILESTONE), AnkiquestMood.poses(Mood.FIRE, 365))
     }
 
     @Test
@@ -94,7 +96,7 @@ class AnkiquestMoodTest : RobolectricTest() {
         val today = 20_000 * day + 5 * 3_600_000
         val pose = { endsAt: Long -> AnkiquestMood.bigPose(Mood.FIRE, 120, endsAt) }
         assertEquals(
-            setOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone),
+            setOf(AnkiquestPose.STREAK_LEGEND, AnkiquestPose.STREAK_MILESTONE),
             setOf(pose(today), pose(today + day)),
             "two days in a row show both poses",
         )
@@ -189,7 +191,9 @@ class AnkiquestMoodTest : RobolectricTest() {
         val view = ReviewHeatmapView(ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid))
         val aki = view.findViewById<ImageView>(R.id.review_heatmap_aki)
         assertTrue(aki.isVisible)
-        assertEquals(AnkiquestMood.pose(Mood.SAD, 12), shadowOf(aki.drawable).createdFromResId)
+        val shown = assertNotNull((aki.drawable as? BitmapDrawable)?.bitmap)
+        val expected = AnkiquestCompanion.bitmap(targetContext, AnkiquestMood.pose(Mood.SAD, 12), aki.layoutParams.width)
+        assertSame(expected, shown, "the chosen companion's pack draws today's sad pose")
     }
 
     private companion object {

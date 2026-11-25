@@ -2,7 +2,9 @@
 @file:Suppress("DEPRECATION")
 
 import com.android.build.api.variant.FilterConfiguration.FilterType
+import com.ichi2.anki.gradle.AnkiquestArtMode
 import com.ichi2.anki.gradle.AnkiquestBrandingTask
+import com.ichi2.anki.gradle.BundleAnkiquestPacks
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.addAnkiBackendDependencies
@@ -441,6 +443,30 @@ val ankiquestBranding =
     }
 androidComponents.onVariants { variant ->
     variant.sources.res?.addGeneratedSourceDirectory(ankiquestBranding, AnkiquestBrandingTask::output)
+}
+
+// AnkiQuest: every build draws its companions from the AnkiQuest-Art release ankiquest-art.json
+// pins. It carries assets/ankiquest/art.json, the launcher icons' pictures as resources and, with
+// -PankiquestArt=bundled (the default), the companion packs; the slim APK (-PankiquestArt=download)
+// downloads the packs in the app. Downloads are cached by SHA-256 in the Gradle user home, or in
+// -PankiquestArtCache=<dir> (the F-Droid recipe fills that folder before building).
+val ankiquestArt = AnkiquestArtMode.of(providers.gradleProperty("ankiquestArt").getOrElse("bundled"))
+val ankiquestArtPin = rootProject.layout.projectDirectory.file("ankiquest-art.json")
+val ankiquestArtCache =
+    providers
+        .gradleProperty("ankiquestArtCache")
+        .map { rootProject.file(it) }
+        .getOrElse(File(gradle.gradleUserHomeDir, "caches/ankiquest-art"))
+androidComponents.onVariants { variant ->
+    // One task per variant: AGP gives each generated source directory its own output folder.
+    val packs =
+        tasks.register<BundleAnkiquestPacks>("bundle${variant.name.replaceFirstChar { it.uppercase() }}AnkiquestPacks") {
+            pin.set(ankiquestArtPin)
+            mode.set(ankiquestArt)
+            cacheDir.set(ankiquestArtCache)
+        }
+    variant.sources.assets?.addGeneratedSourceDirectory(packs, BundleAnkiquestPacks::outputDir)
+    variant.sources.res?.addGeneratedSourceDirectory(packs, BundleAnkiquestPacks::resDir)
 }
 
 androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->

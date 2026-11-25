@@ -105,6 +105,21 @@ jobs:
             -PupstreamCommit="$UPSTREAM_SHA"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
+      # The slim APK: the same build without the bundled companion packs, which it downloads in the app
+      # from the pinned release. Only assets differ, so Gradle reuses the compiled code of the full build.
+      - name: Assemble slim
+        env:
+          RELEASE: ${{ steps.release.outputs.number }}
+          NIGHTLY: ${{ steps.release.outputs.nightly }}
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+        run: |
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestArt=download \
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
+            -PankiquestRelease="$RELEASE" \
+            -PankiquestNightly="$NIGHTLY" \
+            -PupstreamCommit="$UPSTREAM_SHA"
+          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest-slim.apk
+
       - name: Sign with the AnkiQuest release key
         id: sign
         env:
@@ -121,13 +136,17 @@ jobs:
           fi
           echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          "$apksigner" sign \
-            --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
-            --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
-            --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
-            AnkiQuest.apk
+          for apk in AnkiQuest.apk AnkiQuest-slim.apk; do
+            "$apksigner" sign \
+              --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
+              --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
+              --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
+              "$apk"
+          done
           rm -f "$RUNNER_TEMP/ankiquest.jks"
-          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiQuest.apk | grep -q "CN=AnkiQuest"
+          for apk in AnkiQuest.apk AnkiQuest-slim.apk; do
+            "$apksigner" verify --min-sdk-version 28 --print-certs "$apk" | grep -q "CN=AnkiQuest"
+          done
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Version code
@@ -148,7 +167,9 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ankiquest
-          path: AnkiQuest.apk
+          path: |
+            AnkiQuest.apk
+            AnkiQuest-slim.apk
           if-no-files-found: error
 
       - name: Publish release
@@ -159,7 +180,7 @@ jobs:
         run: |
           # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk AnkiQuest-slim.apk \
             --title "AnkiQuest $RELEASE" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
@@ -173,8 +194,8 @@ jobs:
         run: |
           jq -n --argjson release "$RELEASE" --argjson nightly "$NIGHTLY" --argjson version_code "$VERSION_CODE" \
             --arg commit "$GITHUB_SHA" --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --argjson size "$(stat -c %s AnkiQuest.apk)" \
-            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
+            --argjson size "$(stat -c %s AnkiQuest.apk)" --argjson slim_size "$(stat -c %s AnkiQuest-slim.apk)" \
+            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size, slim_size: $slim_size}' \
             > nightly.json
           cp AnkiQuest.apk AnkiDroid-Quest.apk
 
@@ -188,4 +209,5 @@ jobs:
           files: |
             AnkiQuest.apk
             AnkiDroid-Quest.apk
+            AnkiQuest-slim.apk
             nightly.json

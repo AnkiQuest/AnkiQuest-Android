@@ -20,6 +20,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestLinks
+import com.ichi2.anki.ankiquest.AnkiquestPackCredits
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.destinations.ChangelogDestination
@@ -83,23 +84,16 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             movementMethod = LinkMovementMethod.getInstance()
         }
 
-        // License text, with the credit Anki-tan's CC BY-SA licence asks for
+        // License text, with each installed companion's credit and licence from its pack
         val gplLicenseLink = getString(R.string.licence_wiki)
         val agplLicenseLink = getString(R.string.link_agpl_wiki)
         val sourceCodeLink = sourceLink(repository)
         val dependencyLicenseLink = getString(R.string.dependency_license_wiki)
-        val ankiTan =
-            getString(
-                R.string.ankiquest_about_anki_tan,
-                getString(R.string.ankiquest_link_anki_tan),
-                getString(R.string.ankiquest_link_shigeyuki),
-                getString(R.string.ankiquest_link_cc_by_sa),
-            )
         binding.licenseDescription.apply {
             text =
                 (
                     getString(R.string.ankiquest_about_license, gplLicenseLink, agplLicenseLink, sourceCodeLink) + "<br>" +
-                        ankiTan + "<br>" +
+                        AnkiquestPackCredits.html(requireContext()) +
                         getString(CommonString.other_licenses, dependencyLicenseLink)
                 ).parseAsHtml()
             movementMethod = LinkMovementMethod.getInstance()
@@ -153,11 +147,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             } else {
                 null
             }
-        if (icon != null) {
-            binding.appLogo.setImageDrawable(icon)
-        } else {
-            binding.appLogo.setImageResource(R.drawable.aki_face)
-        }
+        binding.appLogo.setImageDrawable(icon ?: manager.getApplicationIcon(context.applicationInfo))
     }
 
     private fun sourceLink(repository: String): String {

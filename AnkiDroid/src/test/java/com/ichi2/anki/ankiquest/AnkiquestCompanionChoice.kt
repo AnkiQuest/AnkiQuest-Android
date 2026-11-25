@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import kotlin.test.assertTrue
 
@@ -18,15 +17,14 @@ internal fun chooseCompanion(choice: Choice) {
     assertTrue(AnkiquestCompanion.remember(requireNotNull(AnkiquestHomeData.account()), choice.id))
 }
 
-/** Ankilope's core pose for each streak mood; the cow draws hers. On fire she studies until her on-fire art exists. */
-internal val ankilopeMoodPoses =
-    mapOf(
-        AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
-        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_sleeping,
-        AnkiquestMood.Mood.SAD to R.drawable.ankilope_sad,
-        AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
-        AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
-        AnkiquestMood.Mood.FROZEN_3 to R.drawable.ankilope_frozen,
-        AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
-        AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
-    )
+/**
+ * The Art name of a pose `streak_moods.json` names. The pinned fixture still names Aki's drawables
+ * (`aki_sleeping`); newer ones use Art names, which pass unchanged.
+ */
+internal fun fixturePose(name: String): String = if (name == "aki_sleeping") "asleep" else name.removePrefix("aki_")
+
+/** Ankilope, earned at a level; a pack of the pinned Art release. */
+internal val Choice.Companion.ANKILOPE get() = Choice("ankilope")
+
+/** Bluma, earned by hours of study; a pack of the pinned Art release. */
+internal val Choice.Companion.COW get() = Choice("cow")

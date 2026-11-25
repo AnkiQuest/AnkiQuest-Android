@@ -23,8 +23,7 @@
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:layout_marginEnd="6dp"
-            android:importantForAccessibility="no"
-            android:src="@drawable/aki_face" />
+            android:importantForAccessibility="no" />
         <TextView
             android:id="@+id/ankiquest_widget_title"
             android:layout_width="wrap_content"

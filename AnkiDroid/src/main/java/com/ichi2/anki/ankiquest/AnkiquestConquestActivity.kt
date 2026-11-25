@@ -216,7 +216,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         val hero = views.card(content, tinted = true)
         hero.gravity = Gravity.CENTER_HORIZONTAL
         if (AnkiquestCompanion.visible()) {
-            hero.addView(AnkiquestAki.image(this, if (card.leech) R.drawable.aki_winner else R.drawable.aki_deck_conquered, 120))
+            hero.addView(AnkiquestAki.image(this, if (card.leech) AnkiquestPose.WINNER else AnkiquestPose.DECK_CONQUERED, 120))
         } else {
             views.text(hero, "🏆").apply {
                 textSize = 56f

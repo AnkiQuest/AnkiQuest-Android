@@ -57,7 +57,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         val release = AnkiquestUpdater.Release(BuildConfig.ANKIQUEST_RELEASE + 1, "New release", "", 1)
         mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
         try {
-            every { AnkiquestUpdater["available"]() } answers {
+            every { AnkiquestUpdater["available"](any<ApkKind>()) } answers {
                 requested.countDown()
                 check(response.await(10, TimeUnit.SECONDS))
                 release
@@ -224,6 +224,27 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         assertEquals("Nightly quest-17+3 (1a2b3c4)", nightly.name)
         assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk", nightly.apkUrl)
         assertNull(AnkiquestUpdater.parseNightly(JSONObject(nightlyJson.toString()).put("version_code", 0)))
+    }
+
+    @Test
+    fun `a slim install updates to the slim nightly`() {
+        val nightly = AnkiquestUpdater.parseNightly(JSONObject(nightlyJson.toString()).put("slim_size", 40_000_000), ApkKind.SLIM)!!
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest-slim.apk", nightly.apkUrl)
+        assertEquals(40_000_000, nightly.apkSize)
+    }
+
+    private fun asset(name: String) = JSONObject().put("name", name).put("browser_download_url", "https://example.org/$name")
+
+    @Test
+    fun `each install updates to its own kind of APK`() {
+        val assets = listOf(asset("AnkiQuest-slim.apk"), asset("AnkiDroid-Quest.apk"), asset("AnkiQuest.apk"), asset("notes.md"))
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(assets, ApkKind.FULL)!!.getString("name"))
+        assertEquals("AnkiQuest-slim.apk", AnkiquestUpdater.pickApk(assets, ApkKind.SLIM)!!.getString("name"))
+
+        // A release from before the slim APK updates a slim install to the full one.
+        val older = listOf(asset("AnkiQuest.apk"), asset("AnkiDroid-Quest.apk"))
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(older, ApkKind.SLIM)!!.getString("name"))
+        assertNull(AnkiquestUpdater.pickApk(listOf(asset("notes.md")), ApkKind.FULL))
     }
 
     @Test

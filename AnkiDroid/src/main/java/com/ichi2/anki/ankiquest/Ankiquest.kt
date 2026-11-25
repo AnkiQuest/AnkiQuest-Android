@@ -1244,6 +1244,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         this.activity = WeakReference(activity)
         val context = activity.applicationContext
         scope.launch { AnkiquestIcon.onAppStart(context) }
+        // The slim APK fetches its companions once per start until they are in.
+        scope.launch { AnkiquestPacks.fetchPinned(context) }
         AnkiquestUpdater.maybeCheck(activity)
         val now = TimeManager.time.intTimeMS()
         if (now - resumeUploadAt > RESUME_UPLOAD_INTERVAL_MS) {

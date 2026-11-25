@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Only the quest build's src/quest/res uses these, so lint of other builds would call them unused. -->
+<!-- The launcher icons come from the pinned Art release at build time (BundleAnkiquestPacks). Only
+     the quest build's src/quest/res uses them, so lint of other builds would call them unused. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/anki_tan_icon,@drawable/anki_tan_icon_happy,@drawable/anki_tan_icon_worried,@drawable/anki_tan_icon_sleepy,@drawable/anki_tan_icon_mono" />
+    tools:keep="@drawable/aki_face,@drawable/aki_icon_happy,@drawable/aki_icon_worried,@drawable/aki_icon_frozen,@drawable/aki_icon_sleepy,@drawable/anki_tan_icon,@drawable/anki_tan_icon_happy,@drawable/anki_tan_icon_worried,@drawable/anki_tan_icon_sleepy,@drawable/anki_tan_icon_mono" />

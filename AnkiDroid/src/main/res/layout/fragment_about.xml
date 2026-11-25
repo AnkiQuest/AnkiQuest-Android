@@ -41,8 +41,7 @@
                 <ImageView
                     android:id="@+id/app_logo"
                     android:layout_width="96dp"
-                    android:layout_height="96dp"
-                    app:srcCompat="@drawable/aki_face" />
+                    android:layout_height="96dp" />
 
                 <TextView
                     android:id="@+id/about_app_name"

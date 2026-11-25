@@ -4,8 +4,17 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.res.AssetManager
+import androidx.annotation.VisibleForTesting
+import androidx.core.text.htmlEncode
+import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.R
+import org.json.JSONException
+import org.json.JSONObject
+import timber.log.Timber
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * The app's companion packs: the bundled ones in assets, and the downloaded and imported ones in
@@ -18,20 +27,131 @@ internal object AnkiquestPacks {
     /** Where downloaded and imported packs live, inside the app's files. */
     private const val STORAGE = "ankiquest/packs"
 
-    @Volatile
-    private var library: AnkiquestPackLibrary? = null
+    /**
+     * The library in use and the storage folder it reads; [storage] is null for one from [use]. Keyed
+     * by the folder, not the application, so no context is held in a static field.
+     */
+    private class Held(
+        val storage: File?,
+        val library: AnkiquestPackLibrary,
+    ) {
+        fun serves(folder: File) = storage == null || storage == folder
+    }
 
-    /** The library over this app's folders, created once. */
+    @Volatile
+    private var held: Held? = null
+
+    /**
+     * The library over [context]'s application's folders, created once per storage folder, so a
+     * new application (each Robolectric test has its own) never reads another's deleted storage.
+     */
     fun library(context: Context): AnkiquestPackLibrary {
-        library?.let { return it }
+        val app = context.applicationContext ?: context
+        val storage = File(app.filesDir, STORAGE)
+        held?.takeIf { it.serves(storage) }?.let { return it.library }
         synchronized(this) {
-            library?.let { return it }
-            val storage = File(context.filesDir, STORAGE)
-            return AnkiquestPackLibrary(
-                bundled = AssetPackFolder(context.assets, ASSETS),
-                downloaded = FilePackFolder(File(storage, "downloaded")),
-                imported = FilePackFolder(File(storage, "imported")),
-            ).also { library = it }
+            held?.takeIf { it.serves(storage) }?.let { return it.library }
+            val library =
+                AnkiquestPackLibrary(
+                    bundled = AssetPackFolder(app.assets, ASSETS),
+                    downloaded = FilePackFolder(File(storage, "downloaded")),
+                    imported = FilePackFolder(File(storage, "imported")),
+                )
+            val replaced = held != null
+            held = Held(storage, library)
+            download = null
+
+            // Pictures decoded from the previous application's packs are not this one's.
+            if (replaced) {
+                AnkiquestArt.clear()
+            }
+            return library
+        }
+    }
+
+    /**
+     * The library when it can be read without a context: the one in use, or the app's own; null
+     * before the app has started (plain JVM code such as the API client's tests).
+     */
+    fun libraryOrNull(): AnkiquestPackLibrary? {
+        held?.takeIf { it.storage == null }?.let { return it.library }
+        if (!AnkiDroidApp.isInitialized) {
+            return null
+        }
+        return library(AnkiDroidApp.instance)
+    }
+
+    /** Shows [replacement]'s companions until the next call; null reads the app's folders again. */
+    @VisibleForTesting
+    fun use(replacement: AnkiquestPackLibrary?) {
+        synchronized(this) {
+            held = replacement?.let { Held(null, it) }
+            download = null
+        }
+        AnkiquestArt.clear()
+    }
+
+    @Volatile
+    private var build: ArtBuild? = null
+
+    /** The automatic download of the pinned packs in the slim APK; tried once per process. */
+    private enum class AutoDownload { WAITING, RUNNING, DONE }
+
+    private val auto = AtomicReference(AutoDownload.WAITING)
+
+    /** What this build says about its packs, read once from assets. */
+    fun build(context: Context): ArtBuild {
+        build?.let { return it }
+        val text =
+            try {
+                context.assets
+                    .open(ArtBuild.ASSET)
+                    .use { readSmall(it, ArtBuild.MAX_BYTES) }
+                    ?.decodeToString()
+            } catch (e: IOException) {
+                null
+            }
+        return (text?.let(ArtBuild::parse) ?: ArtBuild.LOCAL).also { build = it }
+    }
+
+    /** At most [limit] bytes of [input], or null when it holds more; stops at a read of nothing. */
+    private fun readSmall(
+        input: InputStream,
+        limit: Int,
+    ): ByteArray? {
+        val buffer = ByteArray(limit + 1)
+        var size = 0
+        while (size < buffer.size) {
+            val n = input.read(buffer, size, buffer.size - size)
+            if (n <= 0) {
+                break
+            }
+            size += n
+        }
+        return buffer.copyOf(size).takeIf { size <= limit }
+    }
+
+    /**
+     * In the slim APK, downloads the packs of the release the build pins while no index as new is
+     * installed. Runs once per process; a failure waits for the next start or a tap on "Download
+     * companions". Blocking: call it off the main thread.
+     */
+    fun fetchPinned(context: Context) {
+        val build = build(context)
+        val pinned = build.pinned ?: return
+        if (build.apk != ApkKind.SLIM || !auto.compareAndSet(AutoDownload.WAITING, AutoDownload.RUNNING)) {
+            return
+        }
+        try {
+            if ((library(context).index()?.version ?: 0) < build.pinnedVersion) {
+                download(context).update(pinned)
+            }
+        } catch (e: PackRefused) {
+            Timber.w(e, "AnkiQuest pinned packs refused")
+        } catch (e: IOException) {
+            Timber.w(e, "AnkiQuest pinned packs not downloaded")
+        } finally {
+            auto.set(AutoDownload.DONE)
         }
     }
 
@@ -45,6 +165,91 @@ internal object AnkiquestPacks {
             download?.let { return it }
             return AnkiquestPackDownload(library(context), GithubPackFetch(AnkiquestHttp.client)).also { download = it }
         }
+    }
+}
+
+/**
+ * The credit and licence of every installed companion, as its pack's `companion.json` gives them,
+ * for the About screen. Imported packs are a player's own files, so their text is escaped.
+ */
+internal object AnkiquestPackCredits {
+    /** One HTML line per companion, with its licence notice under it, each ending in a line break. */
+    fun html(context: Context): String =
+        AnkiquestPacks.library(context).companions().joinToString("") { pack ->
+            lines(pack.info) { name, credit, licence -> context.getString(R.string.ankiquest_about_companion, name, credit, licence) }
+        }
+
+    /** [info]'s credit line, worded by [line] from its escaped name, credit and licence, then its notice. */
+    fun lines(
+        info: PackInfo,
+        line: (String, String, String) -> String,
+    ): String {
+        val credit = line(escape(info.name), escape(info.credit), escape(info.licence))
+        val notice =
+            info.notice
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { "<br>" + escape(it).replace("\n", "<br>") }
+                .orEmpty()
+        return "$credit$notice<br>"
+    }
+
+    private fun escape(text: String): String = text.htmlEncode()
+}
+
+/** Which APK this is: the full one bundles the pinned release's packs, the slim one downloads them. */
+internal enum class ApkKind(
+    /** The release asset an update of this APK installs. */
+    val file: String,
+) {
+    FULL("AnkiQuest.apk"),
+    SLIM("AnkiQuest-slim.apk"),
+}
+
+/**
+ * What a release build writes into [ASSET] (buildSrc BundleAnkiquestPacks): which APK it is and the
+ * Art release it pins, with the SHA-256 of that release's `packs.json`.
+ */
+internal class ArtBuild(
+    val apk: ApkKind,
+    val pinned: PackSource.Pinned?,
+) {
+    /** `N` of the pinned `art-<N>`, or 0 without a pin. */
+    val pinnedVersion: Int =
+        pinned?.let {
+            TAG
+                .matchEntire(it.tag)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt()
+        } ?: 0
+
+    companion object {
+        const val ASSET = "ankiquest/art.json"
+
+        /** Largest [ASSET] read; the build writes a few lines. */
+        const val MAX_BYTES = 4096
+
+        // Before LOCAL, which is built while the companion is initialised.
+        private val TAG = Regex("art-([1-9][0-9]{0,8})")
+        private val SHA256 = Regex("[0-9a-f]{64}")
+
+        /** A build without a readable [ASSET]: a full APK with no packs pinned. */
+        val LOCAL = ArtBuild(ApkKind.FULL, null)
+
+        /** [text] of [ASSET]; [LOCAL] when it cannot be read. */
+        fun parse(text: String): ArtBuild =
+            try {
+                val json = JSONObject(text)
+                val apk = ApkKind.entries.firstOrNull { it.name.lowercase() == json.getString("apk") } ?: ApkKind.FULL
+                val tag = json.optString("tag")
+                val sha256 = json.optString("packs_sha256")
+                val pinned = PackSource.Pinned(tag, sha256).takeIf { TAG.matches(tag) && SHA256.matches(sha256) }
+                ArtBuild(apk, pinned)
+            } catch (e: JSONException) {
+                Timber.w(e, "AnkiQuest %s ignored", ASSET)
+                LOCAL
+            }
     }
 }
 

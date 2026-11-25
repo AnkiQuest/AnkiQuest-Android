@@ -5,7 +5,6 @@ package com.ichi2.anki.ankiquest
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.ankiquest.AnkiquestDebug.Overrides
 import com.ichi2.anki.ankiquest.AnkiquestDebug.Today
@@ -113,8 +112,8 @@ class AnkiquestDebugTest : RobolectricTest() {
         assertEquals(Mood.FROZEN_3, AnkiquestMood.today(null, 0, Goal.OPEN, forced))
         assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, 0, Goal.OPEN, Overrides.NONE))
         assertEquals(
-            AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.AKI),
-            AnkiquestMood.todayPose(Mood.SAD, 1, forced, Choice.AKI),
+            AnkiquestMood.pose(Mood.FROZEN_3, 1),
+            AnkiquestMood.todayPose(Mood.SAD, 1, forced),
             "a streak reminder shows the forced mood",
         )
     }
@@ -123,17 +122,15 @@ class AnkiquestDebugTest : RobolectricTest() {
     fun `a forced pose replaces only the picture`() {
         val forced = Overrides.NONE.forcePose(AnkiquestPose.DEAD)
         assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, 0, Goal.OPEN, forced))
-        val dead = AnkiquestCompanion.art(AnkiquestPose.DEAD, Choice.AKI)
-        assertEquals(dead, AnkiquestMood.todayPose(Mood.FIRE, 400, forced, Choice.AKI))
-        assertEquals(listOf(dead), AnkiquestMood.poses(Mood.FIRE, 400, Choice.AKI, forced), "no legend rotation")
+        assertEquals(AnkiquestPose.DEAD, AnkiquestMood.todayPose(Mood.FIRE, 400, forced))
+        assertEquals(listOf(AnkiquestPose.DEAD), AnkiquestMood.poses(Mood.FIRE, 400, forced), "no legend rotation")
     }
 
     @Test
     fun `edited heat changes today's fire pose`() {
         val edited = assertNotNull(Overrides.NONE.withRules(Rules(hotDays = 3)))
-        val hot = AnkiquestCompanion.art(AnkiquestPose.STREAK_HOT, Choice.AKI)
-        assertEquals(hot, AnkiquestMood.todayPose(Mood.FIRE, 3, edited, Choice.AKI))
-        assertEquals(AnkiquestMood.pose(Mood.FIRE, 3, Choice.AKI), AnkiquestMood.todayPose(Mood.FIRE, 3, Overrides.NONE, Choice.AKI))
+        assertEquals(AnkiquestPose.STREAK_HOT, AnkiquestMood.todayPose(Mood.FIRE, 3, edited))
+        assertEquals(AnkiquestMood.pose(Mood.FIRE, 3), AnkiquestMood.todayPose(Mood.FIRE, 3, Overrides.NONE))
     }
 
     @Test

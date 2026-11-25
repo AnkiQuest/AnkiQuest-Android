@@ -12,7 +12,6 @@ import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.service.chooser.ChooserAction
-import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
@@ -84,7 +83,7 @@ internal object AnkiquestShare {
     data class Card(
         val title: String,
         val body: String,
-        @DrawableRes val art: Int = R.drawable.aki_celebrate,
+        val art: AnkiquestPose = AnkiquestPose.HAPPY,
         val details: List<String> = emptyList(),
         val streak: Int? = null,
         val companion: AnkiquestCompanion.Choice? = null,
@@ -124,11 +123,10 @@ internal object AnkiquestShare {
      * Aki's pose for the picture of a Share button's [share] intent. Buttons without a kind, such as
      * a climb to [place] or one posted by an older version, use what they carry.
      */
-    @DrawableRes
     fun art(
         share: Intent,
         place: Int?,
-    ): Int {
+    ): AnkiquestPose {
         val kind = share.getStringExtra(EXTRA_KIND) ?: if (place == null) KIND_CELEBRATION else KIND_WEEKLY_RECAP
         return AnkiquestArt.forNotice(kind, share.getStringExtra(EXTRA_TOPIC) ?: place?.let { "place:$it" })
     }
@@ -276,7 +274,7 @@ internal object AnkiquestShare {
         title: String,
         body: String,
         friends: PendingIntent? = null,
-        @DrawableRes art: Int = R.drawable.aki_celebrate,
+        art: AnkiquestPose = AnkiquestPose.HAPPY,
         streak: Int? = null,
         companion: AnkiquestCompanion.Choice? = null,
     ): Intent {

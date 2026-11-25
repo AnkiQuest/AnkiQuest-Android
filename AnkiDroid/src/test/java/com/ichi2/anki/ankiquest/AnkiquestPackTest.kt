@@ -472,6 +472,22 @@ class AnkiquestPackTest {
     }
 
     @Test
+    fun `the build's art file names the APK and the pinned release`() {
+        val sha = "a".repeat(64)
+        val slim = ArtBuild.parse("""{"apk": "slim", "tag": "art-9", "packs_sha256": "$sha"}""")
+        assertEquals(ApkKind.SLIM, slim.apk)
+        assertEquals(PackSource.Pinned("art-9", sha), slim.pinned)
+        assertEquals(9, slim.pinnedVersion)
+
+        // A pin without packs, a bad tag or hash, and a broken file pin nothing.
+        assertNull(ArtBuild.parse("""{"apk": "full", "tag": "art-4", "packs_sha256": null}""").pinned)
+        assertNull(ArtBuild.parse("""{"apk": "slim", "tag": "art-09", "packs_sha256": "$sha"}""").pinned)
+        assertNull(ArtBuild.parse("""{"apk": "slim", "tag": "art-9", "packs_sha256": "ABC"}""").pinned)
+        assertEquals(ApkKind.FULL, ArtBuild.parse("not json").apk)
+        assertNull(ArtBuild.parse("not json").pinned)
+    }
+
+    @Test
     fun `downloads go only to GitHub over HTTPS`() {
         val allowed = { url: String -> GithubPackFetch.allowed(url.toHttpUrl()) }
         assertTrue(allowed(AnkiquestPackDownload.LATEST_INDEX))

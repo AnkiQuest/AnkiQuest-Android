@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_packs_download">Begleiter herunterladen</string>
+    <string name="ankiquest_packs_downloading">Suche nach neuen Begleitern…</string>
+    <plurals name="ankiquest_packs_installed">
+        <item quantity="one">%d Begleiter installiert. Tippen, um nach neuen zu suchen.</item>
+        <item quantity="other">%d Begleiter installiert. Tippen, um nach neuen zu suchen.</item>
+    </plurals>
+    <string name="ankiquest_packs_none">Noch keine Begleiter heruntergeladen. Tippen, um sie herunterzuladen.</string>
+    <string name="ankiquest_packs_up_to_date">Die Begleiter sind aktuell.</string>
+    <string name="ankiquest_packs_downloaded">Heruntergeladen: %1$s</string>
+    <string name="ankiquest_packs_download_failed">Begleiter konnten nicht heruntergeladen werden: %1$s</string>
+    <string name="ankiquest_packs_import">Begleiter importieren</string>
+    <string name="ankiquest_packs_import_summary">Ein Begleiterpaket (.zip) aus deinen Dateien hinzufügen. Es erscheint nur auf diesem Gerät.</string>
+    <string name="ankiquest_packs_imported">%1$s importiert.</string>
+    <string name="ankiquest_packs_refused">Dieses Begleiterpaket wurde abgelehnt: %1$s</string>
+</resources>

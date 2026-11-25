@@ -302,7 +302,7 @@ private class RecordsSection(
         val position = scroll.scrollY
         content.removeAllViews()
         progress.isVisible = loading && content.isVisible
-        content.addView(AnkiquestAki.image(this, R.drawable.aki_winner, 72))
+        content.addView(AnkiquestAki.image(this, AnkiquestPose.WINNER, 72))
         views.text(content, getString(R.string.aq_records_lead), heading = true)
         views.text(content, getString(R.string.aq_records_intro), small = true)
         val current = account
@@ -527,7 +527,7 @@ private class HistorySection(
         content.removeAllViews()
         detail = null
         progress.isVisible = loading && content.isVisible
-        content.addView(AnkiquestAki.image(this, R.drawable.aki_streak, 72))
+        content.addView(AnkiquestAki.image(this, AnkiquestPose.STREAK, 72))
         views.text(content, getString(R.string.aq_history_intro), small = true)
         if (account == null) {
             val panel = views.card(content)

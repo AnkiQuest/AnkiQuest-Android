@@ -110,7 +110,7 @@ internal class AnkiquestCompanionPicker(
         locked: Offer.Locked?,
     ): LinearLayout {
         val selected = choice == chosen
-        val name = context.getString(choice.title)
+        val name = AnkiquestCompanion.name(context, choice)
         val lines = locked?.let { lockedLines(it.progress) }.orEmpty()
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -179,7 +179,7 @@ internal class AnkiquestCompanionPicker(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             val edge = dp(POSE_DP)
-            for (pose in AnkiquestCompanion.preview(choice)) {
+            for (pose in AnkiquestCompanion.preview(context, choice)) {
                 val bitmap =
                     if (locked == null) {
                         AnkiquestCompanion.bitmap(context, pose, edge, choice)

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_packs_download">Télécharger les compagnons</string>
+    <string name="ankiquest_packs_downloading">Recherche de nouveaux compagnons…</string>
+    <plurals name="ankiquest_packs_installed">
+        <item quantity="one">%d compagnon installé. Touche pour en chercher de nouveaux.</item>
+        <item quantity="many">%d compagnons installés. Touche pour en chercher de nouveaux.</item>
+        <item quantity="other">%d compagnons installés. Touche pour en chercher de nouveaux.</item>
+    </plurals>
+    <string name="ankiquest_packs_none">Aucun compagnon téléchargé. Touche pour les télécharger.</string>
+    <string name="ankiquest_packs_up_to_date">Les compagnons sont à jour.</string>
+    <string name="ankiquest_packs_downloaded">Téléchargé : %1$s</string>
+    <string name="ankiquest_packs_download_failed">Impossible de télécharger les compagnons : %1$s</string>
+    <string name="ankiquest_packs_import">Importer un compagnon</string>
+    <string name="ankiquest_packs_import_summary">Ajouter un pack de compagnon (.zip) depuis tes fichiers. Il n\'apparaît que sur cet appareil.</string>
+    <string name="ankiquest_packs_imported">%1$s importé.</string>
+    <string name="ankiquest_packs_refused">Ce pack de compagnon a été refusé : %1$s</string>
+</resources>

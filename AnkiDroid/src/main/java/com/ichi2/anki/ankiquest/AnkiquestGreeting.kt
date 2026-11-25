@@ -6,7 +6,6 @@ import android.app.Dialog
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.ImageView
-import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.fragment.app.DialogFragment
@@ -77,7 +76,7 @@ internal class AnkiquestGreetingDialog : DialogFragment() {
         val context = requireContext()
         val view = requireActivity().layoutInflater.inflate(R.layout.dialog_ankiquest_greeting, null)
         val image = view.findViewById<ImageView>(R.id.ankiquest_greeting_image)
-        showArt(image, R.drawable.aki_welcome)
+        showArt(image, AnkiquestPose.WELCOME)
 
         // Signed-out players are offered the sign-in; signed-in players go straight to their decks.
         val builder = AlertDialog.Builder(context).setView(view)
@@ -102,13 +101,8 @@ internal class AnkiquestGreetingDialog : DialogFragment() {
 
     private fun showArt(
         image: ImageView,
-        @DrawableRes art: Int,
+        pose: AnkiquestPose,
     ) {
-        val bitmap = AnkiquestArt.bitmap(image.context, art, image.layoutParams.width)
-        if (bitmap != null) {
-            image.setImageBitmap(bitmap)
-        } else {
-            image.setImageResource(art)
-        }
+        AnkiquestCompanion.show(image, pose, image.layoutParams.width, AnkiquestCompanion.Choice.AKI)
     }
 }

@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import androidx.annotation.ColorRes
-import androidx.annotation.DrawableRes
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import org.json.JSONArray
@@ -13,7 +12,7 @@ import org.json.JSONArray
  * How Aki feels about today's streak: the one rule for every place the companion shows today, from
  * the streak widget and the Home card to the launcher icon, the heatmap and streak reminders. Sad
  * before any study, hopeful after some, on fire once today counts, and frozen after days a freeze
- * kept. Each mood is an [AnkiquestPose]; [AnkiquestCompanion.art] draws it as the chosen companion.
+ * kept. Each mood is an [AnkiquestPose]; [AnkiquestCompanion.bitmap] draws it as the chosen companion.
  */
 internal object AnkiquestMood {
     /** The streak lengths the widget and pictures count down to. */
@@ -185,23 +184,17 @@ internal object AnkiquestMood {
      * The player's own pose for [mood] with a [streak] of that many days: [pose], unless [debug]
      * forces a mood or a pose. Streak reminders pass the mood they stand for.
      */
-    @DrawableRes
     fun todayPose(
         mood: Mood,
         streak: Int,
         debug: AnkiquestDebug.Overrides = AnkiquestDebug.current(),
-        choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
-    ): Int {
-        val shown = debug.pose() ?: named(debug.mood(mood), streak, debug.rules)
-        return AnkiquestCompanion.art(shown, choice)
-    }
+    ): AnkiquestPose = debug.pose() ?: pose(debug.mood(mood), streak, debug.rules)
 
     /**
      * The companion's pose today for the signed-in player, from what the server and the collection
      * last said: the same mood the streak widget shows.
      */
-    @DrawableRes
-    fun ownPose(now: Long): Int {
+    fun ownPose(now: Long): AnkiquestPose {
         val day = AnkiquestDay.ownCarried(now)
         // The last profile's goal and frozen days only count while its day is the one judged.
         val endsAt = AnkiquestDay.last()?.dayEndsAt?.takeIf { it > now }
@@ -220,8 +213,11 @@ internal object AnkiquestMood {
             Mood.FIRE -> Flame.LIT
         }
 
-    /** The pose for [mood] with a [streak] of that many days. */
-    private fun named(
+    /**
+     * The pose for [mood] with a [streak] of that many days, as the shared fixture names it; the
+     * companion's pack draws it, with its fallbacks where it has no picture of that name.
+     */
+    fun pose(
         mood: Mood,
         streak: Int,
         rules: Rules = Rules.SHARED,
@@ -229,24 +225,13 @@ internal object AnkiquestMood {
         when (mood) {
             Mood.UNKNOWN -> AnkiquestPose.FACE
             Mood.ASLEEP -> AnkiquestPose.ASLEEP
-            Mood.SAD -> AnkiquestPose.SAD
-            Mood.FROZEN_1 -> AnkiquestPose.FROZEN
-            Mood.FROZEN_2 -> AnkiquestPose.FROZEN_2
-            Mood.FROZEN_3 -> AnkiquestPose.FROZEN_3
-            Mood.HOPEFUL -> AnkiquestPose.HOPEFUL
+            Mood.SAD -> AnkiquestPose.AT_RISK
+            Mood.FROZEN_1 -> AnkiquestPose.FREEZE_USED
+            Mood.FROZEN_2 -> AnkiquestPose.FREEZE
+            Mood.FROZEN_3 -> AnkiquestPose.FREEZE_USED
+            Mood.HOPEFUL -> AnkiquestPose.WELCOME
             Mood.FIRE -> rules.heat(streak).pose
         }
-
-    /**
-     * [choice]'s art for [mood] with a [streak] of that many days. It is resolved from the pose, not
-     * from Aki's picture, because one of Aki's pictures stands for two poses (welcome for hopeful).
-     */
-    @DrawableRes
-    fun pose(
-        mood: Mood,
-        streak: Int,
-        choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
-    ): Int = AnkiquestCompanion.art(named(mood, streak), choice)
 
     /**
      * The poses the big widget rotates through for [mood], all of the same mood, each once. [debug]
@@ -255,29 +240,27 @@ internal object AnkiquestMood {
     fun poses(
         mood: Mood,
         streak: Int,
-        choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
         debug: AnkiquestDebug.Overrides = AnkiquestDebug.Overrides.NONE,
-    ): List<Int> {
-        val pose = todayPose(mood, streak, debug, choice)
+    ): List<AnkiquestPose> {
+        val pose = todayPose(mood, streak, debug)
         // A forced pose is the only picture; the legend rotation belongs to the computed fire mood.
         if (debug.pose() != null) {
             return listOf(pose)
         }
         if (debug.mood(mood) == Mood.FIRE && debug.rules.heat(streak) == Heat.LEGEND) {
-            return listOf(pose, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, choice)).distinct()
+            return listOf(pose, AnkiquestPose.STREAK_MILESTONE)
         }
         return listOf(pose)
     }
 
     /** One of [poses] for the day ending at [dayEndsAt], the same all day and changing from day to day. */
-    @DrawableRes
     fun bigPose(
         mood: Mood,
         streak: Int,
         dayEndsAt: Long,
         debug: AnkiquestDebug.Overrides = AnkiquestDebug.Overrides.NONE,
-    ): Int {
-        val choices = poses(mood, streak, debug = debug)
+    ): AnkiquestPose {
+        val choices = poses(mood, streak, debug)
         return choices[Math.floorMod(Math.floorDiv(dayEndsAt, DAY_MS), choices.size.toLong()).toInt()]
     }
 

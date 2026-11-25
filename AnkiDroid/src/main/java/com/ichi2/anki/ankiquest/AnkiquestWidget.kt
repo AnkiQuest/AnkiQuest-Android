@@ -645,15 +645,12 @@ open class AnkiquestWidget : AppWidgetProvider() {
             views.scaleText(R.id.ankiquest_widget_status, 13f, scale)
             views.scaleBox(R.id.ankiquest_widget_companion, COMPANION_DP.toFloat(), COMPANION_DP.toFloat(), scale)
             views.scaleBox(R.id.ankiquest_widget_refresh, 32f, 32f, scale)
-            views.setViewVisibility(R.id.ankiquest_widget_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
-            if (AnkiquestCompanion.visible()) {
-                val pixels = (COMPANION_DP * scale * context.resources.displayMetrics.density).toInt()
-                val bitmap = AnkiquestCompanion.bitmap(context, R.drawable.aki_face, pixels)
-                if (bitmap != null) {
-                    views.setImageViewBitmap(R.id.ankiquest_widget_companion, bitmap)
-                } else {
-                    views.setImageViewResource(R.id.ankiquest_widget_companion, AnkiquestCompanion.resource(R.drawable.aki_face))
-                }
+            // The companion's face, hidden for no companion and while no pack shows it.
+            val pixels = (COMPANION_DP * scale * context.resources.displayMetrics.density).toInt()
+            val face = AnkiquestCompanion.bitmap(context, AnkiquestPose.FACE, pixels)
+            views.setViewVisibility(R.id.ankiquest_widget_companion, if (face != null) View.VISIBLE else View.GONE)
+            if (face != null) {
+                views.setImageViewBitmap(R.id.ankiquest_widget_companion, face)
             }
             val header = settings.header(context)
             views.setTextViewText(R.id.ankiquest_widget_period, header)

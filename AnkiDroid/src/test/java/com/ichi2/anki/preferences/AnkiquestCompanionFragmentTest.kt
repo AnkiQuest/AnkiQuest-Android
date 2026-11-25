@@ -15,14 +15,18 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ANKILOPE
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestPacks
+import com.ichi2.anki.ankiquest.AnkiquestTestPacks
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
+import com.ichi2.anki.ankiquest.COW
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -34,7 +38,9 @@ import io.mockk.unmockkObject
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
@@ -79,8 +85,12 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
     private lateinit var controller: ActivityController<PreferencesActivity>
 
+    @get:Rule
+    val folder = TemporaryFolder()
+
     @Before
     fun prepare() {
+        AnkiquestTestPacks.useOfficial(folder.newFolder())
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, "https://quest.example")
             putString(Ankiquest.PREF_USER, "member")
@@ -96,6 +106,7 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
     @After
     fun clearMocks() {
+        AnkiquestPacks.use(null)
         unmockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
     }
 

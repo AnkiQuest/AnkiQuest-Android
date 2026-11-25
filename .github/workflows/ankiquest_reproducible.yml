@@ -81,7 +81,8 @@ jobs:
 
       # Same task and properties as ankiquest_apk.yml, signed with the public fallback key.
       # The build time comes from the commit, and the build cache stays off so both
-      # runners compile everything themselves.
+      # runners compile everything themselves. --stacktrace names the cause of a failed
+      # packaging step, which Gradle otherwise reports only as "Multiple task action failures".
       - name: Assemble
         working-directory: ${{ matrix.path }}
         env:
@@ -89,7 +90,7 @@ jobs:
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache \
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache --stacktrace \
             -PcustomSuffix=quest -PcustomName="AnkiQuest"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-$BUILD.apk"
           cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-$BUILD.txt"

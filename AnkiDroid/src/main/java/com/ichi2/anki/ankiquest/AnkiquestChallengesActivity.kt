@@ -308,7 +308,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
         }
         if (invited.isEmpty() && active.isEmpty() && !loading) {
             content.addView(
-                AnkiquestAki.image(this, R.drawable.aki_challenge, 72).apply {
+                AnkiquestAki.image(this, AnkiquestPose.CHALLENGE, 72).apply {
                     (layoutParams as LinearLayout.LayoutParams).topMargin = views.dp(16)
                 },
             )
@@ -384,7 +384,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
             }
             return
         }
-        val art = if (challenge.status == "complete") R.drawable.aki_challenge_won else R.drawable.aki_challenge
+        val art = if (challenge.status == "complete") AnkiquestPose.CHALLENGE_WON else AnkiquestPose.CHALLENGE
         content.addView(AnkiquestAki.image(this, art, 72).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = views.dp(12) })
         renderChallenge(challenge, user, detail = true)
     }

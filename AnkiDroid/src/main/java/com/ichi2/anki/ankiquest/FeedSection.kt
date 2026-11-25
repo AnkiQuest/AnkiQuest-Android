@@ -313,7 +313,7 @@ internal class FeedSection(
         current.lock?.let { views.text(content, getString(it.text), heading = true).setPadding(0, views.dp(16), 0, 0) }
         if (shown.isEmpty()) {
             if (!loading && current.lock == null) {
-                content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
+                content.addView(AnkiquestAki.image(this, AnkiquestPose.HAPPY, 72))
                 views.text(content, getString(emptyMessage(attention.isNotEmpty())), heading = true)
                 views.text(content, getString(R.string.aq_feed_empty_hint), small = true)
             }
