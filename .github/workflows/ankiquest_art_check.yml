@@ -3,8 +3,8 @@ name: ankiquest art check
 
 # Runs the server's art exporter against the app's drawables, at EXPORTER below: AnkiQuest-Server
 # master no longer has the Android exporter (the masters moved to AnkiQuest-Art), so the check stays
-# on the last server commit this app's drawables were exported with, independent of the data pin in
-# ankiquest-server.sha. It goes once the drawables come from the pinned AnkiQuest-Art release. It
+# on the last server commit this app's drawables were exported with. This pins exporter code, not
+# server data. It goes once the drawables come from the pinned AnkiQuest-Art release. It
 # builds and runs the server's code, so it only runs for pull requests, merge queue groups and
 # pushes, never on a schedule or by hand: a manual server ref would run arbitrary code with the
 # Rust cache shared with master.
@@ -40,8 +40,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # Check against the pinned server commit (#203), so a server merge cannot turn master red;
-      # the bump PR brings exporter changes in.
+      # The exporter at EXPORTER, which wrote the drawables.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: AnkiQuest/AnkiQuest-Server
