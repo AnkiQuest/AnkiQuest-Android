@@ -38,4 +38,4 @@ This release includes the latest AnkiDroid changes. Companion pictures come from
 
 Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then open Settings → AnkiQuest → Account → Sign in or create account. Later releases are offered inside the app.
 
-Study uploads contain review history (card id, timestamp, previous interval, time taken, review type and your time-zone offset), never card content. Social actions send the invitation or message you choose to share.
+Study uploads contain review history (card id, timestamp, previous interval, time taken, review type, the button pressed and your time-zone offset), never card content. Social actions send the invitation or message you choose to share.
