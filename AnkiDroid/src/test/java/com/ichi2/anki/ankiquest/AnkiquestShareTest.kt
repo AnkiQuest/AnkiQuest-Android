@@ -86,9 +86,9 @@ class AnkiquestShareTest : RobolectricTest() {
         server = AnkiquestTestServer(::answer)
         base = server.url
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, base)
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, base)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
     }
 
@@ -146,9 +146,9 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `older wins are sent to the server by notification or by place`() =
         runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
-            assertEquals(2, Ankiquest.shareWin(42, null, scope))
-            assertEquals(2, Ankiquest.shareWin(null, 1, scope))
+            val scope = HomeAccount.current()!!.scope
+            assertEquals(2, AnkiquestWins.share(42, null, scope))
+            assertEquals(2, AnkiquestWins.share(null, 1, scope))
             assertEquals(42, JSONObject(posted[0]).getLong("notification"))
             assertFalse(JSONObject(posted[0]).has("place"))
             assertEquals(1, JSONObject(posted[1]).getInt("place"))
@@ -157,9 +157,9 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a win the server keeps is shared by its id`() =
         runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
-            assertEquals(3, Ankiquest.shareWinWithFriends(17, scope))
-            val link = Ankiquest.shareWinLink(17, scope)
+            val scope = HomeAccount.current()!!.scope
+            assertEquals(3, AnkiquestWins.withFriends(17, scope))
+            val link = AnkiquestWins.link(17, scope)
             assertEquals(
                 listOf(17L to "friends", 17L to "link"),
                 posted.map {
@@ -177,11 +177,11 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a win is never shared by an account it does not belong to`() =
         runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "another-credential") }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWin(42, null, scope) }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWinWithFriends(17, scope) }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWinLink(17, scope) }
+            val scope = HomeAccount.current()!!.scope
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "another-credential") }
+            assertFailsWith<HomeAccountChanged> { AnkiquestWins.share(42, null, scope) }
+            assertFailsWith<HomeAccountChanged> { AnkiquestWins.withFriends(17, scope) }
+            assertFailsWith<HomeAccountChanged> { AnkiquestWins.link(17, scope) }
             assertTrue(posted.isEmpty())
         }
 
@@ -197,7 +197,7 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Test
     fun `an unavailable server card gets a local picture and keeps the link`() {
-        val link = AnkiquestShare.Link("$base/w/token", "$base/w/huge.png", "Level 54! $base/w/token")
+        val link = AnkiquestWins.Link("$base/w/token", "$base/w/huge.png", "Level 54! $base/w/token")
         val chooser = AnkiquestShare.linkChooser(targetContext, link)
         val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
         assertEquals("image/png", send.type)
@@ -217,7 +217,7 @@ class AnkiquestShareTest : RobolectricTest() {
     fun `a downloaded picture is drawn locally for the signed-in account`() {
         val saving = assertNotNull(AnkiquestShare.download(targetContext, AnkiquestShare.Card("Level 54", "You reached level 54.")))
         assertEquals(AnkiquestGalleryActivity::class.java.name, saving.component?.className)
-        assertEquals(AnkiquestHomeData.account()!!.scope, saving.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
+        assertEquals(HomeAccount.current()!!.scope, saving.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
         val bitmap = targetContext.contentResolver.openInputStreamSafe(assertNotNull(saving.data)).use { BitmapFactory.decodeStream(it) }
         assertEquals(1080, assertNotNull(bitmap).width)
         assertTrue(posted.isEmpty(), "saving makes no link")
@@ -391,21 +391,21 @@ class AnkiquestShareTest : RobolectricTest() {
         assertEquals("Level 54", intent.getStringExtra(AnkiquestShare.EXTRA_TITLE))
         assertEquals(17, intent.getLongExtra(AnkiquestShare.EXTRA_WIN, 0))
         assertEquals(42, intent.getLongExtra(AnkiquestShare.EXTRA_NOTIFICATION, 0))
-        assertEquals(AnkiquestHomeData.account()!!.scope, intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
+        assertEquals(HomeAccount.current()!!.scope, intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
         assertTrue(intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
     }
 
     @Test
     fun `no share button for another account or a signed-out player`() {
         assertNull(AnkiquestShare.action(targetContext, 1, "Level 54", "", 17, 42, null, "someone-else"))
-        AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
         assertNull(AnkiquestShare.action(targetContext, 1, "Level 54", "", 17, 42, null, null))
     }
 
     @Test
     fun `a conquered card's win, label and a finished deck go to the server`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             assertEquals("conquered:1793183400000", AnkiquestSharing.winKey(account, 17))
             assertNull(AnkiquestSharing.winKey(account, 16), "a page that starts with another win")
             assertEquals("der Hund", AnkiquestSharing.conquestLabel(account, 1793183400000))
@@ -431,12 +431,12 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Test
     fun `a card's text is offered as one plain line, and shared only when chosen`() {
-        assertEquals("der Hund the dog", AnkiquestShare.cardLabel("<b>der&nbsp;Hund</b>[sound:hund.mp3]<br>the  dog"))
-        assertEquals("a < b & c", AnkiquestShare.cardLabel("a &lt; b &amp; c"))
-        assertEquals(AnkiquestShare.MAX_LABEL, AnkiquestShare.cardLabel("x".repeat(500)).length)
-        assertNull(AnkiquestShare.chosenLabel(false, "der Hund"), "the box is unticked by default")
-        assertNull(AnkiquestShare.chosenLabel(true, " \n "))
-        assertEquals("der Hund", AnkiquestShare.chosenLabel(true, "  der\nHund "))
+        assertEquals("der Hund the dog", AnkiquestCardLabels.cardLabel("<b>der&nbsp;Hund</b>[sound:hund.mp3]<br>the  dog"))
+        assertEquals("a < b & c", AnkiquestCardLabels.cardLabel("a &lt; b &amp; c"))
+        assertEquals(AnkiquestCardLabels.MAX_LABEL, AnkiquestCardLabels.cardLabel("x".repeat(500)).length)
+        assertNull(AnkiquestCardLabels.chosenLabel(false, "der Hund"), "the box is unticked by default")
+        assertNull(AnkiquestCardLabels.chosenLabel(true, " \n "))
+        assertEquals("der Hund", AnkiquestCardLabels.chosenLabel(true, "  der\nHund "))
         assertEquals(1793183400000, AnkiquestShare.conqueredAt("conquered:1793183400000"))
         assertNull(AnkiquestShare.conqueredAt("level:5"))
         assertNull(AnkiquestShare.conqueredAt(null))
@@ -447,29 +447,42 @@ class AnkiquestShareTest : RobolectricTest() {
         val fields = listOf("B1L02", "der Hund", "the dog")
         assertEquals(
             "der Hund",
-            AnkiquestShare.suggestedLabel("<style>.card { color: red }</style><div>der Hund</div>[anki:play:q:0]", fields, cloze = false),
+            AnkiquestCardLabels.suggestedLabel(
+                "<style>.card { color: red }</style><div>der Hund</div>[anki:play:q:0]",
+                fields,
+                cloze = false,
+            ),
         )
         assertEquals(
             "der Hund",
-            AnkiquestShare.suggestedLabel("<style>.card {}</style>B1L02", fields, cloze = false),
+            AnkiquestCardLabels.suggestedLabel("<style>.card {}</style>B1L02", fields, cloze = false),
             "a front that is the id gives way",
         )
-        assertEquals("der Hund", AnkiquestShare.suggestedLabel("", fields, cloze = false), "an empty front falls back to the fields")
-        assertEquals("the dog", AnkiquestShare.suggestedLabel("<img src=dog.jpg>", listOf("00412", "", "the dog"), cloze = false))
-        assertNull(AnkiquestShare.suggestedLabel("", listOf("B1L02", "0042"), cloze = false), "only ids: no meaningful suggestion")
-        assertNull(AnkiquestShare.suggestedLabel("", listOf("", "<br>"), cloze = false))
+        assertEquals("der Hund", AnkiquestCardLabels.suggestedLabel("", fields, cloze = false), "an empty front falls back to the fields")
+        assertEquals("the dog", AnkiquestCardLabels.suggestedLabel("<img src=dog.jpg>", listOf("00412", "", "the dog"), cloze = false))
+        assertNull(AnkiquestCardLabels.suggestedLabel("", listOf("B1L02", "0042"), cloze = false), "only ids: no meaningful suggestion")
+        assertNull(AnkiquestCardLabels.suggestedLabel("", listOf("", "<br>"), cloze = false))
         assertEquals(
             "Paris is the capital of France",
-            AnkiquestShare.suggestedLabel(
+            AnkiquestCardLabels.suggestedLabel(
                 "<style>.cloze {}</style>[...] is the capital of France",
                 listOf("{{c1::Paris::city}} is the {{c2::capital}} of <b>France</b>", "Extra"),
                 cloze = true,
             ),
             "a cloze shows its text",
         )
-        assertEquals(AnkiquestShare.MAX_LABEL, AnkiquestShare.suggestedLabel("word ".repeat(100), fields, cloze = false)?.length)
-        for (id in listOf("B1L02", "0042", "ID-17", "2024-05-01", "A12B", "3f2a9c1e-77d0")) assertTrue(AnkiquestShare.looksLikeId(id), id)
-        for (word in listOf("Hund", "der Hund", "la ardilla", "Straße", "x")) assertFalse(AnkiquestShare.looksLikeId(word), word)
+        assertEquals(AnkiquestCardLabels.MAX_LABEL, AnkiquestCardLabels.suggestedLabel("word ".repeat(100), fields, cloze = false)?.length)
+        for (id in listOf(
+            "B1L02",
+            "0042",
+            "ID-17",
+            "2024-05-01",
+            "A12B",
+            "3f2a9c1e-77d0",
+        )) {
+            assertTrue(AnkiquestCardLabels.looksLikeId(id), id)
+        }
+        for (word in listOf("Hund", "der Hund", "la ardilla", "Straße", "x")) assertFalse(AnkiquestCardLabels.looksLikeId(word), word)
     }
 
     @Test

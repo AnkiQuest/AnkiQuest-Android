@@ -56,11 +56,11 @@ class AnkiquestGalleryTest : RobolectricTest() {
     fun prepare() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
-        account = AnkiquestHomeData.account()!!
+        account = HomeAccount.current()!!
         source = "content://${targetContext.packageName}.apkgfileprovider/cache/picture.png".toUri()
         context =
             object : ContextWrapper(targetContext) {
@@ -128,7 +128,7 @@ class AnkiquestGalleryTest : RobolectricTest() {
         every { resolver.openOutputStream(saved) } returns
             object : ByteArrayOutputStream() {
                 override fun close() {
-                    AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "another-account") }
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "another-account") }
                     super.close()
                 }
             }
@@ -140,7 +140,7 @@ class AnkiquestGalleryTest : RobolectricTest() {
     @Test
     fun `an old account or foreign content URI never creates a gallery row`() {
         assertFailsWith<IllegalArgumentException> { AnkiquestGallery.save(context, "content://other/private".toUri(), account) }
-        AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
         assertFailsWith<HomeAccountChanged> { AnkiquestGallery.save(context, source, account) }
         verify(exactly = 0) { resolver.insert(any(), any()) }
     }

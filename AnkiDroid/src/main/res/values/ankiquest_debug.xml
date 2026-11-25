@@ -22,5 +22,4 @@
     <string name="ankiquest_debug_blazing_days" translatable="false">Streak days for blazing (more than hot)</string>
     <string name="ankiquest_debug_legend_days" translatable="false">Streak days for legend (more than blazing)</string>
     <string name="ankiquest_debug_invalid" translatable="false">Not saved: each threshold must be in range and above the one before it.</string>
-    <string name="ankiquest_debug_marker" translatable="false">Debug override</string>
 </resources>

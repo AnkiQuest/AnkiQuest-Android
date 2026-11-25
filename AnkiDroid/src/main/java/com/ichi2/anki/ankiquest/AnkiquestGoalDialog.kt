@@ -18,10 +18,10 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Choice
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.ServerGoal
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -244,7 +244,7 @@ internal object AnkiquestGoalDialog {
             try {
                 val goal = AnkiquestDailyGoal.fetch(account)
                 if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
-                if (AnkiquestHomeData.account()?.scope != account.scope) return@launch
+                if (HomeAccount.current()?.scope != account.scope) return@launch
                 show(activity, account, goal.choice, onSaved = onSaved)
             } catch (e: CancellationException) {
                 throw e

@@ -13,8 +13,8 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.Runs
@@ -150,9 +150,9 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         val now = TimeManager.time.intTimeMS()
         val prefs = targetContext.sharedPrefs()
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         val server =
             AnkiquestDay.Server(
@@ -356,8 +356,8 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @Test
     fun `placed streak widgets are drawn again when the day ends`() {
         targetContext.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
         }
         mockkObject(AnkiquestPoll)
         every { AnkiquestPoll.refreshNow(any()) } just Runs

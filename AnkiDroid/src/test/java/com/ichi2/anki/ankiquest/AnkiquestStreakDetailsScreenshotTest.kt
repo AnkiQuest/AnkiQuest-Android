@@ -16,9 +16,9 @@ import androidx.core.view.isVisible
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.provideRoborazziContext
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import org.json.JSONArray
 import org.json.JSONObject
@@ -35,9 +35,9 @@ class AnkiquestStreakDetailsScreenshotTest : ScreenshotTest() {
         val now = 1_750_000_000_000L
         val prefs = targetContext.sharedPrefs()
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, false)
         }
         AnkiquestWidget.forgetFresh()

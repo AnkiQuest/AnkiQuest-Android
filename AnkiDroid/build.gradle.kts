@@ -411,6 +411,9 @@ android {
         enable = true
     }
 
+    // AnkiQuest: the pinned server examples and shared fixtures live with :ankiquest-core.
+    sourceSets["test"].resources.srcDir("../ankiquest-core/src/test/resources")
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
     }
@@ -820,6 +823,8 @@ dependencies {
 
     // modules
     implementation(project(":anki-common"))
+    implementation(project(":ankiquest-core"))
+    implementation(project(":ankiquest-ui"))
     implementation(project(":common"))
     implementation(project(":common:android"))
     implementation(project(":compat"))

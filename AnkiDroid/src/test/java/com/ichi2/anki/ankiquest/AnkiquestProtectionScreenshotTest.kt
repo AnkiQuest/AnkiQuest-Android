@@ -10,8 +10,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -26,6 +26,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 /** Protection changes retain their explanation and readable Undo at both text sizes. */
 class AnkiquestProtectionScreenshotTest : ScreenshotTest() {
@@ -43,8 +44,8 @@ class AnkiquestProtectionScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareProtection() {
-        mockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         val profile = AnkiquestBoards.parseProfile(JSONObject(AnkiquestBoardsTest.PROFILE))
         coEvery { AnkiquestBoards.player(identity, identity.user) } answers {
             AnkiquestBoards.PlayerPage(profile.copy(freezesEnabled = enabled), own = true, wins = emptyList())
@@ -58,7 +59,7 @@ class AnkiquestProtectionScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupProtection() {
-        unmockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars)
+        unmockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -86,14 +87,14 @@ class AnkiquestProtectionScreenshotTest : ScreenshotTest() {
     ) {
         enabled = result == Protection.PAUSED
         val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext))
-        advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !screen.findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
         advanceRobolectricLooper()
         val label = if (enabled) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume
         val control =
             screen.window.decorView.allViews
                 .filterIsInstance<TextView>()
                 .first { it.text == screen.getString(label) }
-        val scroll = screen.findViewById<NestedScrollView>(R.id.aq_board_scroll)
+        val scroll = screen.findViewById<NestedScrollView>(AnkiDroidR.id.aq_board_scroll)
         val bounds = Rect(0, 0, control.width, control.height)
         scroll.offsetDescendantRectToMyCoords(control, bounds)
         scroll.scrollTo(0, bounds.top)

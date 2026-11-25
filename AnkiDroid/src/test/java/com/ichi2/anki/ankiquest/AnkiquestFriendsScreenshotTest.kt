@@ -7,8 +7,8 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 /** The sections share Friends' scroll and navigation, including offline and large-text states. */
 class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
@@ -38,12 +39,20 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareFriends() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
+        every { HomeAccount.current(any()) } returns identity
         val sample = assertNotNull(javaClass.classLoader?.getResource("ankiquest-api/social.json")).readText(Charsets.UTF_8)
         val overview = AnkiquestSocial.parse(JSONObject(sample))
         coEvery { AnkiquestSocial.overview(any()) } returns overview
-        coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         val rows = JSONArray().put(AnkiquestBoardsTest.row("cerro", 90, 5)).put(AnkiquestBoardsTest.row("hill", 40, 2))
         coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns
@@ -55,7 +64,15 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupFriends() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
+        unmockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -105,12 +122,12 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
     ): AnkiquestFriendsActivity {
         val screen = startRegularActivity<AnkiquestFriendsActivity>(intent)
         advanceRobolectricLooperUntil {
-            listOf(R.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading)
+            listOf(AnkiDroidR.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading)
                 .none { screen.findViewById<View>(it).isVisible }
         }
         advanceRobolectricLooper()
-        assertEquals(screen.getString(R.string.ankiquest_nav_friends), screen.findViewById<TextView>(R.id.aq_feed_title).text)
-        assertTrue(screen.findViewById<View>(R.id.ankiquest_tab_bar).isShown)
+        assertEquals(screen.getString(R.string.ankiquest_nav_friends), screen.findViewById<TextView>(AnkiDroidR.id.aq_feed_title).text)
+        assertTrue(screen.findViewById<View>(AnkiDroidR.id.ankiquest_tab_bar).isShown)
         assertTrue(
             screen.window.decorView.allViews.filterIsInstance<TextView>().any {
                 it.text ==

@@ -15,8 +15,8 @@ import com.google.android.material.chip.Chip
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.setIntroductionSlidesShown
@@ -55,9 +55,9 @@ class AnkiquestStudySessionTest : RobolectricTest() {
         setIntroductionSlidesShown(true)
         TimeManager.resetWith(clock)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "member-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "member-token")
         }
     }
 
@@ -101,7 +101,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             AnkiquestStudySession.start()
             review(clock.intTimeMS() + 1000)
             clock.addM(2)
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "someone-else") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "someone-else") }
             assertNull(AnkiquestStudySession.finish())
             assertNull(AnkiquestStudySession.latest())
         }
@@ -113,13 +113,13 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             review(clock.intTimeMS() + 1000)
             clock.addM(2)
             assertNotNull(AnkiquestStudySession.finish())
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "new-token") }
             assertNull(AnkiquestStudySession.latest())
         }
 
     @Test
     fun `a recap cannot attach to the stopped deck picker`() {
-        val result = CompletableDeferred<AnkiquestStudySession.Summary>()
+        val result = CompletableDeferred<AnkiquestSessionSummary>()
         val reading = CompletableDeferred<Unit>()
         mockkObject(AnkiquestStudySession)
         try {
@@ -136,7 +136,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             advanceRobolectricLooperUntil { reading.isCompleted }
 
             controller.pause().stop()
-            result.complete(AnkiquestStudySession.Summary(6, 1, 3, clock.intTimeMS()))
+            result.complete(AnkiquestSessionSummary(6, 1, 3, clock.intTimeMS()))
             advanceRobolectricLooper()
 
             assertEquals(before, ShadowDialog.getLatestDialog())
@@ -148,10 +148,10 @@ class AnkiquestStudySessionTest : RobolectricTest() {
 
     @Test
     fun `a queued moment joins the recap without another dialog`() {
-        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDeckShare.PREF_ASK, false) }
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, false) }
         mockkObject(AnkiquestStudySession)
         try {
-            coEvery { AnkiquestStudySession.finish() } returns AnkiquestStudySession.Summary(6, 1, 3, clock.intTimeMS())
+            coEvery { AnkiquestStudySession.finish() } returns AnkiquestSessionSummary(6, 1, 3, clock.intTimeMS())
             val intent = Intent().putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
             val host = startActivityControllerNormallyOpenCollectionWithIntent(DeckPicker::class.java, intent).get()
             assertTrue(AnkiquestPostStudyPrompts.ready(host))
@@ -159,7 +159,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             advanceRobolectricLooperUntil { ShadowDialog.getLatestDialog()?.isShowing == true }
             val recap = assertNotNull(ShadowDialog.getLatestDialog())
             assertTrue(recap.isShowing)
-            val account = assertNotNull(AnkiquestHomeData.account()).notificationAccount
+            val account = assertNotNull(HomeAccount.current()).notificationAccount
             val moment = AnkiquestMoments.Moment("level:4", AnkiquestMoments.Kind.LEVEL, "Level 4", "", clock.intTimeMS())
             AnkiquestMoments.offer(AnkiDroidApp.sharedPrefs(), account, listOf(moment))
 
@@ -224,7 +224,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
         val intent = Intent().putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
         val host = startActivityControllerNormallyOpenCollectionWithIntent(DeckPicker::class.java, intent).get()
         val deck = col.decks.selected()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         val friend = AnkiquestSocial.Person("friend", "Friend")
         val settings = JSONObject().put("decks", JSONArray()).put("recipients", JSONArray().put(JSONObject().put("user", friend.user)))
         mockkObject(AnkiquestDecks, AnkiquestApi, AnkiquestCapabilities, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)

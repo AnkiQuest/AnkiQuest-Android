@@ -11,7 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputLayout
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -64,7 +64,7 @@ internal object AnkiquestDeckNameDialog {
         val field =
             MaterialAutoCompleteTextView(host).apply {
                 setSingleLine(true)
-                filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
+                filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestCardLabels.MAX_LABEL))
                 threshold = 0
                 setAdapter(ArrayAdapter(host, android.R.layout.simple_dropdown_item_1line, deck.picks.filter(String::isNotEmpty)))
                 setText(deck.name, false)

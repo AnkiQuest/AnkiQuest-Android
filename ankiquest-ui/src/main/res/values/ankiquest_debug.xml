@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- What Home and the widget show while the debug menu overrides today. Developer options are English only, as upstream's. -->
+<resources>
+    <string name="ankiquest_debug_marker" translatable="false">Debug override</string>
+</resources>

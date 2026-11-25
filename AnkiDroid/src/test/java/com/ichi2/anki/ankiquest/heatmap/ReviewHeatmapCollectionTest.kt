@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest.heatmap
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.RevlogSource
 import com.ichi2.anki.common.time.TimeManager
 import org.junit.Before
 import org.junit.Test
@@ -32,9 +33,9 @@ class ReviewHeatmapCollectionTest : RobolectricTest() {
             )
         for (offset in listOf(-1L, 0L, 1L, 90L)) {
             val date = today.plusDays(offset)
-            assertEquals(ReviewHeatmap.searchForDay(data, date), ReviewHeatmap.searchForDay(col, date))
+            assertEquals(ReviewHeatmap.searchForDay(data, date), ReviewHeatmap.searchForDay(RevlogSource(col), date))
         }
-        assertNull(ReviewHeatmap.searchForDay(col, today.plusDays(91)))
+        assertNull(ReviewHeatmap.searchForDay(RevlogSource(col), today.plusDays(91)))
         assertEquals(0, col.db.queryScalar("select count(*) from revlog"))
     }
 
@@ -53,7 +54,7 @@ class ReviewHeatmapCollectionTest : RobolectricTest() {
         review(cutoff - DAY_MILLIS + 600, unratedOnlyCard, ease = 0, type = 0)
         review(cutoff, cardId)
 
-        val data = ReviewHeatmap.load(col)
+        val data = ReviewHeatmap.load(RevlogSource(col))
         assertEquals(3, data.reviews[data.today])
         assertEquals(3L, data.totalReviews)
         assertEquals(1, data.daysStudied)
@@ -72,7 +73,7 @@ class ReviewHeatmapCollectionTest : RobolectricTest() {
         review(cutoff - DAY_MILLIS, firstCard)
         review(cutoff - 1, firstCard)
 
-        val data = ReviewHeatmap.load(col)
+        val data = ReviewHeatmap.load(RevlogSource(col))
         assertEquals(2, data.reviews[data.today])
         assertEquals(2, data.reviews[data.today.minusDays(1)])
         assertEquals(2, data.currentStreak)
@@ -104,7 +105,7 @@ class ReviewHeatmapCollectionTest : RobolectricTest() {
         scheduledCard(queue = 2, due = col.sched.today + 91)
         val lastForecastCard = scheduledCard(queue = 2, due = col.sched.today + 90)
 
-        val data = ReviewHeatmap.load(col)
+        val data = ReviewHeatmap.load(RevlogSource(col))
         assertTrue(data.reviews.isEmpty())
         assertEquals(expected.size, data.scheduled[data.today.plusDays(1)])
         assertEquals(2, data.scheduled.size)

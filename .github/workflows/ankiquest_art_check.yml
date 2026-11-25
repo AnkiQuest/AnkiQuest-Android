@@ -55,6 +55,16 @@ jobs:
         with:
           workspaces: server
 
+      # The art lives in ankiquest-ui. An exporter pinned before it learned that path still looks
+      # in AnkiDroid/, so it is shown the same files there; drop this once the pin includes the
+      # exporter's new path.
+      - name: Show the art where the pinned exporter looks
+        shell: bash
+        run: |
+          if grep -q '"AnkiDroid/src/main/res/drawable-nodpi"' server/crates/xtask/src/art.rs; then
+            ln -s ../../../../ankiquest-ui/src/main/res/drawable-nodpi AnkiDroid/src/main/res/drawable-nodpi
+          fi
+
       # A server without the exporter fails here instead of skipping the check.
       - name: Check the app's art against the server's exporter
         shell: bash

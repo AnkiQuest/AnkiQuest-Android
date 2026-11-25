@@ -13,7 +13,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import kotlin.math.roundToInt
 
 /** The reviewer's short, touch-through celebration. */

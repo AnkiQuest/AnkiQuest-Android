@@ -34,6 +34,8 @@ rootProject.name = "AnkiQuest-Android"
 // alphabetical ordering rather than dependency-tree ordering to avoid bikeshedding
 include(
     ":anki-common",
+    ":ankiquest-core",
+    ":ankiquest-ui",
     ":api",
     ":AnkiDroid",
     ":baselineprofile",

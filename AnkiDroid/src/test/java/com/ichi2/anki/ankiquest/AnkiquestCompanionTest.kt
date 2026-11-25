@@ -7,9 +7,9 @@ import androidx.core.content.edit
 import androidx.core.graphics.get
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.ui.R
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -24,11 +24,11 @@ class AnkiquestCompanionTest : RobolectricTest() {
     private fun account(user: String): HomeAccount {
         val preferences = AnkiDroidApp.sharedPrefs()
         preferences.edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "https://example.com")
-            putString(Ankiquest.PREF_USER, user)
-            putString(Ankiquest.PREF_TOKEN, "token-$user")
+            putString(AnkiquestPreferences.PREF_URL, "https://example.com")
+            putString(AnkiquestPreferences.PREF_USER, user)
+            putString(AnkiquestPreferences.PREF_TOKEN, "token-$user")
         }
-        return requireNotNull(AnkiquestHomeData.account())
+        return requireNotNull(HomeAccount.current())
     }
 
     @Test

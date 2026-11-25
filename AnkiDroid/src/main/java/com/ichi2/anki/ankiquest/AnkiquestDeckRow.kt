@@ -5,10 +5,11 @@ package com.ichi2.anki.ankiquest
 import android.content.res.ColorStateList
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.databinding.ItemDeckBinding
 import com.ichi2.anki.deckpicker.DisplayDeckNode
+import com.ichi2.anki.R as AnkiDroidR
 
 /** Shows a deck's daily AnkiQuest status in its deck list row. */
 object AnkiquestDeckRow {
@@ -19,7 +20,7 @@ object AnkiquestDeckRow {
         val dailyStatus = node.dailyState?.status
         binding.deckDailyStatus.isVisible = dailyStatus == DailyDeckStatus.LEARNING_LATER
         val finished = dailyStatus == DailyDeckStatus.DONE
-        binding.deckName.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, if (finished) R.drawable.ic_done else 0, 0)
+        binding.deckName.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, if (finished) AnkiDroidR.drawable.ic_done else 0, 0)
         TextViewCompat.setCompoundDrawableTintList(
             binding.deckName,
             if (finished) {

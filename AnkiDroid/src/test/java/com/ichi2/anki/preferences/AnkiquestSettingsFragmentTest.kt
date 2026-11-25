@@ -18,7 +18,6 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
@@ -27,12 +26,13 @@ import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminder
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
+import com.ichi2.anki.ankiquest.AnkiquestCompanions
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
@@ -40,6 +40,7 @@ import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.ankiquest.SubscriptionRepository
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -63,6 +64,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
 
@@ -76,7 +78,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     fun prepare() {
         signIn()
         repository = mockk()
-        mockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestHomeData)
+        mockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestCompanions)
         mockkObject(AnkiquestDeckSharing)
         coEvery { AnkiquestDeckSharing.restore(any(), any()) } returns JSONObject()
         every { AnkiquestSubscriptions.repository } returns repository
@@ -85,25 +87,25 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { AnkiquestCommunity.reminders(any()) } returns reminders
         coEvery { AnkiquestSharing.settings(any()) } returns sharing
         coEvery { Ankiquest.notificationSwitches() } returns JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, true)
-        coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
+        coEvery { AnkiquestCompanions.choice(any()) } returns "aki"
     }
 
     @After
     fun clearMocks() {
-        unmockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestHomeData)
+        unmockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestCompanions)
         unmockkObject(AnkiquestDeckSharing)
     }
 
     private fun signIn() =
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
 
     @Test
     fun `a phone that is not signed in only offers signing in and the app's own settings`() {
-        AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
         val fragment = open()
         val signIn = fragment.preference<Preference>(R.string.ankiquest_sign_in_key)
         assertEquals(targetContext.getString(R.string.ankiquest_sign_in_title), signIn.title)
@@ -131,7 +133,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         assertEquals("", dialog.findViewById<EditText>(R.id.ankiquest_sign_in_password).text.toString())
         user.setText("another")
         assertEquals("another", user.text.toString())
-        assertNull(AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+        assertNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
     }
 
     @Test
@@ -165,7 +167,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
             shadowOf(Looper.getMainLooper()).idle()
 
             assertEquals(listOf("", "123456"), sent.map { it.code })
-            assertEquals("device-token", AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+            assertEquals("device-token", AnkiDroidApp.sharedPrefs().getString(AnkiquestPreferences.PREF_TOKEN, null))
         } finally {
             unmockkObject(AnkiquestAccount)
         }
@@ -323,29 +325,29 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     @Test
     fun `RWKV switch is off by default and refuses to turn on without an engine`() {
-        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        val rwkv = open().switch(AnkiDroidR.string.ankiquest_rwkv_key)
         assertFalse(rwkv.isVisible, "An unavailable scheduler must stay out of settings")
         assertFalse(rwkv.isChecked)
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
+        assertEquals(targetContext.getString(AnkiDroidR.string.ankiquest_rwkv_off), rwkv.summary.toString())
 
         // This build has no engine: the switch stays off and says why.
         rwkv.performClick()
         idle()
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+        assertEquals(targetContext.getString(AnkiDroidR.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test
     fun `a saved RWKV switch that is now blocked opens off`() {
         AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestRwkv.PREF_ENABLED, true) }
 
-        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        val rwkv = open().switch(AnkiDroidR.string.ankiquest_rwkv_key)
         idle()
         assertFalse(rwkv.isVisible, "A saved switch must not expose an unavailable scheduler")
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+        assertEquals(targetContext.getString(AnkiDroidR.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test
@@ -362,7 +364,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val field = AnkiquestBoards.GLOBAL_SETTING
         val current = JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, false).put(field, true)
         coEvery { Ankiquest.notificationSwitches() } coAnswers {
-            if (prefs.getString(Ankiquest.PREF_USER, null) == "member") old.await() else current
+            if (prefs.getString(AnkiquestPreferences.PREF_USER, null) == "member") old.await() else current
         }
         try {
             val fragment = open()
@@ -371,8 +373,8 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
             assertFalse(moments.isEnabled)
 
             prefs.edit {
-                putString(Ankiquest.PREF_USER, "other")
-                putString(Ankiquest.PREF_TOKEN, "other-token")
+                putString(AnkiquestPreferences.PREF_USER, "other")
+                putString(AnkiquestPreferences.PREF_TOKEN, "other-token")
             }
             fragment.onResume()
             idle()
@@ -434,7 +436,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val before = scope.children.toSet()
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         val work = scope.children.first { it !in before }
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
         waiting.complete(deckSettings())
         advanceRobolectricLooperUntil { work.isCompleted }
         assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
@@ -453,7 +455,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
         assertTrue(people !== decks)
         assertTrue(people.listView.isItemChecked(0), "retain the server's recipient preselection")
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
         people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         idle()
         coVerify(exactly = 0) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) }
@@ -504,7 +506,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         val fragment = open()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
@@ -528,7 +530,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         val fragment = open()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
@@ -565,7 +567,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         idle()
         val work = scope.children.first { it !in before }
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "new-token") }
         waiting.complete(JSONObject())
         advanceRobolectricLooperUntil { work.isCompleted }
         assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
@@ -588,7 +590,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
                    "recipients":[{"user":"ana","display":"Ana"},{"user":"cerro","display":"Cerro"}]}""",
             )
         val fragment = saveBulk(settings)
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         coVerify(exactly = 1) {
             Ankiquest.saveDeckNotificationSettings(listOf("1", "2"), listOf("3"), listOf("ana", "cerro"), account)
         }
@@ -612,7 +614,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     fun `bulk Undo cannot cross an account switch`() {
         val fragment = saveBulk(deckSettings())
         val button = assertNotNull(undoButton(fragment))
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "replacement") }
         button.performClick()
         idle()
         coVerify(exactly = 0) { AnkiquestDeckSharing.restore(any(), any()) }
@@ -623,7 +625,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
         val fragment = open()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
         idle()
         val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
@@ -700,7 +702,10 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val controller = Robolectric.buildActivity(PreferencesActivity::class.java, intent).setup()
         saveControllerForCleanup(controller)
         idle()
-        val fragment = (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(R.id.settings_container)
+        val fragment =
+            (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(
+                AnkiDroidR.id.settings_container,
+            )
         return fragment as AnkiquestSettingsFragment
     }
 

@@ -11,9 +11,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Checks [AnkiquestStudyTime] against `tests/fixtures/study_time.json` from AnkiQuest-Server,
- * which the desktop add-on also follows. Each case runs the real query on a revlog holding the
- * case's rows.
+ * Checks [AnkiquestStudyLog] and [AnkiquestStudyTime] against `tests/fixtures/study_time.json`
+ * from AnkiQuest-Server, which the desktop add-on also follows. Each case runs
+ * the real query on a revlog holding the case's rows.
  */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestStudyTimeTest : RobolectricTest() {
@@ -46,7 +46,7 @@ class AnkiquestStudyTimeTest : RobolectricTest() {
 
             val clock = case.getJSONObject("clock")
             val totals =
-                AnkiquestStudyTime.load(col, case.getLong("now_ms"), clock.getInt("offset_west_min"), clock.getInt("rollover_hour"))
+                AnkiquestStudyLog.load(col, case.getLong("now_ms"), clock.getInt("offset_west_min"), clock.getInt("rollover_hour"))
             val expected = case.getJSONObject("expected")
             assertEquals(expected.getString("today"), totals.today.toString(), name)
             assertEquals(

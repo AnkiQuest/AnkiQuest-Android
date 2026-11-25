@@ -93,9 +93,9 @@ class AnkiquestServerGoalTest : RobolectricTest() {
                 TestResponse.json(answer, status)
             }
         prefs.edit {
-            putString(Ankiquest.PREF_URL, server.url)
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
     }
 
@@ -107,7 +107,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         SharedPreferencesTestHook.override = null
     }
 
-    private fun account() = AnkiquestHomeData.account()!!
+    private fun account() = HomeAccount.current()!!
 
     private fun puts(path: String) = requests.filter { it.first == "PUT" && it.second == path }
 
@@ -210,8 +210,8 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         prefs.edit { remove(AnkiquestDailyGoal.PREF_MODE) }
         AnkiquestDailyGoal.remember(profile, prefs)
         assertEquals(Choice(Mode.MINUTES, 40), AnkiquestDailyGoal.choice(prefs))
-        prefs.edit { putString(Ankiquest.PREF_USER, "cerro") }
-        assertNull(AnkiquestDailyGoal.cached(prefs, AnkiquestHomeData.account(prefs)?.scope), "another account never inherits it")
+        prefs.edit { putString(AnkiquestPreferences.PREF_USER, "cerro") }
+        assertNull(AnkiquestDailyGoal.cached(prefs, HomeAccount.current(prefs)?.scope), "another account never inherits it")
     }
 
     @Test
@@ -346,7 +346,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     fun `settings are never read or written for an account that is no longer signed in`() =
         runBlocking {
             val captured = account()
-            prefs.edit { putString(Ankiquest.PREF_TOKEN, "another-credential") }
+            prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "another-credential") }
             assertFailsWith<HomeAccountChanged> { AnkiquestSharing.settings(captured) }
             assertFailsWith<HomeAccountChanged> { AnkiquestDailyGoal.fetch(captured) }
             assertTrue(requests.isEmpty())

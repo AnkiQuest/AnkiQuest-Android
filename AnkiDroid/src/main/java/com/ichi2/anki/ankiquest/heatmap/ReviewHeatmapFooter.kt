@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.DeckPicker
+import com.ichi2.anki.ankiquest.RevlogSource
 import com.ichi2.anki.common.destinations.BrowserDestination
 import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.launchCatchingTask
@@ -27,7 +28,7 @@ object ReviewHeatmapFooter {
                     activity.launchCatchingTask {
                         // Recalculate the relative search day in case midnight/rollover passed
                         // while the deck list remained on screen.
-                        val query = withCol { ReviewHeatmap.searchForDay(this, date) }
+                        val query = withCol { ReviewHeatmap.searchForDay(RevlogSource(this), date) }
                         if (query != null) {
                             with(activity) { navigate(BrowserDestination.Search(query, allDecks = true)) }
                         }

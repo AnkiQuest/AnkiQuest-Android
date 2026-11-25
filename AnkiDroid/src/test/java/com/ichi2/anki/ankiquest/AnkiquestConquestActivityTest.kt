@@ -16,8 +16,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.ioDispatcher
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
 import com.ichi2.utils.openInputStreamSafe
@@ -59,6 +59,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp", shadows = [ShadowFileProviderPathStrategy::class])
@@ -78,7 +79,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         // limit; a cold first render on macOS took longer than the 10 s wait (#298).
         ioDispatcher = Dispatchers.Main
         ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
         coEvery { AnkiquestShare.conqueredCardLabels(any()) } returns null
         coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(friends = 2)
@@ -99,7 +100,10 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `the owner sees the card, its label and numbers, and can tell friends once`() {
         coEvery { AnkiquestCommunity.tell(identity, AT) } returns 2
         val card = launch()
-        assertEquals(card.getString(R.string.aq_profile_conquest), card.findViewById<TextView>(R.id.aq_board_title).text.toString())
+        assertEquals(
+            card.getString(R.string.aq_profile_conquest),
+            card.findViewById<TextView>(AnkiDroidR.id.aq_board_title).text.toString(),
+        )
         assertTrue(card.hasText("el murciélago"))
         assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_lead_mine, 4, 4)))
         assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_lapses, 4, "4")))
@@ -199,8 +203,8 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `the owner shares the card's words, deck, picture and page`() {
         val picture = "https://anki.example.test/w/tok.png"
         coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Animales"
-        coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
-            AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
+        coEvery { AnkiquestWins.link(6, identity.scope) } returns
+            AnkiquestWins.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
         every { AnkiquestShare.cardPng(any(), any(), picture) } returns "the server's PNG".toByteArray()
         // Robolectric's cache folder is not always under the provider's root, so the picture's address is made up.
         val stream = "content://com.ichi2.anki.debug.apkgfileprovider/cache-directory/ankiquest-share/win.png".toUri()
@@ -305,7 +309,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
         assertTrue(sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty().endsWith("https://anki.example.test/conquered/hill/$AT"))
         coVerify(exactly = 1) { AnkiquestCommunity.conquest(identity, "hill", AT) }
-        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+        coVerify(exactly = 0) { AnkiquestWins.link(any(), any()) }
     }
 
     @Test
@@ -442,7 +446,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             sent.getStringExtra(Intent.EXTRA_TEXT),
         )
         coVerify(exactly = 0) { AnkiquestShare.conqueredCardDeck(any()) }
-        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+        coVerify(exactly = 0) { AnkiquestWins.link(any(), any()) }
     }
 
     @Test
@@ -494,11 +498,11 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             coEvery { AnkiquestBoards.player(identity, "cerro") } returns
                 AnkiquestBoards.PlayerPage(profile, own = false, wins = emptyList())
             val page = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, "cerro"))
-            advanceRobolectricLooperUntil { !page.findViewById<View>(R.id.aq_board_loading).isVisible }
+            advanceRobolectricLooperUntil { !page.findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
             advanceRobolectricLooper()
             val lapses = page.resources.getQuantityString(R.plurals.aq_profile_lapses, 5, 5)
             page
-                .findViewById<View>(R.id.aq_board_content)
+                .findViewById<View>(AnkiDroidR.id.aq_board_content)
                 .allViews
                 .filterIsInstance<TextView>()
                 .first { it.text.toString() == lapses }
@@ -520,7 +524,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_tell) }.performClick()
         advanceRobolectricLooper()
 
-        card.findViewById<View>(R.id.aq_board_refresh).performClick()
+        card.findViewById<View>(AnkiDroidR.id.aq_board_refresh).performClick()
         advanceRobolectricLooperUntil { card.hasText("el murciélago") }
         val tell = card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_tell) }
         assertFalse(tell.isEnabled, "friends could be told twice")
@@ -562,7 +566,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         val (controller, answer) = lateLabel()
         controller.pause().stop()
         val other = identity.copy(user = "other", token = "other-synthetic-token")
-        every { AnkiquestHomeData.account(any()) } returns other
+        every { HomeAccount.current(any()) } returns other
         coEvery { AnkiquestCommunity.conquest(other, "hill", AT) } returns recorded.copy(told = null, friends = null)
         controller.start().resume()
         controller.get().settle()
@@ -583,9 +587,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     @Test
     fun `a share finishing while paused leaves the screen ready after resume`() {
-        val answer = CompletableDeferred<AnkiquestShare.Link>()
+        val answer = CompletableDeferred<AnkiquestWins.Link>()
         val prepared = AtomicBoolean(false)
-        coEvery { Ankiquest.shareWinLink(6, identity.scope) } coAnswers { answer.await() }
+        coEvery { AnkiquestWins.link(6, identity.scope) } coAnswers { answer.await() }
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
             prepared.set(true)
             Intent(Intent.ACTION_CHOOSER)
@@ -602,24 +606,24 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         card.views<TextView>().first { it.text.toString() == card.getString(R.string.ankiquest_share) }.performClick()
         advanceRobolectricLooper()
         controller.pause()
-        answer.complete(AnkiquestShare.Link("https://example.test/w/link", "https://example.test/w/link.png", "A win"))
+        answer.complete(AnkiquestWins.Link("https://example.test/w/link", "https://example.test/w/link.png", "A win"))
         advanceRobolectricLooperUntil { prepared.get() }
         advanceRobolectricLooperUntil { !ReflectionHelpers.getField<Boolean>(card, "busy") }
         assertNull(shadowOf(card).nextStartedActivity, "a paused screen must not open a chooser")
         controller.resume()
         advanceRobolectricLooper()
-        assertFalse(card.findViewById<View>(R.id.aq_board_loading).isVisible, "returning must clear the finished share's progress")
+        assertFalse(card.findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible, "returning must clear the finished share's progress")
         assertTrue(card.views<TextView>().first { it.text.toString() == card.getString(R.string.ankiquest_share) }.isEnabled)
         controller.pause().stop().destroy()
     }
 
     private fun AnkiquestConquestActivity.settle() {
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
         advanceRobolectricLooper()
     }
 
     private inline fun <reified T : View> AnkiquestConquestActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
+        findViewById<View>(AnkiDroidR.id.aq_board_content).allViews.filterIsInstance<T>().toList()
 
     private fun AnkiquestConquestActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
 
@@ -634,7 +638,8 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         private const val AT = 1_793_097_000_000L
 
         /** The objects the card talks to, spied on for the whole class. */
-        private val spied = arrayOf(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
+        private val spied =
+            arrayOf(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, AnkiquestWins, HomeAccount.Companion)
 
         /**
          * Spies on [spied] once per class. Each spy re-instruments its class,

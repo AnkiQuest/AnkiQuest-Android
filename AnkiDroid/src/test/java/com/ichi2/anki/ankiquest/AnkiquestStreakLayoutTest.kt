@@ -6,9 +6,9 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject

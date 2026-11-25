@@ -15,10 +15,10 @@ import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Style
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.justRun
@@ -50,9 +50,9 @@ class AnkiquestClearStreakTest : RobolectricTest() {
     @Before
     fun prepare() {
         prefs.edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
             putBoolean(AnkiquestIcon.PREF_ENABLED, false)
         }
         AnkiquestWidget.forgetFresh()
@@ -185,7 +185,7 @@ class AnkiquestClearStreakTest : RobolectricTest() {
             assertEquals(12, goal.progress)
             assertNotNull(goal.background)
         }
-        prefs.edit { putString(Ankiquest.PREF_TOKEN, "replacement") }
+        prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "replacement") }
         for (size in Size.entries) {
             assertEquals(View.GONE, render(board, size, Style.TRANSPARENT).findViewById<ProgressBar>(R.id.ankiquest_streak_goal).visibility)
         }

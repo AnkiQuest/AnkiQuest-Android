@@ -32,7 +32,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -43,13 +43,14 @@ import org.json.JSONException
 import timber.log.Timber
 import java.io.IOException
 import java.util.UUID
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * Friend goals, natively: invitations to accept or decline, goals in progress with everyone's
  * progress, finished ones with their result, the weekly suggested friend and starting a new goal.
  * [EXTRA_CHALLENGE] opens one goal. A server without the endpoint says it needs updating.
  */
-class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
+class AnkiquestChallengesActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiquest_feed) {
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private val views = AnkiquestBoardViews(this)
@@ -83,29 +84,29 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
-        content = findViewById(R.id.aq_feed_content)
-        scroll = findViewById(R.id.aq_feed_scroll)
-        findViewById<TextView>(R.id.aq_feed_title).apply {
+        content = findViewById(AnkiDroidR.id.aq_feed_content)
+        scroll = findViewById(AnkiDroidR.id.aq_feed_scroll)
+        findViewById<TextView>(AnkiDroidR.id.aq_feed_title).apply {
             setText(R.string.aq_challenges_title)
             ViewCompat.setAccessibilityHeading(this, true)
         }
-        findViewById<View>(R.id.aq_feed_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        findViewById<ImageButton>(R.id.aq_feed_refresh).apply {
+        findViewById<View>(AnkiDroidR.id.aq_feed_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        findViewById<ImageButton>(AnkiDroidR.id.aq_feed_refresh).apply {
             contentDescription = getString(R.string.aq_challenges_refresh)
             setOnClickListener {
                 status = null
                 reload()
             }
         }
-        findViewById<View>(R.id.aq_feed_loading).contentDescription = getString(R.string.aq_challenges_loading)
+        findViewById<View>(AnkiDroidR.id.aq_feed_loading).contentDescription = getString(R.string.aq_challenges_loading)
         onBackPressedDispatcher.addCallback(this, backToList)
-        val root = findViewById<View>(R.id.aq_feed_root)
+        val root = findViewById<View>(AnkiDroidR.id.aq_feed_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
             insets
         }
-        account = AnkiquestHomeData.account()
+        account = HomeAccount.current()
         if (savedInstanceState == null) {
             val addressed = intent.getStringExtra(EXTRA_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
@@ -134,11 +135,11 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
         super.onResume()
         if (!::content.isInitialized) return
         // Another account's goals must never stay on screen after signing out or switching.
-        if (AnkiquestHomeData.account()?.scope != account?.scope) reload()
+        if (HomeAccount.current()?.scope != account?.scope) reload()
     }
 
     private fun reload() {
-        val current = AnkiquestHomeData.account()
+        val current = HomeAccount.current()
         if (current?.scope != account?.scope) {
             account = current
             overview = null
@@ -257,7 +258,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        findViewById<View>(R.id.aq_feed_loading).isVisible = loading
+        findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible = loading
         status?.let { line ->
             views.text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         }

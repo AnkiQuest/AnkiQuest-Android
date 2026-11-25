@@ -27,7 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
@@ -37,13 +37,14 @@ import org.json.JSONException
 import timber.log.Timber
 import java.io.IOException
 import kotlin.math.abs
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * Friends and groups, natively: friend requests both ways, friends, muted players, groups with
  * their members and invite links, joining a group from a `/join/<code>` link, and the way to the
  * friend goals. The bottom navigation's Friends tab opens here.
  */
-class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
+class AnkiquestFriendsActivity : AnkiActivity(AnkiDroidR.layout.activity_ankiquest_feed) {
     private lateinit var content: LinearLayout
     private lateinit var sections: AnkiquestFriendsSections
     private lateinit var scroll: NestedScrollView
@@ -70,24 +71,24 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
         undo = AnkiquestUndo(this)
-        content = findViewById(R.id.aq_feed_content)
-        scroll = findViewById(R.id.aq_feed_scroll)
-        findViewById<TextView>(R.id.aq_feed_title).apply {
+        content = findViewById(AnkiDroidR.id.aq_feed_content)
+        scroll = findViewById(AnkiDroidR.id.aq_feed_scroll)
+        findViewById<TextView>(AnkiDroidR.id.aq_feed_title).apply {
             setText(R.string.ankiquest_nav_friends)
             ViewCompat.setAccessibilityHeading(this, true)
         }
-        AnkiquestTabBar.removeBack(findViewById(R.id.aq_feed_back), findViewById(R.id.aq_feed_title))
-        findViewById<ImageButton>(R.id.aq_feed_refresh).apply {
+        AnkiquestTabBar.removeBack(findViewById(AnkiDroidR.id.aq_feed_back), findViewById(AnkiDroidR.id.aq_feed_title))
+        findViewById<ImageButton>(AnkiDroidR.id.aq_feed_refresh).apply {
             contentDescription = getString(R.string.aq_friends_refresh)
             setOnClickListener {
                 status = null
                 reload()
             }
         }
-        findViewById<View>(R.id.aq_feed_loading).contentDescription = getString(R.string.aq_friends_loading)
-        AnkiquestTabBar.attach(this, findViewById(R.id.aq_feed_root), R.id.ankiquest_nav_friends)
+        findViewById<View>(AnkiDroidR.id.aq_feed_loading).contentDescription = getString(R.string.aq_friends_loading)
+        AnkiquestTabBar.attach(this, findViewById(AnkiDroidR.id.aq_feed_root), AnkiDroidR.id.ankiquest_nav_friends)
         sections = AnkiquestFriendsSections(this, savedInstanceState, undo)
-        account = AnkiquestHomeData.account()
+        account = HomeAccount.current()
         if (savedInstanceState == null) {
             val addressed = intent.getStringExtra(EXTRA_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
@@ -113,11 +114,11 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         super.onResume()
         if (!::content.isInitialized) return
         // Another account's friends must never stay on screen after signing out or switching.
-        if (AnkiquestHomeData.account()?.scope != account?.scope) reload()
+        if (HomeAccount.current()?.scope != account?.scope) reload()
     }
 
     private fun reload() {
-        val current = AnkiquestHomeData.account()
+        val current = HomeAccount.current()
         if (current?.scope != account?.scope) {
             undo.clear()
             account = current
@@ -291,7 +292,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                 }
         sections.attach(content, groups)
         sections.showTarget()
-        findViewById<View>(R.id.aq_feed_loading).isVisible = loading
+        findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible = loading
         status?.let { line ->
             views.text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         }

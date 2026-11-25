@@ -14,7 +14,7 @@ import androidx.appcompat.widget.AppCompatEditText
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withResumed
 import com.ichi2.anki.AnkiActivity
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.ioDispatcher
@@ -48,7 +48,7 @@ class AnkiquestShareActivity : AnkiActivity() {
             return
         }
         val language = AnkiquestLanguage.context(this)
-        val current = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+        val current = HomeAccount.current()?.takeIf { it.token.isNotEmpty() }
         if (scope == null || current?.scope != scope) {
             showThemedToast(this, language.getString(R.string.ankiquest_share_account_changed), shortLength = false)
             finish()
@@ -93,7 +93,7 @@ class AnkiquestShareActivity : AnkiActivity() {
      * friends next to the other apps; older versions ask first, then open the share sheet for other apps.
      */
     private fun chooseDestination(share: Share) {
-        val account = AnkiquestHomeData.account()?.takeIf { it.scope == share.scope }
+        val account = HomeAccount.current()?.takeIf { it.scope == share.scope }
         if (account != null && withRecipients(account, share)) {
             return
         }
@@ -201,7 +201,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                     setText(suggestion)
                     hint = language.getString(R.string.ankiquest_share_card_hint)
                     isSingleLine = true
-                    filters = arrayOf(InputFilter.LengthFilter(AnkiquestShare.MAX_LABEL))
+                    filters = arrayOf(InputFilter.LengthFilter(AnkiquestCardLabels.MAX_LABEL))
                     isEnabled = include.isChecked
                 }
             include.setOnCheckedChangeListener { _, checked -> field.isEnabled = checked }
@@ -227,7 +227,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                             }
                             return@setPositiveButton
                         }
-                        val label = AnkiquestShare.chosenLabel(include.isChecked, field.text?.toString())
+                        val label = AnkiquestCardLabels.chosenLabel(include.isChecked, field.text?.toString())
                         lifecycleScope.launch {
                             try {
                                 if (!ownsCard(owner)) {
@@ -307,7 +307,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                     val card = AnkiquestShare.Card(share.title, share.body, art)
                     val link =
                         try {
-                            share.win?.let { Ankiquest.shareWinLink(it, share.scope) }
+                            share.win?.let { AnkiquestWins.link(it, share.scope) }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: HomeAccountChanged) {
@@ -324,11 +324,11 @@ class AnkiquestShareActivity : AnkiActivity() {
                                 AnkiquestShare.linkChooser(applicationContext, link, friends, card)
                             }
                         }
-                    if (AnkiquestHomeData.account()?.scope != share.scope) {
+                    if (HomeAccount.current()?.scope != share.scope) {
                         throw HomeAccountChanged()
                     }
                     lifecycle.withResumed {
-                        if (AnkiquestHomeData.account()?.scope != share.scope) {
+                        if (HomeAccount.current()?.scope != share.scope) {
                             throw HomeAccountChanged()
                         }
                         if (!isFinishing && !isDestroyed) {
@@ -359,9 +359,9 @@ class AnkiquestShareActivity : AnkiActivity() {
                 try {
                     val friends =
                         if (share.win != null) {
-                            Ankiquest.shareWinWithFriends(share.win, share.scope)
+                            AnkiquestWins.withFriends(share.win, share.scope)
                         } else {
-                            Ankiquest.shareWin(share.notification, share.place, share.scope)
+                            AnkiquestWins.share(share.notification, share.place, share.scope)
                         }
                     if (friends == 0) {
                         language.getString(R.string.ankiquest_share_nobody)

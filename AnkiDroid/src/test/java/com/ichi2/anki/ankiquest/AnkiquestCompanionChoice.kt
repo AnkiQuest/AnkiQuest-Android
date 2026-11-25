@@ -4,18 +4,18 @@ package com.ichi2.anki.ankiquest
 
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.ui.R
 import kotlin.test.assertTrue
 
 /** Signs in a test account, alice, and makes [choice] her companion. */
 internal fun chooseCompanion(choice: Choice) {
     AnkiDroidApp.sharedPrefs().edit(commit = true) {
-        putString(Ankiquest.PREF_URL, "https://example.com")
-        putString(Ankiquest.PREF_USER, "alice")
-        putString(Ankiquest.PREF_TOKEN, "token-alice")
+        putString(AnkiquestPreferences.PREF_URL, "https://example.com")
+        putString(AnkiquestPreferences.PREF_USER, "alice")
+        putString(AnkiquestPreferences.PREF_TOKEN, "token-alice")
     }
-    assertTrue(AnkiquestCompanion.remember(requireNotNull(AnkiquestHomeData.account()), choice.id))
+    assertTrue(AnkiquestCompanion.remember(requireNotNull(HomeAccount.current()), choice.id))
 }
 
 /** Ankilope's core pose for each streak mood; the cow draws hers. On fire she studies until her on-fire art exists. */

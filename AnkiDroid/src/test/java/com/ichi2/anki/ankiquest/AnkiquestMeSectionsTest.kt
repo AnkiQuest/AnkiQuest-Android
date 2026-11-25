@@ -10,9 +10,9 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.chip.Chip
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapGrid
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -38,6 +38,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -58,8 +59,8 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
         coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(boards)
         coEvery { AnkiquestRecords.scopes(any()) } returns listOf(AnkiquestRecords.Scope.CIRCLE, club)
@@ -69,7 +70,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -86,7 +87,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
         me.click(me.getString(R.string.aq_records_title))
         assertFalse(me.findViewById<View>(R.id.aq_me_records_content).isVisible)
         me.click(me.getString(R.string.aq_records_title))
-        me.findViewById<View>(R.id.aq_board_refresh).performClick()
+        me.findViewById<View>(AnkiDroidR.id.aq_board_refresh).performClick()
         awaitSections(me)
         assertEquals(selected, me.grid().selectedDate)
         assertTrue(me.views<Chip>().single { it.text == "Spanish club" }.isChecked)
@@ -248,12 +249,17 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     private fun launch(intent: Intent) =
         startActivityControllerNormallyOpenCollectionWithIntent(AnkiquestProfileActivity::class.java, intent).also {
-            advanceRobolectricLooperUntil { !it.get().findViewById<View>(R.id.aq_board_loading).isVisible }
+            advanceRobolectricLooperUntil { !it.get().findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
         }
 
     private fun awaitSections(me: AnkiquestProfileActivity) {
         advanceRobolectricLooperUntil {
-            listOf(R.id.aq_board_loading, R.id.aq_me_records_loading, R.id.aq_me_history_loading, R.id.aq_me_study_time_loading).none {
+            listOf(
+                AnkiDroidR.id.aq_board_loading,
+                R.id.aq_me_records_loading,
+                R.id.aq_me_history_loading,
+                R.id.aq_me_study_time_loading,
+            ).none {
                 me.findViewById<View>(it).isVisible
             }
         }
@@ -261,7 +267,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
     }
 
     private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
+        findViewById<View>(AnkiDroidR.id.aq_board_content).allViews.filterIsInstance<T>().toList()
 
     private fun AnkiquestProfileActivity.click(
         label: String,

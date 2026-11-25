@@ -28,6 +28,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** Opt-in visual QA; the normal unit-test task excludes ScreenshotTestCategory. */
 class AnkiquestFeedScreenshotTest : ScreenshotTest() {
@@ -41,17 +42,17 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
     @Before
     fun prepareFeed() {
         val identity = HomeAccount("https://anki.example.test", "sam", "visual-test-token")
-        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
-        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        every { HomeAccount.current(any()) } returns identity
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         every { AnkiquestShare.picture(any()) } returns
             createBitmap(120, 120).apply { eraseColor(Color.rgb(36, 95, 171)) }
     }
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -72,7 +73,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } coAnswers {
             withContext(Dispatchers.IO) {
                 delay(500)
-                AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+                AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
             }
         }
         captureFeed(prefix = "activity_feed_delayed")
@@ -91,13 +92,13 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
         // Both requests can rerender Friends; capture their finished fixture, not a loading frame.
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_friends_feed_loading).isVisible &&
+                !screen.findViewById<View>(AnkiquestR.id.aq_friends_feed_loading).isVisible &&
                 screen.window.decorView.allViews
                     .filterIsInstance<TextView>()
                     .any { it.text == "Challenge invitation" }
         }
         assertFalse(screen.findViewById<View>(R.id.aq_feed_loading).isVisible, "capture must await the parent overview")
-        assertFalse(screen.findViewById<View>(R.id.aq_friends_feed_loading).isVisible, "capture must await the feed")
+        assertFalse(screen.findViewById<View>(AnkiquestR.id.aq_friends_feed_loading).isVisible, "capture must await the feed")
         assertTrue(
             screen.window.decorView.allViews
                 .filterIsInstance<TextView>()
@@ -106,7 +107,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
         val heading =
             screen.window.decorView.allViews.filterIsInstance<TextView>().first {
                 it.text ==
-                    screen.getString(R.string.aq_home_activity)
+                    screen.getString(AnkiquestR.string.aq_home_activity)
             }
         val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
         val bounds = Rect(0, 0, heading.width, heading.height)

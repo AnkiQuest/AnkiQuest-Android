@@ -32,6 +32,7 @@ import com.ichi2.anki.widgets.DeckAdapter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** AnkiQuest behaviour of [DeckPicker], kept here so the upstream activity only carries one-line calls. */
 object AnkiquestDeckPickerHooks {
@@ -88,16 +89,16 @@ object AnkiquestDeckPickerHooks {
         }
         activity.launchCatchingTask {
             val prefs = activity.sharedPrefs()
-            val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
+            val owner = HomeAccount.fingerprint(prefs.all)
             val summary = AnkiquestStudySession.finish()
             // Keep the result with this host while paused; discard it after an account change.
             activity.lifecycle.withResumed {
-                if (owner != AnkiquestNavigation.accountFingerprint(prefs.all)) {
+                if (owner != HomeAccount.fingerprint(prefs.all)) {
                     return@withResumed
                 }
                 val session =
                     AnkiquestMomentCard.Session(
-                        summary = summary?.takeIf { prefs.getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true) },
+                        summary = summary?.takeIf { prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true) },
                         onContinue = openReviewer,
                         onClose = { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } },
                     )
@@ -117,7 +118,7 @@ object AnkiquestDeckPickerHooks {
     fun refreshGoal(activity: DeckPicker) {
         AnkiquestMoments.showBadge(activity.binding.bottomNavigation, AnkiDroidApp.sharedPrefs())
         val parent = activity.binding.deckPickerPane.deckpickerView
-        if (AnkiquestHomeData.account() == null) {
+        if (HomeAccount.current() == null) {
             showGoal(parent, null)
             return
         }
@@ -228,11 +229,11 @@ object AnkiquestDeckPickerHooks {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_1 -> R.id.ankiquest_nav_today
                 KeyEvent.KEYCODE_2 -> R.id.ankiquest_nav_friends
-                KeyEvent.KEYCODE_3 -> R.id.ankiquest_nav_progress
+                KeyEvent.KEYCODE_3 -> AnkiquestR.id.ankiquest_nav_progress
                 KeyEvent.KEYCODE_4 -> R.id.ankiquest_nav_decks
                 else -> return false
             }
-        if (target == R.id.ankiquest_nav_progress) {
+        if (target == AnkiquestR.id.ankiquest_nav_progress) {
             activity.startActivity(AnkiquestProfileActivity.intent(activity))
         } else {
             bottomNavigation.selectedItemId = target
@@ -249,10 +250,10 @@ object AnkiquestDeckPickerHooks {
         if (!AnkiquestNavigation.enabled() || (!activity.bottomNavigationEnabled && activity.fragmented)) return null
         val label =
             when (destination) {
-                NavigationItem.HOME -> R.string.ankiquest_nav_today
-                NavigationItem.BROWSER -> R.string.ankiquest_nav_friends
-                NavigationItem.STATS -> R.string.ankiquest_me
-                NavigationItem.MORE -> R.string.ankiquest_nav_decks
+                NavigationItem.HOME -> AnkiquestR.string.ankiquest_nav_today
+                NavigationItem.BROWSER -> AnkiquestR.string.ankiquest_nav_friends
+                NavigationItem.STATS -> AnkiquestR.string.ankiquest_me
+                NavigationItem.MORE -> AnkiquestR.string.ankiquest_nav_decks
             }
         return activity.shortcut(keys, label)
     }
@@ -315,8 +316,8 @@ object AnkiquestDeckPickerHooks {
                 }
             when (available) {
                 true -> openReviewer()
-                false -> activity.showSnackbar(R.string.ankiquest_deck_ready_later)
-                null -> activity.showSnackbar(R.string.ankiquest_missing_deck)
+                false -> activity.showSnackbar(AnkiquestR.string.ankiquest_deck_ready_later)
+                null -> activity.showSnackbar(AnkiquestR.string.ankiquest_missing_deck)
             }
             return true
         }

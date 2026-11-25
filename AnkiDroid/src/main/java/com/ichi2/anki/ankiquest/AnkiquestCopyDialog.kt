@@ -16,7 +16,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Lifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.utils.ext.getParcelableCompat
@@ -167,7 +167,7 @@ internal class AnkiquestCopyDialog : DialogFragment() {
 
     private fun owns(): Boolean = isAdded && activity?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true && sameAccount()
 
-    private fun sameAccount(): Boolean = AnkiquestHomeData.account()?.scope == requireArguments().getString(AnkiquestDeckChoices.ARG_SCOPE)
+    private fun sameAccount(): Boolean = HomeAccount.current()?.scope == requireArguments().getString(AnkiquestDeckChoices.ARG_SCOPE)
 
     private fun close() {
         state = State.Closed

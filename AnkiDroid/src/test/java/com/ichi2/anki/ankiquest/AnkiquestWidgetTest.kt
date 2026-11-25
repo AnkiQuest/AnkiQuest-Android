@@ -23,9 +23,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings.Scale
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -422,9 +422,9 @@ class AnkiquestWidgetTest : RobolectricTest() {
 
     private fun configureTodayLaunch() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "member-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "member-token")
             putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true)
         }
         Ankiquest.resumeUploadAt = TimeManager.time.intTimeMS()

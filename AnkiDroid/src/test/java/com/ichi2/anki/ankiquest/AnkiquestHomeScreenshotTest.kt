@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -57,15 +57,15 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
                             .put("done", false),
                     ),
                 )
-        mockkObject(AnkiquestHomeData)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(any()) } returns profile
     }
 
     @After
     fun clearHomeMocks() {
-        unmockkObject(AnkiquestHomeData)
+        unmockkObject(AnkiquestHomeData, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

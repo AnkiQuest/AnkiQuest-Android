@@ -14,8 +14,8 @@ import androidx.viewpager2.widget.ViewPager2
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.setIntroductionSlidesShown
 import com.ichi2.testutils.BackupManagerTestUtilities
 import io.mockk.coEvery
@@ -37,12 +37,12 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
         setIntroductionSlidesShown(true)
         BackupManagerTestUtilities.setupSpaceForBackup(targetContext)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
         mockkObject(AnkiquestStudySession, AnkiquestDeckShare)
-        coEvery { AnkiquestStudySession.finish() } returns AnkiquestStudySession.Summary(24, 6, 12, 1_750_000_000_000)
+        coEvery { AnkiquestStudySession.finish() } returns AnkiquestSessionSummary(24, 6, 12, 1_750_000_000_000)
         coEvery { AnkiquestDeckShare.offer(any()) } returns Unit
     }
 
@@ -138,7 +138,7 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
                 Intent().putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true),
             )
         val prefs = AnkiDroidApp.sharedPrefs()
-        val account = assertNotNull(AnkiquestHomeData.account()).notificationAccount
+        val account = assertNotNull(HomeAccount.current()).notificationAccount
         AnkiquestMoments.offer(
             prefs,
             account,

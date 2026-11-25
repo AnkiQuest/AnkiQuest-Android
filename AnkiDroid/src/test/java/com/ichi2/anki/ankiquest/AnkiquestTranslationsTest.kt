@@ -13,23 +13,27 @@ import kotlin.test.fail
 class AnkiquestTranslationsTest {
     @Test
     fun `AnkiQuest strings are translated into every AnkiQuest language`() {
-        val sources = File(RES, "values").listFiles { file -> file.name.startsWith(PREFIX) && file.extension == "xml" }.orEmpty()
-        assertTrue(sources.isNotEmpty(), "no AnkiQuest strings found in $RES/values")
-
-        // Each language's names, from all its files, since a translation may sit in another file.
-        val translated = LANGUAGES.associateWith { language -> names(File(RES, "values-$language")) }
-        val missing =
-            sources
-                .filter { it.name !in KNOWN_GAPS }
-                .flatMap { source ->
-                    val wanted = translatable(source)
-                    LANGUAGES.flatMap { language ->
-                        (wanted - translated.getValue(language)).map { "values-$language: ${source.name} $it" }
-                    }
-                }
+        val missing = RES.flatMap { missing(File(it)) }
         if (missing.isNotEmpty()) {
             fail("Untranslated AnkiQuest strings:\n" + missing.sorted().joinToString("\n"))
         }
+    }
+
+    /** "<res>/values-de: file.xml name" for each AnkiQuest string in [res] without a translation there. */
+    private fun missing(res: File): List<String> {
+        val sources = File(res, "values").listFiles { file -> file.name.startsWith(PREFIX) && file.extension == "xml" }.orEmpty()
+        assertTrue(sources.isNotEmpty(), "no AnkiQuest strings found in $res/values")
+
+        // Each language's names, from all its files, since a translation may sit in another file.
+        val translated = LANGUAGES.associateWith { language -> names(File(res, "values-$language")) }
+        return sources
+            .filter { it.name !in KNOWN_GAPS }
+            .flatMap { source ->
+                val wanted = translatable(source)
+                LANGUAGES.flatMap { language ->
+                    (wanted - translated.getValue(language)).map { "$res/values-$language: ${source.name} $it" }
+                }
+            }
     }
 
     /** The names in [source] that need a translation. */
@@ -57,7 +61,8 @@ class AnkiquestTranslationsTest {
     }
 
     private companion object {
-        const val RES = "src/main/res"
+        /** The app's resources and those of :ankiquest-ui, which holds most AnkiQuest strings. */
+        val RES = listOf("src/main/res", "../ankiquest-ui/src/main/res")
         const val PREFIX = "ankiquest"
         val LANGUAGES = listOf("de", "es", "fr", "pt")
         val TEXT_TAGS = listOf("string", "plurals", "string-array")

@@ -19,12 +19,12 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.ReviewerTest
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ThemeConfig
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmap
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -49,6 +49,7 @@ import org.robolectric.RuntimeEnvironment
 import java.io.IOException
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * Phone screens for the README banner (`docs/graphics/logos/banner_readme.png`), drawn from sample
@@ -143,7 +144,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(decks, 12, goal = goal, secondsPerCard = 6.0)
         coEvery { AnkiquestHomeData.profile(any()) } returns JSONObject(HOME)
         // The sample server does not exist: answer at once instead of waiting on its socket.
-        coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(identity) } throws IOException("offline")
         val home =
             startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
         advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible }
@@ -204,7 +205,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
             )
         coEvery { AnkiquestBoards.player(identity, "mira") } returns page
         val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, null))
-        advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !screen.findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
         captureScreen("5_profile")
     }
 
@@ -229,9 +230,9 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
     /** The server screens: a signed-in sample player at a fixed time, with the API mocked. */
     private fun social() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial)
+        mockkObject(AnkiquestHomeData, AnkiquestCompanions, AnkiquestBoards, AnkiquestSocial, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
     }
 
     /**
@@ -341,7 +342,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
                 )
                 addView(part(answer))
             }
-        findViewById<FrameLayout>(R.id.flashcard).addView(
+        findViewById<FrameLayout>(AnkiDroidR.id.flashcard).addView(
             ScrollView(this).apply {
                 setBackgroundColor(Color.WHITE)
                 addView(page)

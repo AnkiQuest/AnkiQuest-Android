@@ -16,9 +16,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Device
@@ -27,8 +25,10 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Provider
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Purpose
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Summary
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
+import com.ichi2.anki.ankiquest.HomeAccount
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
@@ -49,6 +49,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestSignInFragmentTest : RobolectricTest() {
@@ -80,9 +81,9 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
     fun prepare() {
         TimeManager.resetWith(MockTime(NOW))
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example")
-            putString(Ankiquest.PREF_USER, "ana")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "ana")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         mockkObject(AnkiquestAccountSettings, AnkiquestCapabilities)
         coEvery { AnkiquestAccountSettings.methods(any()) } returns withPassword
@@ -136,7 +137,7 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
 
     @Test
     fun `without an account it asks to sign in first`() {
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "") }
         val fragment = open().second
         assertEquals(targetContext.getString(R.string.ankiquest_account_configure), fragment.status().summary)
         coVerify(exactly = 0) { AnkiquestAccountSettings.methods(any()) }
@@ -436,7 +437,7 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
             14L
         }
         val fragment = open().second
-        fragment.saveExport(assertNotNull(AnkiquestHomeData.account()), uri)
+        fragment.saveExport(assertNotNull(HomeAccount.current()), uri)
         idle()
         assertEquals("{\"profile\":[]}", written.toString(Charsets.UTF_8.name()))
     }
@@ -447,7 +448,7 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         shadowOf(targetContext.contentResolver).registerOutputStream(uri, ByteArrayOutputStream())
         coEvery { AnkiquestAccountSettings.export(any(), any()) } throws AnkiquestHttpException(401, "Sign in first.")
         val fragment = open().second
-        fragment.saveExport(assertNotNull(AnkiquestHomeData.account()), uri)
+        fragment.saveExport(assertNotNull(HomeAccount.current()), uri)
         idle()
         assertEquals("Sign in first.", message(latest()))
     }
@@ -478,7 +479,7 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         positive(dialog)
         assertFalse(dialog.isShowing)
         assertEquals(targetContext.getString(R.string.ankiquest_delete_done), message(latest()))
-        assertNull(AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }, "this device is signed out")
+        assertNull(HomeAccount.current()?.takeIf { it.token.isNotEmpty() }, "this device is signed out")
         assertEquals(targetContext.getString(R.string.ankiquest_account_configure), fragment.status().summary)
     }
 
@@ -534,7 +535,10 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         val controller = Robolectric.buildActivity(PreferencesActivity::class.java, intent).setup()
         saveControllerForCleanup(controller)
         idle()
-        val fragment = (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(R.id.settings_container)
+        val fragment =
+            (controller.get().fragment as PreferencesFragment).childFragmentManager.findFragmentById(
+                AnkiDroidR.id.settings_container,
+            )
         return controller to fragment as AnkiquestSignInFragment
     }
 

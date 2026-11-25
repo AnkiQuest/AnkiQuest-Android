@@ -8,13 +8,13 @@ import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.ankiquest.AnkiquestMood.Heat
 import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapView
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
@@ -25,6 +25,7 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 import com.ichi2.anki.common.android.R as CommonR
 
 /**
@@ -173,9 +174,9 @@ class AnkiquestMoodTest : RobolectricTest() {
     fun `the heatmap companion shows today's mood`() {
         val now = TimeManager.time.intTimeMS()
         targetContext.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         val today = JSONObject().put("starts_at", now - HOUR).put("reviews", 0).put("streak_minutes", 10)
         AnkiquestDay.remember(
@@ -187,7 +188,7 @@ class AnkiquestMoodTest : RobolectricTest() {
         )
 
         val view = ReviewHeatmapView(ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid))
-        val aki = view.findViewById<ImageView>(R.id.review_heatmap_aki)
+        val aki = view.findViewById<ImageView>(AnkiDroidR.id.review_heatmap_aki)
         assertTrue(aki.isVisible)
         assertEquals(AnkiquestMood.pose(Mood.SAD, 12), shadowOf(aki.drawable).createdFromResId)
     }

@@ -2,11 +2,9 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.content.Context
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
-import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
 
@@ -16,35 +14,21 @@ object AnkiquestStudySession {
     private const val PREF_LATEST_SESSION = "ankiquestLastStudySession"
     private const val MAX_DURATION = DAY_MS
 
-    data class Summary(
-        val reviews: Int,
-        val minutes: Int,
-        val remaining: Int,
-        val finishedAt: Long,
-    ) {
-        fun duration(context: Context): String =
-            if (minutes == 0) {
-                context.getString(R.string.ankiquest_summary_under_minute)
-            } else {
-                context.resources.getQuantityString(R.plurals.ankiquest_summary_minutes, minutes, minutes)
-            }
-    }
-
     fun start() {
         if (!AnkiquestNavigation.enabled()) return
         val value =
             JSONObject()
-                .put("account", AnkiquestNavigation.accountFingerprint())
+                .put("account", HomeAccount.fingerprint())
                 .put("started", TimeManager.time.intTimeMS())
         AnkiDroidApp.sharedPrefs().edit { putString(PREF_ACTIVE_SESSION, value.toString()) }
     }
 
-    suspend fun finish(): Summary? {
+    suspend fun finish(): AnkiquestSessionSummary? {
         val prefs = AnkiDroidApp.sharedPrefs()
         val active = prefs.getString(PREF_ACTIVE_SESSION, null) ?: return null
         prefs.edit { remove(PREF_ACTIVE_SESSION) }
         val data = runCatching { JSONObject(active) }.getOrNull() ?: return null
-        val account = AnkiquestNavigation.accountFingerprint()
+        val account = HomeAccount.fingerprint()
         if (!AnkiquestNavigation.enabled() || data.optString("account") != account) return null
         val now = TimeManager.time.intTimeMS()
         val started = data.optLong("started")
@@ -58,10 +42,10 @@ object AnkiquestStudySession {
                         now,
                     ).use { cursor ->
                         cursor.moveToFirst()
-                        Summary(cursor.getInt(0), (cursor.getLong(1) / 60_000).toInt(), sched.totalCount(), now)
+                        AnkiquestSessionSummary(cursor.getInt(0), (cursor.getLong(1) / 60_000).toInt(), sched.totalCount(), now)
                     }
             }
-        if (summary.reviews == 0 || account != AnkiquestNavigation.accountFingerprint()) return null
+        if (summary.reviews == 0 || account != HomeAccount.fingerprint()) return null
         val stored =
             JSONObject()
                 .put("account", account)
@@ -73,17 +57,22 @@ object AnkiquestStudySession {
         return summary
     }
 
-    fun latest(): Summary? {
+    fun latest(): AnkiquestSessionSummary? {
         val prefs = AnkiDroidApp.sharedPrefs()
         val text = prefs.getString(PREF_LATEST_SESSION, null) ?: return null
         val data = runCatching { JSONObject(text) }.getOrNull()
-        if (!AnkiquestNavigation.enabled() || data == null || data.optString("account") != AnkiquestNavigation.accountFingerprint()) {
+        if (!AnkiquestNavigation.enabled() || data == null || data.optString("account") != HomeAccount.fingerprint()) {
             prefs.edit {
                 remove(PREF_LATEST_SESSION)
                 remove(PREF_ACTIVE_SESSION)
             }
             return null
         }
-        return Summary(data.optInt("reviews"), data.optInt("minutes"), data.optInt("remaining"), data.optLong("finished_at"))
+        return AnkiquestSessionSummary(
+            data.optInt("reviews"),
+            data.optInt("minutes"),
+            data.optInt("remaining"),
+            data.optLong("finished_at"),
+        )
     }
 }

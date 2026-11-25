@@ -7,8 +7,8 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.widget.NestedScrollView
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -24,6 +24,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "screenshot-token")
@@ -37,8 +38,8 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestSocial.overview(any()) } returns AnkiquestSocial.parse(JSONObject("""{"groups":[]}"""))
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
@@ -51,7 +52,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -149,7 +150,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
         screen: AnkiquestFriendsActivity,
         target: View,
     ) {
-        val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
+        val scroll = screen.findViewById<NestedScrollView>(AnkiDroidR.id.aq_feed_scroll)
         val bounds = Rect(0, 0, target.width, target.height)
         scroll.offsetDescendantRectToMyCoords(target, bounds)
         scroll.scrollTo(0, maxOf(0, bounds.bottom - scroll.height))

@@ -11,8 +11,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
@@ -35,6 +35,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -46,8 +47,8 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
 
     @Before
     fun prepareFriends() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestSocial.overview(identity) } returns overview
         coEvery { AnkiquestSocial.change(identity, any()) } returns overview
         coEvery { AnkiquestSocial.invite(identity, any()) } returns AnkiquestSocial.parseInvite(JSONObject(example("invite")))
@@ -55,7 +56,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
 
     @After
     fun clearFriendMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
     }
 
     @Test
@@ -338,7 +339,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the screen asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val friends = launch()
         assertTrue(friends.hasText(friends.getString(R.string.aq_friends_connect)))
         coVerify(exactly = 0) { AnkiquestSocial.overview(any()) }
@@ -351,7 +352,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         val friends = launch()
         friends.click(friends.getString(R.string.aq_friends_accept))
 
-        friends.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        friends.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         friends.settle()
         val accept = friends.views<TextView>().first { it.text.toString() == friends.getString(R.string.aq_friends_accept) }
         assertFalse(accept.isEnabled, "a second change could be sent while the first is on its way")
@@ -370,12 +371,12 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
             .also { it.settle() }
 
     private fun AnkiquestFriendsActivity.settle() {
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_feed_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         advanceRobolectricLooper()
     }
 
     private inline fun <reified T : View> AnkiquestFriendsActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_feed_content).allViews.filterIsInstance<T>().toList()
+        findViewById<View>(AnkiDroidR.id.aq_feed_content).allViews.filterIsInstance<T>().toList()
 
     private fun AnkiquestFriendsActivity.texts(): List<String> = views<TextView>().map { it.text.toString() }
 

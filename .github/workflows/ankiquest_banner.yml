@@ -16,7 +16,7 @@ on:
     paths:
       - '.github/workflows/ankiquest_banner.yml'
       - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
-      - 'AnkiDroid/src/test/resources/ankiquest-server.sha'
+      - 'ankiquest-core/src/test/resources/ankiquest-server.sha'
       - 'ankiquest-art.json'
       - 'docs/graphics/banner.toml'
       - 'docs/graphics/logos/banner_readme.png'

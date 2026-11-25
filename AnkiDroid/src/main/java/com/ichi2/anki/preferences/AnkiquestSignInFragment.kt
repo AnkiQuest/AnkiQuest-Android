@@ -24,7 +24,6 @@ import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
@@ -33,11 +32,12 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Methods
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Purpose
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Summary
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHosts
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.launchCatchingTask
@@ -52,6 +52,7 @@ import kotlinx.coroutines.yield
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.io.IOException
 import java.util.Date
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * The player's password, linked Google/GitHub sign-ins, signed-in devices, data download and account
@@ -59,7 +60,7 @@ import java.util.Date
  * the browser, since the provider's own page has to be shown; everything else stays in the app.
  */
 class AnkiquestSignInFragment : SettingsFragment() {
-    override val preferenceResource = R.xml.preferences_ankiquest_sign_in
+    override val preferenceResource = AnkiDroidR.xml.preferences_ankiquest_sign_in
     override val analyticsScreenNameConstant = "prefs.ankiquest.signin"
 
     private var methods: Methods? = null
@@ -173,7 +174,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
                 val typed = preference.text.orEmpty()
                 if (AnkiquestHosts.insecure(typed)) "$summary\n${getString(R.string.ankiquest_check_insecure, typed.trim())}" else summary
             }
-        requirePreference<Preference>(R.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
+        requirePreference<Preference>(AnkiDroidR.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
             launchCatchingTask { DebugInfoService.copyReport(requireContext()) }
             true
         }
@@ -225,7 +226,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
         key: String?,
     ) {
         super.onSharedPreferenceChanged(sharedPreferences, key)
-        if (key in setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)) {
+        if (key in setOf(AnkiquestPreferences.PREF_URL, AnkiquestPreferences.PREF_USER, AnkiquestPreferences.PREF_TOKEN)) {
             afterReauth = null
             refresh()
         }
@@ -235,7 +236,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
         // Device ids and provider rows are not settings; keep them out of analytics.
         if (preference.key?.startsWith(DYNAMIC_PREFIX) == true) false else super.onPreferenceTreeClick(preference)
 
-    private fun current(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+    private fun current(): HomeAccount? = HomeAccount.current()?.takeIf { it.token.isNotEmpty() }
 
     /** The signed-in account, or null after saying that there is none. */
     private fun signedIn(): HomeAccount? = current() ?: null.also { alert(getString(R.string.ankiquest_account_configure)) }

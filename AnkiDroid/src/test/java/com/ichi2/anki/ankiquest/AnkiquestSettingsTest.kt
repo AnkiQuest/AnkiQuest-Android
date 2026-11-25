@@ -25,9 +25,9 @@ class AnkiquestSettingsTest : RobolectricTest() {
     @Before
     fun configureAccount() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example/anki")
-            putString(Ankiquest.PREF_USER, "cerro")
-            putString(Ankiquest.PREF_TOKEN, "saved-test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example/anki")
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "saved-test-token")
         }
     }
 
@@ -40,9 +40,9 @@ class AnkiquestSettingsTest : RobolectricTest() {
         every { changingPreferences.all } answers {
             val captured = preferences.all
             preferences.edit {
-                putString(Ankiquest.PREF_URL, "https://different.example")
-                putString(Ankiquest.PREF_USER, "hill")
-                putString(Ankiquest.PREF_TOKEN, "different-server-secret")
+                putString(AnkiquestPreferences.PREF_URL, "https://different.example")
+                putString(AnkiquestPreferences.PREF_USER, "hill")
+                putString(AnkiquestPreferences.PREF_TOKEN, "different-server-secret")
             }
             captured
         }
@@ -106,9 +106,9 @@ class AnkiquestSettingsTest : RobolectricTest() {
     @Test
     fun `a deck's menu offers telling friends only to a signed-in player`() {
         AnkiDroidApp.sharedPrefs().edit {
-            remove(Ankiquest.PREF_URL)
-            remove(Ankiquest.PREF_USER)
-            remove(Ankiquest.PREF_TOKEN)
+            remove(AnkiquestPreferences.PREF_URL)
+            remove(AnkiquestPreferences.PREF_USER)
+            remove(AnkiquestPreferences.PREF_TOKEN)
         }
         assertFalse(AnkiquestDeckShare.available())
         assertFalse(
@@ -116,9 +116,9 @@ class AnkiquestSettingsTest : RobolectricTest() {
                 DeckPickerMenuContentProvider.createOptionsList(isDynamic = false, hasBuriedInDeck = false),
         )
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         assertTrue(AnkiquestDeckShare.available())
         assertTrue(

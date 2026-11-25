@@ -28,6 +28,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** The alert action and its Undo stay visible on narrow screens and at large text sizes. */
 class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
@@ -43,8 +44,8 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
     @Before
     fun prepare() {
         val account = HomeAccount("https://quest.example.test", "hill", "visual-test-token")
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         val completion =
             AnkiquestFeed.item(
@@ -56,7 +57,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
                     .put("sender", "cerro")
                     .put("kind", "completion"),
             )!!
-        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
         coEvery { AnkiquestFeed.page(account, any(), any(), any()) } returns
             page.copy(items = listOf(completion), attention = emptyList())
         val repository = mockk<SubscriptionRepository>()
@@ -68,7 +69,7 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestSubscriptions, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -96,11 +97,11 @@ class AnkiquestDeckAlertsScreenshotTest : ScreenshotTest() {
             )
         advanceRobolectricLooperUntil {
             !screen.findViewById<View>(R.id.aq_feed_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_friends_feed_loading).isVisible
+                !screen.findViewById<View>(AnkiquestR.id.aq_friends_feed_loading).isVisible
         }
         val stop =
             screen.window.decorView.allViews.filterIsInstance<TextView>().first {
-                it.text.toString() == screen.getString(R.string.aq_deck_alerts_stop, "cerro")
+                it.text.toString() == screen.getString(AnkiquestR.string.aq_deck_alerts_stop, "cerro")
             }
         val scroll = screen.findViewById<NestedScrollView>(R.id.aq_feed_scroll)
         val bounds = Rect(0, 0, stop.width, stop.height)

@@ -9,8 +9,8 @@ import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.chip.Chip
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,13 +33,14 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
 class AnkiquestFriendsSectionsTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
     private var account: HomeAccount? = identity
-    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE)).copy(attention = emptyList())
+    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE)).copy(attention = emptyList())
     private val board =
         AnkiquestBoards.parseLeaderboard(
             JSONArray().put(AnkiquestBoardsTest.row("cerro", 40, 5)),
@@ -48,8 +49,16 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("friends unavailable")
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns page
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
@@ -61,7 +70,15 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestFeed, AnkiquestBoards, AnkiquestAvatars, AnkiquestShare)
+        unmockkObject(
+            AnkiquestHomeData,
+            AnkiquestSocial,
+            AnkiquestFeed,
+            AnkiquestBoards,
+            AnkiquestAvatars,
+            AnkiquestShare,
+            HomeAccount.Companion,
+        )
     }
 
     @Test
@@ -99,7 +116,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
         screen.click(R.string.ankiquest_dashboard_title)
         assertFalse(screen.findViewById<View>(R.id.aq_friends_board_content).isVisible)
         screen.click(R.string.ankiquest_dashboard_title)
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         awaitSections(screen)
         controller.recreate()
         awaitSections(controller.get())
@@ -149,7 +166,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
         screen.click(R.string.aq_feed_messages)
         screen.click(R.string.aq_feed_unread_only)
         screen.click(R.string.aq_home_activity)
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         awaitSections(screen)
         screen.click(R.string.aq_home_activity)
         controller.recreate()
@@ -201,7 +218,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
         screen.click(R.string.aq_feed_unread_only)
         val pending = CompletableDeferred<AnkiquestFeed.Page>()
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } coAnswers { withContext(NonCancellable) { pending.await() } }
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         advanceRobolectricLooper()
         try {
             val next = identity.copy(user = "other", token = "other-token")
@@ -256,12 +273,12 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
 
     private fun launch(intent: Intent = AnkiquestFriendsActivity.intent(targetContext)) =
         startActivityControllerNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, intent).also {
-            advanceRobolectricLooperUntil { !it.get().findViewById<View>(R.id.aq_feed_loading).isVisible }
+            advanceRobolectricLooperUntil { !it.get().findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         }
 
     private fun awaitSections(screen: AnkiquestFriendsActivity) {
         advanceRobolectricLooperUntil {
-            listOf(R.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading).none {
+            listOf(AnkiDroidR.id.aq_feed_loading, R.id.aq_friends_feed_loading, R.id.aq_friends_board_loading).none {
                 assertNotNull(screen.findViewById<View>(it)).isVisible
             }
         }

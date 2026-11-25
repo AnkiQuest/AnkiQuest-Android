@@ -48,8 +48,8 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, Ankiquest)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, Ankiquest, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
         coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
     }
@@ -57,7 +57,7 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, Ankiquest)
+        unmockkObject(AnkiquestHomeData, Ankiquest, HomeAccount.Companion)
     }
 
     @Test
@@ -138,7 +138,7 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
         screen.setContentView(FrameLayout(screen))
         savePicker(screen)
         assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
-        assertEquals(screen.getString(com.ichi2.anki.R.string.ankiquest_share_failed), ShadowToast.getTextOfLatestToast())
+        assertEquals(screen.getString(com.ichi2.anki.ankiquest.ui.R.string.ankiquest_share_failed), ShadowToast.getTextOfLatestToast())
     }
 
     @Test
@@ -175,7 +175,7 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
         repeat(2) { undo.performClick() }
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
         coVerify(exactly = 2) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), identity) }
-        assertEquals(screen.getString(com.ichi2.anki.R.string.ankiquest_share_failed), ShadowToast.getTextOfLatestToast())
+        assertEquals(screen.getString(com.ichi2.anki.ankiquest.ui.R.string.ankiquest_share_failed), ShadowToast.getTextOfLatestToast())
     }
 
     @Test

@@ -6,8 +6,8 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -39,8 +39,8 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
@@ -68,7 +68,7 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides, HomeAccount.Companion)
     }
 
     @Test

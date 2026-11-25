@@ -38,6 +38,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -48,15 +49,23 @@ class AnkiquestTabBarTest : RobolectricTest() {
     fun prepareTabs() {
         setIntroductionSlidesShown(true)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, identity.server)
-            putString(Ankiquest.PREF_USER, identity.user)
-            putString(Ankiquest.PREF_TOKEN, identity.token)
+            putString(AnkiquestPreferences.PREF_URL, identity.server)
+            putString(AnkiquestPreferences.PREF_USER, identity.user)
+            putString(AnkiquestPreferences.PREF_TOKEN, identity.token)
         }
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(
+            AnkiquestHomeData,
+            AnkiquestCompanions,
+            AnkiquestSocial,
+            AnkiquestBoards,
+            AnkiquestFeed,
+            AnkiquestAvatars,
+            HomeAccount.Companion,
+        )
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject().put("level", 2)
-        coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
+        coEvery { AnkiquestCompanions.choice(identity) } throws IOException("offline")
         coEvery { AnkiquestSocial.overview(identity) } throws IOException("offline")
         coEvery { AnkiquestBoards.player(identity, any()) } throws IOException("offline")
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
@@ -67,7 +76,15 @@ class AnkiquestTabBarTest : RobolectricTest() {
 
     @After
     fun clearTabMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars)
+        unmockkObject(
+            AnkiquestHomeData,
+            AnkiquestCompanions,
+            AnkiquestSocial,
+            AnkiquestBoards,
+            AnkiquestFeed,
+            AnkiquestAvatars,
+            HomeAccount.Companion,
+        )
     }
 
     @Test
@@ -225,8 +242,8 @@ class AnkiquestTabBarTest : RobolectricTest() {
     @Test
     fun `Today avatar opens Me above Today and Back returns to it`() {
         val home = startRegularActivity<AnkiquestHomeActivity>(AnkiquestHomeActivity.intent(targetContext))
-        val avatar = assertNotNull(home.findViewById<View>(R.id.aq_home_account))
-        assertEquals(home.getString(R.string.ankiquest_me), avatar.contentDescription)
+        val avatar = assertNotNull(home.findViewById<View>(AnkiquestR.id.aq_home_account))
+        assertEquals(home.getString(AnkiquestR.string.ankiquest_me), avatar.contentDescription)
         val node = avatar.createAccessibilityNodeInfo()
         assertEquals(android.widget.Button::class.java.name, node.className.toString())
         assertTrue(node.isClickable)
@@ -240,14 +257,14 @@ class AnkiquestTabBarTest : RobolectricTest() {
         val me = startRegularActivity<AnkiquestProfileActivity>(destination)
         assertNull(me.findViewById<View>(R.id.ankiquest_tab_bar))
         assertTrue(me.findViewById<View>(R.id.aq_board_back).isVisible)
-        assertEquals(home.getString(R.string.ankiquest_me), me.findViewById<android.widget.TextView>(R.id.aq_board_title).text)
+        assertEquals(home.getString(AnkiquestR.string.ankiquest_me), me.findViewById<android.widget.TextView>(R.id.aq_board_title).text)
         me.onBackPressedDispatcher.onBackPressed()
         assertTrue(me.isFinishing)
     }
 
     /** The visible controls of [screen] announced as going back. */
     private fun backControls(screen: Activity): List<View> {
-        val back = screen.getString(R.string.aq_feed_back)
+        val back = screen.getString(AnkiquestR.string.aq_feed_back)
         val found = mutableListOf<View>()
 
         fun visit(view: View) {

@@ -9,8 +9,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.allViews
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyAnkiActivity
 import io.mockk.coEvery
 import io.mockk.every
@@ -47,15 +47,15 @@ class AnkiquestShareSheetScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareSheet() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestSocial.overview(identity) } returns overview
     }
 
     @After
     fun cleanupSheet() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

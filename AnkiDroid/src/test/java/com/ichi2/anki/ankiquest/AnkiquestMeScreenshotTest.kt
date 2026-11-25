@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
@@ -23,6 +23,7 @@ import org.robolectric.RuntimeEnvironment
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 /** Me keeps its own Back action and Settings when the profile is unavailable. */
 class AnkiquestMeScreenshotTest : ScreenshotTest() {
@@ -38,8 +39,8 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
     @Before
     fun prepareMe() {
         val profile = AnkiquestBoards.parseProfile(JSONObject(AnkiquestBoardsTest.PROFILE))
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, identity.user) } returns
             AnkiquestBoards.PlayerPage(profile, own = true, wins = emptyList())
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
@@ -51,7 +52,7 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupMe() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, AnkiquestRecords, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -106,12 +107,12 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
     ) {
         val intent = destination?.let { AnkiquestMeSections.intent(targetContext, it) } ?: AnkiquestProfileActivity.intent(targetContext)
         val me = startRegularActivity<AnkiquestProfileActivity>(intent)
-        advanceRobolectricLooperUntil { !me.findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !me.findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
         advanceRobolectricLooperUntil {
             !me.findViewById<View>(R.id.aq_me_records_loading).isVisible && !me.findViewById<View>(R.id.aq_me_history_loading).isVisible
         }
-        assertEquals(me.getString(R.string.ankiquest_me), me.findViewById<TextView>(R.id.aq_board_title).text.toString())
-        assertTrue(me.findViewById<View>(R.id.aq_board_back).isVisible)
+        assertEquals(me.getString(R.string.ankiquest_me), me.findViewById<TextView>(AnkiDroidR.id.aq_board_title).text.toString())
+        assertTrue(me.findViewById<View>(AnkiDroidR.id.aq_board_back).isVisible)
         assertTrue(
             me.window.decorView.allViews
                 .filterIsInstance<TextView>()
@@ -128,7 +129,7 @@ class AnkiquestMeScreenshotTest : ScreenshotTest() {
                     me.findViewById<View>(contentId).parent as View
                 }
             val bounds = Rect(0, 0, section.width, section.height)
-            val scroll = me.findViewById<NestedScrollView>(R.id.aq_board_scroll)
+            val scroll = me.findViewById<NestedScrollView>(AnkiDroidR.id.aq_board_scroll)
             scroll.offsetDescendantRectToMyCoords(section, bounds)
             scroll.scrollTo(0, bounds.top)
             advanceRobolectricLooper()

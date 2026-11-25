@@ -13,7 +13,6 @@ import androidx.fragment.app.FragmentManager
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.compat.requireSerializableCompat
 import com.ichi2.anki.contextmenu.DeckPickerMenuContentProvider
@@ -24,6 +23,7 @@ import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.ext.requireLong
 import com.ichi2.anki.utils.ext.setFragmentResultListener
 import com.ichi2.utils.title
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 class DeckPickerContextMenu : AnalyticsDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -90,7 +90,7 @@ class DeckPickerContextMenu : AnalyticsDialogFragment() {
                     EDIT_DESCRIPTION -> getString(CommonString.edit_deck_description)
                     ADD_CARD -> TR.actionsAdd()
                     SCHEDULE_REMINDERS -> getString(CommonString.schedule_reminders_title)
-                    SHARE_WITH_FRIENDS -> getString(R.string.ankiquest_deck_menu_share)
+                    SHARE_WITH_FRIENDS -> getString(AnkiquestR.string.ankiquest_deck_menu_share)
                 }
             }
     }

@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 import com.ichi2.anki.common.android.R as CommonR
 
 @RunWith(RobolectricTestRunner::class)
@@ -70,7 +71,7 @@ class ReviewHeatmapViewTest {
         layout(view)
         val grid = view.findViewById<ReviewHeatmapGrid>(R.id.review_heatmap_grid)
         val host = assertNotNull(assertNotNull(grid.accessibilityNodeProvider).createAccessibilityNodeInfo(View.NO_ID))
-        assertEquals(context.getString(R.string.review_heatmap_title), host.contentDescription)
+        assertEquals(context.getString(AnkiquestR.string.review_heatmap_title), host.contentDescription)
     }
 
     @Test
@@ -173,7 +174,7 @@ class ReviewHeatmapViewTest {
         provider.performAction(beyondForecast.dayOfYear - 1, AccessibilityNodeInfoCompat.ACTION_CLICK, null)
         assertFalse(view.findViewById<View>(R.id.review_heatmap_view_cards).isEnabled)
         assertEquals(
-            context.getString(R.string.review_heatmap_forecast_unavailable),
+            context.getString(AnkiquestR.string.review_heatmap_forecast_unavailable),
             view.findViewById<TextView>(R.id.review_heatmap_selected_count).text.toString(),
         )
     }
@@ -204,7 +205,7 @@ class ReviewHeatmapViewTest {
         assertEquals(1, retries)
         view.setData(ReviewHeatmap.summarize(LocalDate.of(2024, 1, 1), emptyMap(), emptyMap()))
         assertEquals(
-            context.getString(R.string.review_heatmap_empty),
+            context.getString(AnkiquestR.string.review_heatmap_empty),
             view.findViewById<TextView>(R.id.review_heatmap_status).text.toString(),
         )
         assertEquals(View.VISIBLE, view.findViewById<View>(R.id.review_heatmap_calendar).visibility)

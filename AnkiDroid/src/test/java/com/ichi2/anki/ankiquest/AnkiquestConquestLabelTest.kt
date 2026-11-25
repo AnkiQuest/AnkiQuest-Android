@@ -25,7 +25,7 @@ class AnkiquestConquestLabelTest : RobolectricTest() {
             val template = if (case.isNull("template")) null else case.getString("template")
             assertEquals(
                 case.getString("expected"),
-                AnkiquestShare.suggestedLabel(case.getString("question"), fields, case.optBoolean("cloze"), template, names).orEmpty(),
+                AnkiquestCardLabels.suggestedLabel(case.getString("question"), fields, case.optBoolean("cloze"), template, names).orEmpty(),
                 case.getString("name"),
             )
         }

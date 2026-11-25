@@ -10,8 +10,8 @@ import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -33,18 +33,19 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
 class AnkiquestFeedActivityTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "member", "secret")
-    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
 
     @Before
     fun prepareFeed() {
-        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns page
         coEvery { AnkiquestFeed.markRead(identity, any()) } returns Unit
         coEvery { AnkiquestFeed.markAllRead(identity, any()) } returns Unit
@@ -55,7 +56,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
     }
 
     @Test
@@ -200,7 +201,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
             coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
             val feed = launch()
             feed
-                .findViewById<View>(R.id.aq_feed_content)
+                .findViewById<View>(AnkiDroidR.id.aq_feed_content)
                 .allViews
                 .filterIsInstance<TextView>()
                 .first { it.text.toString() == feed.getString(R.string.aq_friends_mute) }
@@ -298,7 +299,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     @Test
     fun `an older server's list has no filters or read state`() {
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
-            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedTest.LEGACY))
+            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedSamples.LEGACY))
         val feed = launch()
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_legacy)))
         assertFalse(feed.hasText(feed.getString(R.string.aq_feed_messages)))
@@ -321,7 +322,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the feed asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val feed = launch()
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_connect)))
         coVerify(exactly = 0) { AnkiquestFeed.page(any(), any(), any(), any()) }
@@ -342,7 +343,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         val feed = launch()
         feed.click(feed.getString(R.string.aq_feed_mark_all_read))
 
-        feed.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        feed.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_friends_feed_loading).isVisible }
         val markAll = feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_feed_mark_all_read) }
         assertFalse(markAll.isEnabled, "marking all read could be sent twice")

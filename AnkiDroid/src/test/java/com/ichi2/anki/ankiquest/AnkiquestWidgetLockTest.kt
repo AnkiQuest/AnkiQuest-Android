@@ -15,8 +15,8 @@ import androidx.core.widget.RemoteViewsCompat
 import androidx.core.widget.RemoteViewsCompat.RemoteCollectionItems
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import io.mockk.Runs
@@ -90,9 +90,9 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
                 TestResponse.json(body, headers = lock)
             }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, server.url)
-            putString(Ankiquest.PREF_USER, "aldanita")
-            putString(Ankiquest.PREF_TOKEN, "aldanita-token")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
+            putString(AnkiquestPreferences.PREF_USER, "aldanita")
+            putString(AnkiquestPreferences.PREF_TOKEN, "aldanita-token")
         }
     }
 

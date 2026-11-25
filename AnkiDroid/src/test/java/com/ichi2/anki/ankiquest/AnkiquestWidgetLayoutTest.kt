@@ -55,8 +55,8 @@ class AnkiquestWidgetLayoutTest(
         )
 
     private fun widgetLayout(): Element {
-        val path = "src/main/res/layout/$layoutName.xml"
-        val layout = listOf(File(path), File("AnkiDroid", path)).firstOrNull { it.isFile }
+        val path = "ankiquest-ui/src/main/res/layout/$layoutName.xml"
+        val layout = listOf(File("..", path), File(path)).firstOrNull { it.isFile }
         val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         return factory.newDocumentBuilder().parse(assertNotNull(layout, "Cannot locate $layoutName.xml")).documentElement
     }

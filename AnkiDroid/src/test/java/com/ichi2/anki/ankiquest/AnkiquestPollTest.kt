@@ -98,22 +98,22 @@ class AnkiquestPollTest : RobolectricTest() {
             AnkiquestTestServer { request ->
                 val path = request.path
                 if (path == "/api/avatars" && switchAccountDuringAvatars) {
-                    AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
                 }
                 if (path == "/api/avatars" && replaceBoardDuringAvatars) {
-                    val fetchedAt = cacheKey(AnkiquestPoll.PREF_CACHE_AT)
+                    val fetchedAt = cacheKey(AnkiquestWidget.PREF_CACHE_AT)
                     AnkiDroidApp.sharedPrefs().edit {
                         putLong(fetchedAt, AnkiDroidApp.sharedPrefs().getLong(fetchedAt, 0) + 1)
-                        putString(cacheKey(AnkiquestPoll.PREF_CACHE), "[{\"user\":\"newer\"}]")
+                        putString(cacheKey(AnkiquestWidget.PREF_CACHE), "[{\"user\":\"newer\"}]")
                     }
                 }
                 val inbox = path.startsWith("/api/notifications/")
                 val reminders = path == "/api/community/reminders/cerro"
                 if (reminders && reminderReply == ReminderReply.CHANGE_ACCOUNT) {
-                    AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "changed-token") }
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "changed-token") }
                 }
                 if (inbox && switchAccountDuringInbox) {
-                    AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+                    AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
                 }
                 val status =
                     when {
@@ -136,13 +136,13 @@ class AnkiquestPollTest : RobolectricTest() {
             }
         url = server.url
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, url)
-            putString(Ankiquest.PREF_USER, "cerro")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, url)
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
     }
 
-    private fun cacheKey(base: String) = scopedKey(base, AnkiquestHomeData.account()?.scope)
+    private fun cacheKey(base: String) = scopedKey(base, HomeAccount.current()?.scope)
 
     @Test
     @Config(sdk = [32])
@@ -246,7 +246,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
             val capabilities = requests.indexOf("/api/capabilities")
             assertTrue(capabilities > requests.indexOfFirst { it.startsWith("/api/notifications/") })
-            assertFalse(AnkiquestCapabilities.has(assertNotNull(AnkiquestHomeData.account()), "cookie_session"))
+            assertFalse(AnkiquestCapabilities.has(assertNotNull(HomeAccount.current()), "cookie_session"))
             server.requests.clear()
             assertEquals(Result.success(), worker().doWork())
             assertTrue(requests.none { it == "/api/capabilities" }, "fresh capabilities are not asked again")
@@ -271,9 +271,9 @@ class AnkiquestPollTest : RobolectricTest() {
             val synced = assertNotNull(AnkiquestNotificationHealth.lastSuccessfulSync())
             assertTrue(synced > 0L)
 
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
             assertNull(AnkiquestNotificationHealth.lastSuccessfulSync())
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "cerro") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "cerro") }
             assertEquals(synced, AnkiquestNotificationHealth.lastSuccessfulSync())
         }
 
@@ -289,7 +289,7 @@ class AnkiquestPollTest : RobolectricTest() {
     fun `corrupt cached leaderboard does not prevent inbox delivery`() =
         runBlocking {
             leaderboardStatus = 503
-            AnkiDroidApp.sharedPrefs().edit { putString(cacheKey(AnkiquestPoll.PREF_CACHE), "invalid JSON") }
+            AnkiDroidApp.sharedPrefs().edit { putString(cacheKey(AnkiquestWidget.PREF_CACHE), "invalid JSON") }
 
             assertEquals(Result.success(), worker().doWork())
 
@@ -363,7 +363,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `missing token skips inbox and succeeds without retry`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
 
             assertEquals(Result.success(), worker().doWork())
 
@@ -374,12 +374,12 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `inbox response retains its captured account when settings change`() =
         runBlocking {
-            val expectedScope = requireNotNull(AnkiquestHomeData.account()).scope
+            val expectedScope = requireNotNull(HomeAccount.current()).scope
             switchAccountDuringInbox = true
 
             assertEquals(Result.success(), worker().doWork())
 
-            assertEquals("other", Ankiquest.player())
+            assertEquals("other", HomeAccount.current()?.user)
             verify(exactly = 1) { AnkiquestNotifier.onDeckCompletions(any(), "$url/cerro", any(), expectedScope) }
             verify(exactly = 0) { AnkiquestNotifier.onDeckCompletions(any(), "$url/other", any(), any()) }
             assertTrue(requests.none { it == "/api/avatars" })
@@ -406,7 +406,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `photo failure happens after inbox delivery and cannot request retry`() =
         runBlocking {
-            val expectedScope = requireNotNull(AnkiquestHomeData.account()).scope
+            val expectedScope = requireNotNull(HomeAccount.current()).scope
             avatarStatus = 503
 
             assertEquals(Result.success(), worker().doWork())
