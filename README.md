@@ -55,7 +55,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 <div style="display:flex;">
 
 1. Create an account on an AnkiQuest server, such as [ankiquest.org](https://ankiquest.org). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
-2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
+2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest): `AnkiQuest.apk`, or the smaller `AnkiQuest-slim.apk`, which downloads the companions in the app (**Settings → ankiquest → Study companion → Download companions**). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
@@ -92,6 +92,8 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 ./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'
 node --test .github/tests/*.test.cjs
 ```
+
+Release builds bundle the companion packs of the AnkiQuest-Art release that `ankiquest-art.json` pins ([format](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/docs/packs.md)), downloaded once and checked against the pin's SHA-256; `-PankiquestArt=download` builds the slim APK without them. Debug builds carry none.
 
 AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 

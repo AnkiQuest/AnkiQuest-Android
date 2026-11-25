@@ -98,6 +98,17 @@ jobs:
             -PupstreamCommit=${{ steps.upstream.outputs.sha }}
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
+      # The slim APK: the same build without the bundled companion packs, which it downloads in the app.
+      # Only assets differ, so Gradle reuses the compiled code of the full build.
+      - name: Assemble slim
+        run: |
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestArt=download \
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
+            -PankiquestRelease=${{ steps.release.outputs.number }} \
+            -PankiquestNightly=${{ steps.release.outputs.nightly }} \
+            -PupstreamCommit=${{ steps.upstream.outputs.sha }}
+          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest-slim.apk
+
       - name: Sign with the AnkiQuest release key
         id: sign
         env:
@@ -114,13 +125,17 @@ jobs:
           fi
           echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          "$apksigner" sign \
-            --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
-            --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
-            --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
-            AnkiQuest.apk
+          for apk in AnkiQuest.apk AnkiQuest-slim.apk; do
+            "$apksigner" sign \
+              --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
+              --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
+              --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
+              "$apk"
+          done
           rm -f "$RUNNER_TEMP/ankiquest.jks"
-          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiQuest.apk | grep -q "CN=AnkiQuest"
+          for apk in AnkiQuest.apk AnkiQuest-slim.apk; do
+            "$apksigner" verify --min-sdk-version 28 --print-certs "$apk" | grep -q "CN=AnkiQuest"
+          done
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Version code
@@ -141,7 +156,9 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ankiquest
-          path: AnkiQuest.apk
+          path: |
+            AnkiQuest.apk
+            AnkiQuest-slim.apk
           if-no-files-found: error
 
       - name: Publish release
@@ -151,7 +168,7 @@ jobs:
         run: |
           # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk AnkiQuest-slim.apk \
             --title "AnkiQuest ${{ steps.release.outputs.number }}" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
@@ -170,7 +187,7 @@ jobs:
             > nightly.json
           gh release delete nightly --yes --cleanup-tag || true
           cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk nightly.json \
+          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk AnkiQuest-slim.apk nightly.json \
             --prerelease --latest=false --target "$GITHUB_SHA" \
             --title "AnkiQuest nightly" \
             --notes "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."

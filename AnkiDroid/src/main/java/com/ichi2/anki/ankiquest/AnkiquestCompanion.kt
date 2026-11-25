@@ -265,6 +265,56 @@ internal object AnkiquestCompanion {
             R.drawable.aki_leech to AnkiquestPose.LEECH_DEFEATED,
         )
 
+    /**
+     * The AnkiQuest-Art name (pose, moment picture or launcher icon) of each of Aki's pictures, which
+     * every companion's pack is asked for; the pack falls back where it has no picture of that name.
+     */
+    private val artNames =
+        mapOf(
+            R.drawable.aki_face to "face",
+            R.drawable.aki_sleeping to "asleep",
+            R.drawable.aki_celebrate to "happy",
+            R.drawable.aki_streak to "streak",
+            R.drawable.aki_streak_hot to "streak_hot",
+            R.drawable.aki_streak_blazing to "streak_blazing",
+            R.drawable.aki_streak_legend to "streak_legend",
+            R.drawable.aki_streak_milestone to "streak_milestone",
+            R.drawable.aki_sad to "sad",
+            R.drawable.aki_hopeful to "hopeful",
+            R.drawable.aki_frozen to "frozen",
+            R.drawable.aki_neglected to "neglected",
+            R.drawable.aki_welcome to "welcome",
+            R.drawable.aki_review to "review",
+            R.drawable.aki_winner to "winner",
+            R.drawable.aki_leech to "leech_defeated",
+            R.drawable.aki_at_risk to "at_risk",
+            R.drawable.aki_freeze to "freeze",
+            R.drawable.aki_freeze_used to "freeze_used",
+            R.drawable.aki_comeback to "comeback",
+            R.drawable.aki_minimum to "minimum",
+            R.drawable.aki_achievement to "achievement",
+            R.drawable.aki_goal to "goal",
+            R.drawable.aki_deck_conquered to "deck_conquered",
+            R.drawable.aki_level_up to "level_up",
+            R.drawable.aki_backlog to "backlog",
+            R.drawable.aki_nudge to "nudge",
+            R.drawable.aki_challenge to "challenge",
+            R.drawable.aki_challenge_won to "challenge_won",
+            R.drawable.aki_challenge_lost to "challenge_lost",
+            R.drawable.aki_place_1 to "place_1",
+            R.drawable.aki_place_2 to "place_2",
+            R.drawable.aki_place_3 to "place_3",
+            R.drawable.aki_icon_happy to "icon_happy",
+            R.drawable.aki_icon_worried to "icon_worried",
+            R.drawable.aki_icon_frozen to "icon_frozen",
+            R.drawable.aki_icon_sleepy to "icon_sleepy",
+        )
+
+    /** The Art name of [aki], one of Aki's pictures, or null when it is none. */
+    fun artName(
+        @DrawableRes aki: Int,
+    ): String? = artNames[aki]
+
     /** Ankilope's version of Aki's pictures that are scenes rather than poses. */
     private val ankilopeScenes =
         mapOf(
@@ -311,9 +361,9 @@ internal object AnkiquestCompanion {
     }
 
     /**
-     * [choice]'s version of [aki], decoded for [size] pixels, or null when it cannot be decoded.
-     * Every surface draws the companion through here, so the cow's colours apply everywhere,
-     * RemoteViews included.
+     * [choice]'s version of [aki], decoded for [size] pixels, or null when it cannot be decoded: from
+     * [choice]'s pack when one is installed, else from the drawables. Every surface draws the
+     * companion through here, so the cow's colours apply everywhere, RemoteViews included.
      */
     fun bitmap(
         context: Context,
@@ -321,6 +371,11 @@ internal object AnkiquestCompanion {
         size: Int,
         choice: Choice = choice(),
     ): Bitmap? {
+        // An installed pack draws the companion as AnkiQuest-Art does; the built-in drawables are the fallback.
+        val packed = artNames[aki]?.let { AnkiquestArt.packed(context, choice.id, it, size) }
+        if (packed != null) {
+            return packed
+        }
         val art = resource(aki, choice)
         if (choice != Choice.COW) {
             return AnkiquestArt.bitmap(context, art, size)

@@ -63,6 +63,39 @@ internal object AnkiquestArt {
     }
 
     /**
+     * Companion [id]'s picture for the Art name [name] from its installed pack, decoded like [bitmap];
+     * null when no pack shows [id] or the picture cannot be decoded. The pack resolves fallbacks.
+     */
+    fun packed(
+        context: Context,
+        id: String,
+        name: String,
+        size: Int,
+    ): Bitmap? {
+        if (size <= 0) return null
+        val library = AnkiquestPacks.library(context)
+        val pack = library.companion(id) ?: return null
+
+        // Keyed by the pack's origin and version, so a newly downloaded pack is decoded afresh.
+        val key = "pack:${pack.origin}:$id:${pack.info.version}:$name:$size"
+        cache.get(key)?.let { return it }
+        val bytes = library.picture(id, name) ?: return null
+        val bounds =
+            BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val edge = minOf(bounds.outWidth, bounds.outHeight)
+        val options =
+            BitmapFactory.Options().apply {
+                inSampleSize = if (edge > 0) sampleSize(edge, size) else 1
+            }
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
+        cache.put(key, decoded)
+        return decoded
+    }
+
+    /**
      * [bitmap] drawn through [filter], cached under [name] next to the plain bitmap. For art
      * recoloured on the phone; RemoteViews cannot apply a filter, so the colours are drawn in.
      */

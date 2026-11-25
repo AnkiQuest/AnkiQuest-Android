@@ -13,4 +13,14 @@
     <com.ichi2.anki.preferences.AnkiquestCompanionPicker
         android:key="@string/ankiquest_companion_picker_key"
         android:persistent="false" />
+    <!-- Companion packs from AnkiQuest-Art releases and from the player's files. -->
+    <Preference
+        android:key="@string/ankiquest_packs_download_key"
+        android:persistent="false"
+        android:title="@string/ankiquest_packs_download" />
+    <Preference
+        android:key="@string/ankiquest_packs_import_key"
+        android:persistent="false"
+        android:title="@string/ankiquest_packs_import"
+        android:summary="@string/ankiquest_packs_import_summary" />
 </PreferenceScreen>

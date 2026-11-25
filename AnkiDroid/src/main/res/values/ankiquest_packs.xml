@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Companion packs (AnkiQuest-Art docs/packs.md): downloading the latest ones and importing a player's own. Same wording as the desktop add-on. -->
+<resources>
+    <string name="ankiquest_packs_download_key" translatable="false">ankiquestPacksDownload</string>
+    <string name="ankiquest_packs_import_key" translatable="false">ankiquestPacksImport</string>
+    <string name="ankiquest_packs_download">Download companions</string>
+    <string name="ankiquest_packs_downloading">Checking for new companions…</string>
+    <plurals name="ankiquest_packs_installed">
+        <item quantity="one">%d companion installed. Tap to check for new ones.</item>
+        <item quantity="other">%d companions installed. Tap to check for new ones.</item>
+    </plurals>
+    <string name="ankiquest_packs_none">No companions downloaded yet. Tap to download them.</string>
+    <string name="ankiquest_packs_up_to_date">Companions are up to date.</string>
+    <string name="ankiquest_packs_downloaded">Downloaded: %1$s</string>
+    <string name="ankiquest_packs_download_failed">Could not download companions: %1$s</string>
+    <string name="ankiquest_packs_import">Import companion</string>
+    <string name="ankiquest_packs_import_summary">Add a companion pack (.zip) from your files. It shows on this device only.</string>
+    <string name="ankiquest_packs_imported">Imported %1$s.</string>
+    <string name="ankiquest_packs_refused">This companion pack was refused: %1$s</string>
+</resources>

@@ -2,6 +2,7 @@
 @file:Suppress("DEPRECATION")
 
 import com.android.build.api.variant.FilterConfiguration.FilterType
+import com.ichi2.anki.gradle.BundleAnkiquestPacks
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.addAnkiBackendDependencies
@@ -426,6 +427,26 @@ if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "q
     androidComponents.onVariants { variant ->
         variant.sources.res?.addStaticSourceDirectory("src/quest/res")
         variant.sources.manifests.addStaticManifestFile("src/quest/AndroidManifest.xml")
+    }
+}
+
+// AnkiQuest: release builds carry the companion packs of the pinned Art release (-PankiquestArt=bundled,
+// the default); the slim APK (-PankiquestArt=download) and debug builds carry none and download them in the app.
+val ankiquestArt = providers.gradleProperty("ankiquestArt").getOrElse("bundled")
+if (ankiquestArt !in listOf("bundled", "download")) {
+    throw GradleException("Unsupported -PankiquestArt value '$ankiquestArt'. Expected bundled or download")
+}
+if (ankiquestArt == "bundled") {
+    val ankiquestArtPin = rootProject.layout.projectDirectory.file("ankiquest-art.json")
+    val ankiquestArtCache = File(gradle.gradleUserHomeDir, "caches/ankiquest-art")
+    androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
+        // One task per variant: AGP gives each generated source directory its own output folder.
+        val packs =
+            tasks.register<BundleAnkiquestPacks>("bundle${variant.name.replaceFirstChar { it.uppercase() }}AnkiquestPacks") {
+                pin.set(ankiquestArtPin)
+                cacheDir.set(ankiquestArtCache)
+            }
+        variant.sources.assets?.addGeneratedSourceDirectory(packs, BundleAnkiquestPacks::outputDir)
     }
 }
 

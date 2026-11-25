@@ -45,12 +45,16 @@ class AnkiquestCompanionFragment : SettingsFragment() {
     /** The scope of the account whose choice and status the screen shows; null when signed out. */
     private var owner: String? = null
 
+    /** The download and import entries for companion packs. */
+    private val packs = AnkiquestPackSettings(this)
+
     /** Taps toward a chibi, and the hint shown for the last one, replaced by the next. */
     private var chibiTaps = AnkiquestChibi.Taps()
     private var hint: Toast? = null
 
     override fun initSubscreen() {
         picker().setOnTap(::tap)
+        packs.attach()
         owner = signedIn()?.scope
         render()
         refresh()
