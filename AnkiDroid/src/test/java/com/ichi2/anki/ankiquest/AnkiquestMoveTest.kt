@@ -4,13 +4,17 @@ package com.ichi2.anki.ankiquest
 
 import android.annotation.SuppressLint
 import android.app.role.RoleManager
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestMove.Role
 import com.ichi2.anki.ankiquest.AnkiquestMove.Verdict
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -40,6 +44,19 @@ class AnkiquestMoveTest : RobolectricTest() {
     }
 
     @Test
+    @Config(sdk = [27])
+    fun `matching legacy signatures do not allow a settings transfer on Android 8`() {
+        val packages = mockk<PackageManager>()
+        every { packages.checkSignatures(AnkiquestMove.NEW_PACKAGE, AnkiquestMove.OLD_PACKAGE) } returns PackageManager.SIGNATURE_MATCH
+        val bridge = mockk<Context>()
+        every { bridge.packageName } returns AnkiquestMove.OLD_PACKAGE
+        every { bridge.packageManager } returns packages
+        every { bridge.checkCallingPermission(AnkiquestMove.PERMISSION) } returns PackageManager.PERMISSION_GRANTED
+
+        assertEquals(Verdict.WRONG_SIGNATURE, AnkiquestMove.verdict(bridge, AnkiquestMove.NEW_PACKAGE))
+    }
+
+    @Test
     fun `a caller other than the new package is refused`() {
         for (caller in listOf(
             null,
@@ -56,10 +73,7 @@ class AnkiquestMoveTest : RobolectricTest() {
 
     @Test
     fun `the new package signed with another key is refused`() {
-        val mismatches = listOf(PackageManager.SIGNATURE_NO_MATCH, PackageManager.SIGNATURE_UNKNOWN_PACKAGE)
-        for (answer in mismatches) {
-            assertEquals(Verdict.WRONG_SIGNATURE, verdict(signature = answer), answer.toString())
-        }
+        assertEquals(Verdict.WRONG_SIGNATURE, verdict(trustedSigners = false))
     }
 
     @Test
@@ -99,14 +113,15 @@ class AnkiquestMoveTest : RobolectricTest() {
         assertTrue("""android:exported="true"""" in provider, provider)
         assertTrue("""android:permission="${AnkiquestMove.PERMISSION}"""" in provider, provider)
         assertTrue("""<package android:name="${AnkiquestMove.OLD_PACKAGE}" />""" in manifest, "the new app must see the old package")
+        assertTrue("""<package android:name="${AnkiquestMove.NEW_PACKAGE}" />""" in manifest, "the old app checks the new signer")
         assertEquals("${AnkiquestMove.OLD_PACKAGE}.ankiquestmove", AnkiquestMove.AUTHORITY)
     }
 
     private fun verdict(
         role: Role = Role.OLD,
         caller: String? = AnkiquestMove.NEW_PACKAGE,
-        signature: Int = PackageManager.SIGNATURE_MATCH,
+        trustedSigners: Boolean = true,
         permission: Int = PackageManager.PERMISSION_GRANTED,
         roles: Set<String> = emptySet(),
-    ): Verdict = AnkiquestMove.verdict(role, caller, { signature }, { permission }, { roles })
+    ): Verdict = AnkiquestMove.verdict(role, caller, { trustedSigners }, { permission }, { roles })
 }

@@ -4,8 +4,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!--
-        Moving from com.ichi2.anki.quest to the new package (AnkiquestMove). Both apps declare the
-        permission; signature level means only apps signed with the AnkiQuest key hold it.
+        Moving from com.ichi2.anki.quest to the new package (AnkiquestMove). The old app declares the
+        signature permission and exposes the provider. The new app only requests the permission.
     -->
     <permission
         android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE"
@@ -13,6 +13,7 @@
     <uses-permission android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
     <queries>
         <package android:name="com.ichi2.anki.quest" />
+        <package android:name="org.ankiquest.ankidroid" />
     </queries>
 
     <!-- AnkiquestUpdater installs downloaded releases -->

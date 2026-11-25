@@ -135,6 +135,9 @@
     <string name="ankiquest_update_later">@string/button_backup_later</string>
     <string name="ankiquest_update_downloading">Downloading… %1$d%%</string>
     <string name="ankiquest_update_failed">The update could not be downloaded. It will be offered again later.</string>
+    <string name="ankiquest_moved_title">AnkiQuest moved to a new app</string>
+    <string name="ankiquest_moved_message">Sync, then install the new app from the release page. Your data comes back after you sign in and sync there.</string>
+    <string name="ankiquest_moved_open">Open release page</string>
     <!-- Translations for the separately submitted crop and contextual-reply PRs. -->
     <string name="ankiquest_avatar_crop_hint" tools:ignore="UnusedResources">Drag to move your picture. Pinch or use the slider to zoom.</string>
     <string name="ankiquest_avatar_zoom" tools:ignore="UnusedResources">Zoom</string>

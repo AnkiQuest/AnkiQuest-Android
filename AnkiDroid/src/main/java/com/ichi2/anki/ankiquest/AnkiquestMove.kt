@@ -9,6 +9,10 @@ import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
+import com.ichi2.anki.compat.CompatHelper.Companion.getPackageInfoCompat
+import com.ichi2.anki.compat.GET_SIGNING_CERTIFICATES_L
+import com.ichi2.anki.compat.PackageInfoFlagsCompat
+import java.security.MessageDigest
 
 /**
  * Moving from the old package, `com.ichi2.anki.quest`, to the new one, `org.ankiquest.ankidroid`.
@@ -24,8 +28,11 @@ internal object AnkiquestMove {
     /** The old app's provider: `${applicationId}.ankiquestmove` in src/quest/AndroidManifest.xml. */
     const val AUTHORITY = "$OLD_PACKAGE.ankiquestmove"
 
-    /** Both apps declare this signature permission, so only apps signed with the AnkiQuest key hold it. */
+    /** The old app declares this signature permission; the new app requests it. */
     const val PERMISSION = "$OLD_PACKAGE.permission.ANKIQUEST_MOVE"
+
+    /** The current project signer, as documented in the README's APK verification section. */
+    private const val RELEASE_SHA256 = "b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d"
 
     /** The provider's only `call` method; its answer holds the payload under [KEY_PAYLOAD]. */
     const val METHOD_EXPORT = "export"
@@ -70,14 +77,14 @@ internal object AnkiquestMove {
      * this repeats the check in code, names the one package allowed to ask, and stops serving
      * while the old app holds a sensitive role, which no AnkiQuest build asks for.
      *
-     * @param signatures [PackageManager.checkSignatures] of a package against the running app
+     * @param trustedSigners whether both apps have the current release signer
      * @param permission [Context.checkCallingPermission] of [PERMISSION]
      * @param roles the sensitive roles the running app holds
      */
     fun verdict(
         role: Role,
         caller: String?,
-        signatures: (String) -> Int,
+        trustedSigners: (String) -> Boolean,
         permission: () -> Int,
         roles: () -> Set<String>,
     ): Verdict {
@@ -87,7 +94,7 @@ internal object AnkiquestMove {
         if (caller != NEW_PACKAGE) {
             return Verdict.WRONG_PACKAGE
         }
-        if (signatures(caller) != PackageManager.SIGNATURE_MATCH) {
+        if (!trustedSigners(caller)) {
             return Verdict.WRONG_SIGNATURE
         }
         if (permission() != PackageManager.PERMISSION_GRANTED) {
@@ -107,7 +114,7 @@ internal object AnkiquestMove {
         verdict(
             role = Role.of(context.packageName),
             caller = caller,
-            signatures = { context.packageManager.checkSignatures(it, context.packageName) },
+            trustedSigners = { trustedPair(context, it) },
             permission = { context.checkCallingPermission(PERMISSION) },
             roles = { heldRoles(context) },
         )
@@ -146,10 +153,37 @@ internal object AnkiquestMove {
         if (provider.packageName != OLD_PACKAGE) {
             return OldApp.MISSING
         }
-        // An app of another signer could hold the old package name; its settings are not taken.
-        if (packages.checkSignatures(OLD_PACKAGE, context.packageName) != PackageManager.SIGNATURE_MATCH) {
+        if (!trustedPair(context, OLD_PACKAGE) || context.checkSelfPermission(PERMISSION) != PackageManager.PERMISSION_GRANTED) {
             return OldApp.MISSING
         }
         return OldApp.READY
+    }
+
+    private fun trustedPair(
+        context: Context,
+        other: String,
+    ): Boolean {
+        // Android 7 and 8 see the public fallback key on the old package. They cannot verify a move.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return false
+        }
+        val packages = context.packageManager
+        return hasReleaseSigner(packages, context.packageName) && hasReleaseSigner(packages, other)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun hasReleaseSigner(
+        packages: PackageManager,
+        name: String,
+    ): Boolean {
+        val info =
+            try {
+                packages.getPackageInfoCompat(name, PackageInfoFlagsCompat.of(GET_SIGNING_CERTIFICATES_L))
+            } catch (_: PackageManager.NameNotFoundException) {
+                return false
+            }
+        // The old APK includes the fallback key in its history. Only the current signer counts.
+        val signer = info?.signingInfo?.apkContentsSigners?.singleOrNull() ?: return false
+        return MessageDigest.getInstance("SHA-256").digest(signer.toByteArray()).toHexString() == RELEASE_SHA256
     }
 }

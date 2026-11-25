@@ -118,6 +118,9 @@
     <string name="ankiquest_update_later">Más tarde</string>
     <string name="ankiquest_update_downloading">Descargando… %1$d%%</string>
     <string name="ankiquest_update_failed">No se pudo descargar la actualización. Se ofrecerá de nuevo más tarde.</string>
+    <string name="ankiquest_moved_title">AnkiQuest se ha trasladado a una nueva aplicación</string>
+    <string name="ankiquest_moved_message">Sincroniza y luego instala la nueva aplicación desde la página de la versión. Tus datos vuelven cuando inicies sesión y sincronices allí.</string>
+    <string name="ankiquest_moved_open">Abrir la página de la versión</string>
     <string name="ankiquest_nudge_alerts_title">Avisos de toques</string>
     <string name="ankiquest_deck_collapse">Contraer submazos</string>
     <string name="ankiquest_deck_expand">Expandir submazos</string>
