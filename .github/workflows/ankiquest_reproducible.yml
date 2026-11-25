@@ -69,6 +69,7 @@ jobs:
       # Full history, for the merge base with upstream below.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           path: ${{ matrix.path }}
           fetch-depth: 0
 
@@ -98,11 +99,13 @@ jobs:
       # runners compile everything themselves.
       - name: Assemble
         working-directory: ${{ matrix.path }}
+        env:
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
           quest=(--no-build-cache -Pankiquest -PcustomName="AnkiQuest"
-            -PupstreamCommit=${{ steps.upstream.outputs.sha }})
+            -PupstreamCommit="$UPSTREAM_SHA")
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestUpdates=github "${quest[@]}"
           ./gradlew :AnkiDroid:bundlePlayRelease -PankiquestUpdates=none "${quest[@]}"
           out="$GITHUB_WORKSPACE/out"

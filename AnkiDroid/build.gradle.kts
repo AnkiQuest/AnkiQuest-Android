@@ -2,6 +2,7 @@
 @file:Suppress("DEPRECATION")
 
 import com.android.build.api.variant.FilterConfiguration.FilterType
+import com.ichi2.anki.gradle.AnkiquestBrandingTask
 import com.ichi2.anki.gradle.UpstreamCommit
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
@@ -468,6 +469,19 @@ if (ankiquestUpdates.get() == "github") {
     androidComponents.onVariants { variant ->
         variant.sources.manifests.addStaticManifestFile("src/githubUpdates/AndroidManifest.xml")
     }
+}
+
+// AnkiQuest: upstream's visible strings that name AnkiDroid say AnkiQuest, in every build and
+// locale. Generated from common/android's strings at build time, so upstream merges bring no
+// conflicts and its translations need no copies; ankiquest-branding-keep.txt lists the exceptions.
+val ankiquestBranding =
+    tasks.register<AnkiquestBrandingTask>("ankiquestBranding") {
+        upstreamRes.set(rootProject.layout.projectDirectory.dir("common/android/src/main/res"))
+        keepFile.set(layout.projectDirectory.file("ankiquest-branding-keep.txt"))
+        output.set(layout.buildDirectory.dir("generated/ankiquest/branding"))
+    }
+androidComponents.onVariants { variant ->
+    variant.sources.res?.addGeneratedSourceDirectory(ankiquestBranding, AnkiquestBrandingTask::output)
 }
 
 androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->

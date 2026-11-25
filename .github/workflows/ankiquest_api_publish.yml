@@ -83,6 +83,9 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The last step pushes the api-v<version> tag.
+          persist-credentials: true # zizmor: ignore[artipacked]
 
       # The version job ran before this run waited; ask again now that no other run of this
       # version is publishing, and skip the upload and the tag if it released meanwhile
@@ -98,12 +101,12 @@ jobs:
           distribution: "jetbrains"
           java-version: "21"
 
+      # No Gradle cache, so nothing a cache entry holds can reach the published library.
       - name: Setup Gradle
         if: steps.released.outputs.publish == 'true'
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-provider: basic
-          cache-read-only: true
+          cache-disabled: true
 
       - name: Download Robolectric SDKs
         if: steps.released.outputs.publish == 'true'

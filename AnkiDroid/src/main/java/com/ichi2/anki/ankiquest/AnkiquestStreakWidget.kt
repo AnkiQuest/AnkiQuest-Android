@@ -304,7 +304,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val frozen = profile?.optInt("frozen_days") ?: 0
             // Until the server answers for a new day, a counted day carries into it: the streak waits.
             val today = day ?: carriedDay(own, row, now)
-            val mood = AnkiquestMood.of(today, frozen, goalState)
+            // The debug menu's overrides change only the player's own widget.
+            val debug = if (own) AnkiquestDebug.current() else AnkiquestDebug.Overrides.NONE
+            val mood = AnkiquestMood.today(today, frozen, goalState, debug)
 
             // Aki shows the mood when chosen; otherwise only the flame does.
             val companionVisible = AnkiquestCompanion.visible()
@@ -313,9 +315,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 val days = (if (day != null) streak else today?.streak) ?: 0
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
-                        AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now)
+                        AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now, debug)
                     } else {
-                        AnkiquestMood.pose(mood, days)
+                        AnkiquestMood.todayPose(mood, days, debug)
                     }
                 setCompanion(views, context, aki, companionPx(context, size, options))
             }
@@ -324,13 +326,15 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 R.id.ankiquest_streak_label,
                 language.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak ?: 0),
             )
-            val status =
+            val verdict =
                 when {
                     ownDay != null -> AnkiquestDay.words(language, ownDay)
                     board == null -> language.getString(R.string.ankiquest_widget_unconfigured)
                     me == null -> language.getString(R.string.ankiquest_streak_unknown)
                     else -> AnkiquestWidget.streakLabel(language, me, state)
                 }
+            // The debug menu's overrides are marked where the status is.
+            val status = listOfNotNull(AnkiquestDebug.marker(language, debug), verdict).joinToString(" · ")
             views.setTextViewText(R.id.ankiquest_streak_status, status)
             fitLegacyStatus(views, language, size, status)
             val progress = setMinimumProgress(views, language, day, status, size)

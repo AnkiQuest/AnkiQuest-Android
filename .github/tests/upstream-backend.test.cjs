@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-// AnkiQuest-Android uses only org.ankiquest backend artifacts, never upstream's (hill, 2026-11-21).
+// AnkiQuest-Android uses only org.ankiquest backend artifacts, never upstream's.
 const UPSTREAM_BACKEND_GROUP = "io.github.david-allison";
 
 // Files that name the group to reject it: this test and the Gradle resolution guard.

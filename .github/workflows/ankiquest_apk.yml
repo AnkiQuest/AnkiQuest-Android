@@ -44,10 +44,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
-      contents: write
+      contents: write # publishes the release and the nightly
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
@@ -57,9 +58,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # No Gradle cache: the release and the nightly are built from a clean
+      # cache, so nothing a cache entry holds can reach the published APK.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
-          cache-provider: basic
+          cache-disabled: true
 
       - name: Release number
         id: release
@@ -98,11 +101,11 @@ jobs:
         env:
           RELEASE: ${{ steps.release.outputs.number }}
           NIGHTLY: ${{ steps.release.outputs.nightly }}
-          UPSTREAM: ${{ steps.upstream.outputs.sha }}
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           echo "fatal_warnings=false" >> local.properties
           quest=(-Pankiquest -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE"
-            -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM")
+            -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM_SHA")
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestUpdates=github "${quest[@]}"
           ./gradlew :AnkiDroid:bundlePlayRelease -PankiquestUpdates=none "${quest[@]}"
           cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk AnkiQuest.apk
@@ -201,6 +204,7 @@ jobs:
 
       # The download list for the release notes and nightly.json, most common first.
       - name: Assets
+        id: assets
         run: |
           # org.ankiquest.ankidroid publishes no AnkiDroid-Quest.apk: that name is for updaters of
           # the old package, whose final release is quest-24. Its updater finds AnkiQuest.apk here
@@ -209,6 +213,11 @@ jobs:
           for file in "${files[@]}"; do
             jq -n --arg name "$file" --argjson size "$(stat -c %s "$file")" '{name: $name, size: $size}'
           done | jq -s . > assets.json
+          {
+            echo "files<<EOF"
+            printf '%s\n' "${files[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
           {
             echo
             echo "## Downloads"
@@ -260,16 +269,17 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/quest-')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE: ${{ steps.release.outputs.number }}
         run: |
           cat AnkiDroid/src/main/assets/ankiquest/release-notes.md downloads.md > notes.md
           gh release create "$GITHUB_REF_NAME" $(jq -r '.[].name' assets.json) \
-            --title "AnkiQuest ${{ steps.release.outputs.number }}" \
+            --title "AnkiQuest $RELEASE" \
             --notes-file notes.md
 
-      - name: Publish nightly
+      - name: Nightly manifest
+        id: nightly
         if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}
           NIGHTLY: ${{ steps.release.outputs.nightly }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
@@ -283,8 +293,14 @@ jobs:
             echo "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."
             cat downloads.md
           } > notes.md
-          gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly $(jq -r '.[].name' assets.json) nightly.json \
-            --prerelease --latest=false --target "$GITHUB_SHA" \
-            --title "AnkiQuest nightly" \
-            --notes-file notes.md
+
+      # Updates the release in place and retries the release API; see the action.
+      - name: Publish nightly
+        if: steps.nightly.outcome == 'success'
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/nightly-release@master
+        with:
+          title: AnkiQuest nightly
+          notes-file: notes.md
+          files: |
+            ${{ steps.assets.outputs.files }}
+            nightly.json

@@ -22,10 +22,14 @@ jobs:
           token: ${{ secrets.MACHINE_ACCOUNT_PAT }}
           ref: 'main'
           fetch-depth: 0
+          # A later step pushes i18n_sync with this token.
+          persist-credentials: true # zizmor: ignore[artipacked]
 
       - name: Credential Prep
+        env:
+          CROWDIN_APIv2_PAT: ${{ secrets.CROWDIN_APIv2_PAT }}
         run: |
-          echo "CROWDIN_APIv2_PAT=${{ secrets.CROWDIN_APIv2_PAT }}" >> $GITHUB_ENV
+          echo "CROWDIN_APIv2_PAT=$CROWDIN_APIv2_PAT" >> "$GITHUB_ENV"
         shell: bash
 
       - name: GIT Setup
@@ -56,7 +60,9 @@ jobs:
 
       - name: Await CrowdIn API Cooldown If Needed
         if: steps.calc_time.outputs.time_left > 0
-        run: sleep ${{ steps.calc_time.outputs.time_left }}
+        env:
+          TIME_LEFT: ${{ steps.calc_time.outputs.time_left }}
+        run: sleep "$TIME_LEFT"
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

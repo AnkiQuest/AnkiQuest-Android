@@ -43,38 +43,66 @@ function fakeBuild(t) {
 // release, quest-24.
 const names = ["AnkiQuest-arm64-v8a.apk", "AnkiQuest.apk", "AnkiQuest-armeabi-v7a.apk", "AnkiQuest-x86_64.apk", "AnkiQuest-x86.apk", "AnkiQuest.aab"];
 
-for (const channel of ["release", "nightly"]) {
-    test(channel + " publishes the new download names without the legacy alias", (t) => {
-        const { dir } = fakeBuild(t);
-        const bin = path.join(dir, "bin");
-        const capture = path.join(dir, "published");
-        const options = {
-            cwd: dir,
-            env: {
-                ...process.env,
-                PATH: bin + path.delimiter + process.env.PATH,
-                GH_CAPTURE: capture,
-                GITHUB_REF_NAME: "quest-25",
-                GITHUB_SHA: "synthetic-commit",
-                RELEASE: "25",
-                NIGHTLY: "3",
-                VERSION_CODE: "50025003",
-            },
-            encoding: "utf8",
-        };
-        execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Assets")], options);
-        const assets = JSON.parse(fs.readFileSync(path.join(dir, "assets.json"), "utf8"));
-        assert.deepEqual(assets.map(asset => asset.name), names);
-        assert.ok(!fs.existsSync(path.join(dir, legacyApk)), legacyApk + " belongs to the old package");
-
-        const publish = stepScript("Publish " + channel).replaceAll("$" + "{{ steps.release.outputs.number }}", "25");
-        execFileSync("bash", ["-euo", "pipefail", "-c", publish], options);
-        const args = fs.readFileSync(capture, "utf8").split("\0");
-        const create = args.lastIndexOf("create");
-        assert.ok(create >= 0, "A release must be created");
-        for (const name of names) {
-            assert.ok(args.slice(create).includes(name), name + " must be attached to the release");
-        }
-        assert.ok(!args.slice(create).includes(legacyApk), legacyApk + " must not be attached");
-    });
+// Runs the Assets step and returns its files output, as the nightly action receives it.
+function runAssets(t) {
+    const { dir } = fakeBuild(t);
+    const bin = path.join(dir, "bin");
+    const output = path.join(dir, "github-output");
+    fs.writeFileSync(output, "");
+    const options = {
+        cwd: dir,
+        env: {
+            ...process.env,
+            PATH: bin + path.delimiter + process.env.PATH,
+            GH_CAPTURE: path.join(dir, "published"),
+            GITHUB_OUTPUT: output,
+            GITHUB_REF_NAME: "quest-25",
+            GITHUB_SHA: "synthetic-commit",
+            RELEASE: "25",
+            NIGHTLY: "3",
+            VERSION_CODE: "50025003",
+        },
+        encoding: "utf8",
+    };
+    execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Assets")], options);
+    const assets = JSON.parse(fs.readFileSync(path.join(dir, "assets.json"), "utf8"));
+    assert.deepEqual(assets.map(asset => asset.name), names);
+    assert.ok(!fs.existsSync(path.join(dir, legacyApk)), legacyApk + " belongs to the old package");
+    const files = fs.readFileSync(output, "utf8").match(/^files<<EOF\n([\s\S]*?)EOF\n/m);
+    assert.ok(files, "Assets must output the file list");
+    return { dir, options, files: files[1].split("\n").filter(Boolean) };
 }
+
+test("release publishes the new download names without the legacy alias", (t) => {
+    const { dir, options } = runAssets(t);
+    const publish = stepScript("Publish release");
+    execFileSync("bash", ["-euo", "pipefail", "-c", publish], options);
+    const args = fs.readFileSync(path.join(dir, "published"), "utf8").split("\0");
+    const create = args.lastIndexOf("create");
+    assert.ok(create >= 0, "A release must be created");
+    for (const name of names) {
+        assert.ok(args.slice(create).includes(name), name + " must be attached to the release");
+    }
+    assert.ok(!args.slice(create).includes(legacyApk), legacyApk + " must not be attached");
+});
+
+test("nightly publishes the new download names without the legacy alias", (t) => {
+    const { dir, options, files } = runAssets(t);
+    assert.deepEqual(files, names);
+
+    // The manifest step writes nightly.json and the notes the action publishes.
+    execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Nightly manifest")], options);
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, "nightly.json"), "utf8"));
+    assert.deepEqual(manifest.assets.map(asset => asset.name), names);
+    assert.match(fs.readFileSync(path.join(dir, "notes.md"), "utf8"), /## Downloads/);
+
+    // The action gets the Assets list and nightly.json, nothing else.
+    const start = workflow.indexOf("      - name: Publish nightly\n");
+    assert.notEqual(start, -1, "Publish nightly");
+    const end = workflow.indexOf("\n      - ", start + 1);
+    const step = workflow.slice(start, end < 0 ? undefined : end);
+    assert.match(step, /uses: AnkiQuest\/AnkiQuest-Dev\/\.github\/actions\/nightly-release@master/);
+    assert.match(step, /notes-file: notes\.md/);
+    assert.match(step, /files: \|\n {12}\$\{\{ steps\.assets\.outputs\.files \}\}\n {12}nightly\.json\n/);
+    assert.doesNotMatch(step, new RegExp(legacyApk.replace(".", "\\.")));
+});
