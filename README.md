@@ -66,16 +66,14 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 
 ### Moving from com.ichi2.anki.quest
 
-Earlier releases were the package `com.ichi2.anki.quest`. AnkiDroid's maintainers ask forks not to use AnkiDroid's package name, so AnkiQuest is now `org.ankiquest.ankidroid`, a separate app that cannot update the old one. To move:
+AnkiQuest `org.ankiquest.ankidroid` installs alongside the old `com.ichi2.anki.quest` app.
 
-1. In the old app, sync with AnkiWeb, or export your collection (**Export collection** with scheduling and media).
-2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest).
-3. In the new app, sync with AnkiWeb (or import the export), then sign in under **Settings → ankiquest → Account**.
+1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
+2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). On Android 9 and later, the official app offers to move settings, AnkiQuest sign-in and AnkiWeb sign-in on first launch.
+3. With an AnkiWeb login, sync your collection in the new app. Without one, use **Export collection** (with scheduling and media) in the old app, then import the file in the new app. Android 7 and 8 and builds signed outside the official releases use this collection transfer and a fresh sign-in.
 4. Uninstall the old app once your cards are in the new one.
 
-Obtainium tracks apps by package: remove the old entry and add AnkiQuest again.
-
-Automations (Tasker and similar) that start a sync send the action `org.ankiquest.ankidroid.DO_SYNC`; AnkiDroid's `com.ichi2.anki.DO_SYNC` does not reach AnkiQuest. Apps using the AnkiDroid API find AnkiQuest through `org.ankiquest:api` (provider `org.ankiquest.ankidroid.flashcards`).
+Obtainium users can remove the old entry and add AnkiQuest again. Apps using the AnkiDroid API find the new package through `org.ankiquest:api` and the `org.ankiquest.ankidroid.flashcards` provider. Automations start a sync with `org.ankiquest.ankidroid.DO_SYNC`.
 
 ### Verify the APK
 
@@ -89,12 +87,9 @@ SHA-1:   74:A5:0A:AA:20:37:2D:88:B2:B7:42:64:66:34:7B:9F:7C:28:31:E9
 Compare the fingerprint with one of:
 
 - [AppVerifier](https://github.com/soupslurpr/AppVerifier) or [Obtainium](https://github.com/ImranR98/Obtainium), which show the installed app's signing certificate.
-- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. Look for `CN=AnkiQuest, O=float3`, the v3 signer for Android 9 and newer. Recent build-tools label it `V3.0 Signer`.
+- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. Compare the SHA-256 fingerprint with the one above.
 
-Releases and nightlies are signed with the same key, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml). The key replaced a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`, SHA-256 `0A:8E:BE:EA:…:E4:2A`) through key rotation, which Android supports from 9 on. That key's password is public, so its fingerprint proves nothing:
-
-- On Android 7 and 8, and in the v1/v2 signatures `keytool -printcert -jarfile` reads, the APK shows only the test key.
-- Builds without the release key (forks, workflow runs without the signing secret) are signed with the test key only. Don't install them as AnkiQuest.
+All published `org.ankiquest.ankidroid` APKs use the AnkiQuest key across supported Android versions. The final `com.ichi2.anki.quest` release keeps the earlier signing lineage so it can update the existing app. [Signing workflow](.github/workflows/ankiquest_apk.yml)
 
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 

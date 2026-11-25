@@ -44,14 +44,27 @@ test("the APK workflow fails unless the built APK has the AnkiQuest package", ()
     assert.match(step, /if \[ "\$package" != "\$PACKAGE" \]; then[\s\S]*?exit 1/);
 });
 
-test("nothing hard-codes the old package", () => {
+test("the build and release do not target the old package", () => {
     const files = [
         ...workflows,
         "AnkiDroid/build.gradle.kts",
-        "AnkiDroid/src/quest/AndroidManifest.xml",
         "AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestLinksTest.kt",
     ];
     for (const file of files) {
         assert.doesNotMatch(read(file), /com\.ichi2\.anki\.quest\b/, file);
     }
+});
+
+test("the new manifest names the old package only for the one-time import", () => {
+    let manifest = read("AnkiDroid/src/quest/AndroidManifest.xml");
+    const bridge = [
+        '<uses-permission android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />',
+        '<package android:name="com.ichi2.anki.quest" />',
+    ];
+    for (const entry of bridge) {
+        assert.ok(manifest.includes(entry), entry);
+        manifest = manifest.replace(entry, "");
+    }
+    assert.doesNotMatch(manifest, /com\.ichi2\.anki\.quest\b/);
+    assert.doesNotMatch(manifest, /AnkiquestMoveProvider/);
 });

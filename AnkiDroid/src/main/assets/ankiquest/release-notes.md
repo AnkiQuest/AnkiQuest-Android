@@ -1,6 +1,6 @@
 AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): study, shared goals, and progress in one place.
 
-**New app: org.ankiquest.ankidroid.** AnkiDroid's maintainers ask forks not to use AnkiDroid's package name, so AnkiQuest is now a separate app, org.ankiquest.ankidroid. It cannot update com.ichi2.anki.quest. Moving from com.ichi2.anki.quest: in the old app, sync with AnkiWeb or export your collection; install this app; sync (or import) and sign in to AnkiQuest; then uninstall the old app. Obtainium users remove the old entry and add AnkiQuest again. Automations that start a sync (Tasker) send org.ankiquest.ankidroid.DO_SYNC instead of com.ichi2.anki.DO_SYNC.
+**New app.** AnkiQuest now installs as `org.ankiquest.ankidroid`. Update the old app to [quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24) first. On Android 9 and later, this app offers to move settings and sign-ins on first launch. On Android 7 and 8, sign in again here. Sync your collection with AnkiWeb, or export it from the old app and import it here. Keep the old app until your collection is in the new one. Obtainium users can remove the old entry and add AnkiQuest again. Sync automations use `org.ankiquest.ankidroid.DO_SYNC`.
 
 **Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 

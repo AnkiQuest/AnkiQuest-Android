@@ -15,6 +15,7 @@ import androidx.core.content.edit
 import androidx.core.os.BundleCompat
 import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.account.LoginFragment
+import com.ichi2.anki.ankiquest.AnkiquestMoveImport
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.introduction.CollectionPermissionScreenLauncher
@@ -70,6 +71,11 @@ class IntroductionActivity :
                 CollectionSetupOption.DeckPickerWithNewCollection -> startDeckPicker()
                 CollectionSetupOption.SyncFromExistingAccount -> openLoginDialog()
             }
+        }
+
+        // AnkiQuest: the new package offers to take the old one's settings and logins first.
+        AnkiquestMoveImport.offer(this) { next ->
+            startDeckPicker(if (next == AnkiquestMoveImport.Next.SYNC) RESULT_SYNC_PROFILE else RESULT_START_NEW)
         }
     }
 

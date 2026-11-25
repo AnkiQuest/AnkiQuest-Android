@@ -3,6 +3,11 @@
 <!-- AnkiQuest branding, merged over the main manifest only by the AnkiQuest build (-Pankiquest). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- Requests access to the final old-package release's migration provider. -->
+    <uses-permission android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
+    <queries>
+        <package android:name="com.ichi2.anki.quest" />
+    </queries>
 
     <!-- AnkiquestUpdater installs downloaded releases -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />

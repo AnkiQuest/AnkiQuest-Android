@@ -107,7 +107,7 @@
     <string name="ankiquest_update_downloading">Téléchargement… %1$d%%</string>
     <string name="ankiquest_update_failed">La mise à jour n’a pas pu être téléchargée. Elle sera proposée à nouveau plus tard.</string>
     <string name="ankiquest_moved_title">AnkiQuest est passé à une nouvelle application</string>
-    <string name="ankiquest_moved_message">Synchronisez, puis installez la nouvelle application depuis la page de publication. Elle propose de reprendre vos paramètres et votre connexion de cette application.</string>
+    <string name="ankiquest_moved_message">Synchronisez, puis installez la nouvelle application depuis la page de publication. Vos données reviennent après connexion et synchronisation dans celle-ci.</string>
     <string name="ankiquest_moved_open">Ouvrir la page de publication</string>
     <string name="ankiquest_avatar_crop_hint">Fais glisser l’image pour la déplacer. Pince ou utilise le curseur pour zoomer.</string>
     <string name="ankiquest_avatar_zoom">Zoom</string>

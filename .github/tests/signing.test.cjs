@@ -64,3 +64,59 @@ test("key rotation fails when the current APK is absent", t => {
     assert.notEqual(result.status, 0);
     assert.equal(result.apk, null);
 });
+
+const apkWorkflow = fs.readFileSync(path.join(__dirname, "../workflows/ankiquest_apk.yml"), "utf8");
+
+test("the new package uses the release key alone on every supported Android version", () => {
+    const signing = apkWorkflow.split("      - name: Sign with the AnkiQuest release key\n")[1]?.split("\n      - name:")[0];
+    assert.ok(signing, "the build must have a signing step");
+    assert.match(signing, /--ks-key-alias ankiquest/);
+    assert.doesNotMatch(signing, /fallback-release-keystore\.jks|--next-signer|--lineage/);
+    assert.match(signing, /verify --min-sdk-version 24 AnkiQuest\.apk/);
+    assert.match(signing, /for api in 24 28 33/);
+    assert.match(signing, /verify --min-sdk-version "\$api" --max-sdk-version "\$api" --print-certs/);
+    assert.match(signing, /b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d/);
+});
+
+test("publishing the new package waits for the final legacy APK release", () => {
+    const bridge = apkWorkflow.indexOf("      - name: Check the migration release");
+    const release = apkWorkflow.indexOf("      - name: Publish release");
+    assert.ok(bridge >= 0 && bridge < release, "the bridge check must run before either publication step");
+    assert.match(apkWorkflow.slice(bridge, release), /git merge-base --is-ancestor [a-f0-9]{40} refs\/tags\/quest-24/);
+    assert.match(apkWorkflow.slice(bridge, release), /gh release view quest-24/);
+    assert.match(apkWorkflow.slice(bridge, release), /AnkiDroid-Quest\.apk/);
+    assert.doesNotMatch(apkWorkflow.slice(release), /AnkiDroid-Quest\.apk/);
+});
+
+test("the publication guard accepts only the complete stable bridge", () => {
+    const step = apkWorkflow.split("      - name: Check the migration release\n")[1]?.split("\n      - name:")[0];
+    const guard = step?.split("        run: |\n")[1]?.replace(/^          /gm, "");
+    assert.ok(guard, "the bridge check must include a release guard");
+
+    const shell = `git() {
+    case "$1" in
+        merge-base) test "$BRIDGE_COMMIT" = present ;;
+        grep) test "$BRIDGE_PACKAGE" = legacy ;;
+        *) return 127 ;;
+    esac
+}
+gh() { printf '%s\\n' "$BRIDGE_JSON"; }
+${guard}`;
+    const stable = { isDraft: false, isPrerelease: false, assets: [{name: "AnkiQuest.apk"}, {name: "AnkiDroid-Quest.apk"}] };
+    const cases = [
+        { name: "complete legacy release", info: stable, commit: "present", expected: 0 },
+        { name: "missing migration commit", info: stable, commit: "absent", expected: 1 },
+        { name: "tag built from the new package", info: stable, commit: "present", pkg: "new", expected: 1 },
+        { name: "missing legacy name", info: {...stable, assets: stable.assets.slice(0, 1)}, commit: "present", expected: 1 },
+        { name: "draft", info: {...stable, isDraft: true}, commit: "present", expected: 1 },
+        { name: "prerelease", info: {...stable, isPrerelease: true}, commit: "present", expected: 1 },
+    ];
+    for (const { name, info, commit, pkg = "legacy", expected } of cases) {
+        const result = spawnSync("bash", ["-euo", "pipefail", "-c", shell], {
+            env: { ...process.env, GITHUB_REPOSITORY: "AnkiQuest/AnkiQuest-Android", BRIDGE_COMMIT: commit, BRIDGE_PACKAGE: pkg, BRIDGE_JSON: JSON.stringify(info) },
+            encoding: "utf8",
+        });
+        assert.equal(result.status, expected, `${name}\n${result.stderr}`);
+        assert.doesNotMatch(result.stderr, /command not found/);
+    }
+});

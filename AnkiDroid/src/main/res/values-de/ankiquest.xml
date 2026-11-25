@@ -107,7 +107,7 @@
     <string name="ankiquest_update_downloading">Wird heruntergeladen… %1$d%%</string>
     <string name="ankiquest_update_failed">Das Update konnte nicht heruntergeladen werden. Es wird später erneut angeboten.</string>
     <string name="ankiquest_moved_title">AnkiQuest ist in eine neue App umgezogen</string>
-    <string name="ankiquest_moved_message">Synchronisiere, dann installiere die neue App von der Release-Seite. Sie bietet an, deine Einstellungen und Anmeldung aus dieser App zu übernehmen.</string>
+    <string name="ankiquest_moved_message">Synchronisiere, dann installiere die neue App von der Release-Seite. Deine Daten kommen zurück, wenn du dich dort anmeldest und synchronisierst.</string>
     <string name="ankiquest_moved_open">Release-Seite öffnen</string>
     <string name="ankiquest_avatar_crop_hint">Ziehe das Bild zum Verschieben. Zoome mit zwei Fingern oder dem Regler.</string>
     <string name="ankiquest_avatar_zoom">Zoom</string>

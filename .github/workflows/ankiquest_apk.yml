@@ -103,6 +103,7 @@ jobs:
         env:
           ANKIQUEST_KEYSTORE: ${{ secrets.ANKIQUEST_KEYSTORE }}
           ANKIQUEST_KEY_PASSWORD: ${{ secrets.ANKIQUEST_KEY_PASSWORD }}
+          RELEASE_CERTIFICATE_SHA256: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
         run: |
           if [ -z "$ANKIQUEST_KEYSTORE" ]; then
             if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then
@@ -112,15 +113,21 @@ jobs:
             echo "::warning::No ANKIQUEST_KEYSTORE; this build stays on the public fallback key"
             exit 0
           fi
-          echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
+          keystore=$(mktemp "$RUNNER_TEMP/ankiquest.XXXXXX.jks")
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$ANKIQUEST_KEYSTORE" | base64 -d > "$keystore"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          "$apksigner" sign \
-            --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
-            --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
-            --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
-            AnkiQuest.apk
-          rm -f "$RUNNER_TEMP/ankiquest.jks"
-          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiQuest.apk | grep -q "CN=AnkiQuest"
+          "$apksigner" sign --ks "$keystore" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD AnkiQuest.apk
+          "$apksigner" verify --min-sdk-version 24 AnkiQuest.apk
+          # The verifier reports the newest signer for a range. Check each scheme's first supported API separately.
+          for api in 24 28 33; do
+            certificates=$("$apksigner" verify --min-sdk-version "$api" --max-sdk-version "$api" --print-certs AnkiQuest.apk)
+            digests=$(printf '%s\n' "$certificates" | awk '/^(V[^ ]+ )?Signer.*certificate SHA-256 digest:/ {print $NF}' | sort -u)
+            if [ "$digests" != "$RELEASE_CERTIFICATE_SHA256" ]; then
+              echo "::error::APK on Android API $api must use the AnkiQuest release certificate"
+              exit 1
+            fi
+          done
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Package and version code
@@ -150,14 +157,32 @@ jobs:
           path: AnkiQuest.apk
           if-no-files-found: error
 
+      - name: Check the migration release
+        if: steps.sign.outputs.signed == 'true' && (startsWith(github.ref, 'refs/tags/quest-') || github.ref == 'refs/heads/master')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! git merge-base --is-ancestor 5dc88751adc8aec5756a4f9c07dc38f4139f23da refs/tags/quest-24; then
+            echo "::error::quest-24 must contain the old-package settings bridge and updater notice"
+            exit 1
+          fi
+          if ! git grep -q -F 'applicationId = "com.ichi2.anki"' refs/tags/quest-24 -- AnkiDroid/build.gradle.kts; then
+            echo "::error::quest-24 must use the legacy app's base ID"
+            exit 1
+          fi
+          if ! gh release view quest-24 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets \
+            | jq -e '(.isDraft == false) and (.isPrerelease == false) and
+                ([.assets[].name] | contains(["AnkiQuest.apk", "AnkiDroid-Quest.apk"]))' > /dev/null; then
+            echo "::error::Publish the final migration release as quest-24 with both legacy download names first"
+            exit 1
+          fi
+
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/quest-')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
-          cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk \
             --title "AnkiQuest ${{ steps.release.outputs.number }}" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
@@ -175,8 +200,7 @@ jobs:
             '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
             > nightly.json
           gh release delete nightly --yes --cleanup-tag || true
-          cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk nightly.json \
+          gh release create nightly AnkiQuest.apk nightly.json \
             --prerelease --latest=false --target "$GITHUB_SHA" \
             --title "AnkiQuest nightly" \
             --notes "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."
