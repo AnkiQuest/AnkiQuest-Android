@@ -47,11 +47,9 @@
                 android:description="@string/read_write_permission_description"
                 android:protectionLevel="dangerous"
                 />
-    <!-- The API library declares the providers its clients talk to. AnkiQuest is a provider, not a client.
-         Never remove the app's own permission (com.ichi2.anki here): CardContentProvider rejects callers
-         that do not request it, the app's own instrumented ContentProviderTest included. -->
-    <!-- Goes once the app itself is org.ankiquest.ankidroid (#420): then it is the app's own. -->
-    <uses-permission android:name="org.ankiquest.ankidroid.permission.READ_WRITE_DATABASE" tools:node="remove" />
+    <!-- The app requests its own provider permission, including in debug builds.
+         The API library also declares the legacy package's permission for external clients. -->
+    <uses-permission android:name="${applicationId}.permission.READ_WRITE_DATABASE" />
     <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE" tools:node="remove" />
 
     <supports-screens
@@ -238,9 +236,9 @@
                 <data android:mimeType="image/svg" />
             </intent-filter>
 
-            <!-- Tasker DO_SYNC intent -->
+            <!-- Tasker DO_SYNC intent: AnkiQuest's own action, not AnkiDroid's (#461) -->
             <intent-filter>
-                <action android:name="com.ichi2.anki.DO_SYNC" />
+                <action android:name="org.ankiquest.ankidroid.DO_SYNC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

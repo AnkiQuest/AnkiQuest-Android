@@ -6,6 +6,7 @@ import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Looper
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -35,6 +36,7 @@ import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
+import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.RwkvSwitch
@@ -165,6 +167,52 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
             assertEquals(listOf("", "123456"), sent.map { it.code })
             assertEquals("device-token", AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+        } finally {
+            unmockkObject(AnkiquestAccount)
+        }
+    }
+
+    /** How the player changes the sign-in after the server asked for a second factor. */
+    private enum class SignInChange { SERVER, USERNAME, CREATE }
+
+    @Test
+    fun `changing the server, username or create mode hides and clears the code`() {
+        AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
+        val sent = mutableListOf<AnkiquestAccount.Credentials>()
+        mockkObject(AnkiquestAccount)
+        try {
+            coEvery { AnkiquestAccount.submit(any(), any()) } answers {
+                sent += firstArg<AnkiquestAccount.Credentials>()
+                throw AnkiquestAccount.SecondFactorNeeded(AnkiquestAccount.SecondFactor.ASKED)
+            }
+            for (change in SignInChange.entries) {
+                sent.clear()
+                val fragment = open()
+                fragment.preference<Preference>(R.string.ankiquest_sign_in_key).performClick()
+                val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+                val code = dialog.findViewById<EditText>(R.id.ankiquest_sign_in_code)!!
+                val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                dialog.findViewById<EditText>(R.id.ankiquest_sign_in_password)!!.setText("right password")
+                submit.performClick()
+                shadowOf(Looper.getMainLooper()).idle()
+                assertTrue(code.isShown, "$change: the server asked for the code")
+                code.setText("123456")
+
+                // The code belonged to the account the server asked about.
+                when (change) {
+                    SignInChange.SERVER -> dialog.findViewById<EditText>(R.id.ankiquest_sign_in_server)!!.setText("https://other.example")
+                    SignInChange.USERNAME -> dialog.findViewById<EditText>(R.id.ankiquest_sign_in_user)!!.setText("someone-else")
+                    SignInChange.CREATE -> dialog.findViewById<CheckBox>(R.id.ankiquest_sign_in_create)!!.isChecked = true
+                }
+                assertFalse(code.isShown, "$change: the code field hides")
+                assertEquals("", code.text.toString(), "$change: the code is cleared")
+
+                // A code typed for the earlier account is not sent with the changed one.
+                submit.performClick()
+                shadowOf(Looper.getMainLooper()).idle()
+                assertEquals("", sent.last().code, "$change")
+                dialog.dismiss()
+            }
         } finally {
             unmockkObject(AnkiquestAccount)
         }
@@ -662,6 +710,22 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     private fun undoButton(fragment: AnkiquestSettingsFragment): android.view.View? =
         fragment.requireActivity().findViewById(com.google.android.material.R.id.snackbar_action)
+
+    @Test
+    fun `update settings show only in a self-updating build`() {
+        mockkObject(AnkiquestUpdater)
+        try {
+            for (source in AnkiquestUpdater.Source.entries) {
+                every { AnkiquestUpdater.source() } returns source
+                val fragment = open()
+                val shown = source == AnkiquestUpdater.Source.GITHUB
+                assertEquals(shown, fragment.preference<ListPreference>(R.string.ankiquest_update_channel_key).isVisible, source.name)
+                assertEquals(shown, fragment.preference<Preference>(R.string.ankiquest_check_updates_key).isVisible, source.name)
+            }
+        } finally {
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
 
     private fun open(): AnkiquestSettingsFragment {
         val intent = PreferencesActivity.getIntent(targetContext, AnkiquestSettingsFragment::class)

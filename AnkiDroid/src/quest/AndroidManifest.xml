@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- AnkiQuest branding, merged over the main manifest only by the quest build (-PcustomSuffix=quest). -->
+<!-- AnkiQuest branding, merged over the main manifest only by the AnkiQuest build (-Pankiquest). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
-    <!-- AnkiquestUpdater installs downloaded releases -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Requests access to the final old-package release's migration provider. -->
+    <uses-permission android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
+    <queries>
+        <package android:name="com.ichi2.anki.quest" />
+    </queries>
 
     <application
         android:icon="@mipmap/ankiquest_launcher"

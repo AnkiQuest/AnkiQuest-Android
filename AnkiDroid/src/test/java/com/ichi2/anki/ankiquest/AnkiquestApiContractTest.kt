@@ -199,7 +199,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `capabilities give the features and, from servers that name it, an https main address`() {
         val answer = JSONObject(example("capabilities"))
         assertTrue("devices" in AnkiquestCapabilities.parse(answer.toString()))
-        // Servers before float3/ankiquest#171 do not name a main address.
+        // Servers before AnkiQuest/AnkiQuest-Desktop#171 do not name a main address.
         if (answer.has("public_url")) {
             assertEquals("https://anki.example.test", AnkiquestServerMove.mainAddress(answer))
         } else {

@@ -5,7 +5,9 @@ package com.ichi2.anki.provider
 import android.database.ContentObserver
 import android.database.Cursor
 import android.database.DataSetObserver
+import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.FlashCardsContract
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.libanki.NoteId
@@ -50,17 +52,20 @@ class CardContentProviderCursorTest : RobolectricTest() {
     }
 
     private fun createProvider(): CardContentProvider {
-        grantPermissions(FlashCardsContract.READ_WRITE_PERMISSION)
+        grantPermissions(FlashCardsContract.getPermission(BuildConfig.APPLICATION_ID))
         return Robolectric
             .buildContentProvider(CardContentProvider::class.java)
-            .create(FlashCardsContract.AUTHORITY)
+            .create(FlashCardsContract.getAuthority(BuildConfig.APPLICATION_ID))
             .get()
     }
 
     private fun queryNote(noteId: NoteId): Cursor =
         assertNotNull(
             createProvider().query(
-                uri = FlashCardsContract.Note.CONTENT_URI_V2,
+                uri =
+                    "content://${FlashCardsContract.getAuthority(
+                        BuildConfig.APPLICATION_ID,
+                    )}/${FlashCardsContract.Note.CONTENT_URI_V2_SEGMENT}".toUri(),
                 projection = arrayOf(FlashCardsContract.Note._ID),
                 selection = "id=?",
                 selectionArgs = arrayOf(noteId.toString()),

@@ -33,10 +33,10 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 ### Features
 
 <div style="display:flex;">
- 
+
 - AnkiQuest: XP, streaks, quests, records and a leaderboard widget
 - Night mode
-- Whiteboard 
+- Whiteboard
 - Progress widget
 - Detailed statistics
 - [Review heatmap beneath the deck list](docs/review-heatmap.md)
@@ -55,14 +55,27 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 <div style="display:flex;">
 
 1. Create an account on an AnkiQuest server, such as [ankiquest.org](https://ankiquest.org). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
-2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
+2. Download an APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest): `AnkiQuest-arm64-v8a.apk` for most phones, or `AnkiQuest.apk`, which runs on every device, if unsure. `AnkiQuest-armeabi-v7a.apk` is for older 32-bit phones, `AnkiQuest-x86_64.apk` and `AnkiQuest-x86.apk` for emulators and Chromebooks. `AnkiQuest.aab` is for Google Play and does not install. The app installs next to AnkiDroid as "AnkiQuest" (package `org.ankiquest.ankidroid`) and offers later releases itself, for the same device type. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
     <img alt="Get it on Obtainium" height="80"
         src="https://github.com/user-attachments/assets/713d71c5-3dec-4ec4-a3f2-8d28d025a9c6"/></a>
 
+In Obtainium, set "Filter APKs by regular expression" to `^AnkiQuest-arm64-v8a\.apk$` for most phones, or `^AnkiQuest\.apk$` for the universal APK.
+
 </div>
+
+### Moving from com.ichi2.anki.quest
+
+AnkiQuest `org.ankiquest.ankidroid` installs alongside the old `com.ichi2.anki.quest` app and starts with its own collection.
+
+1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
+2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). On Android 9 and later, the official app offers to move settings, AnkiQuest sign-in and AnkiWeb sign-in on first launch.
+3. With an AnkiWeb login, sync your collection in the new app. Without one, use **Export collection** (with scheduling and media) in the old app, then import the file in the new app. Android 7 and 8 and builds signed outside the official releases use this collection transfer and a fresh sign-in.
+4. Uninstall the old app once your cards are in the new one.
+
+Obtainium users can remove the old entry and add AnkiQuest again. Apps using the AnkiDroid API find the new package through `org.ankiquest:api` and the `org.ankiquest.ankidroid.flashcards` provider. Automations start a sync with `org.ankiquest.ankidroid.DO_SYNC`.
 
 ### Verify the APK
 
@@ -76,12 +89,9 @@ SHA-1:   74:A5:0A:AA:20:37:2D:88:B2:B7:42:64:66:34:7B:9F:7C:28:31:E9
 Compare the fingerprint with one of:
 
 - [AppVerifier](https://github.com/soupslurpr/AppVerifier) or [Obtainium](https://github.com/ImranR98/Obtainium), which show the installed app's signing certificate.
-- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. Look for `CN=AnkiQuest, O=float3`, the v3 signer for Android 9 and newer. Recent build-tools label it `V3.0 Signer`.
+- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. It shows one signer, `CN=AnkiQuest, O=float3`; compare its SHA-256 fingerprint with the one above.
 
-Releases and nightlies are signed with the same key, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml). The key replaced a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`, SHA-256 `0A:8E:BE:EA:…:E4:2A`) through key rotation, which Android supports from 9 on. That key's password is public, so its fingerprint proves nothing:
-
-- On Android 7 and 8, and in the v1/v2 signatures `keytool -printcert -jarfile` reads, the APK shows only the test key.
-- Builds without the release key (forks, workflow runs without the signing secret) are signed with the test key only. Don't install them as AnkiQuest.
+Releases, nightlies and the F-Droid build of `org.ankiquest.ankidroid` are signed with this key alone, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml): every signature scheme, no other key and no key rotation lineage. The final `com.ichi2.anki.quest` release, quest-24, keeps the earlier signing lineage so it can update the existing app. Builds without the release key (forks, workflow runs without the signing secret) are signed with a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`) whose password is in this repository. Don't install them as AnkiQuest.
 
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 
@@ -102,6 +112,15 @@ See [docs/ankiquest-api.md](docs/ankiquest-api.md).
 ./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'
 node --test .github/tests/*.test.cjs
 ```
+
+The GitHub release APK is built with:
+
+```sh
+SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" ./gradlew :AnkiDroid:assembleFullRelease \
+  -Duniversal-apk=true -Pankiquest -PcustomName="AnkiQuest" -PankiquestUpdates=github
+```
+
+`-PankiquestUpdates=github` builds in the self-updater, which installs new releases from GitHub and requests `REQUEST_INSTALL_PACKAGES`. Without it (`none`, the default) the app neither checks for updates nor requests the permission: use that for store builds (F-Droid, IzzyOnDroid, Play), whose store updates them. Rebuilding the release APK for comparison takes `github`, as in `ankiquest_reproducible.yml`.
 
 AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 
@@ -124,7 +143,7 @@ Thanks to our 1400 translators, for allowing us to be available, partially or to
 ## License
 
 * [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
-* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
+* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/` and `AnkiDroid/src/main/assets/ankiquest/release-notes.md`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
 * [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
 * [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/COPYING.LESSER) for the AnkiDroid API

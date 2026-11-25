@@ -257,8 +257,20 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         user.setText(AnkiquestAccountSettings.signInUsername(server.text.toString()))
         var usernameEdited = false
         var updatingSuggestion = false
-        user.doAfterTextChanged { if (!updatingSuggestion) usernameEdited = true }
+
+        // A second-factor code belongs to the account the server asked about; any change drops it.
+        val dropCode = {
+            code.visibility = View.GONE
+            code.text.clear()
+        }
+        user.doAfterTextChanged {
+            dropCode()
+            if (!updatingSuggestion) {
+                usernameEdited = true
+            }
+        }
         server.doAfterTextChanged {
+            dropCode()
             if (!usernameEdited) {
                 updatingSuggestion = true
                 user.setText(AnkiquestAccountSettings.signInUsername(it.toString()))
@@ -275,6 +287,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 .show()
         val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
         create.setOnCheckedChangeListener { _, creating ->
+            dropCode()
             display.visibility = if (creating) View.VISIBLE else View.GONE
             hint.visibility = if (creating) View.VISIBLE else View.GONE
             submit.setText(if (creating) R.string.ankiquest_sign_in_submit_create else R.string.ankiquest_sign_in_submit)
@@ -561,6 +574,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             }
             true
         }
+        // Builds without a self-updater hide its settings; their store updates them.
+        val updates = AnkiquestUpdater.source() == AnkiquestUpdater.Source.GITHUB
+        requirePreference<Preference>(R.string.ankiquest_update_channel_key).isVisible = updates
+        requirePreference<Preference>(R.string.ankiquest_check_updates_key).isVisible = updates
         requirePreference<Preference>(R.string.ankiquest_check_updates_key).summary =
             getString(
                 R.string.ankiquest_check_updates_summary,

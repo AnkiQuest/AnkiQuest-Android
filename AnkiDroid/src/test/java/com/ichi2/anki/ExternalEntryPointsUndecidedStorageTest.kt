@@ -141,16 +141,25 @@ class ExternalEntryPointsUndecidedStorageTest : RobolectricTest() {
     }
 
     private fun queryContentProvider(className: String) {
-        grantPermissions(FlashCardsContract.READ_WRITE_PERMISSION)
+        grantPermissions(FlashCardsContract.getPermission(BuildConfig.APPLICATION_ID))
         val providerClass = Class.forName(className).asSubclass(ContentProvider::class.java)
         val provider =
             Robolectric
                 .buildContentProvider(providerClass)
-                .create(FlashCardsContract.AUTHORITY)
+                .create(FlashCardsContract.getAuthority(BuildConfig.APPLICATION_ID))
                 .get()
         // IllegalStateException is expected. A custom exception kills the process
         assertFailsWith<IllegalStateException> {
-            provider.query(FlashCardsContract.Note.CONTENT_URI, null, null, null, null)?.close()
+            provider
+                .query(
+                    "content://${FlashCardsContract.getAuthority(
+                        BuildConfig.APPLICATION_ID,
+                    )}/${FlashCardsContract.Note.CONTENT_URI_SEGMENT}".toUri(),
+                    null,
+                    null,
+                    null,
+                    null,
+                )?.close()
         }
     }
 

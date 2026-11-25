@@ -77,6 +77,24 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
     }
 
     @Test
+    fun `a board unlocked by the first upload drops the line on refresh`() {
+        lock = AnkiquestLock.UPLOAD_FIRST
+        answer.put(AnkiquestBoardsTest.row("hill", 40, 2))
+        val screen = launch().get()
+        assertTrue(targetContext.getString(R.string.aq_upload_first) in labels(screen))
+
+        // The upload reached the server, which now lists everyone.
+        lock = null
+        answer = JSONArray().put(AnkiquestBoardsTest.row("hill", 40, 2)).put(AnkiquestBoardsTest.row("cerro", 90, 5))
+        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.awaitBoard()
+
+        val words = labels(screen)
+        assertFalse(targetContext.getString(R.string.aq_upload_first) in words)
+        assertTrue("Cerro" in words, "$words")
+    }
+
+    @Test
     fun `global gaps and an own place below the top hundred keep the server's ranks`() {
         answer.put(stranger("ana", rank = 3, xp = 90))
         answer.put(

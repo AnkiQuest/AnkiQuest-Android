@@ -243,6 +243,13 @@ jobs:
         if: needs.changes.outputs.code != 'false'
         run: ./gradlew :AnkiDroid:jacocoCiUnitTestReports --daemon
 
+      - name: Test the self-updating build
+        if: needs.changes.outputs.code != 'false' && matrix.iteration == 1 && matrix.os == 'ubuntu-latest'
+        run: >
+          ./gradlew :AnkiDroid:testPlayDebugUnitTest
+          -PankiquestUpdates=github
+          --tests 'com.ichi2.anki.ankiquest.AnkiquestUpdaterTest'
+          --daemon
 
       # Only runs:
       # - on a scheduled run

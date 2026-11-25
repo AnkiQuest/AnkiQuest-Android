@@ -84,6 +84,7 @@
     <string name="ankiquest_check_updates_summary">Installé : %1$s</string>
     <string name="ankiquest_local_build">version locale</string>
     <string name="ankiquest_update_none">Tu as la dernière version (%1$s).</string>
+    <string name="ankiquest_updates_off">Cette version ne se met pas à jour elle-même. Le store d’où tu l’as installée la met à jour.</string>
     <string name="ankiquest_update_check_failed">Impossible de vérifier les mises à jour sur GitHub. Réessaie plus tard.</string>
     <string name="ankiquest_period_hour">cette heure</string>
     <string name="ankiquest_period_day">Aujourd\'hui</string>
@@ -106,6 +107,9 @@
     <string name="ankiquest_update_later">@string/button_backup_later</string>
     <string name="ankiquest_update_downloading">Téléchargement… %1$d%%</string>
     <string name="ankiquest_update_failed">La mise à jour n’a pas pu être téléchargée. Elle sera proposée à nouveau plus tard.</string>
+    <string name="ankiquest_moved_title">AnkiQuest est passé à une nouvelle application</string>
+    <string name="ankiquest_moved_message">Synchronisez, puis installez la nouvelle application depuis la page de publication. Vos données reviennent après connexion et synchronisation dans celle-ci.</string>
+    <string name="ankiquest_moved_open">Ouvrir la page de publication</string>
     <string name="ankiquest_avatar_crop_hint">Fais glisser l’image pour la déplacer. Pince ou utilise le curseur pour zoomer.</string>
     <string name="ankiquest_avatar_zoom">Zoom</string>
     <string name="ankiquest_avatar_reset">@string/reset</string>

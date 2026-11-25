@@ -103,6 +103,22 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `records unlocked by the first upload drop the line on the next load`() {
+        coEvery { AnkiquestRecords.scopes(identity) } returns listOf(AnkiquestRecords.Scope.CIRCLE, AnkiquestRecords.Scope.GLOBAL)
+        val empty = boards.map { it.copy(holders = emptyList()) }
+        coEvery { AnkiquestRecords.records(identity, any()) } returns AnkiquestRecords.Records(empty, AnkiquestLock.UPLOAD_FIRST)
+        val records = launch()
+        assertTrue(records.hasText(records.getString(R.string.aq_upload_first)))
+
+        // The upload reached the server, which now lists everyone's records.
+        coEvery { AnkiquestRecords.records(identity, any()) } returns AnkiquestRecords.Records(boards)
+        records.click(records.getString(R.string.aq_records_scope_global))
+
+        assertFalse(records.hasText(records.getString(R.string.aq_upload_first)))
+        assertTrue(records.hasText("Cerro"))
+    }
+
+    @Test
     fun `the boards can show everyone or one group`() {
         coEvery { AnkiquestRecords.scopes(identity) } returns
             listOf(AnkiquestRecords.Scope.CIRCLE, AnkiquestRecords.Scope.GLOBAL, club)
