@@ -54,6 +54,9 @@ internal object PackFormat {
     /** Longest licence notice, in characters. */
     const val MAX_NOTICE = 16 * 1024
 
+    /** Largest pack file, checked before fetching or reading it. */
+    const val MAX_ARCHIVE = 32L * 1024 * 1024
+
     private val ID = Regex("[a-z][a-z0-9_]{0,31}")
 
     fun validId(id: String) = ID.matches(id)
@@ -164,6 +167,9 @@ internal data class PackIndex(
             // The file is a plain asset name of this release; no path can sneak into a URL.
             if (entry.file != "pack-${entry.id}.zip" || !SHA256.matches(entry.sha256) || entry.size <= 0) {
                 throw PackRefused(PackRefusal.BAD_INDEX, "entry ${entry.id}")
+            }
+            if (entry.size > PackFormat.MAX_ARCHIVE) {
+                throw PackRefused(PackRefusal.TOO_LARGE, entry.file)
             }
             return entry
         }

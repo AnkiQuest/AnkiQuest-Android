@@ -38,7 +38,6 @@ internal class AnkiquestPackLibrary(
     private val imported: WritablePackFolder,
 ) {
     /** What the folders held when last read; null until read or after a change. */
-    @Volatile
     private var snapshot: Snapshot? = null
 
     /** The installed packs and the newest index, read together. */
@@ -111,16 +110,22 @@ internal class AnkiquestPackLibrary(
         packs: List<Pack>,
         index: ByteArray,
     ) {
-        packs.forEach { downloaded.install(it) }
-        downloaded.writeIndex(index)
-        changed()
+        try {
+            packs.forEach { downloaded.install(it) }
+            downloaded.writeIndex(index)
+        } finally {
+            // Earlier packs may have been installed even if a later storage write failed.
+            changed()
+        }
     }
 
     /** Forgets what was read, so the next call reads the folders again. */
+    @Synchronized
     fun changed() {
         snapshot = null
     }
 
+    @Synchronized
     private fun read(): Snapshot {
         snapshot?.let { return it }
 
