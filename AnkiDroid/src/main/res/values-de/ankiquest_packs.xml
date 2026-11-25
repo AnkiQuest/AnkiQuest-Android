@@ -15,4 +15,19 @@
     <string name="ankiquest_packs_import_summary">Ein Begleiterpaket (.zip) aus deinen Dateien hinzufügen. Es erscheint nur auf diesem Gerät.</string>
     <string name="ankiquest_packs_imported">%1$s importiert.</string>
     <string name="ankiquest_packs_refused">Dieses Begleiterpaket wurde abgelehnt: %1$s</string>
+    <string name="ankiquest_packs_share">Gefährten für Freunde zeigen</string>
+    <string name="ankiquest_packs_share_none">Freunde sehen keinen Gefährten von dir. Tippe, um einen importierten zu wählen.</string>
+    <string name="ankiquest_packs_share_shown">Freunde sehen %1$s.</string>
+    <string name="ankiquest_packs_share_no_imports">Importiere zuerst einen Gefährten.</string>
+    <string name="ankiquest_packs_share_stop">Keinen zeigen</string>
+    <string name="ankiquest_packs_share_confirm">%1$s auf den AnkiQuest-Server hochladen, damit deine Freunde ihn sehen? Die Bilder werden unter %2$s geteilt, Urheber: %3$s. Teile nur Bilder, die du teilen darfst.</string>
+    <string name="ankiquest_packs_share_upload">Hochladen</string>
+    <string name="ankiquest_packs_share_failed">Der Gefährte für deine Freunde konnte nicht geändert werden: %1$s</string>
+    <string name="ankiquest_packs_friend_title">Gefährte von %1$s</string>
+    <string name="ankiquest_packs_friend_credit">%1$s, von %2$s. Lizenz: %3$s</string>
+    <string name="ankiquest_packs_report">Melden</string>
+    <string name="ankiquest_packs_report_offensive">Anstößig</string>
+    <string name="ankiquest_packs_report_copyright">Urheberrecht</string>
+    <string name="ankiquest_packs_report_other">Etwas anderes</string>
+    <string name="ankiquest_packs_reported">Gemeldet. Du siehst diesen Gefährten nicht mehr.</string>
 </resources>
