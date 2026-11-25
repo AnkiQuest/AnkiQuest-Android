@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
+
+// F-Droid publishes the APK the release workflow uploads only if its own build from the
+// recipe matches it. Both must build with the same inputs and agree on the file name.
+const root = path.join(__dirname, "../..");
+const recipe = fs.readFileSync(path.join(root, "docs/fdroid/org.ankiquest.ankidroid.yml"), "utf8");
+const workflow = fs.readFileSync(path.join(root, ".github/workflows/ankiquest_apk.yml"), "utf8");
+
+// The run block of the "F-Droid APK" step.
+function fdroidStep() {
+    const start = workflow.indexOf("- name: F-Droid APK");
+    assert.notEqual(start, -1, "ankiquest_apk.yml must have an F-Droid APK step");
+    const next = workflow.indexOf("\n      - ", start + 1);
+    return workflow.slice(start, next === -1 ? undefined : next);
+}
+
+// The entries of a top-level list in the last build of the recipe, e.g. gradleprops.
+function lastBuildList(key) {
+    const builds = recipe.split(/\n  - versionName: /);
+    const lines = builds[builds.length - 1].split("\n");
+    const start = lines.findIndex((line) => line.trim() === `${key}:`);
+    assert.notEqual(start, -1, `the last build must have ${key}`);
+    const items = [];
+    for (const line of lines.slice(start + 1)) {
+        const item = line.match(/^ {6}- (.*)$/);
+        if (!item) {
+            break;
+        }
+        items.push(item[1].trim());
+    }
+    return items;
+}
+
+test("the F-Droid APK step passes every gradle property of the recipe", () => {
+    const step = fdroidStep();
+    const props = lastBuildList("gradleprops");
+    assert.ok(props.length > 0);
+    for (const prop of props) {
+        assert.ok(step.includes(`-P${prop}`), `missing -P${prop}`);
+    }
+    assert.ok(step.includes("-Duniversal-apk=true"), "the recipe builds the universal APK");
+    assert.ok(recipe.includes('echo "systemProp.universal-apk=true"'));
+});
+
+test("the F-Droid APK step sets the release inputs the recipe's prebuild sets", () => {
+    const step = fdroidStep();
+    for (const prop of ["ankiquestRelease", "upstreamCommit"]) {
+        assert.ok(recipe.includes(`echo "${prop}=`), `recipe sets ${prop}`);
+        assert.ok(step.includes(`-P${prop}=`), `step sets ${prop}`);
+    }
+    assert.ok(step.includes("SOURCE_DATE_EPOCH"), "build time from the commit, as on F-Droid");
+});
+
+test("the F-Droid APK is signed by the AnkiQuest key alone", () => {
+    const step = fdroidStep();
+    assert.ok(step.includes("--ks-key-alias ankiquest"));
+    for (const other of ["fallback-release-keystore", "--next-signer", "--lineage"]) {
+        assert.ok(!step.includes(other), `the F-Droid APK must not use ${other}`);
+    }
+    assert.match(recipe, /^AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d$/m);
+});
+
+test("Binaries names the file the step uploads", () => {
+    const binaries = recipe.match(/^Binaries: (.*)$/m);
+    assert.ok(binaries, "the recipe must set Binaries");
+    assert.equal(
+        binaries[1],
+        "https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk",
+    );
+    const step = fdroidStep();
+    assert.ok(step.includes('gh release upload fdroid "AnkiQuest-$code.apk"'));
+    assert.ok(step.includes("startsWith(github.ref, 'refs/tags/quest-')"), "only releases go to F-Droid");
+});
+
+test("the fdroid release never becomes the latest release the updater reads", () => {
+    assert.ok(fdroidStep().includes("--latest=false"));
+});

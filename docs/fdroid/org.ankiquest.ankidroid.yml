@@ -1,6 +1,8 @@
 # Draft of metadata/org.ankiquest.ankidroid.yml for gitlab.com/fdroid/fdroiddata.
 # Not submitted. It needs the org.ankiquest.ankidroid package (#420) and the
-# -PankiquestUpdates switch (#411); see README.md here for what is open.
+# -PankiquestUpdates switch (#484); see README.md here for what is open.
+# The Gradle inputs must stay those of the "F-Droid APK" step in
+# .github/workflows/ankiquest_apk.yml; .github/tests/fdroid.test.cjs checks it.
 Categories:
   - Science & Education
 License: AGPL-3.0-or-later
@@ -14,11 +16,14 @@ AutoName: AnkiQuest
 RepoType: git
 Repo: https://github.com/AnkiQuest/AnkiQuest-Android.git
 
-# Publishing our signed APK instead of an F-Droid-signed one (README.md,
-# "Signing"). Both lines stay commented out until the release workflow
-# publishes an APK built as below and signed with the AnkiQuest key alone.
-# Binaries: https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk
-# AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
+# No anti-features: upstream's metadata/com.ichi2.anki.yml declares none, and
+# AnkiQuest's additions need none (README.md, "Anti-features").
+
+# F-Droid publishes our APK, signed with the AnkiQuest key alone, when its
+# rebuild matches it apart from the signature. ankiquest_apk.yml uploads that
+# APK to the `fdroid` release for every quest-* tag (README.md, "Signing").
+Binaries: https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk
+AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
 
 Builds:
   # The first release as org.ankiquest.ankidroid; fill in its tag and the

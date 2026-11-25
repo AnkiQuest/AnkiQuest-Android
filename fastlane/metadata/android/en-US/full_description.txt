@@ -18,7 +18,7 @@ AnkiDroid:
  - Import of Anki collections and shared decks
 
 Network services:
-AnkiQuest features need an account on an AnkiQuest server. ankiquest.org is the public one. The server is free software (AGPL-3.0) and you can run your own: enter its address when you sign in. When signed in, the app uploads review times, card IDs, intervals, answer times and deck names and progress; it does not upload card text, images or audio. Card labels and deck copies are sent only when you share them. New profiles are public and listed on the global leaderboard; change this in Settings → AnkiQuest → Sharing.
+AnkiQuest features need an account on an AnkiQuest server. ankiquest.org is the public one. The server is free software (AGPL-3.0) and you can run your own: enter its address when you sign in. When signed in, the app uploads review times, card IDs, intervals, answer times and deck names and progress; it does not upload card text, images or audio. Card labels and deck copies are sent only when you share them. Profiles are private unless you make them public: sign-up asks, with "public" off, and Settings → AnkiQuest → Sharing changes it later. Only public profiles are listed on the global leaderboard.
 
 Synchronization is opt-in and uses the non-libre AnkiWeb service by default; it can be pointed at a self-hosted Anki sync server. Crash reports are sent only if you agree.
 

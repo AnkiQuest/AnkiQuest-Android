@@ -158,6 +158,49 @@ jobs:
             --title "AnkiQuest ${{ steps.release.outputs.number }}" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
+      # F-Droid rebuilds each release from docs/fdroid/org.ankiquest.ankidroid.yml and publishes
+      # this APK when its rebuild matches it apart from the signature (Binaries in the recipe).
+      # The Gradle inputs are the recipe's (fdroid.test.cjs): no self-updater, universal APK.
+      # Signed with the AnkiQuest key alone, without the fallback key or the lineage:
+      # fdroidserver rejects APKs whose signers differ.
+      - name: F-Droid APK
+        if: startsWith(github.ref, 'refs/tags/quest-')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE: ${{ steps.release.outputs.number }}
+          UPSTREAM: ${{ steps.upstream.outputs.sha }}
+          ANKIQUEST_KEYSTORE: ${{ secrets.ANKIQUEST_KEYSTORE }}
+          ANKIQUEST_KEY_PASSWORD: ${{ secrets.ANKIQUEST_KEY_PASSWORD }}
+        run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
+            -Pankiquest=true -PcustomName=AnkiQuest -PankiquestUpdates=none \
+            -PankiquestRelease="$RELEASE" -PupstreamCommit="$UPSTREAM"
+          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk fdroid.apk
+
+          # Sign with one signer.
+          echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
+          tools=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)
+          "${tools}apksigner" sign --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest \
+            --ks-pass env:ANKIQUEST_KEY_PASSWORD fdroid.apk
+          rm -f "$RUNNER_TEMP/ankiquest.jks"
+          certs=$("${tools}apksigner" verify --print-certs fdroid.apk)
+          if [ "$(grep -c '^Signer #[0-9]* certificate DN' <<< "$certs")" -ne 1 ] || ! grep -q "CN=AnkiQuest" <<< "$certs"; then
+            echo "::error::the F-Droid APK must be signed by the AnkiQuest key alone"
+            echo "$certs"
+            exit 1
+          fi
+
+          # The recipe's Binaries URL names the APK by version code, since F-Droid only
+          # substitutes the version code and name, not the tag.
+          code=$("${tools}aapt2" dump badging fdroid.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          mv fdroid.apk "AnkiQuest-$code.apk"
+          if ! gh release view fdroid > /dev/null 2>&1; then
+            gh release create fdroid --prerelease --latest=false --title "AnkiQuest for F-Droid" \
+              --notes "APKs F-Droid checks its builds against, one per release. Install AnkiQuest from F-Droid or from the quest-* releases instead."
+          fi
+          gh release upload fdroid "AnkiQuest-$code.apk" --clobber
+
       - name: Publish nightly
         if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:

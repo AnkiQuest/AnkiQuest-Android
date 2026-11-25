@@ -18,6 +18,7 @@ on:
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
       - "docs/graphics/banner.toml"
+      - "docs/fdroid/*.yml"
       # upstream-backend.test.cjs: files that could name a backend artifact
       - "gradle/**"
       - "**/*.gradle.kts"
@@ -40,6 +41,7 @@ on:
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
       - "docs/graphics/banner.toml"
+      - "docs/fdroid/*.yml"
       # upstream-backend.test.cjs: files that could name a backend artifact
       - "gradle/**"
       - "**/*.gradle.kts"
