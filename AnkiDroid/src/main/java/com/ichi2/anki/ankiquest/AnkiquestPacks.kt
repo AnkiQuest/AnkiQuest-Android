@@ -27,28 +27,30 @@ internal object AnkiquestPacks {
     /** Where downloaded and imported packs live, inside the app's files. */
     private const val STORAGE = "ankiquest/packs"
 
-    /** The library in use and the application whose folders it reads; [app] is null for one from [use]. */
+    /**
+     * The library in use and the storage folder it reads; [storage] is null for one from [use]. Keyed
+     * by the folder, not the application, so no context is held in a static field.
+     */
     private class Held(
-        val app: Context?,
+        val storage: File?,
         val library: AnkiquestPackLibrary,
     ) {
-        fun serves(context: Context) = app == null || app === context
+        fun serves(folder: File) = storage == null || storage == folder
     }
 
     @Volatile
     private var held: Held? = null
 
     /**
-     * The library over [context]'s application's folders, created once per application. Keyed by
-     * the application, so a new one (each Robolectric test has its own) never reads another's
-     * storage.
+     * The library over [context]'s application's folders, created once per storage folder, so a
+     * new application (each Robolectric test has its own) never reads another's deleted storage.
      */
     fun library(context: Context): AnkiquestPackLibrary {
         val app = context.applicationContext ?: context
-        held?.takeIf { it.serves(app) }?.let { return it.library }
+        val storage = File(app.filesDir, STORAGE)
+        held?.takeIf { it.serves(storage) }?.let { return it.library }
         synchronized(this) {
-            held?.takeIf { it.serves(app) }?.let { return it.library }
-            val storage = File(app.filesDir, STORAGE)
+            held?.takeIf { it.serves(storage) }?.let { return it.library }
             val library =
                 AnkiquestPackLibrary(
                     bundled = AssetPackFolder(app.assets, ASSETS),
@@ -56,7 +58,7 @@ internal object AnkiquestPacks {
                     imported = FilePackFolder(File(storage, "imported")),
                 )
             val replaced = held != null
-            held = Held(app, library)
+            held = Held(storage, library)
             download = null
 
             // Pictures decoded from the previous application's packs are not this one's.
@@ -72,7 +74,7 @@ internal object AnkiquestPacks {
      * before the app has started (plain JVM code such as the API client's tests).
      */
     fun libraryOrNull(): AnkiquestPackLibrary? {
-        held?.takeIf { it.app == null }?.let { return it.library }
+        held?.takeIf { it.storage == null }?.let { return it.library }
         if (!AnkiDroidApp.isInitialized) {
             return null
         }
