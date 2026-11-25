@@ -1,5 +1,7 @@
 AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): study, shared goals, and progress in one place.
 
+**Moving to the new app.** This is the final update under `com.ichi2.anki.quest`. The next AnkiQuest installs alongside this one as `org.ankiquest.ankidroid`. On Android 9 and later, the official new app offers to move settings and sign-ins on first launch. On Android 7 and 8, sign in again in the new app. Sync your collection through AnkiWeb, or export it here and import it there. Keep this app installed until your collection is in the new one.
+
 **Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 
 **Study time.** Me has a Study time section: today, this week, this month, total and per study day, from this collection's review history, uploaded or not.

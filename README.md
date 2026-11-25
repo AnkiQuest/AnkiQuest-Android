@@ -64,6 +64,15 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 
 </div>
 
+### Moving from com.ichi2.anki.quest
+
+AnkiQuest is moving from the package `com.ichi2.anki.quest` to `org.ankiquest.ankidroid`, a separate app that cannot update the old one. To move:
+
+1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
+2. Install the new app alongside it. On Android 9 and later, two official builds offer "Move your settings and login from the old AnkiQuest?" on first launch. Move copies the app settings and AnkiQuest and AnkiWeb sign-ins.
+3. With an AnkiWeb login, sync your collection in the new app. Without one, use **Export collection** (with scheduling and media) in the old app, then import the file in the new app. Android 7 and 8 and builds signed outside the official releases use this collection transfer and a fresh sign-in.
+4. Uninstall the old app once your cards are in the new one.
+
 ### Verify the APK
 
 Signing certificate fingerprints of the AnkiQuest release key (`CN=AnkiQuest, O=float3`):
