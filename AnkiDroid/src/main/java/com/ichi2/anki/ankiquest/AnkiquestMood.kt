@@ -20,6 +20,9 @@ internal object AnkiquestMood {
     private const val MINUTE_MS = 60_000L
     private const val PERCENT = 100L
 
+    /** Ends the milestone line on moment cards and share pictures. */
+    private const val FLAME = "🔥"
+
     /** The streak lengths the widget and pictures count down to. */
     private val milestones = listOf(7, 30, 100, 365)
 
@@ -290,8 +293,14 @@ internal object AnkiquestMood {
     /** The next milestone after [streak], or null past the last one. */
     fun next(streak: Int): Int? = milestones.firstOrNull { it > streak }
 
-    /** "36 days to 100 🔥", or null without a streak or past the last milestone. */
+    /** "36 days to 100 🔥" for cards, or null without a streak or past the last milestone. */
     fun nextLine(
+        context: Context,
+        streak: Int,
+    ): String? = milestone(context, streak)?.let { "$it $FLAME" }
+
+    /** "36 days to 100", or null without a streak or past the last milestone. */
+    private fun milestone(
         context: Context,
         streak: Int,
     ): String? {
@@ -305,7 +314,7 @@ internal object AnkiquestMood {
 
     /**
      * The line under the streak number for [flame]: the next milestone once today counts, a nudge to
-     * study while it does not, or null without a streak.
+     * study while it does not, or null without a streak. No emoji: the number beside it has the flame.
      */
     fun line(
         context: Context,
@@ -317,7 +326,7 @@ internal object AnkiquestMood {
         }
         return when (flame) {
             Flame.NONE -> null
-            Flame.LIT -> nextLine(context, streak)
+            Flame.LIT -> milestone(context, streak)
             Flame.UNLIT, Flame.ICY -> context.getString(R.string.ankiquest_streak_nudge)
         }
     }

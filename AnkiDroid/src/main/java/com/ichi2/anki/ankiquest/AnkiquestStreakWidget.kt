@@ -333,6 +333,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 }
             views.setTextViewText(R.id.ankiquest_streak_status, status)
             fitLegacyStatus(views, language, size, status)
+            // The flame and the milestone line come from today, so the status follows it too.
+            setBigStatus(views, language, size, today)
             val progress = setMinimumProgress(views, language, day, status, size)
             val goal = setGoalProgress(views, language, day, me.takeIf { player == Ankiquest.player() }, now)
             if (style == Style.TRANSPARENT && progress != null) {
@@ -457,6 +459,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         ): String? {
             val current = streak?.takeIf { it > 0 }
             val tier = current?.let { days -> StreakTier.entries.lastOrNull { it.days <= days } }
+
+            // One flame per layout, beside the number on every size, coloured by the day's state.
             val drawable = tier?.drawable(flame)
             views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, drawable ?: 0, 0)
             fitLegacyNumber(views, context, size, number, drawable, style)
@@ -464,11 +468,32 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 return null
             }
 
-            // The milestone's flame shows only once today counts; until then the line asks for study.
+            // The line under the number: the next milestone once today counts, until then a nudge.
             val label = current?.let { AnkiquestMood.line(context, flame, it) }
             views.setTextViewText(R.id.ankiquest_streak_milestone, label.orEmpty())
             views.setViewVisibility(R.id.ankiquest_streak_milestone, if (label == null) View.GONE else View.VISIBLE)
             return label
+        }
+
+        /**
+         * The big layouts' status line. Their lit flame already says that today counts, so a counted
+         * day keeps only what the flame cannot say: that the server does not have it yet. [day] is
+         * the one the flame shows, carried from yesterday until the server answers.
+         */
+        private fun setBigStatus(
+            views: RemoteViews,
+            context: Context,
+            size: Size,
+            day: AnkiquestDay.Verdict?,
+        ) {
+            if (size != Size.LARGE && size != Size.HUGE) {
+                return
+            }
+            val id = R.id.ankiquest_streak_status
+            if (day?.awaitingUpload == true) {
+                views.setTextViewText(id, context.getString(R.string.ankiquest_streak_unsent))
+            }
+            views.setViewVisibility(id, if (day?.met == true && !day.awaitingUpload) View.GONE else View.VISIBLE)
         }
 
         /** Android 7 lacks native autosizing; fit the guaranteed minimum widget width there. */
