@@ -135,4 +135,18 @@
         <item quantity="one">Se envió %d repaso.</item>
         <item quantity="other">Se enviaron %d repasos.</item>
     </plurals>
+    <string name="ankiquest_widget_settings_title">Widget de clasificación</string>
+    <string name="ankiquest_widget_settings_open">%1$s, ajustes del widget</string>
+    <string name="ankiquest_widget_settings_save">Guardar widget</string>
+    <string name="ankiquest_widget_settings_scale">Tamaño del texto</string>
+    <string name="ankiquest_widget_settings_timeframe">Periodo</string>
+    <string name="ankiquest_widget_settings_groups_failed">No se han podido cargar tus grupos</string>
+    <string name="ankiquest_widget_settings_groups_loading">Cargando tus grupos…</string>
+    <string name="ankiquest_widget_scale_auto">Automático (cabe en el widget)</string>
+    <string name="ankiquest_widget_scale_extra_large">Muy grande</string>
+    <string name="ankiquest_widget_scale_large">Grande</string>
+    <string name="ankiquest_widget_scale_medium">Mediano</string>
+    <string name="ankiquest_widget_scale_small">Pequeño</string>
+    <string name="ankiquest_widget_global_unavailable">Este servidor aún no tiene clasificación global</string>
+    <string name="ankiquest_widget_who_global">Global</string>
 </resources>
