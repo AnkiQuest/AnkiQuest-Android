@@ -124,7 +124,7 @@
         <item>Vou estudar mais tarde</item>
     </string-array>
     <string name="ankiquest_streak_studied">Estudou hoje</string>
-    <string name="ankiquest_streak_unverified">Estudei hoje · tempo desconhecido</string>
+    <string name="ankiquest_streak_unverified">Estudado hoje · tempo desconhecido</string>
     <string name="ankiquest_streak_pending">Ainda não estudou</string>
     <string name="ankiquest_streak_protected">Sequência protegida · Ainda não estudou</string>
     <string name="ankiquest_streak_unknown">Atualiza para ver o estado do estudo de hoje</string>
