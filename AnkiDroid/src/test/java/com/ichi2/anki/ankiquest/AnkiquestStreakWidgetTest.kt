@@ -285,6 +285,46 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         }
     }
 
+    @Test
+    fun `after a counted day the companion sleeps until the usual first study time`() {
+        // The night rule: yesterday counted, the streak waits, and it is before the usual time
+        // (08:00 without history), so the widget's companion is asleep; after it, sad.
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://study.example.test")
+            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_TOKEN, "test-token")
+        }
+        val morning =
+            java.time.ZonedDateTime
+                .now(java.time.ZoneId.systemDefault())
+                .withHour(6)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0)
+                .toInstant()
+                .toEpochMilli()
+        val ended = morning - 2 * 3_600_000
+        val row = me(12, "studied", 30, 20, 10).put("day_ends_at", ended)
+        val profile =
+            JSONObject()
+                .put("streak", 12)
+                .put("streak_state", "studied")
+                .put("day_ends_at", ended)
+        AnkiquestIcon.update(targetContext, profile, morning, prefs)
+        AnkiquestNight.remember(4, emptyList(), prefs)
+
+        val shown = { now: Long ->
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, JSONArray().put(row), "hill", AnkiquestStreakWidget.Size.MEDIUM, now)
+                    .apply(targetContext, FrameLayout(targetContext))
+            shadowOf(widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable).createdFromResId
+        }
+        assertEquals(AnkiquestMood.pose(AnkiquestMood.Mood.ASLEEP, 12), shown(morning))
+        assertEquals(AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 12), shown(morning + 3 * 3_600_000))
+    }
+
     /** The companion [widget] shows is [pose]. */
     private fun assertPose(
         widget: View,
@@ -440,7 +480,8 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
-        assertEquals(10, aki.size)
+        // The away levels add Aki's neglected pose; a freeze in effect shows her frozen one.
+        assertEquals(11, aki.size)
         val poses = aki + ankilopeMoodPoses.values
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

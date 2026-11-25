@@ -193,8 +193,11 @@ class AnkiquestAkiTest : RobolectricTest() {
             val name = case.getString("name")
             val today = case.getJSONObject("today")
             val expected = case.getJSONObject("expected")
-            val profile = homeProfile(today) ?: continue
-            val card = AnkiquestAki.mood(null, profile)
+            val profile = homeProfile(today, NOW) ?: continue
+            if (sleepsAtNight(today, expected)) {
+                continue
+            }
+            val card = AnkiquestAki.mood(null, profile, NOW)
             assertEquals(enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase()), card.mood, name)
             assertEquals(akiMoodArt(expected), targetContext.resources.getResourceEntryName(card.image), name)
             checked++
@@ -212,8 +215,12 @@ class AnkiquestAkiTest : RobolectricTest() {
             )
         var checked = 0
         for (case in fixtures.getJSONArray("moods").objects()) {
-            val profile = homeProfile(case.getJSONObject("today")) ?: continue
-            val card = AnkiquestAki.mood(null, profile)
+            val today = case.getJSONObject("today")
+            val profile = homeProfile(today, NOW) ?: continue
+            if (sleepsAtNight(today, case.getJSONObject("expected"))) {
+                continue
+            }
+            val card = AnkiquestAki.mood(null, profile, NOW)
             val expected = ankilopeMoodPoses.getValue(card.mood)
             assertEquals(expected, AnkiquestCompanion.resource(card.image), case.getString("name"))
             checked++
@@ -222,10 +229,23 @@ class AnkiquestAkiTest : RobolectricTest() {
     }
 
     /**
-     * A server profile that the Home card judges as the fixture's [today], or null for an unknown
-     * day: Home learns the goal and frozen days from the same profile, so it has neither then.
+     * Whether the fixture case is asleep by the night rule: asleep with a streak. Home reads the
+     * night rule's inputs from the collection ([AnkiquestNight]); AnkiquestMoodTest checks those cases.
      */
-    private fun homeProfile(today: JSONObject): JSONObject? {
+    private fun sleepsAtNight(
+        today: JSONObject,
+        expected: JSONObject,
+    ): Boolean = expected.getString("mood") == "asleep" && today.getInt("streak") > 0
+
+    /**
+     * A server profile that the Home card judges at [now] as the fixture's [today], or null for an
+     * unknown day: Home learns the goal, frozen days, days away and freezes from the same profile,
+     * so it has none of them then.
+     */
+    private fun homeProfile(
+        today: JSONObject,
+        now: Long,
+    ): JSONObject? {
         val state = today.getString("state")
         if (state == "unknown") {
             return null
@@ -234,13 +254,21 @@ class AnkiquestAkiTest : RobolectricTest() {
         // A short day is pending on the server, with reviews short of the minimum.
         val serverState = if (state == "short") "pending" else state
         val frozen = today.getInt("frozen_days")
+        val away = today.getInt("days_away")
         val heatmap = JSONArray()
-        repeat(frozen) { heatmap.put(JSONObject().put("frozen", true)) }
+        if (away > 0) {
+            heatmap.put(JSONObject().put("frozen", false).put("state", "met"))
+        }
+        repeat(away) { heatmap.put(JSONObject().put("frozen", false).put("state", "none")) }
+        repeat(frozen) { heatmap.put(JSONObject().put("frozen", true).put("state", "frozen")) }
         heatmap.put(JSONObject())
+        val endsAt = if (today.isNull("day_left_ms")) Long.MAX_VALUE else now + today.getLong("day_left_ms")
         return JSONObject()
             .put("streak_state", serverState)
             .put("streak", today.getInt("streak"))
-            .put("day_ends_at", Long.MAX_VALUE)
+            .put("day_ends_at", endsAt)
+            .put("freezes_enabled", true)
+            .put("stored_freezes", today.getInt("freezes"))
             .put(
                 "today",
                 JSONObject()
@@ -259,5 +287,10 @@ class AnkiquestAkiTest : RobolectricTest() {
             android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO,
             AnkiquestAki.image(targetContext, com.ichi2.anki.R.drawable.aki_review).importantForAccessibility,
         )
+    }
+
+    private companion object {
+        /** A fixed time for the Home card, so a day's time left does not move between building and judging it. */
+        const val NOW = 1_800_000_000_000L
     }
 }

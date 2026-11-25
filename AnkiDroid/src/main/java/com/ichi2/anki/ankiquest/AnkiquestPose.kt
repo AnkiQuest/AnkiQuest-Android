@@ -5,7 +5,8 @@ package com.ichi2.anki.ankiquest
 /**
  * A companion pose, named as in `tests/fixtures/companion_poses.json` from AnkiQuest-Server. Core
  * poses have no [fallback]: every companion has them. An extension a companion has no art for
- * shows its [fallback], which is a core pose or another extension that leads to one.
+ * shows its [fallback], which is a core pose or another extension that leads to one. A picture a
+ * mood shows, such as [FREEZE], falls back the same way.
  */
 internal enum class AnkiquestPose(
     val id: String,
@@ -32,6 +33,9 @@ internal enum class AnkiquestPose(
     DEAD("dead", NEGLECTED),
     LEECH_DEFEATED("leech_defeated", HAPPY),
     WINNER("winner", HAPPY),
+
+    // Pictures a mood shows (companion_poses.json `pictures`); they fall back like extensions.
+    FREEZE("freeze", FROZEN),
     ;
 
     /** This pose, then each fallback in turn, ending at a core pose. */

@@ -120,17 +120,25 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         return mood(AnkiquestDay.judgeOwn(AnkiquestDay.carried(server, now), now, prefs))
     }
 
-    /** The icon for [day]'s mood; the icon has one frozen face, also for thawing, and none for hopeful or almost. */
+    /**
+     * The icon for [day]'s mood; the icon has one frozen face, also for a freeze in effect and
+     * thawing, one sleepy face, also for the away levels, and none for hopeful or almost.
+     */
     private fun mood(day: AnkiquestDay.Verdict?): Mood =
         when (AnkiquestMood.of(day, 0, AnkiquestMood.Goal.OPEN)) {
             AnkiquestMood.Mood.FIRE -> Mood.HAPPY
             AnkiquestMood.Mood.SAD -> Mood.WORRIED
+            AnkiquestMood.Mood.FREEZE,
             AnkiquestMood.Mood.FROZEN_1,
             AnkiquestMood.Mood.FROZEN_2,
             AnkiquestMood.Mood.FROZEN_3,
             AnkiquestMood.Mood.THAWING,
             -> Mood.FROZEN
-            AnkiquestMood.Mood.ASLEEP -> Mood.SLEEPY
+            AnkiquestMood.Mood.ASLEEP,
+            AnkiquestMood.Mood.NEGLECTED,
+            AnkiquestMood.Mood.ABANDONED,
+            AnkiquestMood.Mood.DEAD,
+            -> Mood.SLEEPY
             AnkiquestMood.Mood.HOPEFUL, AnkiquestMood.Mood.ALMOST, AnkiquestMood.Mood.UNKNOWN -> Mood.DEFAULT
         }
 
@@ -221,8 +229,12 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 .put("streak_state", profile.optString("streak_state"))
                 .put("day_ends_at", profile.optLong("day_ends_at"))
                 .put("goal_reached", profile.optJSONObject("goal")?.optBoolean("reached") == true)
-                // The streak widget's frozen mood needs the run of frozen days before today.
+                // The streak widget's mood needs the run of frozen days and of days away before
+                // today, how yesterday ended (the night rule) and the freezes left.
                 .put("frozen_days", AnkiquestMood.frozenRun(profile.optJSONArray("heatmap")))
+                .put("days_away", AnkiquestMood.awayRun(profile.optJSONArray("heatmap")))
+                .put("yesterday", AnkiquestMood.yesterday(profile.optJSONArray("heatmap")).name.lowercase())
+                .put("freezes", if (profile.optBoolean("freezes_enabled")) profile.optInt("stored_freezes").coerceAtLeast(0) else 0)
                 .put(
                     "goal",
                     profile.optJSONObject("goal")?.let { goal ->

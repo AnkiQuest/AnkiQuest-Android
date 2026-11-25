@@ -25,6 +25,7 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
         AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.ankilope_sad,
+        AnkiquestMood.Mood.FREEZE to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.ankilope_frozen,
@@ -32,14 +33,21 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
+        AnkiquestMood.Mood.NEGLECTED to R.drawable.ankilope_neglected,
+        AnkiquestMood.Mood.ABANDONED to R.drawable.ankilope_neglected,
+        AnkiquestMood.Mood.DEAD to R.drawable.ankilope_neglected,
     )
 
-/** The shared pose's Aki drawable; her missing frozen extensions use the core frozen pose. */
+/**
+ * The shared pose's Aki drawable; her missing frozen extensions and the freeze picture use the core
+ * frozen pose, her missing away extensions the core neglected pose.
+ */
 internal fun akiMoodArt(expected: JSONObject): String {
     val pose = expected.getString("pose")
     val shown =
         when (pose) {
-            "frozen_2", "frozen_3" -> "frozen"
+            "freeze", "frozen_2", "frozen_3" -> "frozen"
+            "abandoned", "dead" -> "neglected"
             else -> pose
         }
     return "aki_$shown"
@@ -54,10 +62,14 @@ internal val ankiTanMoodPoses =
         AnkiquestMood.Mood.UNKNOWN to R.drawable.anki_tan_face,
         AnkiquestMood.Mood.ASLEEP to R.drawable.anki_tan_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.anki_tan_sad,
+        AnkiquestMood.Mood.FREEZE to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.THAWING to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.anki_tan_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.anki_tan_hopeful,
+        AnkiquestMood.Mood.NEGLECTED to R.drawable.anki_tan_neglected,
+        AnkiquestMood.Mood.ABANDONED to R.drawable.anki_tan_neglected,
+        AnkiquestMood.Mood.DEAD to R.drawable.anki_tan_dead,
     )

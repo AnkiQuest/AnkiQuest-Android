@@ -18,12 +18,14 @@ import com.ichi2.anki.ankiquest.AnkiquestMood.Stage
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapView
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.ichi2.anki.common.android.R as CommonR
@@ -57,11 +59,110 @@ class AnkiquestMoodTest : RobolectricTest() {
             // The mood from today's verdict, then the pose for that mood by drawable name.
             val state = named<State>(today.getString("state"))
             val stage = Stage.of(today.getLong("time_ms"), today.getInt("streak_minutes"))
-            val mood = AnkiquestMood.of(state, today.getInt("reviews"), stage, streak, today.getInt("frozen_days"), goal)
+            val dayLeft = if (today.isNull("day_left_ms")) null else today.getLong("day_left_ms")
+            val mood =
+                AnkiquestMood.of(
+                    state,
+                    today.getInt("reviews"),
+                    stage,
+                    streak,
+                    today.getInt("frozen_days"),
+                    goal,
+                    today.getInt("days_away"),
+                    today.getInt("freezes"),
+                    dayLeft,
+                    night(case.getJSONObject("night")),
+                )
             assertEquals(named<Mood>(expected.getString("mood")), mood, name)
             val shown = targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak))
             assertEquals(akiMoodArt(expected), shown, name)
         }
+    }
+
+    /** A shared case's night rule inputs. */
+    private fun night(night: JSONObject): AnkiquestMood.Night =
+        AnkiquestMood.Night(
+            night.getString("now"),
+            night.getInt("rollover_hour"),
+            night.getJSONArray("first_reviews").strings(),
+            named(night.getString("yesterday")),
+        )
+
+    @Test
+    fun `every shared usual first study time matches`() {
+        val rule = fixtures.getJSONObject("night")
+        assertEquals(AnkiquestMood.DEFAULT_USUAL, rule.getString("default_usual"))
+        assertEquals(AnkiquestMood.RECENT_DAYS, rule.getInt("recent_days"))
+        assertEquals(AnkiquestMood.MIN_DAYS, rule.getInt("min_days"))
+        assertEquals(named<AnkiquestMood.Flame>(rule.getString("flame")), AnkiquestMood.flame(Mood.ASLEEP, 12))
+        assertEquals(AnkiquestMood.Flame.NONE, AnkiquestMood.flame(Mood.ASLEEP, 0))
+        for (case in rule.getJSONArray("usual_cases").objects()) {
+            val rollover = case.getInt("rollover_hour")
+            assertEquals(
+                AnkiquestMood.afterRollover(case.getString("expected"), rollover),
+                AnkiquestMood.usualFirstStudy(case.getJSONArray("first_reviews").strings(), rollover),
+                case.getString("name"),
+            )
+        }
+    }
+
+    @Test
+    fun `every shared flame matches`() {
+        for (case in cases("flames")) {
+            val mood = named<Mood>(case.getString("mood"))
+            assertEquals(named<AnkiquestMood.Flame>(case.getString("flame")), AnkiquestMood.flame(mood), mood.name)
+        }
+        assertEquals(Mood.entries.toSet(), cases("flames").map { named<Mood>(it.getString("mood")) }.toSet())
+    }
+
+    @Test
+    fun `every shared away run matches`() {
+        for (case in cases("away_run")) {
+            assertEquals(case.getInt("expected"), AnkiquestMood.awayRun(case.optJSONArray("heatmap")), case.getString("name"))
+        }
+    }
+
+    @Test
+    fun `the heatmap says how yesterday ended`() {
+        val today = JSONObject().put("frozen", false).put("state", "none")
+        val cell = { frozen: Boolean, state: String -> JSONObject().put("frozen", frozen).put("state", state) }
+        assertEquals(AnkiquestMood.Yesterday.UNKNOWN, AnkiquestMood.yesterday(null as JSONArray?))
+        assertEquals(AnkiquestMood.Yesterday.UNKNOWN, AnkiquestMood.yesterday(JSONArray().put(today)))
+        assertEquals(AnkiquestMood.Yesterday.COUNTED, AnkiquestMood.yesterday(JSONArray().put(cell(false, "met")).put(today)))
+        assertEquals(AnkiquestMood.Yesterday.PROTECTED, AnkiquestMood.yesterday(JSONArray().put(cell(true, "frozen")).put(today)))
+        assertEquals(AnkiquestMood.Yesterday.MISSED, AnkiquestMood.yesterday(JSONArray().put(cell(false, "short")).put(today)))
+
+        // A profile for today reads its heatmap; once its day has ended, its own verdict is yesterday's.
+        val now = 1_800_000_000_000L
+        val heatmap = JSONArray().put(cell(false, "met")).put(today)
+        val current = JSONObject().put("day_ends_at", now + HOUR).put("streak_state", "pending").put("heatmap", heatmap)
+        assertEquals(AnkiquestMood.Yesterday.COUNTED, AnkiquestMood.yesterday(current, now))
+        val ended = JSONObject().put("day_ends_at", now - HOUR)
+        assertEquals(AnkiquestMood.Yesterday.COUNTED, AnkiquestMood.yesterday(ended.put("streak_state", "studied"), now))
+        assertEquals(AnkiquestMood.Yesterday.PROTECTED, AnkiquestMood.yesterday(ended.put("streak_state", "protected"), now))
+        assertEquals(AnkiquestMood.Yesterday.MISSED, AnkiquestMood.yesterday(ended.put("streak_state", "pending"), now))
+        assertEquals(AnkiquestMood.Yesterday.UNKNOWN, AnkiquestMood.yesterday(ended, now + 2 * DAY))
+        assertEquals(AnkiquestMood.Yesterday.UNKNOWN, AnkiquestMood.yesterday(null, now))
+    }
+
+    @Test
+    fun `the first reviews of earlier study days are kept for the night rule`() {
+        // Study days start at the rollover (4 h, UTC here): a review at 03:00 belongs to the day before.
+        val day = 86_400_000L
+        val base = 400 * day
+        val utc = java.time.ZoneOffset.UTC
+        val ids = listOf(base + 9 * HOUR, base + day + 7 * HOUR, base + 3 * day + 6 * HOUR)
+        val now = base + 3 * day + 12 * HOUR
+        assertEquals(listOf("09:00", "07:00"), AnkiquestNight.firstReviews(ids, now, 0, 4, 14, utc))
+        assertEquals(listOf("07:00"), AnkiquestNight.firstReviews(ids, now, 0, 4, 1, utc))
+
+        // Kept and read back with the local time and how yesterday ended.
+        val prefs = targetContext.sharedPrefs()
+        assertNull(AnkiquestNight.inputs(AnkiquestMood.Yesterday.COUNTED, now, prefs))
+        AnkiquestNight.remember(4, listOf("09:00", "07:00"), prefs)
+        val night = assertNotNull(AnkiquestNight.inputs(AnkiquestMood.Yesterday.COUNTED, now, prefs))
+        assertEquals(listOf("09:00", "07:00"), night.firstReviews)
+        assertEquals(4, night.rolloverHour)
     }
 
     @Test
@@ -132,7 +233,10 @@ class AnkiquestMoodTest : RobolectricTest() {
         for (frozen in listOf(Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3, Mood.THAWING)) {
             assertEquals(AnkiquestMood.Flame.ICY, flames[frozen], frozen.name)
         }
-        assertEquals(AnkiquestMood.Flame.NONE, flames[Mood.ASLEEP])
+        assertEquals(AnkiquestMood.Flame.ICY, flames[Mood.FREEZE])
+        for (away in listOf(Mood.ASLEEP, Mood.NEGLECTED, Mood.ABANDONED, Mood.DEAD)) {
+            assertEquals(AnkiquestMood.Flame.NONE, flames[away], away.name)
+        }
         assertEquals(AnkiquestMood.Flame.NONE, flames[Mood.UNKNOWN])
     }
 
@@ -221,5 +325,6 @@ class AnkiquestMoodTest : RobolectricTest() {
         const val AA_LARGE = 3.0
         const val OPAQUE = 0xFF000000.toInt()
         const val HOUR = 3_600_000L
+        const val DAY = 86_400_000L
     }
 }

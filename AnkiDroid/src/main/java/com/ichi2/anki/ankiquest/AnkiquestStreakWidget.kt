@@ -304,7 +304,14 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val frozen = profile?.optInt("frozen_days") ?: 0
             // Until the server answers for a new day, a counted day carries into it: the streak waits.
             val today = day ?: carriedDay(own, row, now)
-            val mood = AnkiquestMood.of(today, frozen, goalState)
+            // The signed-in player's own day also brings days away, freezes and the night rule.
+            val last = if (own) AnkiquestIcon.lastKnown() else null
+            val mood =
+                if (last != null) {
+                    AnkiquestMood.ownMood(today, last, goalState, now)
+                } else {
+                    AnkiquestMood.of(today, frozen, goalState)
+                }
 
             // Aki shows the mood when chosen; otherwise only the flame does.
             val companionVisible = AnkiquestCompanion.visible()
@@ -347,7 +354,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                         .coerceAtLeast(1)
                 views.setViewPadding(R.id.ankiquest_streak_progress, edge, edge, edge, edge)
             }
-            val milestone = setStreakTier(views, language, AnkiquestMood.flame(mood), streak, size, number, style)
+            val milestone = setStreakTier(views, language, AnkiquestMood.flame(mood, streak ?: 0), streak, size, number, style)
             if (ringed(size)) {
                 val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
                 views.setViewVisibility(R.id.ankiquest_streak_badge, badge)

@@ -59,7 +59,20 @@ internal object AnkiquestAki {
         // The pose follows the one mood rule; the profile's goal and frozen days count only while its day is today.
         val current = profile?.takeIf { day != null }
         val reached = if (current?.optJSONObject("goal")?.optBoolean("reached") == true) Goal.REACHED else Goal.OPEN
-        val mood = AnkiquestMood.of(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
+        val heatmap = current?.optJSONArray("heatmap")
+        val freezes = current?.takeIf { it.optBoolean("freezes_enabled") }?.optInt("stored_freezes")?.coerceAtLeast(0) ?: 0
+        val dayLeft = current?.optLong("day_ends_at")?.takeIf { it > 0 }?.let { it - now }
+        val night = AnkiquestNight.inputs(AnkiquestMood.yesterday(profile, now), now)
+        val mood =
+            AnkiquestMood.of(
+                day,
+                AnkiquestMood.frozenRun(heatmap),
+                reached,
+                AnkiquestMood.awayRun(heatmap),
+                freezes,
+                dayLeft,
+                night,
+            )
         return Card(mood, day?.streak ?: 0, message(mood, local, day))
     }
 
@@ -74,7 +87,7 @@ internal object AnkiquestAki {
         if (!reviewed && mood == AnkiquestMood.Mood.SAD) {
             return Message.WAITING
         }
-        if (!reviewed && mood in frozen) {
+        if (!reviewed && (mood in frozen || mood == AnkiquestMood.Mood.FREEZE)) {
             return Message.FREEZE
         }
 
