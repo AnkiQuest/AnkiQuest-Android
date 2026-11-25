@@ -516,7 +516,7 @@ internal object AnkiquestMomentCard {
             val undo = moment.key in undoable
             holder.tell.isVisible = tellable(moment) && (undo || (moment.key !in told && known?.told != true))
             holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
-            holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
+            holder.tell.setOnClickListener { if (undo) untell(moment, position) else share(moment, position) }
             holder.share.setOnClickListener { share(moment, position) }
             holder.download.setOnClickListener { download(moment) }
             holder.deck.isVisible = moment.conquest != null
@@ -560,7 +560,8 @@ internal object AnkiquestMomentCard {
             val open = waiting as? Waiting.Sheet ?: return
             val moment = moments.firstOrNull { it.key == open.key }?.let(::confirmed) ?: return
             val signedIn = current() ?: return
-            val ref = reference(moment)?.takeIf { AnkiquestMomentShare.available(signedIn, it) } ?: return
+            // The refuse() gate at share time already ruled out a server too old for this.
+            val ref = reference(moment) ?: return
             waiting = Waiting.None
             open.sheet.confirm(ref)
         }
@@ -667,49 +668,6 @@ internal object AnkiquestMomentCard {
             }
         }
 
-        private fun tell(
-            shown: Moment,
-            position: Int,
-        ) {
-            val moment = confirmed(shown)
-            val scope = scope ?: return
-            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
-            val win = moment.win ?: extras[moment.key]?.win
-            val reference = reference(moment)
-            // Tell -> share sheet -> chosen send. Older servers keep their existing route.
-            if (reference != null && AnkiquestMomentShare.available(signedIn, reference)) {
-                share(moment, position)
-                return
-            }
-            scope.launch {
-                val message =
-                    try {
-                        val friends =
-                            when {
-                                moment.conquest != null -> AnkiquestCommunity.tell(signedIn, moment.conquest)
-                                win != null -> Ankiquest.shareWinWithFriends(win, signedIn.scope)
-                                else -> Ankiquest.shareWin(moment.notification, moment.place, signedIn.scope)
-                            }
-                        told += moment.key
-                        if (moment.conquest != null) undoable += moment.key
-                        changed(position)
-                        if (friends == 0) {
-                            host.getString(R.string.ankiquest_share_nobody)
-                        } else {
-                            host.resources.getQuantityString(R.plurals.ankiquest_share_sent, friends, friends)
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: HomeAccountChanged) {
-                        host.getString(R.string.ankiquest_share_account_changed)
-                    } catch (e: Exception) {
-                        Timber.w(e, "AnkiQuest moment: telling friends failed")
-                        host.getString(R.string.ankiquest_share_failed)
-                    }
-                showThemedToast(host, message, shortLength = false)
-            }
-        }
-
         /** Takes back telling friends about a conquered card, from those who have not read it yet. */
         private fun untell(
             moment: Moment,
@@ -750,7 +708,8 @@ internal object AnkiquestMomentCard {
         /**
          * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
          * chosen friends, or for a streak card it has not confirmed yet, whose friends wait for the
-         * upload (hill, 2026-11-20); Android's share sheet otherwise.
+         * upload; Android's share sheet otherwise. The old-server route is gone: the sheet refuses
+         * a server too old to share.
          */
         private fun share(
             shown: Moment,
@@ -759,10 +718,13 @@ internal object AnkiquestMomentCard {
             val moment = confirmed(shown)
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             val ref = reference(moment)
+            if (AnkiquestServerUpdate.refuse(host, signedIn)) {
+                return
+            }
             val subject =
                 when {
-                    ref != null && AnkiquestMomentShare.available(signedIn, ref) -> AnkiquestShareSheet.Subject.Known(ref)
-                    ref == null && AnkiquestMoments.unconfirmed(moment) && AnkiquestMomentShare.available(signedIn) ->
+                    ref != null -> AnkiquestShareSheet.Subject.Known(ref)
+                    AnkiquestMoments.unconfirmed(moment) ->
                         AnkiquestShareSheet.Subject.Uploading
                     else -> {
                         elsewhere(moment)

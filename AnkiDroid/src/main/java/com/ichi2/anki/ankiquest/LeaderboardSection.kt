@@ -65,8 +65,6 @@ internal class LeaderboardSection(
     private sealed interface Hides {
         data object Unknown : Hides
 
-        data object Unavailable : Hides
-
         data class Loading(
             val panel: HiddenPanel,
         ) : Hides
@@ -297,11 +295,11 @@ internal class LeaderboardSection(
             lifecycleScope.launch {
                 val next =
                     try {
-                        AnkiquestGlobalHides.load(current)?.let { Hides.Ready(it, panel) } ?: Hides.Unavailable
+                        Hides.Ready(AnkiquestGlobalHides.load(current), panel)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Hides.Failed(panel, hideFailure(e))
+                        Hides.Failed(panel, hideFailure(current, e))
                     }
                 if (turn != hideGeneration || current.scope != AnkiquestHomeData.account()?.scope) {
                     return@launch
@@ -362,7 +360,7 @@ internal class LeaderboardSection(
                         throw e
                     } catch (e: Exception) {
                         if (turn == hideGeneration && current.scope == AnkiquestHomeData.account()?.scope) {
-                            hides = before.copy(message = getString(hideFailure(e)))
+                            hides = before.copy(message = getString(hideFailure(current, e)))
                             render()
                         }
                         return@launch
@@ -381,8 +379,11 @@ internal class LeaderboardSection(
     }
 
     @StringRes
-    private fun hideFailure(error: Exception): Int =
-        when ((error as? AnkiquestHttpException)?.code) {
+    private fun hideFailure(
+        current: HomeAccount,
+        error: Exception,
+    ): Int =
+        AnkiquestServerUpdate.message(current, error) ?: when ((error as? AnkiquestHttpException)?.code) {
             HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> R.string.aq_home_auth
             HTTP_NOT_FOUND -> R.string.aq_board_hide_gone
             HTTP_CONFLICT -> R.string.aq_board_hide_limit
@@ -536,7 +537,7 @@ internal class LeaderboardSection(
 
     private fun hiddenControls(current: HomeAccount) {
         when (val state = hides) {
-            Hides.Unknown, Hides.Unavailable -> return
+            Hides.Unknown -> return
             is Hides.Loading -> {
                 views.text(content, getString(R.string.aq_board_hidden_loading), small = true)
                 return

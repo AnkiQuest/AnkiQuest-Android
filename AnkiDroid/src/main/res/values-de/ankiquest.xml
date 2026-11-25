@@ -136,4 +136,5 @@
         <item quantity="one">%d Wiederholung gesendet.</item>
         <item quantity="other">%d Wiederholungen gesendet.</item>
     </plurals>
+    <string name="aq_server_outdated">Aktualisiere deinen AnkiQuest-Server</string>
 </resources>

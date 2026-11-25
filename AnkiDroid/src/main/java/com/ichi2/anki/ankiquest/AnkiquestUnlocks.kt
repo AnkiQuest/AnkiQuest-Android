@@ -15,17 +15,10 @@ import org.json.JSONObject
  * conditions are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
  */
 internal object AnkiquestUnlocks {
-    const val FEATURE = "companion_unlocks"
     private const val PREF_UNLOCKS = "ankiquestUnlocks"
 
     /** Companions earned at a milestone. */
     private val EARNED = setOf(Choice.ANKILOPE, Choice.COW)
-
-    /**
-     * Earned companions every player could choose before milestones. A server from then lists no
-     * progress, so these stay free there; the others stay hidden until unlocked.
-     */
-    private val OFFERED_BEFORE = setOf(Choice.ANKILOPE)
 
     /** What a milestone counts; [id] is the fixture's and the server's `kind`. */
     enum class Milestone(
@@ -59,7 +52,7 @@ internal object AnkiquestUnlocks {
         val unlocks: Set<Choice> get() = ids.mapNotNullTo(mutableSetOf()) { known(it) }
 
         companion object {
-            /** A server without [FEATURE]: nothing unlocked, no progress. */
+            /** Nothing unlocked, no progress. */
             val NONE = Found(emptySet(), emptyMap())
 
             /** A `GET /api/unlocks/{user}` answer, leaving out what this app cannot read or show. */
@@ -100,7 +93,7 @@ internal object AnkiquestUnlocks {
             val progress: Progress,
         ) : Offer
 
-        /** Secret until earned, unknown to an older server, or not known yet. */
+        /** Secret until earned, or not known yet. */
         data object Hidden : Offer
     }
 
@@ -124,7 +117,7 @@ internal object AnkiquestUnlocks {
         if (progress != null) {
             return Offer.Locked(progress)
         }
-        return if (found != null && choice in OFFERED_BEFORE) Offer.Free else Offer.Hidden
+        return Offer.Hidden
     }
 
     /** The server's last answer for [account], or null when it has not answered yet. */
@@ -142,15 +135,7 @@ internal object AnkiquestUnlocks {
         if (account.token.isEmpty()) {
             return
         }
-
-        // A server without unlocks has nothing to read; its answer is that nothing is unlocked.
-        val answer =
-            if (FEATURE in AnkiquestCapabilities.current(account)) {
-                AnkiquestHomeData.unlocks(account)
-            } else {
-                JSONObject()
-            }
-        keep(account, answer)
+        keep(account, AnkiquestHomeData.unlocks(account))
     }
 
     /**

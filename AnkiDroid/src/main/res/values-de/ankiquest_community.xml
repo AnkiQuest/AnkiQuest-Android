@@ -72,12 +72,7 @@
         <item quantity="other">%1$s Tage zum Lernen</item>
     </plurals>
     <string name="aq_conquest_tell">Meinen Freunden erzählen</string>
-    <string name="aq_conquest_telling">Deine Freunde werden benachrichtigt…</string>
     <string name="aq_conquest_told">Freunde benachrichtigt</string>
-    <plurals name="aq_conquest_told_count">
-        <item quantity="one">%1$d Freund sieht es in seinen Aktivitäten.</item>
-        <item quantity="other">%1$d Freunde sehen es in ihren Aktivitäten.</item>
-    </plurals>
     <string name="aq_conquest_label_add">Zeigen, welche Karte es war</string>
     <string name="aq_conquest_label_explanation">Alle, die diese Karte öffnen können, sehen es, ebenso Freunde, denen du davon erzählst. Du kannst es später zurücknehmen.</string>
     <string name="aq_conquest_label_save">Auf der Karte zeigen</string>
@@ -106,6 +101,5 @@
         <item quantity="one">%1$s hat endlich „%2$s“ gelernt, eine Karte, die %3$d-mal vergessen wurde. 🏆</item>
         <item quantity="other">%1$s hat endlich „%2$s“ gelernt, eine Karte, die %3$d-mal vergessen wurde. 🏆</item>
     </plurals>
-    <string name="aq_server_outdated">Dafür braucht es einen neueren AnkiQuest-Server. Bitte die Person, die deinen betreibt, ihn zu aktualisieren.</string>
     <string name="aq_conquest_share_deck">Aus meinem Stapel „%1$s“.</string>
 </resources>

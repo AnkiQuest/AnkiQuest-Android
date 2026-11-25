@@ -9,8 +9,6 @@ import org.json.JSONObject
 
 /** Global's private exclusions: controls -> captured account -> authenticated API. */
 internal object AnkiquestGlobalHides {
-    private const val FEATURE = "global_leaderboard_hide"
-
     enum class Action(
         val wire: String,
     ) {
@@ -23,13 +21,9 @@ internal object AnkiquestGlobalHides {
         val display: String,
     )
 
-    /** Null means an older server; an empty list means supported with nobody hidden. */
-    suspend fun load(account: HomeAccount): List<Player>? {
-        val features = AnkiquestCapabilities.current(account)
+    /** The players [account] hid from Global; empty when nobody is hidden. */
+    suspend fun load(account: HomeAccount): List<Player> {
         AnkiquestApi.requireCurrent(account)
-        if (FEATURE !in features) {
-            return null
-        }
         return withContext(Dispatchers.IO) {
             val request = AnkiquestApi.request(account, "api/leaderboard/hidden/${account.encodedUser}").build()
             parse(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) })

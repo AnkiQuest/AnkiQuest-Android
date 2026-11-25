@@ -21,7 +21,6 @@ import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import io.mockk.coEvery
@@ -88,7 +87,7 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
         }
         mockkObject(AnkiquestHomeData, AnkiquestWidget, AnkiquestCapabilities)
         every { AnkiquestWidget.requestUpdate(any()) } just runs
-        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf("companion_unlocks", "companion_milestones")
         coEvery { AnkiquestHomeData.unlocks(any()) } answers { JSONObject(unlocksExample) }
         coEvery { AnkiquestHomeData.companion(any()) } returns "aki"
         coEvery { AnkiquestHomeData.saveCompanion(any(), any()) } answers { secondArg() }
