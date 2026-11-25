@@ -82,7 +82,8 @@ test("publishing the new package waits for the final legacy APK release", () => 
     const bridge = apkWorkflow.indexOf("      - name: Check the migration release");
     const release = apkWorkflow.indexOf("      - name: Publish release");
     assert.ok(bridge >= 0 && bridge < release, "the bridge check must run before either publication step");
-    assert.match(apkWorkflow.slice(bridge, release), /git merge-base --is-ancestor [a-f0-9]{40} refs\/tags\/quest-24/);
+    // Pull requests squash-merge, so a branch commit is never in the tag; its files are.
+    assert.match(apkWorkflow.slice(bridge, release), /git cat-file -e refs\/tags\/quest-24:AnkiDroid\/src\/main\/java\/com\/ichi2\/anki\/ankiquest\/AnkiquestMoveProvider\.kt/);
     assert.match(apkWorkflow.slice(bridge, release), /gh release view quest-24/);
     assert.match(apkWorkflow.slice(bridge, release), /AnkiDroid-Quest\.apk/);
     assert.doesNotMatch(apkWorkflow.slice(release), /AnkiDroid-Quest\.apk/);
@@ -95,7 +96,7 @@ test("the publication guard accepts only the complete stable bridge", () => {
 
     const shell = `git() {
     case "$1" in
-        merge-base) test "$BRIDGE_COMMIT" = present ;;
+        cat-file) test "$BRIDGE_COMMIT" = present ;;
         grep) test "$BRIDGE_PACKAGE" = legacy ;;
         *) return 127 ;;
     esac
@@ -105,7 +106,7 @@ ${guard}`;
     const stable = { isDraft: false, isPrerelease: false, assets: [{name: "AnkiQuest.apk"}, {name: "AnkiDroid-Quest.apk"}] };
     const cases = [
         { name: "complete legacy release", info: stable, commit: "present", expected: 0 },
-        { name: "missing migration commit", info: stable, commit: "absent", expected: 1 },
+        { name: "missing migration files", info: stable, commit: "absent", expected: 1 },
         { name: "tag built from the new package", info: stable, commit: "present", pkg: "new", expected: 1 },
         { name: "missing legacy name", info: {...stable, assets: stable.assets.slice(0, 1)}, commit: "present", expected: 1 },
         { name: "draft", info: {...stable, isDraft: true}, commit: "present", expected: 1 },
