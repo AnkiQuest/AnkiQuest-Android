@@ -2,10 +2,10 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.widget.ImageView
 import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.get
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -116,7 +116,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertNull(AnkiquestCompanion.bitmap(targetContext, AnkiquestPose.FACE, SIZE, Choice("unicorn")))
 
         // A view is hidden for no companion and left empty while no pack shows the chosen one.
-        val view = ImageView(targetContext).apply { setImageBitmap(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)) }
+        val view = ImageView(targetContext).apply { setImageBitmap(createBitmap(1, 1)) }
         AnkiquestCompanion.show(view, AnkiquestPose.FACE, SIZE, Choice("unicorn"))
         assertTrue(view.isVisible)
         assertNull(view.drawable)

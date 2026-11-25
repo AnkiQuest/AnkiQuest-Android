@@ -49,11 +49,16 @@ internal object AnkiquestCompanion {
 
     /** The official companions this app can draw, as the companion-art header names them. */
     val drawn: List<String>
-        get() = official(AnkiDroidApp.instance).map { it.info.id }
+        get() =
+            AnkiquestPacks
+                .libraryOrNull()
+                ?.let(::official)
+                .orEmpty()
+                .map { it.info.id }
 
     private fun library(context: Context) = AnkiquestPacks.library(context)
 
-    private fun official(context: Context) = library(context).companions().filter { it.origin != PackOrigin.IMPORTED }
+    private fun official(library: AnkiquestPackLibrary) = library.companions().filter { it.origin != PackOrigin.IMPORTED }
 
     /** The poses a preview card shows: face, fire and sad. */
     private val previewPoses = listOf(AnkiquestPose.FACE, AnkiquestPose.STREAK, AnkiquestPose.AT_RISK)
@@ -65,7 +70,8 @@ internal object AnkiquestCompanion {
     ): List<AnkiquestPose> {
         val pack = library(context).companion(choice.id) ?: return emptyList()
         val names = library(context).names()
-        return previewPoses.distinctBy { pose -> names.chain(pose.id).firstOrNull { it in pack.info.poses } }
+        // Poses that share a picture show it once: compare the files they resolve to.
+        return previewPoses.distinctBy { pose -> names.chain(pose.id).firstNotNullOfOrNull { pack.info.poses[it] } }
     }
 
     /** [choice]'s name: its pack's, or "No companion". */

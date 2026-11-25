@@ -195,7 +195,12 @@ class AnkiquestAkiTest : RobolectricTest() {
     fun `every bundled companion draws every streak mood`() {
         // Regression: Ankilope studied on a day a freeze kept; each companion's pack draws each mood.
         val companions = AnkiquestPacks.library(targetContext).companions()
-        assertTrue(companions.isNotEmpty(), "the build bundles the pinned packs")
+        val bundled =
+            targetContext.assets
+                .list(AnkiquestPacks.ASSETS)
+                .orEmpty()
+                .toList()
+        assertTrue(companions.isNotEmpty(), "the build bundles the pinned packs; assets hold $bundled")
         for (pack in companions) {
             val choice = AnkiquestCompanion.Choice(pack.info.id)
             for (mood in AnkiquestMood.Mood.entries) {

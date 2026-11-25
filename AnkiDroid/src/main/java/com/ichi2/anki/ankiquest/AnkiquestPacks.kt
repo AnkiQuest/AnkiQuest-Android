@@ -4,8 +4,9 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.res.AssetManager
-import android.text.TextUtils
 import androidx.annotation.VisibleForTesting
+import androidx.core.text.htmlEncode
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import org.json.JSONException
 import org.json.JSONObject
@@ -26,28 +27,64 @@ internal object AnkiquestPacks {
     /** Where downloaded and imported packs live, inside the app's files. */
     private const val STORAGE = "ankiquest/packs"
 
-    @Volatile
-    private var library: AnkiquestPackLibrary? = null
+    /** The library in use and the application whose folders it reads; [app] is null for one from [use]. */
+    private class Held(
+        val app: Context?,
+        val library: AnkiquestPackLibrary,
+    ) {
+        fun serves(context: Context) = app == null || app === context
+    }
 
-    /** The library over this app's folders, created once. */
+    @Volatile
+    private var held: Held? = null
+
+    /**
+     * The library over [context]'s application's folders, created once per application. Keyed by
+     * the application, so a new one (each Robolectric test has its own) never reads another's
+     * storage.
+     */
     fun library(context: Context): AnkiquestPackLibrary {
-        library?.let { return it }
+        val app = context.applicationContext ?: context
+        held?.takeIf { it.serves(app) }?.let { return it.library }
         synchronized(this) {
-            library?.let { return it }
-            val storage = File(context.filesDir, STORAGE)
-            return AnkiquestPackLibrary(
-                bundled = AssetPackFolder(context.assets, ASSETS),
-                downloaded = FilePackFolder(File(storage, "downloaded")),
-                imported = FilePackFolder(File(storage, "imported")),
-            ).also { library = it }
+            held?.takeIf { it.serves(app) }?.let { return it.library }
+            val storage = File(app.filesDir, STORAGE)
+            val library =
+                AnkiquestPackLibrary(
+                    bundled = AssetPackFolder(app.assets, ASSETS),
+                    downloaded = FilePackFolder(File(storage, "downloaded")),
+                    imported = FilePackFolder(File(storage, "imported")),
+                )
+            val replaced = held != null
+            held = Held(app, library)
+            download = null
+
+            // Pictures decoded from the previous application's packs are not this one's.
+            if (replaced) {
+                AnkiquestArt.clear()
+            }
+            return library
         }
+    }
+
+    /**
+     * The library when it can be read without a context: the one in use, or the app's own; null
+     * before the app has started (plain JVM code such as the API client's tests).
+     */
+    fun libraryOrNull(): AnkiquestPackLibrary? {
+        held?.takeIf { it.app == null }?.let { return it.library }
+        if (!AnkiDroidApp.isInitialized) {
+            return null
+        }
+        return library(AnkiDroidApp.instance)
     }
 
     /** Shows [replacement]'s companions until the next call; null reads the app's folders again. */
     @VisibleForTesting
     fun use(replacement: AnkiquestPackLibrary?) {
         synchronized(this) {
-            library = replacement
+            held = replacement?.let { Held(null, it) }
+            download = null
         }
         AnkiquestArt.clear()
     }
@@ -155,7 +192,7 @@ internal object AnkiquestPackCredits {
         return "$credit$notice<br>"
     }
 
-    private fun escape(text: String): String = TextUtils.htmlEncode(text)
+    private fun escape(text: String): String = text.htmlEncode()
 }
 
 /** Which APK this is: the full one bundles the pinned release's packs, the slim one downloads them. */
