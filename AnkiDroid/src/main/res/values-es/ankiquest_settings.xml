@@ -42,4 +42,6 @@
     <string name="ankiquest_streak_cue_title">Aviso de racha al repasar</string>
     <string name="ankiquest_show_global_title">Mostrarme en la clasificación global</string>
     <string name="ankiquest_show_global_summary">Los jugadores que han iniciado sesión ven tu nombre, avatar, nivel, XP y racha. Los perfiles públicos también se ven sin iniciar sesión. Tus amigos y los miembros de tus grupos ven más. Este ajuste solo afecta a la clasificación.</string>
+    <string name="ankiquest_sync_settings_title">Sincronizar ajustes</string>
+    <string name="ankiquest_sync_settings_summary">Mantiene los ajustes de AnkiQuest iguales en todos tus dispositivos. Este interruptor se aplica solo a este dispositivo.</string>
 </resources>

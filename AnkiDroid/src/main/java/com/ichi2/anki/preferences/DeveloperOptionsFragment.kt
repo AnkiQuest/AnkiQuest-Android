@@ -31,6 +31,7 @@ import com.ichi2.utils.setWebContentsDebuggingEnabled
 import com.ichi2.utils.show
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.ankiquest.AnkiquestDebugMenu
 import org.json.JSONArray
 import timber.log.Timber
 import java.io.File
@@ -47,6 +48,8 @@ class DeveloperOptionsFragment : SettingsFragment() {
 
     override fun initSubscreen() {
         setupEnableDeveloperOptions()
+        // AnkiQuest: the secret debug menu for today's mood and pose.
+        AnkiquestDebugMenu.attach(this)
         requirePreference<SwitchPreferenceCompat>(R.string.dev_bottom_nav_key).isVisible =
             resources.getBoolean(R.bool.bottom_navigation_available)
         requirePreference<SwitchPreferenceCompat>(R.string.dev_material_you_key).apply {

@@ -24,6 +24,7 @@ import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.updateBottomNavOnScroll
 import com.ichi2.anki.withProgress
 import dev.androidbroadcast.vbpd.viewBinding
+import org.ankiquest.AnkiquestRwkvStats
 import timber.log.Timber
 
 class Statistics : PageFragment(R.layout.page_statistics) {
@@ -59,6 +60,8 @@ class Statistics : PageFragment(R.layout.page_statistics) {
             }
         }
         registerDeckSelectedHandler(action = ::onDeckSelected)
+        // AnkiQuest: RWKV forecast and recall, only while the RWKV scheduler is on.
+        AnkiquestRwkvStats.attach(this, binding.appBar)
         requireActivity().launchCatchingTask {
             withProgress {
                 val deckName =
