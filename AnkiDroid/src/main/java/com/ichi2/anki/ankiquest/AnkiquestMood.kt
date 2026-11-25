@@ -70,6 +70,15 @@ internal object AnkiquestMood {
     /** Whether today's daily goal is reached. */
     enum class Goal { OPEN, REACHED }
 
+    /** Which players [Rules.hopefulReviews] makes hopeful. */
+    enum class HopefulCount {
+        /** Only players without a streak, as `streak_moods.json` says. */
+        WITHOUT_STREAK,
+
+        /** Players with a streak too; only the debug menu chooses it. */
+        WITH_STREAK,
+    }
+
     /**
      * How far today's review time has come toward the streak minimum. Each stage starts at
      * [percent] of the minimum, as `stages` in streak_moods.json says.
@@ -130,7 +139,7 @@ internal object AnkiquestMood {
      * secret debug menu ([AnkiquestDebug]) uses others, on this phone.
      */
     data class Rules(
-        /** Reviews today that make a day without a streak or freeze hopeful. */
+        /** Reviews today that make a day without a streak or freeze hopeful; with a streak too per [hopefulCount]. */
         val hopefulReviews: Int = 1,
         /** Frozen days in a row that show the second frozen level. */
         val frozen2Days: Int = 2,
@@ -139,6 +148,8 @@ internal object AnkiquestMood {
         val hotDays: Int = Heat.HOT.days,
         val blazingDays: Int = Heat.BLAZING.days,
         val legendDays: Int = Heat.LEGEND.days,
+        /** Whether [hopefulReviews] also counts for players with a streak. */
+        val hopefulCount: HopefulCount = HopefulCount.WITHOUT_STREAK,
     ) {
         /** Whether each threshold is reachable and in the order of its levels. */
         fun valid(): Boolean =
@@ -201,8 +212,10 @@ internal object AnkiquestMood {
                 else -> Mood.HOPEFUL
             }
         }
+        // With a streak the stage decides, unless the debug menu counts reviews toward hopeful too.
+        val counted = rules.hopefulCount == HopefulCount.WITH_STREAK && reviews >= rules.hopefulReviews
         return when (stage) {
-            Stage.STARTED, Stage.QUARTER -> Mood.SAD
+            Stage.STARTED, Stage.QUARTER -> if (counted) Mood.HOPEFUL else Mood.SAD
             Stage.HALF -> Mood.HOPEFUL
             Stage.THREE_QUARTERS -> Mood.ALMOST
         }

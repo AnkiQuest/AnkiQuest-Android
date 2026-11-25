@@ -11,6 +11,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDebug.Overrides
 import com.ichi2.anki.ankiquest.AnkiquestDebug.Today
 import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.ankiquest.AnkiquestMood.Heat
+import com.ichi2.anki.ankiquest.AnkiquestMood.HopefulCount
 import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.AnkiquestMood.Rules
 import com.ichi2.anki.ankiquest.AnkiquestMood.Stage
@@ -109,6 +110,38 @@ class AnkiquestDebugTest : RobolectricTest() {
         assertEquals(Heat.HOT, rules.heat(3))
         assertEquals(Heat.BLAZING, rules.heat(5))
         assertEquals(Heat.LEGEND, rules.heat(9))
+    }
+
+    @Test
+    fun `hopeful reviews count with a streak only when chosen`() {
+        val mood = { rules: Rules, reviews: Int, stage: Stage ->
+            AnkiquestMood.of(State.SHORT, reviews, stage, 12, 0, Goal.OPEN, rules)
+        }
+        val without = Rules(hopefulReviews = 3)
+        val with = without.copy(hopefulCount = HopefulCount.WITH_STREAK)
+        assertEquals(HopefulCount.WITHOUT_STREAK, Rules.SHARED.hopefulCount, "the fixture counts reviews only without a streak")
+
+        // Off: the stage decides, whatever the reviews.
+        assertEquals(Mood.SAD, mood(without, 3, Stage.STARTED))
+        assertEquals(Mood.SAD, mood(without, 3, Stage.QUARTER))
+
+        // On: enough reviews make a streak hopeful before half the minimum; later stages stay.
+        assertEquals(Mood.SAD, mood(with, 2, Stage.STARTED), "two reviews are short of the edited hopeful")
+        assertEquals(Mood.HOPEFUL, mood(with, 3, Stage.STARTED))
+        assertEquals(Mood.HOPEFUL, mood(with, 3, Stage.QUARTER))
+        assertEquals(Mood.ALMOST, mood(with, 3, Stage.THREE_QUARTERS))
+        assertEquals(Mood.FROZEN_1, AnkiquestMood.of(State.PENDING, 3, Stage.STARTED, 12, 1, Goal.OPEN, with), "a freeze still decides")
+    }
+
+    @Test
+    fun `the hopeful count is stored and read back`() {
+        val overrides = assertNotNull(Overrides.NONE.withRules(Rules(hopefulCount = HopefulCount.WITH_STREAK)))
+        assertTrue(overrides.active)
+        AnkiquestDebug.save(overrides, prefs)
+        assertEquals(overrides, AnkiquestDebug.current(prefs))
+
+        AnkiquestDebug.save(overrides.sharedRules(), prefs)
+        assertEquals(HopefulCount.WITHOUT_STREAK, AnkiquestDebug.current(prefs).rules.hopefulCount)
     }
 
     @Test

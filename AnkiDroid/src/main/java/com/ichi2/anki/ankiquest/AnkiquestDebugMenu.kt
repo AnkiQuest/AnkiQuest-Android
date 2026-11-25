@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.text.InputType
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -13,6 +14,7 @@ import androidx.preference.PreferenceFragmentCompat
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDebug.Overrides
 import com.ichi2.anki.ankiquest.AnkiquestDebug.Today
+import com.ichi2.anki.ankiquest.AnkiquestMood.HopefulCount
 import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.AnkiquestMood.Rules
 import com.ichi2.anki.common.time.TimeManager
@@ -101,7 +103,10 @@ internal object AnkiquestDebugMenu {
             }.show()
     }
 
-    /** One number field per threshold, in [Rules]' order; invalid numbers are refused with a toast. */
+    /**
+     * One number field per threshold, in [Rules]' order, and a checkbox for [Rules.hopefulCount];
+     * invalid numbers are refused with a toast.
+     */
     private fun editRules(
         context: Context,
         overrides: Overrides,
@@ -130,6 +135,12 @@ internal object AnkiquestDebugMenu {
                     layout.addView(this)
                 }
             }
+        val withStreak =
+            CheckBox(context).apply {
+                setText(R.string.ankiquest_debug_hopeful_with_streak)
+                isChecked = rules.hopefulCount == HopefulCount.WITH_STREAK
+                layout.addView(this)
+            }
         AlertDialog
             .Builder(context)
             .setTitle(R.string.ankiquest_debug_thresholds)
@@ -144,6 +155,7 @@ internal object AnkiquestDebugMenu {
                         hotDays = numbers[3],
                         blazingDays = numbers[4],
                         legendDays = numbers[5],
+                        hopefulCount = if (withStreak.isChecked) HopefulCount.WITH_STREAK else HopefulCount.WITHOUT_STREAK,
                     )
                 val next = overrides.withRules(edited)
                 if (next == null) {
