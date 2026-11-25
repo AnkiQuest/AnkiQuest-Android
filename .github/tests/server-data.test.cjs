@@ -18,6 +18,7 @@ function fixture(t) {
     for (const directory of [
         path.join(server, "docs/api/examples"),
         path.join(server, "tests/fixtures"),
+        path.join(res, "ankiquest"),
         path.join(res, "ankiquest-api"),
     ]) {
         fs.mkdirSync(directory, { recursive: true });
@@ -39,6 +40,38 @@ test("copy takes the exact bytes and keeps the catalog", t => {
         '{"consumed":["profile"]}\n',
     );
     assert.ok(!fs.existsSync(path.join(res, "ankiquest-api/README.md")));
+});
+
+test("the server's companion poses are not copied; Art's are pinned instead", t => {
+    const { app, server, res } = fixture(t);
+    fs.writeFileSync(path.join(server, "tests/fixtures/companion_poses.json"), '{"core": ["face"]}\n');
+    fs.writeFileSync(path.join(res, "ankiquest/companion_poses.json"), '{"core": ["stale"]}\n');
+    data.copy(app, server);
+    assert.ok(!fs.existsSync(path.join(res, "ankiquest/companion_poses.json")));
+});
+
+test("the art poses are downloaded from the pinned release and checked", async t => {
+    const { app, res } = fixture(t);
+    const poses = '{"core": ["face", "asleep"]}\n';
+    const sha = require("node:crypto").createHash("sha256").update(poses).digest("hex");
+    const pin = path.join(app, "ankiquest-art.json");
+    fs.writeFileSync(pin, JSON.stringify({ "tag": "art-11", "assets": { "poses.json": sha } }));
+    const downloads = [];
+    const fetched = url => {
+        downloads.push(url);
+        return poses;
+    };
+    await data.pinnedPoses(app, fetched);
+    assert.deepEqual(downloads, ["https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/art-11/poses.json"]);
+    assert.equal(fs.readFileSync(path.join(res, "ankiquest/poses.json"), "utf8"), poses);
+
+    fs.writeFileSync(pin, JSON.stringify({ "tag": "art-11", "assets": { "poses.json": "0".repeat(64) } }));
+    fs.unlinkSync(path.join(res, "ankiquest/poses.json"));
+    await assert.rejects(() => data.pinnedPoses(app, fetched), /SHA-256/);
+    assert.ok(!fs.existsSync(path.join(res, "ankiquest/poses.json")));
+
+    fs.writeFileSync(pin, JSON.stringify({ "tag": null, "assets": {} }));
+    await assert.rejects(() => data.pinnedPoses(app, fetched), /AnkiQuest-Art release/);
 });
 
 test("a second copy removes examples the server dropped and adds new ones", t => {

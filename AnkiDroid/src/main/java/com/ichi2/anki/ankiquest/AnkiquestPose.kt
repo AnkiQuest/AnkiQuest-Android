@@ -3,9 +3,10 @@
 package com.ichi2.anki.ankiquest
 
 /**
- * A companion pose, named as in `tests/fixtures/companion_poses.json` from AnkiQuest-Server. Core
- * poses have no [fallback]: every companion has them. An extension a companion has no art for
- * shows its [fallback], which is a core pose or another extension that leads to one.
+ * A companion pose, named as in the pinned AnkiQuest-Art release's `poses.json` (see
+ * [AnkiquestPoseTest]). Core poses have no [fallback]: every companion has them. An extension a
+ * companion has no art for shows its [fallback], which is a core pose or another extension that
+ * leads to one.
  */
 internal enum class AnkiquestPose(
     val id: String,
