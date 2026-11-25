@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// hill decided that AnkiQuest-Android produces nothing named com.ichi2.anki: no application id
-// (every build is org.ankiquest), provider authority, declared permission, Maven group, intent
+// AnkiQuest-Android produces nothing named com.ichi2.anki: no application id (every build is
+// org.ankiquest.ankidroid), provider authority, declared permission, Maven group, intent
 // action or meta-data the app declares, and no package of AnkiQuest's own code.
 // Upstream AnkiDroid's packages and the api/ library (AnkiDroid's code, which other apps compile
 // against) keep their names (#461). tools/ankiquest-packages does the package move.

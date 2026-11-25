@@ -38,8 +38,8 @@ object AnkiquestPoll {
     /**
      * [AnkiquestPollWorker]'s name before the code moved to org.ankiquest. WorkManager stored it
      * and tagged the periodic poll with it; that work can no longer start, and KEEP would keep it
-     * instead of scheduling the poll again. Only org.ankiquest.anki installs from before the move
-     * have it; remove it once none are left.
+     * instead of scheduling the poll again. Only org.ankiquest.ankidroid installs from before the
+     * move have it; remove it once none are left.
      */
     @VisibleForTesting
     internal const val LEGACY_POLL_WORKER = "com.ichi2.anki.ankiquest.AnkiquestPollWorker" // ankiquest-packages: keep
