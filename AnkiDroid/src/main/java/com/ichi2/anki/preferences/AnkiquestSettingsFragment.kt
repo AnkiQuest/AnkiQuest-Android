@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
+import android.text.format.Formatter
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -80,6 +81,7 @@ import com.ichi2.anki.ioDispatcher
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.withProgressDialog
 import com.ichi2.utils.Permissions.openAppSettingsScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
@@ -682,11 +684,49 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             .Builder(requireContext())
             .setTitle(R.string.ankiquest_rwkv_models_title)
             .setMessage(getString(R.string.ankiquest_rwkv_import_message, RwkvLock.RELEASE))
-            .setPositiveButton(R.string.ankiquest_rwkv_import_choose) { _, _ -> rwkvModelPicker.launch(arrayOf(ANY_FILE)) }
-            .setNeutralButton(R.string.ankiquest_rwkv_import_release) { _, _ ->
-                (requireActivity() as AnkiActivity).openUrl(RwkvLock.RELEASE_URL.toUri())
-            }.setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.ankiquest_rwkv_import_download) { _, _ -> showRwkvDownload() }
+            .setNeutralButton(R.string.ankiquest_rwkv_import_choose) { _, _ -> rwkvModelPicker.launch(arrayOf(ANY_FILE)) }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /** The sizes with what each download fetches; picking one downloads it. */
+    private fun showRwkvDownload() {
+        val downloader = AnkiquestRwkv.downloader(requireContext())
+        val sizes = RwkvSize.entries
+        val items =
+            sizes
+                .map { size ->
+                    val bytes = Formatter.formatShortFileSize(requireContext(), downloader.bytes(size))
+                    getString(R.string.ankiquest_rwkv_download_size, rwkvSize(size), bytes)
+                }.toTypedArray()
+        AlertDialog
+            .Builder(requireContext())
+            .setTitle(R.string.ankiquest_rwkv_import_download)
+            .setItems(items) { _, which -> downloadRwkv(sizes[which]) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Downloads [size]'s models, saying which file of how many is being fetched. */
+    @Suppress("Deprecation") // ProgressDialog, as withProgressDialog shows it
+    private fun downloadRwkv(size: RwkvSize) {
+        val activity = requireActivity()
+        val context = activity.applicationContext
+        launchCatchingTask {
+            val results =
+                withProgressDialog(activity, onCancel = null) { dialog ->
+                    AnkiquestRwkv.download(context, size) { done, total ->
+                        val text = context.getString(R.string.ankiquest_rwkv_downloading, done + 1, total)
+                        activity.runOnUiThread { dialog.setMessage(text) }
+                    }
+                }
+            if (!isAdded) {
+                return@launchCatchingTask
+            }
+            showSnackbar(rwkvImportText(results))
+            runRwkv({ appContext, ram -> AnkiquestRwkv.restore(appContext, ram) }) { }
+        }
     }
 
     private fun importRwkv(uris: List<Uri>) {
@@ -713,8 +753,17 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         if (imported.isNotEmpty()) {
             return getString(R.string.ankiquest_rwkv_imported, imported.joinToString { it.id.uppercase() })
         }
-        val unreadable = results.any { it == RwkvImport.Rejected(RwkvImportError.UNREADABLE) }
-        return getString(if (unreadable) R.string.ankiquest_rwkv_import_unreadable else R.string.ankiquest_rwkv_import_unknown)
+        val errors = results.filterIsInstance<RwkvImport.Rejected>().map { it.error }.toSet()
+        // The most specific reason: an unknown file only when nothing else went wrong.
+        val error = errors.firstOrNull { it != RwkvImportError.UNKNOWN_FILE } ?: RwkvImportError.UNKNOWN_FILE
+        return getString(
+            when (error) {
+                RwkvImportError.UNKNOWN_FILE -> R.string.ankiquest_rwkv_import_unknown
+                RwkvImportError.UNREADABLE -> R.string.ankiquest_rwkv_import_unreadable
+                RwkvImportError.NETWORK_FAILED -> R.string.ankiquest_rwkv_download_network
+                RwkvImportError.DOWNLOAD_MISMATCH -> R.string.ankiquest_rwkv_download_mismatch
+            },
+        )
     }
 
     /** Each preset with its RWKV mode; picking one opens its two switches, worded as the desktop fork's Deck Options. */

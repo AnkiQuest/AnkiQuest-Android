@@ -20,6 +20,9 @@ internal interface RwkvEngine {
 
     /** The backend's progress, which also installs a finished replay. */
     suspend fun progress(): RwkvProgress
+
+    /** Asks the backend to drop the loaded model; returns whether one is still loaded. */
+    suspend fun unload(): RwkvLoad
 }
 
 /** Where the backend's model state is. */
@@ -76,4 +79,11 @@ internal object BackendRwkvEngine : RwkvEngine {
         }
         return RwkvProgress.Replaying(status.replayDone, status.replayTotal)
     }
+
+    /**
+     * The pinned backend has no call that drops a model: it stays loaded until the process ends,
+     * so turning RWKV off takes effect at the next start ([RwkvState.Stopping]). A backend with an
+     * unload call replaces this body with that call and returns [RwkvLoad.NOT_LOADED].
+     */
+    override suspend fun unload(): RwkvLoad = load
 }

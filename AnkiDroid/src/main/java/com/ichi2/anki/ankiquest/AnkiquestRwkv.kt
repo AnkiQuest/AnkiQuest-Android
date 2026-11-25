@@ -129,7 +129,7 @@ internal object AnkiquestRwkv {
     suspend fun disable(
         context: Context,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ): RwkvState = transition(context, prefs) { RwkvState.Off.disable(engine.load) }
+    ): RwkvState = transition(context, prefs) { RwkvState.Off.disable(engine.unload()) }
 
     /** The state for the saved switch, as when the app starts or the settings open; a saved "on" that is now blocked is refused. */
     suspend fun restore(
@@ -159,6 +159,21 @@ internal object AnkiquestRwkv {
             }
         return results
     }
+
+    /**
+     * Downloads [size]'s models from the official release; the caller restores the state afterwards,
+     * as after an import. Each zip is checked against the lock before it is read.
+     */
+    suspend fun download(
+        context: Context,
+        size: RwkvSize,
+        progress: (done: Int, total: Int) -> Unit,
+    ): List<RwkvImport> =
+        transitions.withLock {
+            withContext(ioDispatcher) { downloader(context).download(size, progress) }
+        }
+
+    fun downloader(context: Context) = RwkvDownload(store(context), GithubPackFetch(AnkiquestHttp.client))
 
     /** A preset's mode changed: which models run depends on the presets, so the engine is handed them again. */
     suspend fun presetsChanged(context: Context) {

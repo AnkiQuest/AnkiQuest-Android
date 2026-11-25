@@ -24,7 +24,10 @@ internal enum class RwkvHead {
     INSTANT,
 }
 
-/** One model file the app accepts: the `weights.f32.bin` of a package in [RwkvLock.RELEASE]. */
+/**
+ * One model file the app accepts: the `weights.f32.bin` ([bytes], [sha256]) inside release asset
+ * [asset] of [RwkvLock.RELEASE] ([zipBytes], [zipSha256], as the release's `SHA256SUMS` lists it).
+ */
 internal data class RwkvLockEntry(
     val id: String,
     val size: RwkvSize,
@@ -32,6 +35,8 @@ internal data class RwkvLockEntry(
     val asset: String,
     val bytes: Long,
     val sha256: String,
+    val zipBytes: Long,
+    val zipSha256: String,
 )
 
 /**
@@ -43,8 +48,8 @@ internal object RwkvLock {
     const val RELEASE = "rwkv-family-2026-11-13"
     const val RELEASE_URL = "https://github.com/JSchoreels/anki-rwkv/releases/tag/$RELEASE"
 
-    /** The file inside each release zip that the engine reads (the fork's `ARWKVWEIGHTS1` format, f32). */
-    const val WEIGHTS_FILE = "weights.f32.bin"
+    /** Where [RwkvDownload] fetches an entry's asset: the release itself; AnkiQuest hosts nothing. */
+    const val DOWNLOAD_URL = "https://github.com/JSchoreels/anki-rwkv/releases/download/$RELEASE/"
 
     private const val SMALL_BYTES = 1_351_553L
     private const val TINY_BYTES = 1_270_749L
@@ -58,6 +63,8 @@ internal object RwkvLock {
                 "rwkv-small-two-head.zip",
                 SMALL_BYTES,
                 "4fbc5f963b6ef18d23dbc0f11358fed8a9c7c97c271d6eda95df3b8ed6fbeb6e",
+                3_005_254L,
+                "4d46763f92ea05b9ce03942391f190f252e2326eaa96fe1410a9e8e83fa421ca",
             ),
             RwkvLockEntry(
                 "sm98",
@@ -66,6 +73,8 @@ internal object RwkvLock {
                 "rwkv-small-instant-only.zip",
                 SMALL_BYTES,
                 "a006dcc039d19142dc95d257d9c238fb93c7efa12b78e18ec6ae881ac9009a24",
+                4_227_917L,
+                "8c982ebe703e3d832a5cd8a8f9a5f23c59828bf3afd48988b7fc769030c6c3b4",
             ),
             RwkvLockEntry(
                 "sm106",
@@ -74,6 +83,8 @@ internal object RwkvLock {
                 "rwkv-tiny-two-head.zip",
                 TINY_BYTES,
                 "5b346308bbab6ff32241742544af762b714a16334f6a979423b40dfec8897ec3",
+                4_097_873L,
+                "53216b442b983e85d7c5d0715b5797383ab8db3e2f62710f2944058123392e3b",
             ),
             RwkvLockEntry(
                 "sm101",
@@ -82,6 +93,8 @@ internal object RwkvLock {
                 "rwkv-tiny-instant-only.zip",
                 TINY_BYTES,
                 "2faacb5b913bcfbdc0e363532d533e3bcff6872c8358f1ef753ca87f9d2a60fd",
+                4_027_791L,
+                "a16d5aa98b7120583518e4e2619d0285a6f4966706c6f0cf74acefa6416d0af9",
             ),
         )
 }
@@ -104,16 +117,22 @@ internal enum class RwkvVerify {
     HASH,
 }
 
-/** Why a picked file was not imported. */
+/** Why a picked or downloaded file was not imported. */
 internal enum class RwkvImportError {
     /** Neither the file nor any `.bin` in it matches the lock file. */
     UNKNOWN_FILE,
 
     /** The file could not be read or stored. */
     UNREADABLE,
+
+    /** A download failed: no connection, or the release answered with an error. */
+    NETWORK_FAILED,
+
+    /** A download's size or SHA-256 differs from the lock, or it went to a host other than GitHub's. */
+    DOWNLOAD_MISMATCH,
 }
 
-/** The outcome of importing one picked file. */
+/** The outcome of importing one picked or downloaded file. */
 internal sealed interface RwkvImport {
     data class Imported(
         val entries: List<RwkvLockEntry>,

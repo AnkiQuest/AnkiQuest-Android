@@ -7,6 +7,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -123,6 +124,8 @@ class AnkiquestRwkvModelsTest {
         assertEquals(entries.size, entries.map { it.id }.toSet().size)
         for (entry in entries) {
             assertTrue(entry.sha256.matches(Regex("[0-9a-f]{64}")), entry.id)
+            assertTrue(entry.zipSha256.matches(Regex("[0-9a-f]{64}")), entry.id)
+            assertTrue(entry.zipBytes > entry.bytes, entry.id)
             assertTrue(entry.asset.startsWith("rwkv-${entry.size.name.lowercase()}-"), entry.id)
         }
         for (size in RwkvSize.entries) {
@@ -137,7 +140,63 @@ class AnkiquestRwkvModelsTest {
         size: RwkvSize,
         head: RwkvHead,
         content: ByteArray,
-    ) = RwkvLockEntry(id, size, head, "rwkv-$id.zip", content.size.toLong(), sha256(content))
+    ): RwkvLockEntry {
+        val zip = zip("rwkv-$id/weights.f32.bin" to content)
+        return RwkvLockEntry(id, size, head, "rwkv-$id.zip", content.size.toLong(), sha256(content), zip.size.toLong(), sha256(zip))
+    }
+
+    /** Serves each lock entry's zip, as the release would, and records the URLs asked for. */
+    private inner class FakeRelease(
+        private val broken: Set<String> = emptySet(),
+        private val offline: Boolean = false,
+    ) : PackFetch {
+        val asked = mutableListOf<String>()
+
+        override fun get(
+            url: String,
+            limit: Long,
+        ): ByteArray {
+            asked.add(url)
+            if (offline) {
+                throw IOException("offline")
+            }
+            val entry = lock.single { url == RwkvLock.DOWNLOAD_URL + it.asset }
+            val zip = zip("rwkv-${entry.id}/weights.f32.bin" to contents.getValue(entry.id))
+            return if (entry.id in broken) zip.copyOf().also { it[it.size - 1] = 0x7f } else zip
+        }
+    }
+
+    private val contents by lazy { mapOf("sm92" to smallTwoHead, "sm98" to smallInstant, "sm106" to tinyTwoHead) }
+
+    @Test
+    fun `a download fetches the size's models from the release, two-head first`() {
+        val release = FakeRelease()
+        val progress = mutableListOf<Pair<Int, Int>>()
+        val results = RwkvDownload(store, release, lock).download(RwkvSize.SMALL) { done, total -> progress.add(done to total) }
+
+        assertEquals(listOf(RwkvImport.Imported(listOf(lock[0])), RwkvImport.Imported(listOf(lock[1]))), results)
+        assertEquals(listOf(RwkvLock.DOWNLOAD_URL + lock[0].asset, RwkvLock.DOWNLOAD_URL + lock[1].asset), release.asked)
+        assertEquals(listOf(0 to 2, 1 to 2), progress)
+        assertNotNull(store.models(RwkvVerify.HASH)?.instant)
+    }
+
+    @Test
+    fun `a download that differs from the lock is not kept`() {
+        val results = RwkvDownload(store, FakeRelease(broken = setOf("sm92")), lock).download(RwkvSize.SMALL) { _, _ -> }
+        assertEquals(RwkvImport.Rejected(RwkvImportError.DOWNLOAD_MISMATCH), results.first())
+        assertNull(store.models(RwkvVerify.SIZE))
+    }
+
+    @Test
+    fun `a download without a connection says so`() {
+        val results = RwkvDownload(store, FakeRelease(offline = true), lock).download(RwkvSize.TINY) { _, _ -> }
+        assertEquals(listOf(RwkvImport.Rejected(RwkvImportError.NETWORK_FAILED)), results)
+    }
+
+    @Test
+    fun `the download size is the sum of the size's zips`() {
+        assertEquals(lock[0].zipBytes + lock[1].zipBytes, RwkvDownload(store, FakeRelease(), lock).bytes(RwkvSize.SMALL))
+    }
 
     private fun bytes(
         count: Int,
@@ -150,11 +209,17 @@ class AnkiquestRwkvModelsTest {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
             for ((name, content) in files) {
-                zip.putNextEntry(ZipEntry(name))
+                // A fixed time, so the same files always make the same bytes.
+                zip.putNextEntry(ZipEntry(name).apply { time = FIXED_TIME })
                 zip.write(content)
                 zip.closeEntry()
             }
         }
         return out.toByteArray()
+    }
+
+    private companion object {
+        /** 1990-01-01, inside the zip format's date range. */
+        const val FIXED_TIME = 631_152_000_000L
     }
 }

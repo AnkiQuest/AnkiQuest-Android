@@ -18,7 +18,16 @@ class AnkiquestRwkvTest {
     private val twoHead = ByteArray(64) { it.toByte() }
     private val lock =
         listOf(
-            RwkvLockEntry("sm92", RwkvSize.SMALL, RwkvHead.TWO_HEAD, "rwkv-small-two-head.zip", twoHead.size.toLong(), sha256(twoHead)),
+            RwkvLockEntry(
+                id = "sm92",
+                size = RwkvSize.SMALL,
+                head = RwkvHead.TWO_HEAD,
+                asset = "rwkv-small-two-head.zip",
+                bytes = twoHead.size.toLong(),
+                sha256 = sha256(twoHead),
+                zipBytes = 0,
+                zipSha256 = "",
+            ),
         )
     private val store by lazy { RwkvModelStore(File(folder.root, "rwkv"), lock) }
 
@@ -38,6 +47,8 @@ class AnkiquestRwkvTest {
         }
 
         override suspend fun progress(): RwkvProgress = RwkvProgress.Unavailable
+
+        override suspend fun unload(): RwkvLoad = RwkvLoad.NOT_LOADED
     }
 
     @Test

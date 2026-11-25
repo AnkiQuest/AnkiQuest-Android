@@ -10,9 +10,12 @@
     <string name="ankiquest_rwkv_stopping">Desactivado. RWKV sigue programando hasta que AnkiQuest se reinicie.</string>
     <string name="ankiquest_rwkv_models_title">Archivos de modelo RWKV</string>
     <string name="ankiquest_rwkv_models_none">Ninguno importado.</string>
-    <string name="ankiquest_rwkv_import_message">AnkiQuest no incluye pesos RWKV: no tienen licencia para redistribuirse. De la versión %1$s de JSchoreels/anki-rwkv, descarga el zip de dos cabezas Small o Tiny y, si quieres, el zip Instant-only del mismo tamaño, y lee su WEIGHTS-NOTICE.md. Luego elige aquí los zips o sus archivos weights.f32.bin. Solo se guardan los archivos cuyo SHA-256 coincide con un modelo conocido.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest no incluye pesos RWKV: no tienen licencia para redistribuirse y son solo para uso personal y de investigación (WEIGHTS-NOTICE.md de la versión %1$s de JSchoreels/anki-rwkv). Descargar trae los modelos de un tamaño desde esa versión en GitHub. O descarga tú el zip de dos cabezas y, si quieres, el zip Instant-only del mismo tamaño, y elige los zips o sus archivos weights.f32.bin. Solo se guardan los archivos cuyo SHA-256 coincide con un modelo conocido.</string>
     <string name="ankiquest_rwkv_import_choose">Elegir archivos</string>
-    <string name="ankiquest_rwkv_import_release">Abrir versión</string>
+    <string name="ankiquest_rwkv_import_download">Descargar</string>
+    <string name="ankiquest_rwkv_downloading">Descargando %1$d de %2$d…</string>
+    <string name="ankiquest_rwkv_download_network">No descargado: no hay conexión con GitHub.</string>
+    <string name="ankiquest_rwkv_download_mismatch">No descargado: el archivo no coincide con el modelo RWKV conocido.</string>
     <string name="ankiquest_rwkv_imported">Importado: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">No importado: ningún archivo coincide con un modelo RWKV conocido.</string>
     <string name="ankiquest_rwkv_import_unreadable">No importado: no se pudo leer el archivo.</string>

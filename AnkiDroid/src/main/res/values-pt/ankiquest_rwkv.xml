@@ -10,9 +10,12 @@
     <string name="ankiquest_rwkv_stopping">Desativado. O RWKV continua agendando até o AnkiQuest reiniciar.</string>
     <string name="ankiquest_rwkv_models_title">Arquivos de modelo RWKV</string>
     <string name="ankiquest_rwkv_models_none">Nenhum importado.</string>
-    <string name="ankiquest_rwkv_import_message">O AnkiQuest não inclui pesos RWKV: eles não têm licença de redistribuição. Da versão %1$s de JSchoreels/anki-rwkv, baixe o zip de duas cabeças Small ou Tiny e, se quiser, o zip Instant-only do mesmo tamanho, e leia o WEIGHTS-NOTICE.md dele. Depois escolha aqui os zips ou os arquivos weights.f32.bin deles. Só ficam os arquivos cujo SHA-256 corresponde a um modelo conhecido.</string>
+    <string name="ankiquest_rwkv_import_message">O AnkiQuest não inclui pesos RWKV: eles não têm licença de redistribuição e são só para uso pessoal e de pesquisa (WEIGHTS-NOTICE.md da versão %1$s de JSchoreels/anki-rwkv). Baixar busca os modelos de um tamanho nessa versão no GitHub. Ou baixe você mesmo o zip de duas cabeças e, se quiser, o zip Instant-only do mesmo tamanho, e escolha os zips ou os arquivos weights.f32.bin deles. Só ficam os arquivos cujo SHA-256 corresponde a um modelo conhecido.</string>
     <string name="ankiquest_rwkv_import_choose">Escolher arquivos</string>
-    <string name="ankiquest_rwkv_import_release">Abrir versão</string>
+    <string name="ankiquest_rwkv_import_download">Baixar</string>
+    <string name="ankiquest_rwkv_downloading">Baixando %1$d de %2$d…</string>
+    <string name="ankiquest_rwkv_download_network">Não baixado: sem conexão com o GitHub.</string>
+    <string name="ankiquest_rwkv_download_mismatch">Não baixado: o arquivo não corresponde ao modelo RWKV conhecido.</string>
     <string name="ankiquest_rwkv_imported">Importado: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Não importado: nenhum arquivo corresponde a um modelo RWKV conhecido.</string>
     <string name="ankiquest_rwkv_import_unreadable">Não importado: não foi possível ler o arquivo.</string>

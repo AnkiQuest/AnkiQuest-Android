@@ -10,9 +10,12 @@
     <string name="ankiquest_rwkv_stopping">Aus. RWKV plant weiter, bis AnkiQuest neu startet.</string>
     <string name="ankiquest_rwkv_models_title">RWKV-Modelldateien</string>
     <string name="ankiquest_rwkv_models_none">Keine importiert.</string>
-    <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe. Lade aus dem Release %1$s von JSchoreels/anki-rwkv das Two-Head-Zip in Small oder Tiny herunter, wenn du willst auch das Instant-only-Zip derselben Größe, und lies dessen WEIGHTS-NOTICE.md. Wähle dann hier die Zips oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe und sind nur für persönliche und Forschungszwecke (WEIGHTS-NOTICE.md des Release %1$s von JSchoreels/anki-rwkv). Herunterladen holt die Modelle einer Größe aus diesem Release auf GitHub. Oder lade selbst das Two-Head-Zip herunter, wenn du willst auch das Instant-only-Zip derselben Größe, und wähle die Zips oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
     <string name="ankiquest_rwkv_import_choose">Dateien wählen</string>
-    <string name="ankiquest_rwkv_import_release">Release öffnen</string>
+    <string name="ankiquest_rwkv_import_download">Herunterladen</string>
+    <string name="ankiquest_rwkv_downloading">Lade %1$d von %2$d herunter…</string>
+    <string name="ankiquest_rwkv_download_network">Nicht heruntergeladen: keine Verbindung zu GitHub.</string>
+    <string name="ankiquest_rwkv_download_mismatch">Nicht heruntergeladen: Die Datei passt nicht zum bekannten RWKV-Modell.</string>
     <string name="ankiquest_rwkv_imported">Importiert: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Nicht importiert: Keine Datei passt zu einem bekannten RWKV-Modell.</string>
     <string name="ankiquest_rwkv_import_unreadable">Nicht importiert: Die Datei konnte nicht gelesen werden.</string>

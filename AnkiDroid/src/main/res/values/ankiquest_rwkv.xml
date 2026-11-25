@@ -13,9 +13,13 @@
     <string name="ankiquest_rwkv_stopping">Off. RWKV keeps scheduling until AnkiQuest restarts.</string>
     <string name="ankiquest_rwkv_models_title">RWKV model files</string>
     <string name="ankiquest_rwkv_models_none">None imported.</string>
-    <string name="ankiquest_rwkv_import_message">AnkiQuest ships no RWKV weights: they have no licence for redistribution. From the %1$s release of JSchoreels/anki-rwkv, download the Small or Tiny two-head zip, and if you like the Instant-only zip of the same size, and read its WEIGHTS-NOTICE.md. Then choose the zips or their weights.f32.bin files here. Only files whose SHA-256 matches a known model are kept.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest ships no RWKV weights: they have no licence for redistribution and are for personal and research use only (WEIGHTS-NOTICE.md of the %1$s release of JSchoreels/anki-rwkv). Download fetches a size\'s models from that release on GitHub. Or download its two-head zip, and if you like the Instant-only zip of the same size, yourself and choose the zips or their weights.f32.bin files. Only files whose SHA-256 matches a known model are kept.</string>
     <string name="ankiquest_rwkv_import_choose">Choose files</string>
-    <string name="ankiquest_rwkv_import_release">Open release</string>
+    <string name="ankiquest_rwkv_import_download">Download</string>
+    <string name="ankiquest_rwkv_download_size" translatable="false">%1$s, %2$s</string>
+    <string name="ankiquest_rwkv_downloading">Downloading %1$d of %2$d…</string>
+    <string name="ankiquest_rwkv_download_network">Not downloaded: no connection to GitHub.</string>
+    <string name="ankiquest_rwkv_download_mismatch">Not downloaded: the file does not match the known RWKV model.</string>
     <string name="ankiquest_rwkv_imported">Imported: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Not imported: no file matches a known RWKV model.</string>
     <string name="ankiquest_rwkv_import_unreadable">Not imported: the file could not be read.</string>
