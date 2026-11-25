@@ -169,7 +169,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `every example is either read by the app or known to be unused`() {
+    fun `the catalog names only server examples, and unlisted ones count as not yet read`() {
         val directory = File(assertNotNull(javaClass.classLoader?.getResource(EXAMPLES)).toURI())
         val examples =
             assertNotNull(directory.list())
@@ -185,11 +185,10 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 (0 until names.length()).map { names.getString(it) }
             }
         assertEquals(owned.size, owned.toSet().size, "an example must belong to exactly one group")
-        assertEquals(
-            owned.toSet(),
-            examples,
-            "a new or removed example needs a reviewed entry in names.json",
-        )
+
+        // The examples come from server master: one the server dropped must leave names.json, while a
+        // new one the catalog doesn't list yet counts as not_yet until the app reads it.
+        assertEquals(emptySet<String>(), owned.toSet() - examples, "names.json lists examples the server no longer has")
         val consumed = catalog.getJSONArray("consumed")
         assertTrue((0 until consumed.length()).map { consumed.getString(it) }.containsAll(ROUTES.values))
     }
