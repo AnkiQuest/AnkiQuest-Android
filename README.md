@@ -66,7 +66,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 
 ### Moving from com.ichi2.anki.quest
 
-AnkiQuest `org.ankiquest.ankidroid` installs alongside the old `com.ichi2.anki.quest` app.
+AnkiQuest `org.ankiquest.ankidroid` installs alongside the old `com.ichi2.anki.quest` app and starts with its own collection.
 
 1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
 2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). On Android 9 and later, the official app offers to move settings, AnkiQuest sign-in and AnkiWeb sign-in on first launch.
