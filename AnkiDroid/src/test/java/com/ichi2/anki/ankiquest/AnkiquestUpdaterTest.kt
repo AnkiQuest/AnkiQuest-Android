@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -13,7 +13,6 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.setIntroductionSlidesShown
-import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -33,7 +32,6 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -124,20 +122,20 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         controller.get().setTheme(androidx.appcompat.R.style.Theme_AppCompat)
         val host = controller.setup().get()
         saveControllerForCleanup(controller)
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val receiving = CountDownLatch(1)
         val finishDownload = CountDownLatch(1)
         val checking = CountDownLatch(1)
         val finishCheck = CountDownLatch(1)
         val checks = AtomicInteger()
-        server.createContext("/apk") { exchange ->
-            exchange.use {
+        val server =
+            AnkiquestTestServer { request ->
+                if (request.path != "/apk") {
+                    return@AnkiquestTestServer null
+                }
                 receiving.countDown()
                 finishDownload.await(30, TimeUnit.SECONDS)
-                exchange.sendResponseHeaders(HttpURLConnection.HTTP_UNAVAILABLE, -1)
+                TestResponse(HttpURLConnection.HTTP_UNAVAILABLE)
             }
-        }
-        server.start()
         mockkObject(AnkiquestUpdater)
         try {
             every { AnkiquestUpdater.channel() } answers {
@@ -148,7 +146,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
             }
             val check = CoroutineScope(Dispatchers.Main).async { AnkiquestUpdater.checkNow(host) }
             advanceRobolectricLooperUntil { checking.count == 0L }
-            val release = AnkiquestUpdater.Release(41, "Test release", "http://127.0.0.1:${server.address.port}/apk", 1)
+            val release = AnkiquestUpdater.Release(41, "Test release", "${server.url}/apk", 1)
             ReflectionHelpers.callInstanceMethod<Unit>(
                 AnkiquestUpdater,
                 "download",
@@ -191,7 +189,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         } finally {
             finishCheck.countDown()
             finishDownload.countDown()
-            server.stop(0)
+            server.close()
             unmockkObject(AnkiquestUpdater)
         }
     }

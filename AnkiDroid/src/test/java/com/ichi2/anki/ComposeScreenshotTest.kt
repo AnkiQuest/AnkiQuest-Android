@@ -49,19 +49,25 @@ abstract class ComposeScreenshotTest {
         beforeCapture: () -> Unit = {},
         content: @Composable () -> Unit,
     ) {
-        val theme = theme.theme
-        if (theme is NightTheme) RuntimeEnvironment.setQualifiers("+night")
+        val themeConfig = theme
+        val previewTheme = themeConfig.theme
+        if (previewTheme is NightTheme) RuntimeEnvironment.setQualifiers("+night")
         RuntimeEnvironment.setFontScale(fontScale)
         composeRule.setContent {
-            AnkiDroidPreview(theme = theme, content = content)
+            AnkiDroidPreview(theme = previewTheme, content = content)
         }
         composeRule.waitForIdle()
         beforeCapture()
         composeRule.waitForIdle()
         val classDir = "build/outputs/roborazzi/${javaClass.simpleName}"
         composeRule.onNode(node).assertIsDisplayed().captureRoboImage(
-            filePath = "$classDir/${name}_${theme.toString().lowercase()}.png",
+            filePath = "$classDir/${composeScreenshotFileName(name, themeConfig)}",
             roborazziOptions = screenshotOptions("$classDir/diffs"),
         )
     }
 }
+
+internal fun composeScreenshotFileName(
+    name: String,
+    theme: ThemeConfig,
+): String = "${name}_${theme.name.lowercase()}.png"

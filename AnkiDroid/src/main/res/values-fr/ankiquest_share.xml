@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_download_picture">Télécharger l’image</string>
     <string name="ankiquest_picture_saved">Image enregistrée dans ta galerie.</string>
@@ -59,4 +59,5 @@ Je révise avec AnkiQuest.</string>
     <string name="ankiquest_share_targets_failed">Impossible de charger tes amis. Vérifie ta connexion ou partage avec une autre appli.</string>
     <string name="ankiquest_share_invite">Inviter un ami</string>
     <string name="ankiquest_share_lonely">Ajoute des amis dans AnkiQuest pour leur envoyer tes moments.</string>
+    <string name="ankiquest_share_uploading">Envoi de tes révisions…</string>
 </resources>

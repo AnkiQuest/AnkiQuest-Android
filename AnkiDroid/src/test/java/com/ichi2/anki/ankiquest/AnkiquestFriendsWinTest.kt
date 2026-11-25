@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -13,7 +13,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,8 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.ByteArrayOutputStream
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
+import java.net.HttpURLConnection.HTTP_BAD_REQUEST
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -34,10 +32,13 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [32])
 class AnkiquestFriendsWinTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var base: String
+
+    /** Whether the server refuses every request, as after a cheer it will not take. */
+    @Volatile private var refuse = false
     private lateinit var account: HomeAccount
-    private val requests = CopyOnWriteArrayList<Pair<String, String>>()
+    private val requests get() = server.requests.map { it.path to it.body }
     private val manager get() = targetContext.getSystemService<NotificationManager>()!!
 
     @Before
@@ -46,21 +47,16 @@ class AnkiquestFriendsWinTest : RobolectricTest() {
             ByteArrayOutputStream()
                 .also { createBitmap(8, 8).compress(Bitmap.CompressFormat.PNG, 100, it) }
                 .toByteArray()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            requests += exchange.requestURI.path to exchange.requestBody.bufferedReader().use { it.readText() }
-            val (status, body) =
-                when (exchange.requestURI.path) {
-                    "/w/token.png" -> 200 to png
-                    "/api/react/hill" -> 200 to "{}".toByteArray()
-                    else -> 404 to ByteArray(0)
+        server =
+            AnkiquestTestServer { request ->
+                when {
+                    refuse -> TestResponse(HTTP_BAD_REQUEST)
+                    request.path == "/w/token.png" -> TestResponse(bytes = png)
+                    request.path == "/api/react/hill" -> TestResponse(bytes = "{}".toByteArray())
+                    else -> null
                 }
-            exchange.sendResponseHeaders(status, if (body.isEmpty()) -1 else body.size.toLong())
-            exchange.responseBody.use { if (body.isNotEmpty()) it.write(body) }
-            exchange.close()
-        }
-        server.start()
-        base = "http://127.0.0.1:${server.address.port}"
+            }
+        base = server.url
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, base)
             putString(Ankiquest.PREF_USER, "hill")
@@ -71,7 +67,9 @@ class AnkiquestFriendsWinTest : RobolectricTest() {
 
     @After
     fun stopServer() {
-        if (::server.isInitialized) server.stop(0)
+        if (::server.isInitialized) {
+            server.close()
+        }
     }
 
     private fun share(
@@ -193,12 +191,7 @@ class AnkiquestFriendsWinTest : RobolectricTest() {
         runBlocking {
             deliver(share(1))
             val intent = shadowOf(posted(1).actions.first().actionIntent).savedIntent
-            server.removeContext("/")
-            server.createContext("/") { exchange ->
-                exchange.requestBody.close()
-                exchange.sendResponseHeaders(400, -1)
-                exchange.close()
-            }
+            refuse = true
             val data = AnkiquestReply.data(intent, AnkiquestReply.message(intent))
             assertEquals(AnkiquestReply.Outcome.FAILED, AnkiquestReply.run(targetContext, data, 0))
             assertEquals(listOf("🎉 Cheer", "Reply"), posted(1).actions.map { it.title.toString() })

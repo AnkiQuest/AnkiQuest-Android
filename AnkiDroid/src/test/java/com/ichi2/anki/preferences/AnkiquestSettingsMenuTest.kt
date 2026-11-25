@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.preferences
 
@@ -72,6 +72,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                         R.string.ankiquest_mood_icon_key,
                         R.string.ankiquest_open_today_key,
                         R.string.ankiquest_sync_settings_key,
+                        R.string.ankiquest_rwkv_key,
                         R.string.ankiquest_update_channel_key,
                         R.string.ankiquest_check_updates_key,
                         R.string.ankiquest_debug_info_key,

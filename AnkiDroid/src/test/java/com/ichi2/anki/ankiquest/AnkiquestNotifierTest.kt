@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -18,7 +18,6 @@ import androidx.work.Data
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -26,7 +25,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -650,7 +648,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals(0, bodies[0].getJSONArray("previous").length(), "a new device has seen no order yet")
                 assertEquals(listOf("cerro", "hill"), bodies[1].getJSONArray("previous").let { (0 until it.length()).map(it::getString) })
             } finally {
-                server.stop(0)
+                server.close()
             }
         }
 
@@ -693,7 +691,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals("👑 You took the crown", older.getStringExtra(AnkiquestShare.EXTRA_TITLE), "older servers send no share text")
                 assertEquals("You passed hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
             } finally {
-                server.stop(0)
+                server.close()
             }
         }
 
@@ -712,22 +710,20 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, bodies[1].getJSONArray("previous").length(), "a switched account has seen no order yet")
             } finally {
-                server.stop(0)
+                server.close()
             }
         }
 
-    private fun rankServer(respond: (JSONObject) -> JSONObject): HttpServer {
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/api/rank/cerro") { exchange ->
-            val body = JSONObject(exchange.requestBody.bufferedReader().use { it.readText() })
-            val bytes = respond(body).toString().toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(if (exchange.requestMethod == "POST") 200 else 405, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+    private fun rankServer(respond: (JSONObject) -> JSONObject): AnkiquestTestServer {
+        val server =
+            AnkiquestTestServer { request ->
+                if (!request.path.startsWith("/api/rank/cerro")) {
+                    return@AnkiquestTestServer null
+                }
+                TestResponse.json(respond(JSONObject(request.body)), if (request.method == "POST") 200 else 405)
+            }
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "cerro")
         }
         return server

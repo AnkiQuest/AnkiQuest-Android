@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -22,8 +22,6 @@ import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.testutils.EmptyApplication
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
 import com.ichi2.utils.openInputStreamSafe
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -42,8 +40,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
@@ -59,11 +56,21 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class, shadows = [ShadowFileProviderPathStrategy::class])
 @Category(EmptyApplicationCategory::class)
 class AnkiquestShareTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var base: String
-    private val posted = CopyOnWriteArrayList<String>()
-    private val asked = CopyOnWriteArrayList<String>()
-    private val imageAuthorizations = CopyOnWriteArrayList<String?>()
+
+    /** Paths one test answers itself. */
+    private val routes = ConcurrentHashMap<String, (TestRequest) -> TestResponse?>()
+
+    /** The shares sent; the wins, conquest and deck requests as "METHOD uri body"; the card picture's authorizations. */
+    private val posted get() = server.requests.filter { it.path.startsWith("/api/share/hill") }.map { it.body }
+    private val asked get() =
+        server.requests
+            .filter {
+                it.path.startsWith("/api/wins/hill") || it.path.startsWith("/api/conquests/hill/") ||
+                    it.path.startsWith("/api/decks/hill/share")
+            }.map { "$it ${it.body}".trim() }
+    private val imageAuthorizations get() = server.requests.filter { it.path == "/w/token.png" }.map { it.authorization }
     private val card = "not really a png".toByteArray()
     private val png =
         ByteArrayOutputStream().use { out ->
@@ -76,51 +83,8 @@ class AnkiquestShareTest : RobolectricTest() {
         // Robolectric changes cache directories between tests; AndroidX caches their old roots.
         ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/api/share/hill") { exchange ->
-            val body = exchange.requestBody.bufferedReader().use { it.readText() }
-            posted.add(body)
-            val request = JSONObject(body)
-            val answer =
-                when (request.optString("to")) {
-                    "link" ->
-                        JSONObject()
-                            .put("url", "$base/w/token")
-                            .put("image", "$base/w/token.png")
-                            .put("text", "Level 54! Study with me: $base/w/token")
-                    "friends" -> JSONObject().put("recipients", 3).put("link", JSONObject().put("url", "$base/w/token"))
-                    else -> JSONObject().put("recipients", 2)
-                }
-            respond(exchange, 200, answer.toString().toByteArray())
-        }
-        server.createContext("/api/wins/hill") { exchange ->
-            asked.add("${exchange.requestMethod} ${exchange.requestURI}")
-            val wins = JSONObject().put("wins", org.json.JSONArray().put(JSONObject().put("id", 17).put("key", "conquered:1793183400000")))
-            respond(exchange, 200, wins.toString().toByteArray())
-        }
-        server.createContext("/api/conquests/hill/") { exchange ->
-            val body = exchange.requestBody.bufferedReader().use { it.readText() }
-            asked.add("${exchange.requestMethod} ${exchange.requestURI} $body".trim())
-            if (exchange.requestMethod == "GET") {
-                respond(exchange, 200, JSONObject().put("label", "der Hund").toString().toByteArray())
-            } else {
-                respond(exchange, 204, ByteArray(0))
-            }
-        }
-        server.createContext("/api/decks/hill/share") { exchange ->
-            val body = exchange.requestBody.bufferedReader().use { it.readText() }
-            asked.add("${exchange.requestMethod} ${exchange.requestURI} $body")
-            respond(exchange, 200, JSONObject().put("recipients", 2).toString().toByteArray())
-        }
-        server.createContext("/w/token.png") { exchange ->
-            imageAuthorizations.add(exchange.requestHeaders.getFirst("Authorization"))
-            respond(exchange, 200, card)
-        }
-        server.createContext("/w/huge.png") { exchange -> respond(exchange, 200, ByteArray(5 * 1024 * 1024)) }
-        server.createContext("/w/gone.png") { exchange -> respond(exchange, 404, ByteArray(0)) }
-        server.createContext("/w/valid.png") { exchange -> respond(exchange, 200, png) }
-        server.start()
-        base = "http://127.0.0.1:${server.address.port}"
+        server = AnkiquestTestServer(::answer)
+        base = server.url
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, base)
             putString(Ankiquest.PREF_USER, "hill")
@@ -128,20 +92,54 @@ class AnkiquestShareTest : RobolectricTest() {
         }
     }
 
+    /** The share API and the card pictures; [routes] adds paths for one test. */
+    private fun answer(request: TestRequest): TestResponse? {
+        val path = request.path
+        routes[path]?.let { return it(request) }
+        return when {
+            path.startsWith("/api/share/hill") -> {
+                val answer =
+                    when (JSONObject(request.body).optString("to")) {
+                        "link" ->
+                            JSONObject()
+                                .put("url", "$base/w/token")
+                                .put("image", "$base/w/token.png")
+                                .put("text", "Level 54! Study with me: $base/w/token")
+                        "friends" -> JSONObject().put("recipients", 3).put("link", JSONObject().put("url", "$base/w/token"))
+                        else -> JSONObject().put("recipients", 2)
+                    }
+                respond(200, answer.toString().toByteArray())
+            }
+            path.startsWith("/api/wins/hill") -> {
+                val wins =
+                    JSONObject().put(
+                        "wins",
+                        org.json.JSONArray().put(JSONObject().put("id", 17).put("key", "conquered:1793183400000")),
+                    )
+                respond(200, wins.toString().toByteArray())
+            }
+            path.startsWith("/api/conquests/hill/") && request.method == "GET" ->
+                respond(200, JSONObject().put("label", "der Hund").toString().toByteArray())
+            path.startsWith("/api/conquests/hill/") -> respond(204, ByteArray(0))
+            path.startsWith("/api/decks/hill/share") -> respond(200, JSONObject().put("recipients", 2).toString().toByteArray())
+            path == "/w/token.png" -> respond(200, card)
+            path == "/w/huge.png" -> respond(200, ByteArray(5 * 1024 * 1024))
+            path == "/w/gone.png" -> respond(404, ByteArray(0))
+            path == "/w/valid.png" -> respond(200, png)
+            else -> null
+        }
+    }
+
     private fun respond(
-        exchange: HttpExchange,
         status: Int,
         bytes: ByteArray,
-    ) {
-        exchange.responseHeaders.add("Content-Type", "application/json")
-        exchange.sendResponseHeaders(status, if (bytes.isEmpty()) -1 else bytes.size.toLong())
-        exchange.responseBody.use { if (bytes.isNotEmpty()) it.write(bytes) }
-        exchange.close()
-    }
+    ) = TestResponse(status, bytes, mapOf("Content-Type" to "application/json"))
 
     @After
     fun stopServer() {
-        if (::server.isInitialized) server.stop(0)
+        if (::server.isInitialized) {
+            server.close()
+        }
         SharedPreferencesTestHook.override = null
     }
 
@@ -291,9 +289,9 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Test
     fun `notification images retain their longer network deadline`() {
-        server.createContext("/w/notification.png") { exchange ->
+        routes["/w/notification.png"] = {
             Thread.sleep(2_000)
-            respond(exchange, 200, card)
+            respond(200, card)
         }
         assertContentEquals(card, AnkiquestShare.image("$base/w/notification.png"))
     }
@@ -301,9 +299,9 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a stalled image request promptly uses the local picture`() {
         val release = CountDownLatch(1)
-        server.createContext("/w/stalled.png") { exchange ->
+        routes["/w/stalled.png"] = {
             release.await(15, TimeUnit.SECONDS)
-            exchange.close()
+            null
         }
         // Warm the graphics runtime so this measures the network deadline, not test startup.
         val card = AnkiquestShare.Card("A win", "Saved locally")

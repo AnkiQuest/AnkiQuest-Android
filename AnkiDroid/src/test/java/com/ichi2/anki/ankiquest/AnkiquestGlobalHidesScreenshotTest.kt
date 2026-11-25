@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
-import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
@@ -159,17 +158,9 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
 
     private fun launch(): AnkiquestFriendsActivity =
         startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext)).also { screen ->
-            awaitBoard(screen)
+            screen.awaitBoard()
             click(screen, R.string.ankiquest_widget_who_global)
         }
-
-    private fun awaitBoard(screen: AnkiquestFriendsActivity) {
-        advanceRobolectricLooperUntil {
-            !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
-        }
-        advanceRobolectricLooper()
-    }
 
     private fun awaitText(
         screen: AnkiquestFriendsActivity,
@@ -190,7 +181,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
         label: Int,
     ) {
         control(screen, label).performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
     }
 
     private fun control(

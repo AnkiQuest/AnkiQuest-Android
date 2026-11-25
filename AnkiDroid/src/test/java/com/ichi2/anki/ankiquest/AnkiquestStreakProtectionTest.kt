@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -10,7 +10,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -19,8 +18,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -30,8 +27,10 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestStreakProtectionTest : RobolectricTest() {
-    private lateinit var server: HttpServer
-    private val requests = CopyOnWriteArrayList<Triple<String, String?, String>>()
+    private lateinit var server: AnkiquestTestServer
+
+    /** Each request as "METHOD raw path", its authorization and its body. */
+    private val requests get() = server.requests.map { Triple("${it.method} ${it.uri.rawPath}", it.authorization, it.body) }
 
     @Volatile private var response = """{"enabled":true,"freezes":2,"capacity":3}"""
 
@@ -40,22 +39,9 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
     @Before
     fun startServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            requests.add(
-                Triple(
-                    "${exchange.requestMethod} ${exchange.requestURI.rawPath}",
-                    exchange.requestHeaders.getFirst("Authorization"),
-                    exchange.requestBody.bufferedReader().readText(),
-                ),
-            )
-            val bytes = response.toByteArray()
-            exchange.sendResponseHeaders(status, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+        server = AnkiquestTestServer { TestResponse(status, response.toByteArray()) }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "cerro two")
             putString(Ankiquest.PREF_TOKEN, "saved-token")
         }
@@ -63,7 +49,7 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
 
     @After
     fun stopServer() {
-        server.stop(0)
+        server.close()
         SharedPreferencesTestHook.override = null
     }
 

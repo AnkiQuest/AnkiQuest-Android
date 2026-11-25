@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest.heatmap
 
@@ -181,7 +181,7 @@ class AnkiquestHeatmapDeckListTest : RobolectricTest() {
             }
 
         fun submit(deckList: List<DisplayDeckNode>) {
-            deckAdapter.submit(deckList, hasSubDecks = false)
+            deckAdapter.submit(deckList, hasSubDecks = false, onListCommitted = {})
             advanceRobolectricLooperUntil { deckAdapter.currentList == deckList }
         }
 

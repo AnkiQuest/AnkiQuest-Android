@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -109,7 +109,7 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
                 .deckDueTree()
                 .filterAndFlattenDisplay(DeckFilters.create(""), 1)
                 .map { it.withDailyState(states[it.did]) }
-        adapter.submit(nodes, hasSubDecks = false)
+        adapter.submit(nodes, hasSubDecks = false, onListCommitted = {})
         advanceRobolectricLooperUntil { adapter.currentList == nodes }
         list.measure(
             View.MeasureSpec.makeMeasureSpec(480, View.MeasureSpec.EXACTLY),

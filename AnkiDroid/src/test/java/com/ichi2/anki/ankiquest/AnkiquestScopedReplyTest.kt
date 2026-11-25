@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -14,7 +14,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -25,8 +24,6 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -36,9 +33,11 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class, sdk = [32])
 @Category(EmptyApplicationCategory::class)
 class AnkiquestScopedReplyTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var captured: HomeAccount
-    private val requests = CopyOnWriteArrayList<Pair<String, String?>>()
+
+    /** Each request's path and authorization. */
+    private val requests get() = server.requests.map { it.path to it.authorization }
 
     @Volatile private var switchDuringResponse = false
 
@@ -47,20 +46,20 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
     @Before
     fun prepare() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            requests += exchange.requestURI.path to exchange.requestHeaders.getFirst("Authorization")
-            exchange.requestBody.close()
-            if (switchDuringResponse) AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "bob") }
-            if (redirect) exchange.responseHeaders.set("Location", "/other-destination")
-            val response = "{\"sent_to\":\"Friend\"}".toByteArray()
-            exchange.sendResponseHeaders(if (redirect) 307 else 200, response.size.toLong())
-            exchange.responseBody.use { it.write(response) }
-            exchange.close()
-        }
-        server.start()
+        server =
+            AnkiquestTestServer {
+                if (switchDuringResponse) {
+                    AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "bob") }
+                }
+                val response = "{\"sent_to\":\"Friend\"}".toByteArray()
+                if (redirect) {
+                    TestResponse(307, response, mapOf("Location" to "/other-destination"))
+                } else {
+                    TestResponse(200, response)
+                }
+            }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_URL, server.url)
             putString(Ankiquest.PREF_USER, "alice")
             putString(Ankiquest.PREF_TOKEN, "alice-test-token")
         }
@@ -69,7 +68,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
 
     @After
     fun stop() {
-        server.stop(0)
+        server.close()
         SharedPreferencesTestHook.override = null
     }
 

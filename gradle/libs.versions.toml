@@ -52,7 +52,7 @@ androidxExifinterface = "1.4.2"
 # https://developer.android.com/jetpack/androidx/releases/fragment
 androidxFragmentKtx = "1.9.1"
 # https://developer.android.com/jetpack/androidx/releases/lifecycle
-androidxLifecycleProcess = "2.11.0"
+androidxLifecycle = "2.11.0"
 # https://developer.android.com/jetpack/androidx/releases/media3
 androidxMedia3 = "1.11.1"
 # https://developer.android.com/jetpack/androidx/releases/preference
@@ -75,8 +75,8 @@ androidxViewpager2 = "1.1.0"
 androidxWebkit = "1.16.0"
 # https://developer.android.com/jetpack/androidx/releases/work
 androidxWork = "2.12.0"
-# https://github.com/ankidroid/Anki-Android-Backend/
-ankiBackend = '0.1.77-anki26.09.4' # Also update expectedPolicy in PageWebViewClientAssetTest
+# https://github.com/AnkiQuest/AnkiQuest-Android-Backend/
+ankiBackend = '0.1.77-anki26.09.4-ankiquest.4' # Also update expectedPolicy in PageWebViewClientAssetTest
 autoService = "1.1.1"
 autoServiceAnnotations = "1.1.1"
 # https://github.com/skydoves/ColorPickerView/releases
@@ -169,10 +169,10 @@ androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
-androidx-lifecycle-viewmodel-core = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidxLifecycleProcess" }
-androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycleProcess" }
-androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycleProcess" }
-androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "androidxLifecycleProcess" }
+androidx-lifecycle-viewmodel-core = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidxLifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
+androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "androidxLifecycle" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "androidxMedia3" }
 androidx-media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "androidxMedia3" }
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "androidxMedia3" }
@@ -194,9 +194,9 @@ commons-collections4 = { module = "org.apache.commons:commons-collections4", ver
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs-nio" }
 drakeet-drawer = { module = "com.drakeet.drawer:drawer", version.ref = "drawer" }
-ankiBackend-backend = { module = "io.github.david-allison:anki-backend-android", version.ref = "ankiBackend" }
-ankiBackend-core = { module = "io.github.david-allison:anki-backend-core", version.ref = "ankiBackend" }
-ankiBackend-testing = { module = "io.github.david-allison:anki-android-backend-testing", version.ref = "ankiBackend" }
+ankiBackend-backend = { module = "org.ankiquest:anki-backend-android", version.ref = "ankiBackend" }
+ankiBackend-core = { module = "org.ankiquest:anki-backend-core", version.ref = "ankiBackend" }
+ankiBackend-testing = { module = "org.ankiquest:anki-android-backend-testing", version.ref = "ankiBackend" }
 java-semver = { module = "com.github.zafarkhaja:java-semver", version.ref = "javaSemver" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }

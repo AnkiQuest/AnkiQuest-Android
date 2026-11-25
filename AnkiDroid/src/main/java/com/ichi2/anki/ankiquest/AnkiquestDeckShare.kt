@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -309,7 +309,7 @@ internal object AnkiquestDeckShare {
             AnkiquestShareSheet(
                 context,
                 account,
-                reference,
+                AnkiquestShareSheet.Subject.Known(reference),
                 card,
                 elsewhere = { chosen ->
                     context.lifecycleScope.launch {

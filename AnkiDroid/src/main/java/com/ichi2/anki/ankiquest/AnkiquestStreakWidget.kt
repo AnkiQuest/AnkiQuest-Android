@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -207,6 +207,19 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val dayEndsAt = entry?.optLong("day_ends_at")?.takeIf { it > now } ?: return null
             val last = runCatching { AnkiquestIcon.lastKnown() }.getOrNull() ?: return null
             return last.takeIf { it.optLong("day_ends_at") == dayEndsAt }
+        }
+
+        /** What the streak widget shows of [profile]; when it changes, the widget is drawn again. */
+        internal fun streakShown(profile: JSONObject): List<Any> {
+            val row = AnkiquestWidget.ownRow(profile, null)
+            return listOf(
+                row.optLong("streak"),
+                AnkiquestWidget.streakState(row),
+                row.optLong("today_minutes"),
+                row.optLong("streak_minutes"),
+                row.optLong("day_ends_at"),
+                profile.optJSONObject("goal")?.toString().orEmpty(),
+            )
         }
 
         /** Draws your row of [board] into every placed streak widget; null means not configured. */

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.preferences
 
@@ -32,10 +32,12 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
+import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.ankiquest.SubscriptionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -285,6 +287,33 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
         assertFalse(switch.isChecked)
         coVerify(exactly = 1) { Ankiquest.setNotificationSwitch(field, false) }
+    }
+
+    @Test
+    fun `RWKV switch is off by default and refuses to turn on without an engine`() {
+        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        assertFalse(rwkv.isVisible, "An unavailable scheduler must stay out of settings")
+        assertFalse(rwkv.isChecked)
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
+
+        // This build has no engine: the switch stays off and says why.
+        rwkv.performClick()
+        idle()
+        assertFalse(rwkv.isChecked)
+        assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+    }
+
+    @Test
+    fun `a saved RWKV switch that is now blocked opens off`() {
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestRwkv.PREF_ENABLED, true) }
+
+        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        idle()
+        assertFalse(rwkv.isVisible, "A saved switch must not expose an unavailable scheduler")
+        assertFalse(rwkv.isChecked)
+        assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test

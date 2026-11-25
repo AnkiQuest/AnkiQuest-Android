@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
-import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import com.google.android.material.chip.Chip
 import com.ichi2.anki.R
@@ -128,15 +127,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
     }
 
     private fun launch(): AnkiquestFriendsActivity =
-        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext)).also(::awaitBoard)
-
-    private fun awaitBoard(screen: AnkiquestFriendsActivity) {
-        advanceRobolectricLooperUntil {
-            !screen.findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-                !screen.findViewById<View>(R.id.aq_feed_loading).isVisible
-        }
-        advanceRobolectricLooper()
-    }
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsSections.boardIntent(targetContext)).also { it.awaitBoard() }
 
     private fun click(
         screen: AnkiquestFriendsActivity,
@@ -148,6 +139,6 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
             .filterIsInstance<TextView>()
             .first { it.isClickable && it.text == screen.getString(label) }
             .performClick()
-        awaitBoard(screen)
+        screen.awaitBoard()
     }
 }

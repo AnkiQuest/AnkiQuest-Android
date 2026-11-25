@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-License-Identifier: GPL-3.0-or-later
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const store = fs.readFileSync(path.join(__dirname, '../workflows/ankiquest_screenshot_store.yml'), 'utf8').replaceAll('\r\n', '\n');
+const store = fs.readFileSync(path.join(__dirname, '../workflows/screenshot_store.yml'), 'utf8').replaceAll('\r\n', '\n');
 
 test('each supported target branch produces screenshot baselines on push', () => {
   const branches = store.match(/^  push:\n    branches:\n((?:      - .+\n)+)/m)[1];

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -8,7 +8,6 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.acraCoreConfigBuilder
 import com.ichi2.anki.common.crashreporting.CrashReportService
-import com.sun.net.httpserver.HttpServer
 import okhttp3.Request
 import okhttp3.Response
 import org.acra.ReportField
@@ -21,7 +20,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.net.InetSocketAddress
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -97,19 +95,13 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         answer: String,
         read: (Response) -> Any,
     ): String {
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val bytes = answer.toByteArray()
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+        val server = AnkiquestTestServer { TestResponse(bytes = answer.toByteArray()) }
         try {
-            val request = Request.Builder().url("http://127.0.0.1:${server.address.port}/").build()
+            val request = Request.Builder().url("${server.url}/").build()
             val error = assertFailsWith<JSONException> { AnkiquestApi.call(request) { read(it) } }
             return StringWriter().also { error.printStackTrace(PrintWriter(it)) }.toString()
         } finally {
-            server.stop(0)
+            server.close()
         }
     }
 

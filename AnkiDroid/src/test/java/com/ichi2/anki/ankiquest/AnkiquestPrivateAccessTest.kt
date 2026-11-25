@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -12,7 +12,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.asContextElement
@@ -24,8 +23,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -35,9 +32,11 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestPrivateAccessTest : RobolectricTest() {
-    private lateinit var server: HttpServer
+    private lateinit var server: AnkiquestTestServer
     private lateinit var url: String
-    private val requests = CopyOnWriteArrayList<ReceivedRequest>()
+
+    /** The requests received, each with its path as sent. */
+    private val requests get() = server.requests.map { ReceivedRequest(it.uri.toString(), it.method, it.authorization, it.body) }
 
     private data class ReceivedRequest(
         val path: String,
@@ -49,25 +48,11 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Before
     fun startServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.toString()
-            requests.add(
-                ReceivedRequest(
-                    path,
-                    exchange.requestMethod,
-                    exchange.requestHeaders.getFirst("Authorization"),
-                    exchange.requestBody.bufferedReader().use { it.readText() },
-                ),
-            )
-            val body = (if (path == "/api/leaderboard") "[]" else "{}").toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
-            exchange.close()
-        }
-        server.start()
-        url = "http://127.0.0.1:${server.address.port}"
+        server =
+            AnkiquestTestServer { request ->
+                TestResponse.json(if (request.path == "/api/leaderboard") "[]" else "{}")
+            }
+        url = server.url
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, url)
             putString(Ankiquest.PREF_USER, "member name")
@@ -77,7 +62,9 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
 
     @After
     fun stopServer() {
-        if (::server.isInitialized) server.stop(0)
+        if (::server.isInitialized) {
+            server.close()
+        }
         SharedPreferencesTestHook.override = null
     }
 

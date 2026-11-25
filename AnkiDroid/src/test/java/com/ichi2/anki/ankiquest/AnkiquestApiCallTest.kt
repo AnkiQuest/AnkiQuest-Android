@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 package com.ichi2.anki.ankiquest
 
@@ -10,7 +10,6 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -20,8 +19,6 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
-import java.net.InetSocketAddress
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -31,30 +28,22 @@ import kotlin.test.assertTrue
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
 class AnkiquestApiCallTest : RobolectricTest() {
-    private lateinit var server: HttpServer
-    private val requests = CopyOnWriteArrayList<String>()
+    private lateinit var server: AnkiquestTestServer
 
-    private val url get() = "http://127.0.0.1:${server.address.port}"
+    private val url get() = server.url
+
+    /** Each request as "METHOD path authorization body". */
+    private val requests get() = server.requests.map { "${it.method} ${it.uri.rawPath} ${it.authorization} ${it.body}" }
 
     @Before
     fun startServer() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val body = exchange.requestBody.bufferedReader().readText()
-            requests.add(
-                "${exchange.requestMethod} ${exchange.requestURI.rawPath} ${exchange.requestHeaders.getFirst("Authorization")} $body",
-            )
-            val bytes = """{"ok":true}""".toByteArray()
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+        server = AnkiquestTestServer { TestResponse(bytes = """{"ok":true}""".toByteArray()) }
     }
 
     @After
     fun stopServer() {
-        server.stop(0)
+        server.close()
         SharedPreferencesTestHook.override = null
     }
 
