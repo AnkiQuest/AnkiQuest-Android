@@ -8,4 +8,18 @@
     <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für deine Sammlung. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Wähle zuerst eine RWKV-Modelldatei. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_ready">An: RWKV plant deine Wiederholungen.</string>
+
+    <string name="ankiquest_rwkv_forecast_title">RWKV-Prognose</string>
+    <string name="ankiquest_rwkv_forecast_note">wenn du jetzt aufhörst zu wiederholen</string>
+    <string name="ankiquest_rwkv_forecast_now">fällig %1$d | knapp %2$d | sicher %3$d</string>
+    <string name="ankiquest_rwkv_forecast_later">fällig %1$d · +%2$d in 1 Std. · +%3$d in 3 Std. · %4$d bis morgen</string>
+    <string name="ankiquest_rwkv_recall_title">RWKV-Erinnerung jetzt</string>
+    <plurals name="ankiquest_rwkv_recall_below">
+        <item quantity="one">%1$d von %2$d Karte (%3$s) unter %4$s</item>
+        <item quantity="other">%1$d von %2$d Karten (%3$s) unter %4$s</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_recall_below_targets">
+        <item quantity="one">%1$d von %2$d Karte (%3$s) unter ihrer gewünschten Merkquote</item>
+        <item quantity="other">%1$d von %2$d Karten (%3$s) unter ihrer gewünschten Merkquote</item>
+    </plurals>
 </resources>

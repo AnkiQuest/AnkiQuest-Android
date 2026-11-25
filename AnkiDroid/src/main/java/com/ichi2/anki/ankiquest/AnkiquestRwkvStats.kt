@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -103,13 +104,13 @@ internal object AnkiquestRwkvStats {
         cards: List<RwkvRecall>,
     ) {
         val context = panel.context
-        panel.addView(text(context, forecastHead(context), bold = true))
+        panel.addView(text(context, forecastHead(context), Weight.HEADING))
         panel.addView(text(context, forecastLines(context, AnkiquestRwkvForecast.forecast(cards))))
 
         // The chart, then the share of cards below their target.
         val chart = AnkiquestRwkvForecast.chart(cards)
         val below = belowLine(context, chart)
-        panel.addView(text(context, context.getString(R.string.ankiquest_rwkv_recall_title), bold = true))
+        panel.addView(text(context, context.getString(R.string.ankiquest_rwkv_recall_title), Weight.HEADING))
         panel.addView(
             RwkvRecallChart(context, chart).apply { contentDescription = below },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(context, CHART_HEIGHT_DP)),
@@ -156,20 +157,26 @@ internal object AnkiquestRwkvStats {
         )
     }
 
-    private fun percent(): NumberFormat =
-        NumberFormat.getPercentInstance(AnkiquestLanguage.locale()).apply { maximumFractionDigits = 1 }
+    private fun percent(): NumberFormat {
+        val format = NumberFormat.getPercentInstance(AnkiquestLanguage.locale())
+        format.maximumFractionDigits = 1
+        return format
+    }
 
     private fun text(
         context: Context,
         value: String,
-        bold: Boolean = false,
+        weight: Weight = Weight.BODY,
     ): TextView =
         TextView(context).apply {
             text = value
-            if (bold) {
+            if (weight == Weight.HEADING) {
                 setTypeface(typeface, Typeface.BOLD)
             }
         }
+
+    /** A heading is bold; body text keeps the default typeface. */
+    private enum class Weight { HEADING, BODY }
 
     private fun dp(
         context: Context,
@@ -183,8 +190,10 @@ internal object AnkiquestRwkvStats {
 /**
  * Bars of the cards at each whole percent of recall now, from 50% and below to 100%: red below the
  * card's desired retention, orange near it, green above, with a vertical line at each desired
- * retention. Values come from [AnkiquestRwkvForecast.chart].
+ * retention. Values come from [AnkiquestRwkvForecast.chart]. Built in code with its chart, never
+ * inflated from XML.
  */
+@SuppressLint("ViewConstructor")
 private class RwkvRecallChart(
     context: Context,
     private val chart: Chart,
