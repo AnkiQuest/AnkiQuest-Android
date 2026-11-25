@@ -138,7 +138,7 @@ internal object AnkiquestRwkv {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ): RwkvState = transition(context, prefs) { RwkvState.restore(switch(prefs), checks(context, ram), engine.load) }
 
-    /** Imports picked files, then hands the backend the new models if the scheduler is on. */
+    /** Imports picked files; the caller restores the state afterwards, which hands the backend the new models if the scheduler is on. */
     suspend fun import(
         context: Context,
         inputs: List<() -> InputStream>,
@@ -157,9 +157,6 @@ internal object AnkiquestRwkv {
                     }
                 }
             }
-        if (switch() == RwkvSwitch.ON) {
-            restore(context, AndroidRwkvRam(context))
-        }
         return results
     }
 

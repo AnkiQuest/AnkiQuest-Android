@@ -42,7 +42,6 @@ internal data class RwkvLockEntry(
 internal object RwkvLock {
     const val RELEASE = "rwkv-family-2026-11-13"
     const val RELEASE_URL = "https://github.com/JSchoreels/anki-rwkv/releases/tag/$RELEASE"
-    const val NOTICE_URL = "https://github.com/JSchoreels/anki-rwkv/releases/download/$RELEASE/WEIGHTS-NOTICE.md"
 
     /** The file inside each release zip that the engine reads (the fork's `ARWKVWEIGHTS1` format, f32). */
     const val WEIGHTS_FILE = "weights.f32.bin"
