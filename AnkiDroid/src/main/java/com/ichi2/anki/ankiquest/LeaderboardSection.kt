@@ -755,7 +755,7 @@ internal class LeaderboardSection(
             ViewCompat.setAccessibilityHeading(this, false)
         }
         if (row.hasToday) {
-            views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
+            views.text(score, getString(R.string.ankiquest_today, views.number(row.todayReviews)), small = true).gravity = alignment
         }
         // Around the weekly switch, XP that counts for the week before or after the board's.
         val now = TimeManager.time.intTimeMS()

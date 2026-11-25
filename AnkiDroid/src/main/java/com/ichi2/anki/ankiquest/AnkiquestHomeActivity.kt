@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
@@ -29,6 +30,7 @@ import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
@@ -174,6 +176,27 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (!::content.isInitialized) return
         AnkiquestMoments.clearQuiet(AnkiDroidApp.sharedPrefs())
         refresh()
+        offerCountdowns()
+    }
+
+    /** After sign-in, asks once whether to add the countdowns made while signed out to the account. */
+    private fun offerCountdowns() {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val pending = AnkiquestCountdownImport.pending(prefs) ?: return
+        AlertDialog
+            .Builder(this)
+            .setTitle(R.string.ankiquest_countdowns)
+            .setMessage(AnkiquestCountdownTexts.importQuestion(this, pending.count, pending.user))
+            .setPositiveButton(R.string.ankiquest_countdowns_import_add) { _, _ ->
+                if (!AnkiquestCountdownImport.accept(prefs, pending)) {
+                    return@setPositiveButton
+                }
+                if (pending.imported.left.isNotEmpty()) {
+                    showThemedToast(this, AnkiquestCountdownTexts.left(this, pending.imported.left.size), shortLength = false)
+                }
+                refresh()
+            }.setNegativeButton(R.string.ankiquest_countdowns_import_keep, null)
+            .show()
     }
 
     private fun refresh() {
@@ -433,6 +456,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             renderGoalSetup(signed, suggested)
         }
         local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile), suggested) }
+        local?.countdown?.let { renderCountdown(it) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -525,6 +549,15 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(panel, R.string.aq_goal_change) { AnkiquestGoalDialog.edit(this, signed) { refresh() } }
             }
         }
+    }
+
+    /** The nearest countdown and, with a deck, the cards a day to finish it by then. */
+    private fun renderCountdown(countdown: HomeCountdown) {
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.ankiquest_countdowns), small = true)
+        views.text(panel, AnkiquestCountdownTexts.headline(this, countdown.event, countdown.days), heading = true)
+        AnkiquestCountdownTexts.pace(this, countdown.pace, countdown.event.deck)?.let { views.text(panel, it, small = true) }
+        button(panel, R.string.ankiquest_countdowns_manage) { startActivity(AnkiquestCountdownsActivity.intent(this)) }
     }
 
     private suspend fun restoreOldGoal(

@@ -64,7 +64,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         click(screen, R.string.ankiquest_widget_who_global)
         val words = labels(screen)
         assertTrue("Ana" in words)
-        assertFalse(screen.getString(R.string.aq_board_today_reviews, "0") in words)
+        assertFalse(screen.getString(R.string.ankiquest_today, "0") in words)
         assertFalse(words.any { it.contains("Refresh to see") })
     }
 

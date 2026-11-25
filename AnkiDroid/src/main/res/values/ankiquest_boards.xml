@@ -16,7 +16,7 @@
     <string name="aq_upload_first">Study and sync once to see how others are doing.</string>
     <string name="aq_board_your_place">You are in place %1$d of %2$d.</string>
     <string name="aq_board_xp">%1$s XP</string>
-    <string name="aq_board_today_reviews">%1$s today</string>
+    <string name="ankiquest_today">%1$s today</string>
     <string name="aq_board_closing_xp">%1$s XP still counting for last week</string>
     <string name="aq_closing_week">Last week still counting: %1$s XP · closes at %2$s</string>
     <string name="aq_board_next_xp">%1$s XP already counting for next week</string>
