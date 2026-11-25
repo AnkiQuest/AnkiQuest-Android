@@ -40,6 +40,21 @@ val Heat.bottom: Int
         }
 
 /**
+ * The player's own pose for [mood] with a [streak] of that many days: [pose], unless [debug]
+ * forces a mood or a pose. Streak reminders pass the mood they stand for.
+ */
+@DrawableRes
+fun AnkiquestMood.todayPose(
+    mood: Mood,
+    streak: Int,
+    debug: AnkiquestDebug.Overrides = AnkiquestDebug.current(),
+    choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
+): Int {
+    val shown = debug.pose() ?: named(debug.mood(mood), streak, debug.rules)
+    return AnkiquestCompanion.art(shown, choice)
+}
+
+/**
  * The companion's pose today for the signed-in player, from what the server and the collection
  * last said: the same mood the streak widget shows.
  */
@@ -50,7 +65,8 @@ fun AnkiquestMood.ownPose(now: Long): Int {
     val endsAt = AnkiquestDay.last()?.dayEndsAt?.takeIf { it > now }
     val last = AnkiquestIcon.lastKnown()?.takeIf { endsAt != null && it.optLong("day_ends_at") == endsAt }
     val goal = if (last?.optBoolean("goal_reached") == true) Goal.REACHED else Goal.OPEN
-    return pose(of(day, last?.optInt("frozen_days") ?: 0, goal), day?.streak ?: 0)
+    val debug = AnkiquestDebug.current()
+    return todayPose(today(day, last?.optInt("frozen_days") ?: 0, goal, debug), day?.streak ?: 0, debug)
 }
 
 /**
@@ -64,14 +80,22 @@ fun AnkiquestMood.pose(
     choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
 ): Int = AnkiquestCompanion.art(named(mood, streak), choice)
 
-/** The poses the big widget rotates through for [mood], all of the same mood, each once. */
+/**
+ * The poses the big widget rotates through for [mood], all of the same mood, each once. [debug]
+ * is the player's own overrides; other players' widgets pass [AnkiquestDebug.Overrides.NONE].
+ */
 fun AnkiquestMood.poses(
     mood: Mood,
     streak: Int,
     choice: AnkiquestCompanion.Choice = AnkiquestCompanion.choice(),
+    debug: AnkiquestDebug.Overrides = AnkiquestDebug.Overrides.NONE,
 ): List<Int> {
-    val pose = pose(mood, streak, choice)
-    if (mood == Mood.FIRE && Heat.of(streak) == Heat.LEGEND) {
+    val pose = todayPose(mood, streak, debug, choice)
+    // A forced pose is the only picture; the legend rotation belongs to the computed fire mood.
+    if (debug.pose() != null) {
+        return listOf(pose)
+    }
+    if (debug.mood(mood) == Mood.FIRE && debug.rules.heat(streak) == Heat.LEGEND) {
         return listOf(pose, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, choice)).distinct()
     }
     return listOf(pose)
@@ -83,10 +107,17 @@ fun AnkiquestMood.bigPose(
     mood: Mood,
     streak: Int,
     dayEndsAt: Long,
+    debug: AnkiquestDebug.Overrides = AnkiquestDebug.Overrides.NONE,
 ): Int {
-    val choices = poses(mood, streak)
+    val choices = poses(mood, streak, debug = debug)
     return choices[Math.floorMod(Math.floorDiv(dayEndsAt, DAY_MS), choices.size.toLong()).toInt()]
 }
+
+/** "Debug override", or null while nothing is overridden; Home and the widget show it. */
+fun AnkiquestDebug.marker(
+    context: Context,
+    overrides: AnkiquestDebug.Overrides = current(),
+): String? = if (overrides.active) context.getString(R.string.ankiquest_debug_marker) else null
 
 /** "36 days to 100 🔥", or null without a streak or past the last milestone. */
 fun AnkiquestMood.nextLine(

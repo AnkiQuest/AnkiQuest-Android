@@ -9,4 +9,20 @@
     <string name="ankiquest_rwkv_not_enough_memory">Not available: this phone has too little memory for your collection. Scheduling is unchanged.</string>
     <string name="ankiquest_rwkv_no_model">Not available: choose an RWKV model file first. Scheduling is unchanged.</string>
     <string name="ankiquest_rwkv_ready">On: RWKV schedules your reviews.</string>
+
+    <!-- RWKV statistics, worded as Pedrubik2000's anki-rwkv-forecast add-on. -->
+    <string name="ankiquest_rwkv_forecast_title">RWKV forecast</string>
+    <string name="ankiquest_rwkv_forecast_note">if you stop reviewing now</string>
+    <string name="ankiquest_rwkv_forecast_now">due %1$d | near %2$d | safe %3$d</string>
+    <string name="ankiquest_rwkv_forecast_later">due %1$d · +%2$d in 1 h · +%3$d in 3 h · %4$d by tomorrow</string>
+    <string name="ankiquest_rwkv_recall_title">RWKV recall now</string>
+    <!-- %1$d cards below, of %2$d review cards; %3$s their share; %4$s the desired retention -->
+    <plurals name="ankiquest_rwkv_recall_below">
+        <item quantity="one">%1$d of %2$d card (%3$s) below %4$s</item>
+        <item quantity="other">%1$d of %2$d cards (%3$s) below %4$s</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_recall_below_targets">
+        <item quantity="one">%1$d of %2$d card (%3$s) below its desired retention</item>
+        <item quantity="other">%1$d of %2$d cards (%3$s) below their desired retention</item>
+    </plurals>
 </resources>

@@ -64,9 +64,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # No Gradle cache: a release tag's drawing starts from a clean cache,
+      # so nothing a cache entry holds reaches the images it proposes.
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-provider: basic
+          cache-disabled: true
           gradle-version: wrapper
 
       - name: Robolectric SDK cache
@@ -135,6 +137,8 @@ jobs:
         with:
           ref: ${{ steps.base.outputs.branch }}
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+          # A later step pushes the banner branch with this token.
+          persist-credentials: true # zizmor: ignore[artipacked]
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:

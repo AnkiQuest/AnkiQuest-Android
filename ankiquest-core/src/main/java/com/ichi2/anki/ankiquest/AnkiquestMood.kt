@@ -72,7 +72,43 @@ object AnkiquestMood {
 
         companion object {
             /** The heat of a [streak] that counts today; an unknown or zero streak burns as day one. */
-            fun of(streak: Int): Heat = entries.lastOrNull { streak >= it.days } ?: WARM
+            fun of(streak: Int): Heat = Rules.SHARED.heat(streak)
+        }
+    }
+
+    /**
+     * The thresholds of the mood rule. [SHARED] holds the ones `streak_moods.json` pins; only the
+     * secret debug menu ([AnkiquestDebug]) uses others, on this phone.
+     */
+    data class Rules(
+        /** Reviews today that make a day short of the minimum hopeful. */
+        val hopefulReviews: Int = 1,
+        /** Frozen days in a row that show the second frozen level. */
+        val frozen2Days: Int = 2,
+        /** Frozen days in a row that show the third frozen level. */
+        val frozen3Days: Int = 3,
+        val hotDays: Int = Heat.HOT.days,
+        val blazingDays: Int = Heat.BLAZING.days,
+        val legendDays: Int = Heat.LEGEND.days,
+    ) {
+        /** Whether each threshold is reachable and in the order of its levels. */
+        fun valid(): Boolean =
+            hopefulReviews >= 1 &&
+                frozen2Days in 2 until frozen3Days &&
+                hotDays in 2 until blazingDays &&
+                blazingDays < legendDays
+
+        /** The heat of a [streak] that counts today; an unknown or zero streak burns as day one. */
+        fun heat(streak: Int): Heat =
+            when {
+                streak >= legendDays -> Heat.LEGEND
+                streak >= blazingDays -> Heat.BLAZING
+                streak >= hotDays -> Heat.HOT
+                else -> Heat.WARM
+            }
+
+        companion object {
+            val SHARED = Rules()
         }
     }
 
@@ -87,6 +123,7 @@ object AnkiquestMood {
         streak: Int,
         frozenDays: Int,
         goal: Goal,
+        rules: Rules = Rules.SHARED,
     ): Mood {
         // Today counts, or the goal says the player did what they planned.
         if (state == State.STUDIED || goal == Goal.REACHED) {
@@ -95,16 +132,16 @@ object AnkiquestMood {
         if (state == State.UNKNOWN) {
             return Mood.UNKNOWN
         }
-        if (reviews > 0) {
+        if (reviews >= rules.hopefulReviews) {
             return Mood.HOPEFUL
         }
 
         // A protected day means a freeze kept at least yesterday, even without the heatmap.
         val frozen = maxOf(frozenDays, if (state == State.PROTECTED) 1 else 0)
         return when {
-            frozen >= 3 -> Mood.FROZEN_3
-            frozen == 2 -> Mood.FROZEN_2
-            frozen == 1 -> Mood.FROZEN_1
+            frozen >= rules.frozen3Days -> Mood.FROZEN_3
+            frozen >= rules.frozen2Days -> Mood.FROZEN_2
+            frozen >= 1 -> Mood.FROZEN_1
             streak == 0 -> Mood.ASLEEP
             else -> Mood.SAD
         }
@@ -118,12 +155,24 @@ object AnkiquestMood {
         day: AnkiquestDay.Verdict?,
         frozenDays: Int,
         goal: Goal,
+        rules: Rules = Rules.SHARED,
     ): Mood {
         if (day == null) {
             return Mood.UNKNOWN
         }
-        return of(day.label, day.reviews, day.streak ?: 0, frozenDays, goal)
+        return of(day.label, day.reviews, day.streak ?: 0, frozenDays, goal, rules)
     }
+
+    /**
+     * The player's own mood today: [of] with the debug menu's [debug] overrides. Every place that
+     * shows the player's own day uses it; other players' days use [of].
+     */
+    fun today(
+        day: AnkiquestDay.Verdict?,
+        frozenDays: Int,
+        goal: Goal,
+        debug: AnkiquestDebug.Overrides = AnkiquestDebug.current(),
+    ): Mood = debug.mood(of(day, frozenDays, goal, debug.rules))
 
     /** The flame for [mood], so the flame says what Aki would even with no companion shown. */
     fun flame(mood: Mood): Flame =
@@ -138,6 +187,7 @@ object AnkiquestMood {
     fun named(
         mood: Mood,
         streak: Int,
+        rules: Rules = Rules.SHARED,
     ): AnkiquestPose =
         when (mood) {
             Mood.UNKNOWN -> AnkiquestPose.FACE
@@ -147,7 +197,7 @@ object AnkiquestMood {
             Mood.FROZEN_2 -> AnkiquestPose.FROZEN_2
             Mood.FROZEN_3 -> AnkiquestPose.FROZEN_3
             Mood.HOPEFUL -> AnkiquestPose.HOPEFUL
-            Mood.FIRE -> Heat.of(streak).pose
+            Mood.FIRE -> rules.heat(streak).pose
         }
 
     /**

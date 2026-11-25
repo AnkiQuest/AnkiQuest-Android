@@ -33,9 +33,11 @@ jobs:
           ref: master
           fetch-depth: 0
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+          # A later step pushes bot/server-bump with this token.
+          persist-credentials: true # zizmor: ignore[artipacked]
 
       - name: Alert once when a bump has remained red for two days
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
           script: |
@@ -93,7 +95,7 @@ jobs:
 
       - name: Open or update the bump pull request
         if: steps.branch.outputs.changed == 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
           script: |

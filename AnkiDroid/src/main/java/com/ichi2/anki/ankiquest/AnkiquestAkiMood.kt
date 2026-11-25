@@ -25,7 +25,7 @@ internal fun AnkiquestAki.mood(
     // The pose follows the one mood rule; the profile's goal and frozen days count only while its day is today.
     val current = profile?.takeIf { day != null }
     val reached = if (current?.optJSONObject("goal")?.optBoolean("reached") == true) Goal.REACHED else Goal.OPEN
-    val mood = AnkiquestMood.of(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
+    val mood = AnkiquestMood.today(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
     return Card(mood, day?.streak ?: 0, message(mood, local, day))
 }
 

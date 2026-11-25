@@ -481,7 +481,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
             advanceRobolectricLooper()
 
-            // hill, 2026-11-20: Share opens AnkiQuest's sheet at once, friends shown but not choosable.
+            // Share opens AnkiQuest's sheet at once, friends shown but not choosable.
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
             val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog(), "Share opens AnkiQuest's share sheet")
             assertNull(shadowOf(host).nextStartedActivity, "nothing leaves the app before a choice")
