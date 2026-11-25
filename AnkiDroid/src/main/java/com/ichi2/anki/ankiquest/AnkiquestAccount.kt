@@ -7,10 +7,12 @@ import android.os.Build
 import com.ichi2.anki.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.IOException
+import java.net.URLEncoder
 import java.net.UnknownHostException
 
 /** Signs in with a username and password, or creates an account, and keeps only the device token it returns. */
@@ -23,9 +25,19 @@ object AnkiquestAccount {
     /** Where the website sets two-factor authentication up: its own card in Settings. */
     const val TWO_FACTOR_PAGE = "/settings#two-factor"
 
+    /** Who may open the profile of a new account: the answer to "Public profile" at sign-up. */
+    enum class Profile {
+        /** Friends and groups only; the answer unless the player ticks the box. */
+        PRIVATE,
+
+        /** Anyone, and listed on the global leaderboard. */
+        PUBLIC,
+    }
+
     /**
      * [code] is the two-factor code or a recovery code, sent only once the server asked for one:
-     * servers without two-factor refuse fields they do not know.
+     * servers without two-factor refuse fields they do not know. [profile] counts only when
+     * [create] is set.
      */
     data class Credentials(
         val url: String,
@@ -34,6 +46,7 @@ object AnkiquestAccount {
         val display: String,
         val create: Boolean,
         val code: String = "",
+        val profile: Profile = Profile.PRIVATE,
     )
 
     data class Signed(
@@ -102,8 +115,32 @@ object AnkiquestAccount {
                     if (!e.secondFactor) throw e
                     throw SecondFactorNeeded(secondFactor(e.code, request.code))
                 }
-            Signed(request.url.trimEnd('/'), answer.getString("user"), answer.getString("token"))
+            val signed = Signed(request.url.trimEnd('/'), answer.getString("user"), answer.getString("token"))
+            if (request.create) chooseProfile(signed, request.profile)
+            signed
         }
+
+    /**
+     * Stores the sign-up answer with the `visibility` action every server has. Servers from before
+     * the answer refuse an unknown sign-up field and make new profiles public, so it is not sent
+     * with the sign-up. A failure leaves the server's default, private on current servers; the
+     * player can still change it under Friends.
+     */
+    private fun chooseProfile(
+        signed: Signed,
+        profile: Profile,
+    ) {
+        val user = URLEncoder.encode(signed.user, "UTF-8").replace("+", "%20")
+        val url = "${signed.url}/api/social/$user".toHttpUrl()
+        val body = AnkiquestSocial.Change.Visibility(profile == Profile.PUBLIC).body()
+        try {
+            AnkiquestApi.anonymous(
+                AnkiquestApi.request(url, signed.token, AnkiquestLanguage.tag()).post(AnkiquestApi.body(body)).build(),
+            )
+        } catch (e: IOException) {
+            Timber.w(e, "ankiquest sign-up profile choice not stored")
+        }
+    }
 
     private fun secondFactor(
         status: Int,

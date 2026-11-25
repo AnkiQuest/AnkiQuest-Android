@@ -50,6 +50,7 @@
     <string name="ankiquest_sign_in_display">Anzeigename (optional)</string>
     <string name="ankiquest_sign_in_create">Neues Konto erstellen</string>
     <string name="ankiquest_sign_in_hint">Benutzernamen bestehen aus Kleinbuchstaben, Ziffern, - und _. Passwörter brauchen mindestens 10 Zeichen.</string>
+    <string name="ankiquest_sign_in_public_hint">Alle können dein Profil öffnen und du stehst in der globalen Rangliste.</string>
     <string name="ankiquest_sign_in_submit">Anmelden</string>
     <string name="ankiquest_sign_in_submit_create">Konto erstellen</string>
     <string name="ankiquest_sign_in_missing">Server, Benutzername und Passwort ausfüllen.</string>
