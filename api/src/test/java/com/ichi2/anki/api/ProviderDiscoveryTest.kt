@@ -125,8 +125,8 @@ internal class ProviderDiscoveryTest {
     companion object {
         private val STOCK_PACKAGE = BuildConfig.ANKI_PACKAGE_NAME
         private const val RELEASED_QUEST_PACKAGE = "com.ichi2.anki.quest"
-        private const val QUEST_PACKAGE = "org.ankiquest"
-        private const val QUEST_DEBUG_PACKAGE = "org.ankiquest.debug"
+        private const val QUEST_PACKAGE = "org.ankiquest.ankidroid"
+        private const val QUEST_DEBUG_PACKAGE = "org.ankiquest.ankidroid.debug"
         private const val FORK_PACKAGE = "org.example.ankifork"
         private const val LATER_FORK_PACKAGE = "org.example.zfork"
         private const val FORK_AUTHORITY = "$FORK_PACKAGE.flashcards"

@@ -8,7 +8,7 @@
     <!-- AnkiDroid -->
     <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE"/>
     <!-- AnkiQuest -->
-    <uses-permission android:name="org.ankiquest.permission.READ_WRITE_DATABASE"/>
+    <uses-permission android:name="org.ankiquest.ankidroid.permission.READ_WRITE_DATABASE"/>
     <!-- AnkiQuest up to quest-23 -->
     <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE"/>
 
@@ -17,8 +17,8 @@
         <package android:name="com.ichi2.anki" />
         <provider android:authorities="com.ichi2.anki.flashcards" />
         <!-- AnkiQuest -->
-        <package android:name="org.ankiquest" />
-        <provider android:authorities="org.ankiquest.flashcards" />
+        <package android:name="org.ankiquest.ankidroid" />
+        <provider android:authorities="org.ankiquest.ankidroid.flashcards" />
         <!-- AnkiQuest up to quest-23 -->
         <package android:name="com.ichi2.anki.quest" />
         <provider android:authorities="com.ichi2.anki.quest.flashcards" />

@@ -50,7 +50,8 @@
     <!-- The API library declares the providers its clients talk to. AnkiQuest is a provider, not a client.
          Never remove the app's own permission (com.ichi2.anki here): CardContentProvider rejects callers
          that do not request it, the app's own instrumented ContentProviderTest included. -->
-    <uses-permission android:name="org.ankiquest.permission.READ_WRITE_DATABASE" tools:node="remove" />
+    <!-- Goes once the app itself is org.ankiquest.ankidroid (#420): then it is the app's own. -->
+    <uses-permission android:name="org.ankiquest.ankidroid.permission.READ_WRITE_DATABASE" tools:node="remove" />
     <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE" tools:node="remove" />
 
     <supports-screens
@@ -695,7 +696,7 @@
             library also reads (#461): AnkiQuest exposes none of AnkiDroid's contract names.
             -->
             <meta-data android:name="org.ankiquest.provider.spec" android:value="2" />
-            <!-- Lets API clients find parallel builds (org.ankiquest.debug) -->
+            <!-- Lets API clients find parallel builds (org.ankiquest.ankidroid.debug) -->
             <intent-filter>
                 <action android:name="org.ankiquest.action.FLASHCARDS_PROVIDER" />
             </intent-filter>
