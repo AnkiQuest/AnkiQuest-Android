@@ -136,4 +136,18 @@
         <item quantity="one">%d revisão enviada.</item>
         <item quantity="other">%d revisões enviadas.</item>
     </plurals>
+    <string name="ankiquest_widget_settings_title">Widget de classificação</string>
+    <string name="ankiquest_widget_settings_open">%1$s, definições do widget</string>
+    <string name="ankiquest_widget_settings_save">Guardar o widget</string>
+    <string name="ankiquest_widget_settings_scale">Tamanho do texto</string>
+    <string name="ankiquest_widget_settings_timeframe">Período</string>
+    <string name="ankiquest_widget_settings_groups_failed">Não foi possível carregar os teus grupos</string>
+    <string name="ankiquest_widget_settings_groups_loading">A carregar os teus grupos…</string>
+    <string name="ankiquest_widget_scale_auto">Automático (cabe no widget)</string>
+    <string name="ankiquest_widget_scale_extra_large">Muito grande</string>
+    <string name="ankiquest_widget_scale_large">Grande</string>
+    <string name="ankiquest_widget_scale_medium">Médio</string>
+    <string name="ankiquest_widget_scale_small">Pequeno</string>
+    <string name="ankiquest_widget_global_unavailable">Este servidor ainda não tem classificação global</string>
+    <string name="ankiquest_widget_who_global">Global</string>
 </resources>
