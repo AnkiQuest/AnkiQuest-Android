@@ -93,7 +93,7 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 node --test .github/tests/*.test.cjs
 ```
 
-Release builds bundle the companion packs of the AnkiQuest-Art release that `ankiquest-art.json` pins ([format](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/docs/packs.md)), downloaded once and checked against the pin's SHA-256; `-PankiquestArt=download` builds the slim APK without them; it downloads them on first start and checks `packs.json` against the SHA-256 in its `assets/ankiquest/art.json`. Debug builds carry neither.
+Every build draws the companions from the AnkiQuest-Art release that `ankiquest-art.json` pins: it bundles that release's companion packs ([format](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/docs/packs.md)) and takes the launcher icons' pictures from its `android-drawables.zip`, each downloaded once, checked against the pin's SHA-256 and cached in `~/.gradle/caches/ankiquest-art` (or `-PankiquestArtCache=<dir>`). The app has no companion pictures of its own. `-PankiquestArt=download` builds the slim APK without the packs; it downloads them on first start and checks `packs.json` against the SHA-256 in its `assets/ankiquest/art.json`.
 
 AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 

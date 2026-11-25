@@ -49,7 +49,7 @@ internal object AnkiquestConquestShare {
         return AnkiquestShare.Card(
             context.getString(if (card.leech) R.string.aq_profile_leech else R.string.aq_profile_conquest),
             words(context, viewer, card),
-            if (card.leech) R.drawable.aki_winner else R.drawable.aki_deck_conquered,
+            if (card.leech) AnkiquestPose.WINNER else AnkiquestPose.DECK_CONQUERED,
             listOfNotNull(
                 from(context, viewer, card, name),
                 resources.getQuantityString(R.plurals.aq_conquest_answers, card.answers, numbers.format(card.answers)),

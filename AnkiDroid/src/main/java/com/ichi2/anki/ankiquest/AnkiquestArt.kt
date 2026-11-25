@@ -10,6 +10,7 @@ import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.util.LruCache
 import androidx.annotation.DrawableRes
+import androidx.annotation.VisibleForTesting
 import androidx.core.graphics.createBitmap
 import com.ichi2.anki.R
 
@@ -31,40 +32,10 @@ internal object AnkiquestArt {
         }
 
     /**
-     * [resource] downsampled by a power of two to the smallest size that still covers [size] pixels
-     * on its shorter side, or null when it cannot be decoded. The bitmap is shared and must not be changed.
-     */
-    fun bitmap(
-        context: Context,
-        @DrawableRes resource: Int,
-        size: Int,
-    ): Bitmap? {
-        if (size <= 0) return null
-        val bounds =
-            BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-                inScaled = false
-            }
-        BitmapFactory.decodeResource(context.resources, resource, bounds)
-        val edge = minOf(bounds.outWidth, bounds.outHeight)
-        val sample = if (edge > 0) sampleSize(edge, size) else 1
-
-        // Keyed by sample, so sizes that decode alike share one bitmap, also within one RemoteViews.
-        val key = "$resource:$sample"
-        cache.get(key)?.let { return it }
-        val options =
-            BitmapFactory.Options().apply {
-                inSampleSize = sample
-                inScaled = false
-            }
-        val decoded = BitmapFactory.decodeResource(context.resources, resource, options) ?: return null
-        cache.put(key, decoded)
-        return decoded
-    }
-
-    /**
-     * Companion [id]'s picture for the Art name [name] from its installed pack, decoded like [bitmap];
-     * null when no pack shows [id] or the picture cannot be decoded. The pack resolves fallbacks.
+     * Companion [id]'s picture for the Art name [name] from its installed pack, downsampled by a power
+     * of two to the smallest size that still covers [size] pixels on its shorter side; null when no
+     * pack shows [id] or the picture cannot be decoded. The pack resolves fallbacks. The bitmap is
+     * shared and must not be changed.
      */
     fun packed(
         context: Context,
@@ -124,23 +95,24 @@ internal object AnkiquestArt {
         return decoded
     }
 
+    /** Forgets every decoded picture, as when the installed packs were swapped. */
+    @VisibleForTesting
+    fun clear() = cache.evictAll()
+
     /**
-     * [bitmap] drawn through [filter], cached under [name] next to the plain bitmap. For art
-     * recoloured on the phone; RemoteViews cannot apply a filter, so the colours are drawn in.
+     * [plain] drawn through [filter], cached under [key]. For art recoloured on the phone;
+     * RemoteViews cannot apply a filter, so the colours are drawn in.
      */
     fun filtered(
-        context: Context,
-        @DrawableRes resource: Int,
-        size: Int,
-        name: String,
+        plain: Bitmap,
+        key: String,
         filter: ColorFilter,
-    ): Bitmap? {
-        val plain = bitmap(context, resource, size) ?: return null
-        val key = "$name:$resource:${plain.width}"
-        cache.get(key)?.let { return it }
+    ): Bitmap {
+        val cached = "$key:${plain.width}"
+        cache.get(cached)?.let { return it }
         val drawn = createBitmap(plain.width, plain.height)
         Canvas(drawn).drawBitmap(plain, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter = filter })
-        cache.put(key, drawn)
+        cache.put(cached, drawn)
         return drawn
     }
 
@@ -149,56 +121,41 @@ internal object AnkiquestArt {
      * is about ("streak", "goal", "secured", "conquered", "achievement", …) or "place:N" for a weekly recap; older
      * servers send none.
      */
-    @DrawableRes
     fun forNotice(
         kind: String,
         topic: String?,
-    ): Int =
+    ): AnkiquestPose =
         when (kind) {
             "celebration", "share" -> forTopic(topic)
-
-            "nudge" -> R.drawable.aki_nudge
-
-            "challenge_invite", "challenge_accepted" -> R.drawable.aki_challenge
-
-            "challenge_complete" -> R.drawable.aki_challenge_won
-
+            "nudge" -> AnkiquestPose.NUDGE
+            "challenge_invite", "challenge_accepted" -> AnkiquestPose.CHALLENGE
+            "challenge_complete" -> AnkiquestPose.CHALLENGE_WON
             // The server sends these only to a streak not studied today; the streak's length is not in the notice.
-            "reminder_urgent", "reminder_milestone" -> AnkiquestMood.pose(AnkiquestMood.Mood.SAD, 1)
-
-            "reminder_freeze_used" -> AnkiquestMood.pose(AnkiquestMood.Mood.FROZEN_1, 1)
-
-            "reminder_weekly_recap" -> place(topic?.removePrefix("place:")?.toIntOrNull()) ?: R.drawable.aki_face
-
-            else -> R.drawable.aki_face
+            // They show the player's own day, so the debug menu's overrides apply.
+            "reminder_urgent", "reminder_milestone" -> AnkiquestMood.todayPose(AnkiquestMood.Mood.SAD, 1)
+            "reminder_freeze_used" -> AnkiquestMood.todayPose(AnkiquestMood.Mood.FROZEN_1, 1)
+            "reminder_weekly_recap" -> place(topic?.removePrefix("place:")?.toIntOrNull()) ?: AnkiquestPose.FACE
+            else -> AnkiquestPose.FACE
         }
 
-    @DrawableRes
-    private fun forTopic(topic: String?): Int =
+    private fun forTopic(topic: String?): AnkiquestPose =
         when {
-            topic == "streak" -> R.drawable.aki_streak_milestone
-
+            topic == "streak" -> AnkiquestPose.STREAK_MILESTONE
             // A notification does not say how long the streak is: the first fire pose.
             topic == "secured" -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 1)
-
-            topic == "goal" -> R.drawable.aki_goal
-
-            topic == "conquered" -> R.drawable.aki_deck_conquered
-
-            topic == "companion" -> R.drawable.aki_celebrate
-
-            topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: R.drawable.aki_achievement
-
-            else -> R.drawable.aki_achievement
+            topic == "goal" -> AnkiquestPose.GOAL
+            topic == "conquered" -> AnkiquestPose.DECK_CONQUERED
+            topic == "companion" -> AnkiquestPose.HAPPY
+            topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: AnkiquestPose.ACHIEVEMENT
+            else -> AnkiquestPose.ACHIEVEMENT
         }
 
     /** Art for finishing or climbing to [place] (1-based) on the weekly leaderboard, for the top three. */
-    @DrawableRes
-    fun place(place: Int?): Int? =
+    fun place(place: Int?): AnkiquestPose? =
         when (place) {
-            1 -> R.drawable.aki_place_1
-            2 -> R.drawable.aki_place_2
-            3 -> R.drawable.aki_place_3
+            1 -> AnkiquestPose.PLACE_1
+            2 -> AnkiquestPose.PLACE_2
+            3 -> AnkiquestPose.PLACE_3
             else -> null
         }
 

@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.DrawableRes
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.common.time.TimeManager
@@ -26,9 +25,8 @@ internal object AnkiquestAki {
         val streak: Int,
         val message: Message,
     ) {
-        /** The pose [AnkiquestMood] gives the mood, as on the streak widget. */
-        @get:DrawableRes
-        val image: Int get() = AnkiquestMood.pose(mood, streak)
+        /** The pose [AnkiquestMood] gives the mood, as on the streak widget, or the debug menu's. */
+        val image: AnkiquestPose get() = AnkiquestMood.todayPose(mood, streak)
 
         /** The line beside the pose, or null for none: cards due need none, the next-step card says what to do. */
         fun text(context: Context): String? =
@@ -59,7 +57,7 @@ internal object AnkiquestAki {
         // The pose follows the one mood rule; the profile's goal and frozen days count only while its day is today.
         val current = profile?.takeIf { day != null }
         val reached = if (current?.optJSONObject("goal")?.optBoolean("reached") == true) Goal.REACHED else Goal.OPEN
-        val mood = AnkiquestMood.of(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
+        val mood = AnkiquestMood.today(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
         return Card(mood, day?.streak ?: 0, message(mood, local, day))
     }
 
@@ -94,11 +92,11 @@ internal object AnkiquestAki {
 
     fun image(
         context: Context,
-        @DrawableRes resource: Int,
+        pose: AnkiquestPose,
         size: Int = 80,
     ): ImageView =
         ImageView(context).apply {
-            AnkiquestCompanion.show(this, resource, dp(context, size))
+            AnkiquestCompanion.show(this, pose, dp(context, size))
             scaleType = ImageView.ScaleType.FIT_CENTER
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             layoutParams = LinearLayout.LayoutParams(dp(context, size), dp(context, size))
@@ -115,8 +113,11 @@ internal object AnkiquestAki {
             setPadding(0, dp(context, 8), 0, dp(context, 8))
             addView(image(context, card.image))
 
-            // A mood without a line shows the pose alone.
-            val line = card.text(context) ?: return@apply
+            // A mood without a line shows the pose alone; the debug menu's overrides always say so.
+            val line =
+                listOfNotNull(card.text(context), AnkiquestDebug.marker(context))
+                    .joinToString("\n")
+                    .ifEmpty { return@apply }
             addView(
                 TextView(context).apply {
                     text = line
@@ -130,7 +131,7 @@ internal object AnkiquestAki {
 
     fun notificationIcon(
         context: Context,
-        @DrawableRes art: Int = R.drawable.aki_face,
+        art: AnkiquestPose = AnkiquestPose.FACE,
     ): Bitmap? =
         if (!AnkiquestCompanion.visible()) {
             null

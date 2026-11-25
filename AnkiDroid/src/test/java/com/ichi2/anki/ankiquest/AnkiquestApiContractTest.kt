@@ -101,6 +101,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         } finally {
             unmockkObject(AnkiquestWidget, AnkiquestShare)
             SharedPreferencesTestHook.override = null
+            AnkiquestPacks.use(null)
         }
     }
 
@@ -466,6 +467,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
     @Test
     fun `a companion that joined is a shareable moment with its own art`() {
+        // Bluma (`cow`) has a pack whether or not this build bundles the pinned ones.
+        AnkiquestTestPacks.useOfficial(File(targetContext.cacheDir, "packs"))
         val entries = JSONArray(example("notifications_companion"))
         val row = (0 until entries.length()).map { entries.getJSONObject(it) }.first { it.optString("topic") == "companion" }
 

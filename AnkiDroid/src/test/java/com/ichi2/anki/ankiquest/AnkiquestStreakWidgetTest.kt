@@ -230,7 +230,8 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                     .apply(targetContext, FrameLayout(targetContext))
             val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
             val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap, size.name)
-            val blazing = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_streak_blazing, minOf(shown.width, shown.height)))
+            val blazing =
+                assertNotNull(AnkiquestCompanion.bitmap(targetContext, AnkiquestPose.STREAK_BLAZING, minOf(shown.width, shown.height)))
             assertTrue(shown.sameAs(blazing), "$size shows the blazing pose")
         }
     }
@@ -258,7 +259,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                 .apply(targetContext, FrameLayout(targetContext))
         val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
         val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap)
-        val frozen = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_freeze, minOf(shown.width, shown.height)))
+        val frozen = assertNotNull(AnkiquestCompanion.bitmap(targetContext, AnkiquestPose.FREEZE, minOf(shown.width, shown.height)))
         assertTrue(shown.sameAs(frozen))
     }
 
@@ -274,13 +275,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                     AnkiquestStreakWidget
                         .views(targetContext, board, "hill", size, style = style)
                         .apply(targetContext, FrameLayout(targetContext))
-                val name = "$style $size"
-                if (size == AnkiquestStreakWidget.Size.LARGE || size == AnkiquestStreakWidget.Size.HUGE) {
-                    assertPose(widget, R.drawable.ankilope_frozen, name)
-                    continue
-                }
-                val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
-                assertEquals(R.drawable.ankilope_frozen, shadowOf(drawable).createdFromResId, name)
+                assertPose(widget, AnkiquestPose.FREEZE_USED, "$style $size")
             }
         }
     }
@@ -288,14 +283,13 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     /** The companion [widget] shows is [pose]. */
     private fun assertPose(
         widget: View,
-        pose: Int,
+        pose: AnkiquestPose,
         message: String,
     ) {
         val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
         val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap, message)
-        val expected = assertNotNull(AnkiquestArt.bitmap(targetContext, pose, minOf(shown.width, shown.height)))
-        val name = targetContext.resources.getResourceEntryName(pose)
-        assertTrue(shown.sameAs(expected), "$message: not $name")
+        val expected = assertNotNull(AnkiquestCompanion.bitmap(targetContext, pose, minOf(shown.width, shown.height)))
+        assertTrue(shown.sameAs(expected), "$message: not ${pose.id}")
     }
 
     @Test
@@ -435,18 +429,23 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `every streak pose covers the huge layout on a dense screen`() {
         val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
-        // Every pose the big layouts rotate through, and Ankilope's for each mood.
-        val aki =
+        // Every pose the big layouts rotate through, as Aki, Ankilope and Bluma's packs draw it.
+        val poses =
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
-        assertEquals(11, aki.size)
-        val poses = aki + ankilopeMoodPoses.values
-        for (pose in poses) {
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeResource(targetContext.resources, pose, bounds)
-            val name = targetContext.resources.getResourceEntryName(pose)
-            assertTrue(minOf(bounds.outWidth, bounds.outHeight) >= shown, "$name is ${bounds.outWidth} px for $shown px")
+        assertEquals(11, poses.size)
+        val library = AnkiquestPacks.library(targetContext)
+        for (companion in listOf("aki", "ankilope", "cow")) {
+            for (pose in poses) {
+                val bytes = assertNotNull(library.picture(companion, pose.id), "$companion ${pose.id}")
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                assertTrue(
+                    minOf(bounds.outWidth, bounds.outHeight) >= shown,
+                    "$companion ${pose.id} is ${bounds.outWidth} px for $shown px",
+                )
+            }
         }
     }
 

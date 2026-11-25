@@ -33,8 +33,7 @@
             android:importantForAccessibility="no"
             android:maxWidth="@dimen/ankiquest_streak_companion_medium"
             android:maxHeight="@dimen/ankiquest_streak_companion_medium"
-            android:scaleType="fitCenter"
-            android:src="@drawable/aki_streak" />
+            android:scaleType="fitCenter" />
 
         <LinearLayout
             android:layout_width="wrap_content"

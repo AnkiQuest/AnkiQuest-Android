@@ -29,10 +29,12 @@ import java.io.IOException
  * The companion screen's pack entries: "Download companions" fetches the packs of the latest
  * AnkiQuest-Art release, "Import companion" adds a pack the player picks, and "Show a companion to
  * friends" uploads an imported one (AnkiQuest-Server docs/companion-packs.md). Create it while
- * [fragment] is being created, since it registers for the file picker's result.
+ * [fragment] is being created, since it registers for the file picker's result. [changed] runs
+ * after a download or import, so the screen shows the companions now installed.
  */
 internal class AnkiquestPackSettings(
     private val fragment: SettingsFragment,
+    private val changed: () -> Unit,
 ) {
     /** The state of the download entry. */
     private enum class Download { IDLE, RUNNING }
@@ -192,6 +194,7 @@ internal class AnkiquestPackSettings(
                 }
             if (fragment.isAdded) {
                 showInstalled()
+                changed()
                 tell(message)
             }
         }
@@ -221,6 +224,7 @@ internal class AnkiquestPackSettings(
                 }
             if (fragment.isAdded) {
                 showInstalled()
+                changed()
                 tell(message)
             }
         }

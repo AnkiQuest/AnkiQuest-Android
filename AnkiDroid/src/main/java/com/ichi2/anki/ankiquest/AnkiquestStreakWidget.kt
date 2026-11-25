@@ -304,33 +304,33 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val frozen = profile?.optInt("frozen_days") ?: 0
             // Until the server answers for a new day, a counted day carries into it: the streak waits.
             val today = day ?: carriedDay(own, row, now)
-            val mood = AnkiquestMood.of(today, frozen, goalState)
+            // The debug menu's overrides change only the player's own widget.
+            val debug = if (own) AnkiquestDebug.current() else AnkiquestDebug.Overrides.NONE
+            val mood = AnkiquestMood.today(today, frozen, goalState, debug)
 
-            // Aki shows the mood when chosen; otherwise only the flame does.
-            val companionVisible = AnkiquestCompanion.visible()
-            views.setViewVisibility(R.id.ankiquest_streak_companion, if (companionVisible) View.VISIBLE else View.GONE)
-            if (companionVisible) {
-                val days = (if (day != null) streak else today?.streak) ?: 0
-                val aki =
-                    if (size == Size.LARGE || size == Size.HUGE) {
-                        AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now)
-                    } else {
-                        AnkiquestMood.pose(mood, days)
-                    }
-                setCompanion(views, context, aki, companionPx(context, size, options))
-            }
+            // The companion shows the mood when chosen and drawn; otherwise only the flame does.
+            val days = (if (day != null) streak else today?.streak) ?: 0
+            val pose =
+                if (size == Size.LARGE || size == Size.HUGE) {
+                    AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now, debug)
+                } else {
+                    AnkiquestMood.todayPose(mood, days, debug)
+                }
+            val companionVisible = setCompanion(views, context, pose, companionPx(context, size, options))
             views.setTextViewText(R.id.ankiquest_streak_number, number)
             views.setTextViewText(
                 R.id.ankiquest_streak_label,
                 language.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak ?: 0),
             )
-            val status =
+            val verdict =
                 when {
                     ownDay != null -> AnkiquestDay.words(language, ownDay)
                     board == null -> language.getString(R.string.ankiquest_widget_unconfigured)
                     me == null -> language.getString(R.string.ankiquest_streak_unknown)
                     else -> AnkiquestWidget.streakLabel(language, me, state)
                 }
+            // The debug menu's overrides are marked where the status is.
+            val status = listOfNotNull(AnkiquestDebug.marker(language, debug), verdict).joinToString(" · ")
             views.setTextViewText(R.id.ankiquest_streak_status, status)
             fitLegacyStatus(views, language, size, status)
             val progress = setMinimumProgress(views, language, day, status, size)
@@ -385,24 +385,23 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         }
 
         /**
-         * The companion's version of [aki]. A bitmap decoded for [pixels] keeps the launcher from upscaling
-         * the drawable; null [pixels] keeps the drawable.
+         * The companion's picture for [pose], decoded for [pixels] (the small layouts' size when null),
+         * so the launcher never upscales it. Hidden for no companion and while no pack shows it;
+         * answers whether it shows.
          */
         private fun setCompanion(
             views: RemoteViews,
             context: Context,
-            @DrawableRes aki: Int,
+            pose: AnkiquestPose,
             pixels: Int?,
-        ) {
-            // The cow's colours are drawn into a bitmap, so the small layouts need one too.
-            val cow = AnkiquestCompanion.choice() == AnkiquestCompanion.Choice.COW
-            val edge = pixels ?: (SMALL_COMPANION_DP * context.resources.displayMetrics.density).roundToInt().takeIf { cow }
-            val bitmap = edge?.let { AnkiquestCompanion.bitmap(context, aki, it) }
-            if (bitmap == null) {
-                views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
-                return
+        ): Boolean {
+            val edge = pixels ?: (SMALL_COMPANION_DP * context.resources.displayMetrics.density).roundToInt()
+            val bitmap = AnkiquestCompanion.bitmap(context, pose, edge)
+            views.setViewVisibility(R.id.ankiquest_streak_companion, if (bitmap != null) View.VISIBLE else View.GONE)
+            if (bitmap != null) {
+                views.setImageViewBitmap(R.id.ankiquest_streak_companion, bitmap)
             }
-            views.setImageViewBitmap(R.id.ankiquest_streak_companion, bitmap)
+            return bitmap != null
         }
 
         /** Only the 1x1 face rings the companion with the minimum-time progress; larger layouts draw a bar. */

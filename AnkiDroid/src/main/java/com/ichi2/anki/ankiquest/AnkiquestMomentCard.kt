@@ -16,7 +16,6 @@ import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
@@ -337,7 +336,7 @@ internal object AnkiquestMomentCard {
             val view = holder.itemView
             AnkiquestCompanion.show(
                 view.findViewById(R.id.aq_recap_art),
-                if (summary.remaining == 0) R.drawable.aki_celebrate else R.drawable.aki_streak,
+                if (summary.remaining == 0) AnkiquestPose.HAPPY else AnkiquestPose.STREAK,
                 (RECAP_ART_DP * host.resources.displayMetrics.density).toInt(),
             )
             view.findViewById<TextView>(R.id.aq_recap_body).text =
@@ -373,20 +372,19 @@ internal object AnkiquestMomentCard {
             context.getString(R.string.aq_moment_position, position + 1, count)
         }
 
-    /** Aki's pose for [moment]. */
-    @DrawableRes
-    fun art(moment: Moment): Int =
+    /** The companion's pose for [moment]. */
+    fun art(moment: Moment): AnkiquestPose =
         when (moment.kind) {
             // A milestone has its own pose; a counted day burns as hot as its streak.
-            Kind.STREAK -> R.drawable.aki_streak_milestone
-            Kind.LEVEL -> R.drawable.aki_level_up
-            Kind.RANK -> AnkiquestArt.place(moment.place) ?: R.drawable.aki_winner
-            Kind.ACHIEVEMENT -> R.drawable.aki_achievement
-            Kind.RECORD -> R.drawable.aki_winner
-            Kind.LEECH -> R.drawable.aki_leech
-            Kind.CONQUERED -> R.drawable.aki_deck_conquered
-            Kind.GOAL -> R.drawable.aki_goal
-            Kind.COMPANION, Kind.UNLOCKS -> R.drawable.aki_celebrate
+            Kind.STREAK -> AnkiquestPose.STREAK_MILESTONE
+            Kind.LEVEL -> AnkiquestPose.LEVEL_UP
+            Kind.RANK -> AnkiquestArt.place(moment.place) ?: AnkiquestPose.WINNER
+            Kind.ACHIEVEMENT -> AnkiquestPose.ACHIEVEMENT
+            Kind.RECORD -> AnkiquestPose.WINNER
+            Kind.LEECH -> AnkiquestPose.LEECH_DEFEATED
+            Kind.CONQUERED -> AnkiquestPose.DECK_CONQUERED
+            Kind.GOAL -> AnkiquestPose.GOAL
+            Kind.COMPANION, Kind.UNLOCKS -> AnkiquestPose.HAPPY
             Kind.SECURED -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, moment.streak ?: 1)
         }
 
@@ -750,7 +748,7 @@ internal object AnkiquestMomentCard {
         /**
          * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
          * chosen friends, or for a streak card it has not confirmed yet, whose friends wait for the
-         * upload (hill, 2026-11-20); Android's share sheet otherwise.
+         * upload; Android's share sheet otherwise.
          */
         private fun share(
             shown: Moment,

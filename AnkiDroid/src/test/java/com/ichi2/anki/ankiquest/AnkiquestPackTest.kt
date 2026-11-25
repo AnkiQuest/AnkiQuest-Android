@@ -316,6 +316,45 @@ class AnkiquestPackTest {
         assertNull(library.companion("bee"))
     }
 
+    @Test
+    fun `an interrupted replacement keeps the last complete pack`() {
+        val root = folder.newFolder()
+        val installed = FilePackFolder(root)
+        installed.install(read(pack("bee", version = 1)))
+        assertTrue(File(root, "bee").renameTo(File(root, ".bee.old")))
+        assertTrue(File(root, ".bee.new").mkdir())
+
+        val reopened = FilePackFolder(root)
+        assertEquals(listOf("bee"), reopened.ids())
+        val metadata = reopened.read("bee", PackFormat.PACK_INDEX)!!.decodeToString()
+        assertEquals(1, PackInfo.parse(metadata, names).version)
+        reopened.install(read(pack("bee", version = 2)))
+        assertEquals(2, PackInfo.parse(reopened.read("bee", PackFormat.PACK_INDEX)!!.decodeToString(), names).version)
+    }
+
+    @Test
+    fun `a failed download install refreshes the list of stored packs`() {
+        val disk = FilePackFolder(folder.newFolder())
+        val downloaded =
+            object : WritablePackFolder by disk {
+                override fun install(pack: Pack) {
+                    if (pack.info.id == "cow") {
+                        throw IOException("cannot write cow")
+                    }
+                    disk.install(pack)
+                }
+            }
+        val library = AnkiquestPackLibrary(FilePackFolder(folder.newFolder()), downloaded, FilePackFolder(folder.newFolder()))
+        val packs = mapOf("aki" to pack(), "cow" to pack("cow"))
+        assertEquals(emptyList(), library.companions())
+
+        assertFailsWith<IOException> {
+            library.installDownloaded(packs.values.map(::read), index(1, packs).toByteArray())
+        }
+        assertEquals(listOf("aki"), library.companions().map { it.info.id })
+        assertNull(library.index())
+    }
+
     /** A [PackFetch] serving [assets] by URL, recording what was asked. */
     private class FakeFetch(
         val assets: Map<String, ByteArray>,
@@ -354,6 +393,19 @@ class AnkiquestPackTest {
         fetch.asked.clear()
         assertIs<PackUpdate.UpToDate>(AnkiquestPackDownload(library, fetch).update())
         assertEquals(listOf(AnkiquestPackDownload.LATEST_INDEX), fetch.asked)
+    }
+
+    @Test
+    fun `a pack above the archive size limit is refused before downloading it`() {
+        val packs = mapOf("aki" to pack(version = 2))
+        val oversized = JSONObject(index(2, packs))
+        oversized.getJSONArray("companions").getJSONObject(0).put("size", PackFormat.MAX_ARCHIVE + 1)
+        val fetch = release(2, packs, index = oversized.toString())
+        val library = library()
+
+        assertEquals(PackRefusal.TOO_LARGE, refusal { AnkiquestPackDownload(library, fetch).update() })
+        assertEquals(listOf(AnkiquestPackDownload.LATEST_INDEX), fetch.asked)
+        assertNull(library.companion("aki"))
     }
 
     @Test

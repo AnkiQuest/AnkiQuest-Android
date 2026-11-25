@@ -31,8 +31,7 @@
             android:layout_height="20dp"
             android:layout_gravity="center"
             android:importantForAccessibility="no"
-            android:scaleType="fitCenter"
-            android:src="@drawable/aki_streak" />
+            android:scaleType="fitCenter" />
     </FrameLayout>
 
     <ProgressBar

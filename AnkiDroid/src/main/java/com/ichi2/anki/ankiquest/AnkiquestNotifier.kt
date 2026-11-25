@@ -13,7 +13,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -301,7 +300,7 @@ object AnkiquestNotifier {
                 AnkiquestFriendsSections.boardIntent(context, account = account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
-            art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
+            art = place?.let(AnkiquestArt::place) ?: AnkiquestPose.FACE,
         )
     }
 
@@ -581,7 +580,7 @@ object AnkiquestNotifier {
         nudge: Boolean = false,
         silent: Boolean = false,
         picture: Bitmap? = null,
-        @DrawableRes art: Int = R.drawable.aki_face,
+        art: AnkiquestPose = AnkiquestPose.FACE,
     ): Delivery {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED

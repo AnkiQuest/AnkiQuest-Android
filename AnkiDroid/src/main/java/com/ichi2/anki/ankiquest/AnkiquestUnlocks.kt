@@ -9,7 +9,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * Companions earned at milestones: Ankilope at a level, the cow (Bluma) by hours of study. The
+ * Companions earned at milestones, such as Ankilope at a level and Bluma by hours of study. The
  * server decides and keeps every unlock per account (`GET /api/unlocks/{user}`); the app shows
  * what it last answered. They are not settings: the settings-sync switch does not apply. The
  * conditions are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
@@ -18,14 +18,14 @@ internal object AnkiquestUnlocks {
     const val FEATURE = "companion_unlocks"
     private const val PREF_UNLOCKS = "ankiquestUnlocks"
 
-    /** Companions earned at a milestone. */
-    private val EARNED = setOf(Choice.ANKILOPE, Choice.COW)
+    /** Companions anyone may choose, as the server has them; every other official one is earned. */
+    private val FREE = setOf(Choice.AKI, Choice.NONE)
 
     /**
      * Earned companions every player could choose before milestones. A server from then lists no
      * progress, so these stay free there; the others stay hidden until unlocked.
      */
-    private val OFFERED_BEFORE = setOf(Choice.ANKILOPE)
+    private val OFFERED_BEFORE = setOf(Choice("ankilope"))
 
     /** What a milestone counts; [id] is the fixture's and the server's `kind`. */
     enum class Milestone(
@@ -55,7 +55,7 @@ internal object AnkiquestUnlocks {
         val ids: Set<String>,
         val progress: Map<Choice, Progress>,
     ) {
-        /** The unlocked companions this app can show, read from [ids]. */
+        /** The unlocked companions, read from [ids]. */
         val unlocks: Set<Choice> get() = ids.mapNotNullTo(mutableSetOf()) { known(it) }
 
         companion object {
@@ -76,7 +76,7 @@ internal object AnkiquestUnlocks {
                 return Found(ids, progress)
             }
 
-            private fun known(id: String?): Choice? = Choice.entries.firstOrNull { it.id == id }
+            private fun known(id: String?): Choice? = id?.takeIf { PackFormat.validId(it) && it != Choice.NONE.id }?.let(::Choice)
 
             private fun progress(entry: JSONObject?): Progress? {
                 val kind = entry?.opt("kind") as? String ?: return null
@@ -105,16 +105,18 @@ internal object AnkiquestUnlocks {
     }
 
     /**
-     * How the picker offers [choice] to a player whose companion is [current], given the server's
-     * [found] answer (null until it first answers). A chosen companion stays a choice, so a player
-     * who chose Ankilope before milestones keeps it.
+     * How the picker offers [choice], whose pack came from [origin] (null for no companion), to a
+     * player whose companion is [current], given the server's [found] answer (null until it first
+     * answers). Imported companions are free: they are this phone's own. A chosen companion stays a
+     * choice, so a player who chose Ankilope before milestones keeps it.
      */
     fun offer(
         choice: Choice,
+        origin: PackOrigin?,
         found: Found?,
         current: Choice,
     ): Offer {
-        if (choice !in EARNED) {
+        if (choice in FREE || origin == PackOrigin.IMPORTED) {
             return Offer.Free
         }
         if (choice == current || (found != null && choice in found.unlocks)) {

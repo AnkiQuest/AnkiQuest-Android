@@ -446,7 +446,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         views.section(content, getString(R.string.aq_friends_friends), getString(R.string.aq_friends_friends_hint))
         views.button(content, getString(R.string.aq_friends_add), primary = true, enabled = !busy) { askFriend() }
         if (shown.friends.isEmpty()) {
-            content.addView(AnkiquestAki.image(this, R.drawable.aki_celebrate, 72))
+            content.addView(AnkiquestAki.image(this, AnkiquestPose.HAPPY, 72))
             views.text(content, getString(R.string.aq_friends_empty), heading = true)
             views.text(content, getString(R.string.aq_friends_empty_hint), small = true)
         }

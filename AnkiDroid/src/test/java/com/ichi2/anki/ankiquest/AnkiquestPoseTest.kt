@@ -2,8 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import org.json.JSONObject
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -23,12 +21,14 @@ class AnkiquestPoseTest {
         val core = fixture.getJSONArray("core")
         val expectedCore = (0 until core.length()).map { core.getString(it) }
         assertEquals(expectedCore, AnkiquestPose.entries.filter { it.chain().count() == 1 }.map { it.id })
+        assertEquals(expectedCore, AnkiquestPose.entries.filter { it.group == AnkiquestPose.Group.CORE }.map { it.id })
 
         // Each extension falls back to the fixture's pose.
         val extensions = fixture.getJSONObject("extensions")
         val expected = extensions.keys().asSequence().associateWith { extensions.getString(it) }
         val actual =
             AnkiquestPose.entries
+                .filter { it.group == AnkiquestPose.Group.EXTENSION }
                 .mapNotNull { pose ->
                     pose
                         .chain()
@@ -40,35 +40,31 @@ class AnkiquestPoseTest {
     }
 
     @Test
-    fun `every companion has art for every core pose`() {
-        val core = AnkiquestPose.entries.filter { it.chain().count() == 1 }
-        for (choice in Choice.entries) {
-            for (pose in core) {
-                AnkiquestCompanion.art(pose, choice)
-            }
+    fun `every moment picture and launcher icon falls back to a core pose`() {
+        for (pose in AnkiquestPose.entries.filter { it.group == AnkiquestPose.Group.PICTURE || it.group == AnkiquestPose.Group.ICON }) {
+            assertEquals(AnkiquestPose.Group.CORE, pose.chain().last().group, pose.id)
         }
-        val ankilope = core.map { AnkiquestCompanion.art(it, Choice.ANKILOPE) }
         assertEquals(
-            listOf(
-                R.drawable.ankilope_face,
-                R.drawable.ankilope_sleeping,
-                R.drawable.ankilope_celebrate,
-                // Interim until her on-fire art exists.
-                R.drawable.ankilope_study,
-                R.drawable.ankilope_sad,
-                R.drawable.ankilope_hopeful,
-                R.drawable.ankilope_frozen,
-                R.drawable.ankilope_neglected,
-            ),
-            ankilope,
+            listOf("place_1", "winner", "happy"),
+            AnkiquestPose.PLACE_1
+                .chain()
+                .map { it.id }
+                .toList(),
+        )
+        assertEquals(
+            listOf("icon_frozen", "icon", "face"),
+            AnkiquestPose.ICON_FROZEN
+                .chain()
+                .map { it.id }
+                .toList(),
         )
     }
 
     @Test
-    fun `an extension without art shows its fallback`() {
-        assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.ANKILOPE))
-        assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.art(AnkiquestPose.LEECH_DEFEATED, Choice.ANKILOPE))
-        assertEquals(R.drawable.ankilope_study, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, Choice.ANKILOPE))
-        assertEquals(R.drawable.aki_freeze, AnkiquestCompanion.art(AnkiquestPose.FROZEN_2, Choice.AKI))
+    fun `packs without an index know every pose by name`() {
+        val names = PoseNames.builtIn()
+        for (pose in AnkiquestPose.entries) {
+            assertEquals(pose.chain().map { it.id }.toList(), names.chain(pose.id), pose.id)
+        }
     }
 }

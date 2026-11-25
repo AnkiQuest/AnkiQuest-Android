@@ -3,6 +3,7 @@
 
 import com.android.build.api.variant.FilterConfiguration.FilterType
 import com.ichi2.anki.gradle.AnkiquestArtMode
+import com.ichi2.anki.gradle.AnkiquestBrandingTask
 import com.ichi2.anki.gradle.BundleAnkiquestPacks
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
@@ -431,13 +432,32 @@ if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "q
     }
 }
 
-// AnkiQuest: release builds carry assets/ankiquest/art.json and, with -PankiquestArt=bundled (the
-// default), the companion packs of the pinned Art release; the slim APK (-PankiquestArt=download)
-// downloads them in the app. Debug builds carry neither.
+// AnkiQuest: upstream's visible strings that name AnkiDroid say AnkiQuest, in every build and
+// locale. Generated from common/android's strings at build time, so upstream merges bring no
+// conflicts and its translations need no copies; ankiquest-branding-keep.txt lists the exceptions.
+val ankiquestBranding =
+    tasks.register<AnkiquestBrandingTask>("ankiquestBranding") {
+        upstreamRes.set(rootProject.layout.projectDirectory.dir("common/android/src/main/res"))
+        keepFile.set(layout.projectDirectory.file("ankiquest-branding-keep.txt"))
+        output.set(layout.buildDirectory.dir("generated/ankiquest/branding"))
+    }
+androidComponents.onVariants { variant ->
+    variant.sources.res?.addGeneratedSourceDirectory(ankiquestBranding, AnkiquestBrandingTask::output)
+}
+
+// AnkiQuest: every build draws its companions from the AnkiQuest-Art release ankiquest-art.json
+// pins. It carries assets/ankiquest/art.json, the launcher icons' pictures as resources and, with
+// -PankiquestArt=bundled (the default), the companion packs; the slim APK (-PankiquestArt=download)
+// downloads the packs in the app. Downloads are cached by SHA-256 in the Gradle user home, or in
+// -PankiquestArtCache=<dir> (the F-Droid recipe fills that folder before building).
 val ankiquestArt = AnkiquestArtMode.of(providers.gradleProperty("ankiquestArt").getOrElse("bundled"))
 val ankiquestArtPin = rootProject.layout.projectDirectory.file("ankiquest-art.json")
-val ankiquestArtCache = File(gradle.gradleUserHomeDir, "caches/ankiquest-art")
-androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
+val ankiquestArtCache =
+    providers
+        .gradleProperty("ankiquestArtCache")
+        .map { rootProject.file(it) }
+        .getOrElse(File(gradle.gradleUserHomeDir, "caches/ankiquest-art"))
+androidComponents.onVariants { variant ->
     // One task per variant: AGP gives each generated source directory its own output folder.
     val packs =
         tasks.register<BundleAnkiquestPacks>("bundle${variant.name.replaceFirstChar { it.uppercase() }}AnkiquestPacks") {
@@ -446,6 +466,7 @@ androidComponents.onVariants(androidComponents.selector().withBuildType("release
             cacheDir.set(ankiquestArtCache)
         }
     variant.sources.assets?.addGeneratedSourceDirectory(packs, BundleAnkiquestPacks::outputDir)
+    variant.sources.res?.addGeneratedSourceDirectory(packs, BundleAnkiquestPacks::resDir)
 }
 
 androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->

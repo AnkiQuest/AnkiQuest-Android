@@ -18,22 +18,22 @@ class AnkiquestArtTest {
 
     @Test
     fun `each moment gets its own art`() {
-        assertEquals(R.drawable.aki_streak_milestone, AnkiquestArt.forNotice("celebration", "streak"))
-        assertEquals(R.drawable.aki_achievement, AnkiquestArt.forNotice("celebration", "achievement"))
-        assertEquals(R.drawable.aki_achievement, AnkiquestArt.forNotice("celebration", null), "older servers send no topic")
-        assertEquals(R.drawable.aki_goal, AnkiquestArt.forNotice("celebration", "goal"))
-        assertEquals(R.drawable.aki_streak, AnkiquestArt.forNotice("celebration", "secured"), "a counted day is on fire")
-        assertEquals(R.drawable.aki_deck_conquered, AnkiquestArt.forNotice("celebration", "conquered"))
-        assertEquals(R.drawable.aki_challenge, AnkiquestArt.forNotice("challenge_invite", null))
-        assertEquals(R.drawable.aki_challenge_won, AnkiquestArt.forNotice("challenge_complete", null))
-        assertEquals(R.drawable.aki_nudge, AnkiquestArt.forNotice("nudge", null))
-        assertEquals(R.drawable.aki_place_2, AnkiquestArt.forNotice("reminder_weekly_recap", "place:2"))
-        assertEquals(R.drawable.aki_face, AnkiquestArt.forNotice("reminder_weekly_recap", "place:4"))
-        assertEquals(R.drawable.aki_face, AnkiquestArt.forNotice("completion", null))
-        assertEquals(R.drawable.aki_place_1, AnkiquestArt.forNotice("share", "place:1"), "a friend's shared win keeps its art")
-        assertEquals(R.drawable.aki_streak_milestone, AnkiquestArt.forNotice("share", "streak"))
-        assertEquals(R.drawable.aki_goal, AnkiquestArt.forNotice("share", "goal"))
-        assertEquals(R.drawable.aki_deck_conquered, AnkiquestArt.forNotice("share", "conquered"))
+        assertEquals(AnkiquestPose.STREAK_MILESTONE, AnkiquestArt.forNotice("celebration", "streak"))
+        assertEquals(AnkiquestPose.ACHIEVEMENT, AnkiquestArt.forNotice("celebration", "achievement"))
+        assertEquals(AnkiquestPose.ACHIEVEMENT, AnkiquestArt.forNotice("celebration", null), "older servers send no topic")
+        assertEquals(AnkiquestPose.GOAL, AnkiquestArt.forNotice("celebration", "goal"))
+        assertEquals(AnkiquestPose.STREAK, AnkiquestArt.forNotice("celebration", "secured"), "a counted day is on fire")
+        assertEquals(AnkiquestPose.DECK_CONQUERED, AnkiquestArt.forNotice("celebration", "conquered"))
+        assertEquals(AnkiquestPose.CHALLENGE, AnkiquestArt.forNotice("challenge_invite", null))
+        assertEquals(AnkiquestPose.CHALLENGE_WON, AnkiquestArt.forNotice("challenge_complete", null))
+        assertEquals(AnkiquestPose.NUDGE, AnkiquestArt.forNotice("nudge", null))
+        assertEquals(AnkiquestPose.PLACE_2, AnkiquestArt.forNotice("reminder_weekly_recap", "place:2"))
+        assertEquals(AnkiquestPose.FACE, AnkiquestArt.forNotice("reminder_weekly_recap", "place:4"))
+        assertEquals(AnkiquestPose.FACE, AnkiquestArt.forNotice("completion", null))
+        assertEquals(AnkiquestPose.PLACE_1, AnkiquestArt.forNotice("share", "place:1"), "a friend's shared win keeps its art")
+        assertEquals(AnkiquestPose.STREAK_MILESTONE, AnkiquestArt.forNotice("share", "streak"))
+        assertEquals(AnkiquestPose.GOAL, AnkiquestArt.forNotice("share", "goal"))
+        assertEquals(AnkiquestPose.DECK_CONQUERED, AnkiquestArt.forNotice("share", "conquered"))
     }
 
     @Test
