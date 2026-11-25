@@ -38,7 +38,7 @@ internal object AnkiquestRwkvForecast {
     ) {
         NOW(0),
         ONE_HOUR(3_600),
-        THREE_HOURS(3 * 3_600),
+        THREE_HOURS(3 * 3_600L),
 
         /** The backend's code for the next day rollover. */
         TOMORROW(-1),
