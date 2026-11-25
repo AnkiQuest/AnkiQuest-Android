@@ -50,6 +50,7 @@
     <string name="ankiquest_sign_in_display">Nom affiché (facultatif)</string>
     <string name="ankiquest_sign_in_create">Créer un nouveau compte</string>
     <string name="ankiquest_sign_in_hint">Les noms d’utilisateur utilisent des minuscules, des chiffres, - et _. Les mots de passe font au moins 10 caractères.</string>
+    <string name="ankiquest_sign_in_public_hint">Tout le monde peut ouvrir ton profil et tu figures dans le classement général.</string>
     <string name="ankiquest_sign_in_submit">Se connecter</string>
     <string name="ankiquest_sign_in_submit_create">Créer le compte</string>
     <string name="ankiquest_sign_in_missing">Remplis le serveur, le nom d’utilisateur et le mot de passe.</string>

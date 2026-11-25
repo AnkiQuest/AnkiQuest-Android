@@ -50,6 +50,7 @@
     <string name="ankiquest_sign_in_display">Nome visível (opcional)</string>
     <string name="ankiquest_sign_in_create">Criar uma conta nova</string>
     <string name="ankiquest_sign_in_hint">Os nomes de utilizador usam minúsculas, números, - e _. As palavras-passe precisam de pelo menos 10 caracteres.</string>
+    <string name="ankiquest_sign_in_public_hint">Qualquer pessoa pode abrir o teu perfil e apareces na classificação global.</string>
     <string name="ankiquest_sign_in_submit">Iniciar sessão</string>
     <string name="ankiquest_sign_in_submit_create">Criar conta</string>
     <string name="ankiquest_sign_in_missing">Preenche o servidor, o nome de utilizador e a palavra-passe.</string>
