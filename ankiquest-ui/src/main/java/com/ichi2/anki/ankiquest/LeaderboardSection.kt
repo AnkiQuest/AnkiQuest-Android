@@ -528,7 +528,9 @@ internal class LeaderboardSection(
             if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         views.button(content, getString(R.string.aq_board_my_profile)) { openProfile(current.user) }
-        views.button(content, getString(R.string.aq_calendar_title)) { startActivity(AnkiquestHost.current.intent(this, AnkiquestScreen.Calendar)) }
+        views.button(content, getString(R.string.aq_calendar_title)) {
+            startActivity(AnkiquestHost.current.intent(this, AnkiquestScreen.Calendar))
+        }
         scroll.post { scroll.scrollTo(0, position) }
     }
 

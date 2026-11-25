@@ -16,7 +16,8 @@ on:
     paths:
       - '.github/workflows/ankiquest_banner.yml'
       - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
-      - 'AnkiDroid/src/test/resources/ankiquest-server.sha'
+      - 'ankiquest-core/src/test/resources/ankiquest-server.sha'
+      - 'ankiquest-art.json'
       - 'docs/graphics/banner.toml'
       - 'docs/graphics/logos/banner_readme.png'
       - 'docs/graphics/logos/social_preview.png'
@@ -97,7 +98,6 @@ jobs:
       contents: read
     uses: AnkiQuest/AnkiQuest-Dev/.github/workflows/banner.yml@master
     with:
-      server-sha-file: AnkiDroid/src/test/resources/ankiquest-server.sha
       screens-artifact: banner-screens
       screens-path: AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots
       on-stale: ${{ github.event_name == 'pull_request' && 'fail' || 'report' }}

@@ -45,7 +45,7 @@ test("the record job runs the record command of banner.toml", () => {
 
 test("the shared workflow draws and checks the images from the recorded screens", () => {
     assert.match(banner, /uses: AnkiQuest\/AnkiQuest-Dev\/\.github\/workflows\/banner\.yml@master/);
-    assert.match(banner, /server-sha-file: AnkiDroid\/src\/test\/resources\/ankiquest-server\.sha/);
+    assert.doesNotMatch(banner, /server-sha-file:/);
     assert.match(banner, /screens-artifact: banner-screens/);
     assert.ok(config.includes("AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/"));
 });
@@ -60,7 +60,8 @@ test("a pull request that changes the images or their inputs runs the check", ()
         "docs/graphics/banner.toml",
         "docs/graphics/logos/banner_readme.png",
         "docs/graphics/logos/social_preview.png",
-        "AnkiDroid/src/test/resources/ankiquest-server.sha",
+        "ankiquest-core/src/test/resources/ankiquest-server.sha",
+        "ankiquest-art.json",
     ]) {
         assert.match(workflow, new RegExp(`pull_request:\\n {4}paths:[\\s\\S]*?- '${file.replace(/\./g, "\\.")}'`));
     }
