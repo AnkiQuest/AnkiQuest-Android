@@ -57,7 +57,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         val release = AnkiquestUpdater.Release(BuildConfig.ANKIQUEST_RELEASE + 1, "New release", "", 1)
         mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
         try {
-            every { AnkiquestUpdater["available"]() } answers {
+            every { AnkiquestUpdater["available"](any<ApkKind>()) } answers {
                 requested.countDown()
                 check(response.await(10, TimeUnit.SECONDS))
                 release

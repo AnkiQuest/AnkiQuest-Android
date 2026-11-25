@@ -9,6 +9,7 @@ import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -52,11 +53,31 @@ internal object AnkiquestPacks {
         build?.let { return it }
         val text =
             try {
-                context.assets.open(ArtBuild.ASSET).use { it.readBytes().decodeToString() }
+                context.assets
+                    .open(ArtBuild.ASSET)
+                    .use { readSmall(it, ArtBuild.MAX_BYTES) }
+                    ?.decodeToString()
             } catch (e: IOException) {
                 null
             }
         return (text?.let(ArtBuild::parse) ?: ArtBuild.LOCAL).also { build = it }
+    }
+
+    /** At most [limit] bytes of [input], or null when it holds more; stops at a read of nothing. */
+    private fun readSmall(
+        input: InputStream,
+        limit: Int,
+    ): ByteArray? {
+        val buffer = ByteArray(limit + 1)
+        var size = 0
+        while (size < buffer.size) {
+            val n = input.read(buffer, size, buffer.size - size)
+            if (n <= 0) {
+                break
+            }
+            size += n
+        }
+        return buffer.copyOf(size).takeIf { size <= limit }
     }
 
     /**
@@ -125,6 +146,9 @@ internal class ArtBuild(
 
     companion object {
         const val ASSET = "ankiquest/art.json"
+
+        /** Largest [ASSET] read; the build writes a few lines. */
+        const val MAX_BYTES = 4096
 
         // Before LOCAL, which is built while the companion is initialised.
         private val TAG = Regex("art-([1-9][0-9]{0,8})")
