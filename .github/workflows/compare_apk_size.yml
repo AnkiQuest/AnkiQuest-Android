@@ -15,7 +15,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 
 env:
@@ -26,6 +25,9 @@ jobs:
     name: APK Size Check
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # comments the size on the pull request
     env:
       KEYSTORENAME: keystore
       KEYSTOREPWD: testpass
@@ -50,6 +52,7 @@ jobs:
       - name: Checkout PR
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
           ref: 'refs/pull/${{ github.event.inputs.prNumber }}/head'
 
@@ -92,9 +95,11 @@ jobs:
 
       - name: Post comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          INPUTS: ${{ toJSON(inputs) }}
         with:
           script: |
-            var inputs = ${{ toJSON(inputs) }}
+            var inputs = JSON.parse(process.env.INPUTS)
             let prNumber = inputs['prNumber'];
 
             async function getPullRequest() {
