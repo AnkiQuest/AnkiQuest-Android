@@ -99,17 +99,6 @@ class AnkiquestGlobalHidesUiTest : RobolectricTest() {
     }
 
     @Test
-    fun `an older server keeps Global usable without private hide controls`() {
-        coEvery { AnkiquestGlobalHides.load(identity) } returns null
-        val screen = launch()
-        click(screen, "Global")
-        assertTrue("Ana" in labels(screen))
-        assertFalse("Hide for me" in labels(screen))
-        assertFalse("Hidden players" in labels(screen))
-        coVerify(exactly = 0) { AnkiquestGlobalHides.change(any(), any(), any()) }
-    }
-
-    @Test
     fun `loading hidden players can fail and retry without losing the board`() {
         coEvery { AnkiquestGlobalHides.load(identity) } throws IOException("offline")
         val screen = launch()

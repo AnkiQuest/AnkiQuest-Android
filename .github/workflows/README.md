@@ -28,10 +28,10 @@ Alternately, you may run the actions on your fork of `Anki-Android`.
 manual screenshot baselines). Upstream merges conflict on them; keep the
 fork's lines and take upstream's other changes.
 
-The fork's [pinned AnkiQuest server snapshot](../../docs/ankiquest-server-snapshot.md)
-documents `ankiquest_api_contract.yml`, `ankiquest_fixtures.yml` and the daily
-`ankiquest_bump_server.yml`. Normal builds use committed data; server updates
-arrive on `bot/server-bump` pull requests.
+Every workflow that runs the unit tests first copies AnkiQuest-Server master's API
+examples and shared fixtures into the test resources
+([server data](../../docs/ankiquest-server-data.md)); `ankiquest_api_contract.yml`
+runs the API contract test against them.
 
 `ankiquest_labels.yml` runs AnkiQuest-Dev's shared labelling workflows; the
 label set is `labels.json` there.

@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection.HTTP_BAD_REQUEST
 
 /**
  * The activity feed: friends' wins, cheers, messages, replies, deck completions and challenge news
@@ -44,8 +45,13 @@ internal object AnkiquestFeed {
         val replyTo: Pair<String, String>?,
         val image: String?,
         val reacted: Boolean,
+        /** The group a `group_invite` row invites the player to. */
+        val group: Long? = null,
     ) {
         val unread: Boolean get() = readAt == null
+
+        /** The group this row invites the player to while the invitation waits for an answer. */
+        val invitation: Long? get() = group.takeIf { kind == GROUP_INVITE && actionRequired }
 
         /** A friend's win or deck completion, which can be cheered once. */
         val cheerable: Boolean get() = sender.isNotEmpty() && (kind == "share" || kind == "completion")
@@ -68,8 +74,6 @@ internal object AnkiquestFeed {
         val actionCount: Int,
         val latestId: Long?,
         val nextBefore: Long?,
-        /** From a server without the activity feed: the last seven days, with no read state or filters. */
-        val legacy: Boolean = false,
         /** The server ignored the filters asked for and answered the whole feed. */
         val unfiltered: Boolean = false,
         /** Why the server left other players' study out, when it did. */
@@ -88,13 +92,15 @@ internal object AnkiquestFeed {
 
     const val PAGE_SIZE = 50
 
+    /** A row inviting the player to a group, answered with [AnkiquestSocial.Change.AcceptInvite] or [AnkiquestSocial.Change.DeclineInvite]. */
+    const val GROUP_INVITE = "group_invite"
+
     /** The most ids `POST /api/activity/{user}/read` accepts at once. */
     private const val READ_BATCH = 200
 
     /**
-     * One page of [account]'s feed, newest first, starting before [before]. A server without the feed
-     * (`404`) answers the older notification list instead, and one that does not know a filter (`400`)
-     * the unfiltered feed, as the website does.
+     * One page of [account]'s feed, newest first, starting before [before]. A server that does not
+     * know a filter (`400`) answers the unfiltered feed, as the website does.
      */
     suspend fun page(
         account: HomeAccount,
@@ -107,11 +113,10 @@ internal object AnkiquestFeed {
             try {
                 activity(account, category, unreadOnly, before)
             } catch (e: AnkiquestHttpException) {
-                when {
-                    e.code == 400 && filtered -> activity(account, Category.ALL, false, before).copy(unfiltered = true)
-                    e.code == 404 && before == null -> legacy(account)
-                    else -> throw e
+                if (e.code != HTTP_BAD_REQUEST || !filtered) {
+                    throw e
                 }
+                activity(account, Category.ALL, false, before).copy(unfiltered = true)
             }
         }
 
@@ -135,12 +140,7 @@ internal object AnkiquestFeed {
         return parsePage(AnkiquestApi.json(account, request))
     }
 
-    private fun legacy(account: HomeAccount): Page {
-        val request = AnkiquestApi.request(account, "api/notifications/${account.encodedUser}").build()
-        return parseLegacy(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) })
-    }
-
-    /** What [account] sent: replies and nudges, with when they were read. */
+    /** What [account] sent: messages, replies and nudges, with when they were read. */
     suspend fun sent(
         account: HomeAccount,
         before: Long? = null,
@@ -225,18 +225,6 @@ internal object AnkiquestFeed {
             lock = AnkiquestLock.of(json),
         )
 
-    /** The older oldest-first notification array, newest first like the feed. */
-    fun parseLegacy(array: JSONArray): Page =
-        Page(
-            items = items(array).sortedByDescending { it.id },
-            attention = emptyList(),
-            unread = 0,
-            actionCount = 0,
-            latestId = null,
-            nextBefore = null,
-            legacy = true,
-        )
-
     fun parseSent(json: JSONObject): SentPage =
         SentPage(
             items =
@@ -269,6 +257,7 @@ internal object AnkiquestFeed {
             replyTo = replyTo?.takeIf { (title, body) -> title.isNotEmpty() || body.isNotEmpty() },
             image = json.text("image").ifEmpty { null },
             reacted = json.optBoolean("reacted"),
+            group = json.positive("group"),
         )
     }
 

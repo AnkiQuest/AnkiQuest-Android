@@ -128,6 +128,7 @@
         <item>J’étudierai plus tard</item>
     </string-array>
     <string name="ankiquest_streak_studied">A étudié aujourd’hui</string>
+    <string name="ankiquest_streak_unverified">Étudié aujourd’hui · durée inconnue</string>
     <string name="ankiquest_streak_pending">Pas encore étudié</string>
     <string name="ankiquest_streak_protected">Série protégée · Pas encore étudié</string>
     <string name="ankiquest_streak_unknown">Actualise pour voir l’état des études aujourd’hui</string>
@@ -140,6 +141,7 @@
         <item quantity="one">%d révision envoyée.</item>
         <item quantity="other">%d révisions envoyées.</item>
     </plurals>
+    <string name="aq_server_outdated">Mets à jour ton serveur AnkiQuest</string>
     <string name="ankiquest_widget_settings_title">Widget de classement</string>
     <string name="ankiquest_widget_settings_open">%1$s, réglages du widget</string>
     <string name="ankiquest_widget_settings_save">Enregistrer le widget</string>

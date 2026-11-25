@@ -197,6 +197,13 @@ jobs:
           persist-credentials: false
           fetch-depth: 50
 
+      # AnkiQuest: the tests read AnkiQuest-Server master's API examples and shared fixtures
+      # (docs/ankiquest-server-data.md).
+      - name: Fetch AnkiQuest-Server data
+        if: needs.changes.outputs.code != 'false'
+        shell: bash
+        run: node .github/ankiquest_server_data.cjs fetch
+
       - name: Set up Codecov
         id: codecov
         # Flake runs repeat the same tests. Only the first iteration uploads coverage.
