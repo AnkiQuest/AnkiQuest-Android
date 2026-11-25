@@ -61,7 +61,10 @@ jobs:
   store-screenshot-test:
     name: ${{ github.event_name == 'pull_request' && 'test' || 'store' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Under Maven Central throttling the recording build needed 31 minutes on master e1480ce6
+    # (run 45436455564); a store run killed by its own timeout leaves the commit without a
+    # baseline, so the compare of every PR built on it fails after its wait.
+    timeout-minutes: 60
 
     permissions:
       contents: read # for clone
