@@ -162,9 +162,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # The merge queue keeps the reviewed commit with the old-package updater notice.
-          if ! git merge-base --is-ancestor 5dc88751adc8aec5756a4f9c07dc38f4139f23da refs/tags/quest-24; then
-            echo "::error::quest-24 must contain the old-package settings bridge and updater notice"
+          # Pull requests squash-merge, so check the tag's files, not its ancestry. Only the final
+          # old-package source has all three: the export provider, the updater's move notice and
+          # the current-signer check.
+          bridge=refs/tags/quest-24:AnkiDroid/src/main/java/com/ichi2/anki/ankiquest
+          signer=b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
+          if ! git cat-file -e "$bridge/AnkiquestMoveProvider.kt" \
+            || ! git grep -q -F 'Download.MOVED' "$bridge/AnkiquestUpdater.kt" \
+            || ! git grep -q -F "RELEASE_SHA256 = \"$signer\"" "$bridge/AnkiquestMove.kt"; then
+            echo "::error::quest-24 must contain the old-package settings bridge, updater notice and signer check"
             exit 1
           fi
           if ! git grep -q -F 'applicationId = "com.ichi2.anki"' refs/tags/quest-24 -- AnkiDroid/build.gradle.kts; then
