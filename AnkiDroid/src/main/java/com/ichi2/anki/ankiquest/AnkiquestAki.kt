@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.DrawableRes
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.common.time.TimeManager
@@ -27,8 +26,7 @@ internal object AnkiquestAki {
         val message: Message,
     ) {
         /** The pose [AnkiquestMood] gives the mood, as on the streak widget. */
-        @get:DrawableRes
-        val image: Int get() = AnkiquestMood.pose(mood, streak)
+        val image: AnkiquestPose get() = AnkiquestMood.pose(mood, streak)
 
         /** The line beside the pose, or null for none: cards due need none, the next-step card says what to do. */
         fun text(context: Context): String? =
@@ -94,11 +92,11 @@ internal object AnkiquestAki {
 
     fun image(
         context: Context,
-        @DrawableRes resource: Int,
+        pose: AnkiquestPose,
         size: Int = 80,
     ): ImageView =
         ImageView(context).apply {
-            AnkiquestCompanion.show(this, resource, dp(context, size))
+            AnkiquestCompanion.show(this, pose, dp(context, size))
             scaleType = ImageView.ScaleType.FIT_CENTER
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             layoutParams = LinearLayout.LayoutParams(dp(context, size), dp(context, size))
@@ -130,7 +128,7 @@ internal object AnkiquestAki {
 
     fun notificationIcon(
         context: Context,
-        @DrawableRes art: Int = R.drawable.aki_face,
+        art: AnkiquestPose = AnkiquestPose.FACE,
     ): Bitmap? =
         if (!AnkiquestCompanion.visible()) {
             null

@@ -442,7 +442,7 @@ internal object AnkiquestMoments {
     /** The companion that joined in a [Kind.COMPANION] moment, if this app draws it; null otherwise. */
     fun joined(moment: Moment): AnkiquestCompanion.Choice? {
         val id = companion(moment) ?: return null
-        return AnkiquestCompanion.Choice.entries.firstOrNull { it.id == id && it != AnkiquestCompanion.Choice.NONE }
+        return AnkiquestCompanion.Choice(id).takeIf { id in AnkiquestCompanion.drawn }
     }
 
     /** The server's id of the companion that joined in a [Kind.COMPANION] moment, from its key `companion:{companion}`. */

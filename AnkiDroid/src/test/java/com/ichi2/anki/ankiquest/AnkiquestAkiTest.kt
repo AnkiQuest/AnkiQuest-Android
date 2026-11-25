@@ -185,29 +185,27 @@ class AnkiquestAkiTest : RobolectricTest() {
             val profile = homeProfile(today) ?: continue
             val card = AnkiquestAki.mood(null, profile)
             assertEquals(enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase()), card.mood, name)
-            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(card.image), name)
+            assertEquals(fixturePose(expected.getString("pose")), card.image.id, name)
             checked++
         }
         assertTrue(checked > 0)
     }
 
     @Test
-    fun `the home card shows Ankilope's pose for every shared streak mood`() {
-        // Regression: Ankilope studied on a day a freeze kept; each mood has her own pose.
-        chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
-        val fixtures =
-            JSONObject(
-                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
-            )
-        var checked = 0
-        for (case in fixtures.getJSONArray("moods").objects()) {
-            val profile = homeProfile(case.getJSONObject("today")) ?: continue
-            val card = AnkiquestAki.mood(null, profile)
-            val expected = ankilopeMoodPoses.getValue(card.mood)
-            assertEquals(expected, AnkiquestCompanion.resource(card.image), case.getString("name"))
-            checked++
+    fun `every bundled companion draws every streak mood`() {
+        // Regression: Ankilope studied on a day a freeze kept; each companion's pack draws each mood.
+        val companions = AnkiquestPacks.library(targetContext).companions()
+        assertTrue(companions.isNotEmpty(), "the build bundles the pinned packs")
+        for (pack in companions) {
+            val choice = AnkiquestCompanion.Choice(pack.info.id)
+            for (mood in AnkiquestMood.Mood.entries) {
+                for (streak in listOf(0, 1, 7, 30, 100, 365)) {
+                    for (pose in AnkiquestMood.poses(mood, streak)) {
+                        assertNotNull(AnkiquestCompanion.bitmap(targetContext, pose, 64, choice), "$choice $mood $streak $pose")
+                    }
+                }
+            }
         }
-        assertTrue(checked > 0)
     }
 
     /**
@@ -241,7 +239,7 @@ class AnkiquestAkiTest : RobolectricTest() {
         assertTrue(bitmap.width <= 192 && bitmap.height <= 192)
         assertEquals(
             android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO,
-            AnkiquestAki.image(targetContext, com.ichi2.anki.R.drawable.aki_review).importantForAccessibility,
+            AnkiquestAki.image(targetContext, AnkiquestPose.REVIEW).importantForAccessibility,
         )
     }
 }

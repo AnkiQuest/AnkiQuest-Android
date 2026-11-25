@@ -46,7 +46,11 @@ class AnkiquestCompanionFragment : SettingsFragment() {
     private var owner: String? = null
 
     /** The download and import entries for companion packs. */
-    private val packs = AnkiquestPackSettings(this)
+    private val packs =
+        AnkiquestPackSettings(this) {
+            render()
+            AnkiquestWidget.requestUpdate(requireContext())
+        }
 
     /** Taps toward a chibi, and the hint shown for the last one, replaced by the next. */
     private var chibiTaps = AnkiquestChibi.Taps()
@@ -94,7 +98,7 @@ class AnkiquestCompanionFragment : SettingsFragment() {
         val account = signedIn()
         picker().isEnabled = account != null
         val chosen = pending ?: AnkiquestCompanion.choice()
-        picker().show(AnkiquestCompanion.offers(account, chosen), chosen)
+        picker().show(AnkiquestCompanion.offers(requireContext(), account, chosen), chosen)
         if (account == null) {
             showStatus(getString(R.string.ankiquest_companion_signed_out))
         }

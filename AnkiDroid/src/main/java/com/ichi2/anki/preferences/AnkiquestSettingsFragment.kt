@@ -179,7 +179,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             requirePreference<Preference>(key).isVisible = account != null
         }
         // The companion screen saves the choice; this row names it.
-        requirePreference<Preference>(R.string.ankiquest_companion_key).setSummary(AnkiquestCompanion.choice().title)
+        requirePreference<Preference>(
+            R.string.ankiquest_companion_key,
+        ).setSummary(AnkiquestCompanion.name(requireContext(), AnkiquestCompanion.choice()))
         requirePreference<PreferenceCategory>(R.string.ankiquest_notify_group_key).isVisible = account != null
         requirePreference<PreferenceCategory>(R.string.ankiquest_sharing_group_key).isVisible = account != null
     }

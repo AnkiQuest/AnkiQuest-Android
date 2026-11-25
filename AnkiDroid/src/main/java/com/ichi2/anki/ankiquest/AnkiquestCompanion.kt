@@ -9,8 +9,6 @@ import android.graphics.ColorFilter
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.widget.ImageView
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.core.content.edit
 import androidx.core.view.isVisible
 import com.ichi2.anki.AnkiDroidApp
@@ -18,45 +16,68 @@ import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
-import kotlin.math.cos
-import kotlin.math.sin
 
-/** Account-scoped artwork cache. The server owns the choice; offline UI uses its last answer. */
+/**
+ * The chosen companion and its pictures. Every companion is a pack in [AnkiquestPacks.library]:
+ * bundled, downloaded or imported. The server owns the choice of an official companion; offline UI
+ * uses its last answer. An imported companion is chosen on this phone only, since the server knows
+ * only official ones.
+ */
 internal object AnkiquestCompanion {
     private const val KEY_PREFIX = "ankiquestCompanion:"
+
+    /** An imported companion chosen on this phone, per account; it wins while its pack is installed. */
+    private const val KEY_IMPORTED = "ankiquestCompanionImported:"
 
     /** The cache name of silhouettes ([AnkiquestArt.filtered]). */
     private const val SILHOUETTE = "silhouette"
 
-    /** The companions this app has art for, as the server names them. */
-    val drawn: List<String> = Choice.entries.filter { it != Choice.NONE }.map { it.id }
-
-    /** The companions, in the order the picker shows them; [id] is the value the server stores. */
-    enum class Choice(
+    /** A companion by the id the server stores and its pack has; [NONE] shows no companion. */
+    @JvmInline
+    value class Choice(
         val id: String,
-        @StringRes val title: Int,
     ) {
-        AKI("aki", R.string.ankiquest_companion_aki),
-        ANKILOPE("ankilope", R.string.ankiquest_companion_ankilope),
-
-        /** Bluma, earned at a milestone like Ankilope ([AnkiquestUnlocks]). */
-        COW("cow", R.string.ankiquest_companion_cow),
-        NONE("none", R.string.ankiquest_companion_none),
-        ;
-
         companion object {
-            fun of(id: String?): Choice = entries.firstOrNull { it.id == id } ?: AKI
+            /** The server's default and a free choice. */
+            val AKI = Choice("aki")
+            val NONE = Choice("none")
+
+            /** [id] as a choice; Aki when it is missing or not a companion id. */
+            fun of(id: String?): Choice = id?.takeIf { PackFormat.validId(it) }?.let(::Choice) ?: AKI
         }
     }
 
-    /** The poses a preview card shows, as Aki's: face, fire and sad. */
-    private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk)
+    /** The official companions this app can draw, as the companion-art header names them. */
+    val drawn: List<String>
+        get() = official(AnkiDroidApp.instance).map { it.info.id }
 
-    /** [choice]'s preview poses as Aki's, without two that look the same. */
-    fun preview(choice: Choice): List<Int> = previewPoses.distinctBy { resource(it, choice) }
+    private fun library(context: Context) = AnkiquestPacks.library(context)
 
-    /** Degrees that turn Ankilope's tan fur purple for the interim cow. */
-    private const val COW_HUE_DEGREES = 250.0
+    private fun official(context: Context) = library(context).companions().filter { it.origin != PackOrigin.IMPORTED }
+
+    /** The poses a preview card shows: face, fire and sad. */
+    private val previewPoses = listOf(AnkiquestPose.FACE, AnkiquestPose.STREAK, AnkiquestPose.AT_RISK)
+
+    /** [choice]'s preview poses, without two its pack shows with the same picture. */
+    fun preview(
+        context: Context,
+        choice: Choice,
+    ): List<AnkiquestPose> {
+        val pack = library(context).companion(choice.id) ?: return emptyList()
+        val names = library(context).names()
+        return previewPoses.distinctBy { pose -> names.chain(pose.id).firstOrNull { it in pack.info.poses } }
+    }
+
+    /** [choice]'s name: its pack's, or "No companion". */
+    fun name(
+        context: Context,
+        choice: Choice,
+    ): String {
+        if (choice == Choice.NONE) {
+            return context.getString(R.string.ankiquest_companion_none)
+        }
+        return library(context).companion(choice.id)?.info?.name ?: choice.id
+    }
 
     /** [ColorMatrix] is 4 rows of 5: red, green, blue, alpha and a constant. */
     private const val MATRIX_COLUMNS = 5
@@ -66,32 +87,6 @@ internal object AnkiquestCompanion {
     /** The silhouette's grey (0-255) and its opacity as a share of the art's. */
     private const val SILHOUETTE_GREY = 128f
     private const val SILHOUETTE_ALPHA = 110f / 255f
-
-    // The CSS hue-rotate() matrix: per output channel, weights for red, green and blue, plus cosine
-    // and sine terms of the angle.
-    private val hueLuminance = floatArrayOf(0.213f, 0.715f, 0.072f)
-    private val hueCos =
-        listOf(floatArrayOf(0.787f, -0.715f, -0.072f), floatArrayOf(-0.213f, 0.285f, -0.072f), floatArrayOf(-0.213f, -0.715f, 0.928f))
-    private val hueSin =
-        listOf(floatArrayOf(-0.213f, -0.715f, 0.928f), floatArrayOf(0.143f, 0.140f, -0.283f), floatArrayOf(-0.787f, 0.715f, 0.072f))
-
-    /**
-     * The cow is drawn as Ankilope with its hues rotated until it has art of its own (float3/ankiquest#88),
-     * with the matrix of CSS `hue-rotate(250deg)` so every client draws the same purple.
-     */
-    private val cowFilter: ColorFilter by lazy {
-        val radians = Math.toRadians(COW_HUE_DEGREES)
-        val cos = cos(radians).toFloat()
-        val sin = sin(radians).toFloat()
-        val matrix = FloatArray(MATRIX_SIZE)
-        for (row in 0 until 3) {
-            for (column in 0 until 3) {
-                matrix[row * MATRIX_COLUMNS + column] = hueLuminance[column] + cos * hueCos[row][column] + sin * hueSin[row][column]
-            }
-        }
-        matrix[ALPHA_INDEX] = 1f
-        ColorMatrixColorFilter(ColorMatrix(matrix))
-    }
 
     /**
      * A locked companion's art as a grey shadow of its shape, as the desktop draws it: grey at
@@ -108,50 +103,75 @@ internal object AnkiquestCompanion {
 
     fun normalize(value: String?) = Choice.of(value).id
 
-    /** The current account's companion in [prefs], Aki without an account. */
+    /**
+     * The current account's companion in [prefs], Aki without an account: an imported companion
+     * chosen on this phone while its pack is installed, else the server's last answer.
+     */
     fun choice(prefs: SharedPreferences? = AnkiDroidApp.sharedPrefsOrNull()): Choice {
         if (prefs == null) {
             return Choice.AKI
         }
         val account = HomeAccount.current(prefs) ?: return Choice.AKI
+        val imported = prefs.getString(KEY_IMPORTED + account.scope, null)?.let { Choice.of(it) }
+        if (imported != null && origin(AnkiDroidApp.instance, imported) == PackOrigin.IMPORTED) {
+            return imported
+        }
         return Choice.of(prefs.getString(KEY_PREFIX + account.scope, null))
     }
 
     fun selected(prefs: SharedPreferences? = AnkiDroidApp.sharedPrefsOrNull()): String = choice(prefs).id
 
+    /** Where [choice]'s pack came from, or null when none is installed. */
+    private fun origin(
+        context: Context,
+        choice: Choice,
+    ): PackOrigin? = library(context).companion(choice.id)?.origin
+
+    /** Keeps the server's [value] for [account]; answers false when [account] is no longer signed in. */
     fun remember(
         account: HomeAccount,
         value: String,
     ): Boolean {
         if (AnkiquestHomeData.account()?.scope != account.scope) return false
+        keep(account) { putString(KEY_PREFIX + account.scope, normalize(value)) }
+        return true
+    }
+
+    /** Applies [change] to [account]'s stored choice, and the launcher icon when the shown companion changed. */
+    private fun keep(
+        account: HomeAccount,
+        change: SharedPreferences.Editor.() -> Unit,
+    ) {
         val previous = selected()
-        AnkiDroidApp.sharedPrefs().edit { putString(KEY_PREFIX + account.scope, normalize(value)) }
+        AnkiDroidApp.sharedPrefs().edit { change() }
 
         // The launcher icon shows the companion's face.
         if (selected() != previous) {
             AnkiquestIcon.onAppStart(AnkiDroidApp.instance)
         }
-        return true
     }
 
     fun visible() = choice() != Choice.NONE
 
     /**
-     * The companions the picker shows to [account] whose companion is [current], in order, with how
-     * each is offered; hidden ones are left out.
+     * The companions the picker shows to [account] whose companion is [current], in the library's
+     * order and then none, with how each is offered; hidden ones are left out.
      */
     fun offers(
+        context: Context,
         account: HomeAccount?,
         current: Choice,
     ): Map<Choice, Offer> {
         val found = account?.let { AnkiquestUnlocks.found(it) }
-        return Choice.entries
-            .associateWith { AnkiquestUnlocks.offer(it, found, current) }
+        val packs = library(context).companions().associate { Choice(it.info.id) to it.origin }
+        return (packs + (Choice.NONE to null))
+            .mapValues { (choice, origin) -> AnkiquestUnlocks.offer(choice, origin, found, current) }
             .filterValues { it != Offer.Hidden }
     }
 
     /**
-     * Saves [choice] for [account] on the server; answers the saved choice.
+     * Saves [choice] for [account]: an imported companion on this phone, any other on the server.
+     * Answers the saved choice.
      *
      * @throws HomeAccountChanged when [account] is no longer signed in before the request is sent or once it is answered
      */
@@ -159,8 +179,22 @@ internal object AnkiquestCompanion {
         account: HomeAccount,
         choice: Choice,
     ): Choice {
+        if (origin(AnkiDroidApp.instance, choice) == PackOrigin.IMPORTED) {
+            if (AnkiquestHomeData.account()?.scope != account.scope) {
+                throw HomeAccountChanged()
+            }
+            keep(account) { putString(KEY_IMPORTED + account.scope, choice.id) }
+            return choice
+        }
+
+        // The server keeps official companions; an imported choice on this phone stops showing.
         val saved = AnkiquestHomeData.saveCompanion(account, choice.id)
-        remember(account, saved)
+        if (AnkiquestHomeData.account()?.scope == account.scope) {
+            keep(account) {
+                remove(KEY_IMPORTED + account.scope)
+                putString(KEY_PREFIX + account.scope, normalize(saved))
+            }
+        }
         return Choice.of(saved)
     }
 
@@ -173,10 +207,9 @@ internal object AnkiquestCompanion {
     suspend fun refresh(account: HomeAccount): Boolean {
         syncUnlocks(account)
         val answer = AnkiquestHomeData.companion(account)
-        if (choice().id == normalize(answer)) {
-            return false
-        }
-        return remember(account, answer)
+        val shown = choice()
+        remember(account, answer)
+        return choice() != shown
     }
 
     /** [AnkiquestUnlocks.sync], whose failure leaves the unlocks as this phone last read them. */
@@ -193,211 +226,42 @@ internal object AnkiquestCompanion {
     }
 
     /**
-     * Aki's art for each pose. The streak moods keep the pictures they had before her core art
-     * (#294); showing that art is separate work.
-     */
-    private val akiPoses =
-        mapOf(
-            AnkiquestPose.FACE to R.drawable.aki_face,
-            AnkiquestPose.ASLEEP to R.drawable.aki_sleeping,
-            AnkiquestPose.HAPPY to R.drawable.aki_celebrate,
-            AnkiquestPose.STREAK to R.drawable.aki_streak,
-            AnkiquestPose.STREAK_HOT to R.drawable.aki_streak_hot,
-            AnkiquestPose.STREAK_BLAZING to R.drawable.aki_streak_blazing,
-            AnkiquestPose.STREAK_LEGEND to R.drawable.aki_streak_legend,
-            AnkiquestPose.STREAK_MILESTONE to R.drawable.aki_streak_milestone,
-            // Interim: at_risk is the most worried, welcome smiles with a card, freeze_used has snow.
-            AnkiquestPose.SAD to R.drawable.aki_at_risk,
-            AnkiquestPose.HOPEFUL to R.drawable.aki_welcome,
-            AnkiquestPose.FROZEN to R.drawable.aki_freeze_used,
-            AnkiquestPose.FROZEN_2 to R.drawable.aki_freeze,
-            AnkiquestPose.FROZEN_3 to R.drawable.aki_freeze_used,
-            AnkiquestPose.NEGLECTED to R.drawable.aki_neglected,
-        )
-
-    /** Ankilope's art for each pose she has; the cow draws it recoloured. */
-    private val ankilopePoses =
-        mapOf(
-            AnkiquestPose.FACE to R.drawable.ankilope_face,
-            AnkiquestPose.ASLEEP to R.drawable.ankilope_sleeping,
-            AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
-            // Interim: Ankilope has no on-fire art yet, so she studies.
-            AnkiquestPose.STREAK to R.drawable.ankilope_study,
-            AnkiquestPose.SAD to R.drawable.ankilope_sad,
-            AnkiquestPose.HOPEFUL to R.drawable.ankilope_hopeful,
-            AnkiquestPose.FROZEN to R.drawable.ankilope_frozen,
-            AnkiquestPose.NEGLECTED to R.drawable.ankilope_neglected,
-            AnkiquestPose.WELCOME to R.drawable.ankilope_welcome,
-            AnkiquestPose.REVIEW to R.drawable.ankilope_study,
-        )
-
-    /** The pose each of Aki's pictures shows, so that other companions show theirs. */
-    private val akiPictures =
-        mapOf(
-            R.drawable.aki_face to AnkiquestPose.FACE,
-            R.drawable.aki_icon_happy to AnkiquestPose.FACE,
-            R.drawable.aki_icon_worried to AnkiquestPose.FACE,
-            R.drawable.aki_icon_frozen to AnkiquestPose.FACE,
-            R.drawable.aki_icon_sleepy to AnkiquestPose.FACE,
-            R.drawable.aki_sleeping to AnkiquestPose.ASLEEP,
-            R.drawable.aki_celebrate to AnkiquestPose.HAPPY,
-            R.drawable.aki_achievement to AnkiquestPose.HAPPY,
-            R.drawable.aki_goal to AnkiquestPose.HAPPY,
-            R.drawable.aki_deck_conquered to AnkiquestPose.HAPPY,
-            R.drawable.aki_level_up to AnkiquestPose.HAPPY,
-            R.drawable.aki_streak to AnkiquestPose.STREAK,
-            R.drawable.aki_streak_hot to AnkiquestPose.STREAK_HOT,
-            R.drawable.aki_streak_blazing to AnkiquestPose.STREAK_BLAZING,
-            R.drawable.aki_streak_legend to AnkiquestPose.STREAK_LEGEND,
-            R.drawable.aki_streak_milestone to AnkiquestPose.STREAK_MILESTONE,
-            R.drawable.aki_at_risk to AnkiquestPose.SAD,
-            R.drawable.aki_sad to AnkiquestPose.SAD,
-            R.drawable.aki_hopeful to AnkiquestPose.HOPEFUL,
-            R.drawable.aki_freeze_used to AnkiquestPose.FROZEN,
-            R.drawable.aki_frozen to AnkiquestPose.FROZEN,
-            R.drawable.aki_freeze to AnkiquestPose.FROZEN_2,
-            R.drawable.aki_neglected to AnkiquestPose.NEGLECTED,
-            R.drawable.aki_welcome to AnkiquestPose.WELCOME,
-            R.drawable.aki_comeback to AnkiquestPose.WELCOME,
-            R.drawable.aki_review to AnkiquestPose.REVIEW,
-            R.drawable.aki_minimum to AnkiquestPose.REVIEW,
-            R.drawable.aki_winner to AnkiquestPose.WINNER,
-            R.drawable.aki_leech to AnkiquestPose.LEECH_DEFEATED,
-        )
-
-    /**
-     * The AnkiQuest-Art name (pose, moment picture or launcher icon) of each of Aki's pictures, which
-     * every companion's pack is asked for; the pack falls back where it has no picture of that name.
-     */
-    private val artNames =
-        mapOf(
-            R.drawable.aki_face to "face",
-            R.drawable.aki_sleeping to "asleep",
-            R.drawable.aki_celebrate to "happy",
-            R.drawable.aki_streak to "streak",
-            R.drawable.aki_streak_hot to "streak_hot",
-            R.drawable.aki_streak_blazing to "streak_blazing",
-            R.drawable.aki_streak_legend to "streak_legend",
-            R.drawable.aki_streak_milestone to "streak_milestone",
-            R.drawable.aki_sad to "sad",
-            R.drawable.aki_hopeful to "hopeful",
-            R.drawable.aki_frozen to "frozen",
-            R.drawable.aki_neglected to "neglected",
-            R.drawable.aki_welcome to "welcome",
-            R.drawable.aki_review to "review",
-            R.drawable.aki_winner to "winner",
-            R.drawable.aki_leech to "leech_defeated",
-            R.drawable.aki_at_risk to "at_risk",
-            R.drawable.aki_freeze to "freeze",
-            R.drawable.aki_freeze_used to "freeze_used",
-            R.drawable.aki_comeback to "comeback",
-            R.drawable.aki_minimum to "minimum",
-            R.drawable.aki_achievement to "achievement",
-            R.drawable.aki_goal to "goal",
-            R.drawable.aki_deck_conquered to "deck_conquered",
-            R.drawable.aki_level_up to "level_up",
-            R.drawable.aki_backlog to "backlog",
-            R.drawable.aki_nudge to "nudge",
-            R.drawable.aki_challenge to "challenge",
-            R.drawable.aki_challenge_won to "challenge_won",
-            R.drawable.aki_challenge_lost to "challenge_lost",
-            R.drawable.aki_place_1 to "place_1",
-            R.drawable.aki_place_2 to "place_2",
-            R.drawable.aki_place_3 to "place_3",
-            R.drawable.aki_icon_happy to "icon_happy",
-            R.drawable.aki_icon_worried to "icon_worried",
-            R.drawable.aki_icon_frozen to "icon_frozen",
-            R.drawable.aki_icon_sleepy to "icon_sleepy",
-        )
-
-    /** The Art name of [aki], one of Aki's pictures, or null when it is none. */
-    fun artName(
-        @DrawableRes aki: Int,
-    ): String? = artNames[aki]
-
-    /** Ankilope's version of Aki's pictures that are scenes rather than poses. */
-    private val ankilopeScenes =
-        mapOf(
-            R.drawable.aki_nudge to R.drawable.ankilope_nudge,
-            R.drawable.aki_backlog to R.drawable.ankilope_backlog,
-            R.drawable.aki_place_1 to R.drawable.ankilope_place_1,
-            R.drawable.aki_place_2 to R.drawable.ankilope_place_2,
-            R.drawable.aki_place_3 to R.drawable.ankilope_place_3,
-            R.drawable.aki_challenge to R.drawable.ankilope_challenge,
-            R.drawable.aki_challenge_won to R.drawable.ankilope_challenge_won,
-            R.drawable.aki_challenge_lost to R.drawable.ankilope_challenge_lost,
-        )
-
-    /** Whether [choice] is drawn with Ankilope's art: Ankilope, and the cow recoloured. */
-    private fun ankilopeArt(choice: Choice) = choice == Choice.ANKILOPE || choice == Choice.COW
-
-    /** [choice]'s art for [pose], or for its nearest fallback ([AnkiquestPose.chain]) where it has none. */
-    @DrawableRes
-    fun art(
-        pose: AnkiquestPose,
-        choice: Choice = choice(),
-    ): Int {
-        val poses = if (ankilopeArt(choice)) ankilopePoses else akiPoses
-        return pose.chain().firstNotNullOf { poses[it] }
-    }
-
-    /**
-     * [choice]'s version of Aki's picture [aki]: by the pose it shows, or as the same scene. Art that is
-     * already [choice]'s, such as [AnkiquestMood.pose]'s, is returned as it is.
-     */
-    @DrawableRes
-    fun resource(
-        @DrawableRes aki: Int,
-        choice: Choice = choice(),
-    ): Int {
-        if (!ankilopeArt(choice)) {
-            return aki
-        }
-        val pose = akiPictures[aki]
-        if (pose != null) {
-            return art(pose, choice)
-        }
-        return ankilopeScenes[aki] ?: aki
-    }
-
-    /**
-     * [choice]'s version of [aki], decoded for [size] pixels, or null when it cannot be decoded: from
-     * [choice]'s pack when one is installed, else from the drawables. Every surface draws the
-     * companion through here, so the cow's colours apply everywhere, RemoteViews included.
+     * [choice]'s picture for [pose], decoded for [size] pixels, from the pack that shows [choice]
+     * with its fallbacks. Null for no companion, without an installed pack (the slim APK before
+     * its first download, a removed import) or when it cannot be decoded. Every surface draws the
+     * companion through here, RemoteViews included.
      */
     fun bitmap(
         context: Context,
-        @DrawableRes aki: Int,
+        pose: AnkiquestPose,
         size: Int,
         choice: Choice = choice(),
     ): Bitmap? {
-        // An installed pack draws the companion as AnkiQuest-Art does; the built-in drawables are the fallback.
-        val packed = artNames[aki]?.let { AnkiquestArt.packed(context, choice.id, it, size) }
-        if (packed != null) {
-            return packed
+        if (choice == Choice.NONE) {
+            return null
         }
-        val art = resource(aki, choice)
-        if (choice != Choice.COW) {
-            return AnkiquestArt.bitmap(context, art, size)
-        }
-        return AnkiquestArt.filtered(context, art, size, Choice.COW.id, cowFilter)
+        return AnkiquestArt.packed(context, choice.id, pose.id, size)
     }
 
-    /** [choice]'s version of [aki] as a silhouette, for a locked companion; null when it cannot be decoded. */
+    /** [choice]'s picture for [pose] as a silhouette, for a locked companion; null as for [bitmap]. */
     fun silhouette(
         context: Context,
-        @DrawableRes aki: Int,
+        pose: AnkiquestPose,
         size: Int,
         choice: Choice,
-    ): Bitmap? = AnkiquestArt.filtered(context, resource(aki, choice), size, SILHOUETTE, silhouetteFilter)
+    ): Bitmap? {
+        val plain = bitmap(context, pose, size, choice) ?: return null
+        return AnkiquestArt.filtered(plain, "$SILHOUETTE:${choice.id}:${pose.id}", silhouetteFilter)
+    }
 
     /**
-     * Shows [choice]'s version of [aki] in [view], decoded for [size] pixels. [choice] is the chosen
-     * companion unless a moment is about another one.
+     * Shows [choice]'s picture for [pose] in [view], decoded for [size] pixels. [choice] is the
+     * chosen companion unless a moment is about another one. The view is hidden for no companion
+     * and left empty while no pack shows [choice].
      */
     fun show(
         view: ImageView,
-        @DrawableRes aki: Int,
+        pose: AnkiquestPose,
         size: Int,
         choice: Choice = choice(),
     ) {
@@ -405,15 +269,11 @@ internal object AnkiquestCompanion {
         if (!view.isVisible) {
             return
         }
-        val bitmap = bitmap(view.context, aki, size, choice)
-        if (bitmap != null) {
-            view.colorFilter = null
-            view.setImageBitmap(bitmap)
+        val bitmap = bitmap(view.context, pose, size, choice)
+        if (bitmap == null) {
+            view.setImageDrawable(null)
             return
         }
-
-        // Undecodable art falls back to the drawable, recoloured by the view instead.
-        view.setImageResource(resource(aki, choice))
-        view.colorFilter = if (choice == Choice.COW) cowFilter else null
+        view.setImageBitmap(bitmap)
     }
 }

@@ -46,8 +46,13 @@ enum class AnkiquestArtMode {
  * the app's AssetPackFolder reads them (AnkiQuest-Art docs/packs.md). The slim APK downloads the
  * same packs and checks `packs.json` against the SHA-256 in `art.json`.
  *
+ * Into [resDir] it writes the launcher icons' pictures from the release's `android-drawables.zip`,
+ * in every build: Android draws a launcher icon only from a resource the manifest names, so these
+ * are the only companion pictures compiled into the app.
+ *
  * Each asset is downloaded once from the release, checked against the pin's SHA-256 and cached by
- * hash in [cacheDir], so a build works offline after the first. A pin without packs bundles none.
+ * hash in [cacheDir], so a build works offline after the first; the F-Droid recipe fills the cache
+ * before its build. A pin without packs bundles none.
  */
 @CacheableTask
 abstract class BundleAnkiquestPacks : DefaultTask() {
@@ -63,8 +68,13 @@ abstract class BundleAnkiquestPacks : DefaultTask() {
     @get:Internal
     abstract val cacheDir: DirectoryProperty
 
+    /** The generated assets folder. */
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
+    /** The generated resources folder: the launcher icons' pictures. */
+    @get:OutputDirectory
+    abstract val resDir: DirectoryProperty
 
     @TaskAction
     fun bundle() {
@@ -73,10 +83,11 @@ abstract class BundleAnkiquestPacks : DefaultTask() {
         val out = root.resolve(ASSETS)
         out.mkdirs()
 
-        // The pinned release and the hashes of its packs; an older pin has none.
+        // The pinned release and the hashes of its assets; an older pin has no packs.
         val pinned = JsonSlurper().parse(pin.get().asFile) as Map<*, *>
         val tag = pinned["tag"] as String?
         val assets = (pinned["assets"] as Map<*, *>?).orEmpty().entries.associate { (k, v) -> k as String to v as String }
+        launcherIcons(tag, assets)
         val packs = assets.keys.filter { PACK.matches(it) }.sorted()
         val release = tag.takeIf { INDEX in assets && packs.isNotEmpty() }
         if (release != null && !TAG.matches(release)) {
@@ -106,6 +117,37 @@ abstract class BundleAnkiquestPacks : DefaultTask() {
         for (name in packs) {
             val id = PACK.matchEntire(name)!!.groupValues[1]
             unzip(fetch(release, name, assets.getValue(name)), folder.resolve(id))
+        }
+    }
+
+    /** Unpacks the pictures [LAUNCHER] names from [tag]'s `android-drawables.zip` into [resDir]. */
+    private fun launcherIcons(
+        tag: String?,
+        assets: Map<String, String>,
+    ) {
+        val res = resDir.get().asFile
+        res.deleteRecursively()
+        val sha256 = assets[DRAWABLES]
+        if (tag == null || !TAG.matches(tag) || sha256 == null) {
+            throw GradleException("ankiquest-art.json pins no $DRAWABLES; the launcher icons need it")
+        }
+
+        // Only the wanted entries, each as a plain file name; every one must be there.
+        val wanted = LAUNCHER.associateBy { "$NODPI/$it.webp" }
+        val folder = res.resolve(NODPI)
+        folder.mkdirs()
+        val found = mutableSetOf<String>()
+        ZipInputStream(fetch(tag, DRAWABLES, sha256).inputStream()).use { input ->
+            while (true) {
+                val entry = input.nextEntry ?: break
+                val name = wanted[entry.name] ?: continue
+                folder.resolve("$name.webp").outputStream().use { input.copyTo(it) }
+                found += name
+            }
+        }
+        val missing = LAUNCHER - found
+        if (missing.isNotEmpty()) {
+            throw GradleException("$DRAWABLES of $tag lacks ${missing.joinToString()}")
         }
     }
 
@@ -157,6 +199,23 @@ abstract class BundleAnkiquestPacks : DefaultTask() {
         private const val PACKS = "packs"
 
         private const val INDEX = "packs.json"
+        private const val DRAWABLES = "android-drawables.zip"
+        private const val NODPI = "drawable-nodpi"
+
+        /** The pictures the launcher icons of src/quest/res draw. */
+        private val LAUNCHER =
+            listOf(
+                "aki_face",
+                "aki_icon_happy",
+                "aki_icon_worried",
+                "aki_icon_frozen",
+                "aki_icon_sleepy",
+                "anki_tan_icon",
+                "anki_tan_icon_happy",
+                "anki_tan_icon_worried",
+                "anki_tan_icon_sleepy",
+                "anki_tan_icon_mono",
+            )
         private const val RELEASES = "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download"
         private val PACK = Regex("pack-([a-z][a-z0-9_]{0,31})\\.zip")
         private val TAG = Regex("art-[1-9][0-9]*")

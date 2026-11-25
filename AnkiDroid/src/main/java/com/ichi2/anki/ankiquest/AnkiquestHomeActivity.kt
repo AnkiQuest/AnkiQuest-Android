@@ -293,7 +293,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         val position = scroll.scrollY
         content.removeAllViews()
         val face = findViewById<ImageView>(R.id.aq_home_companion)
-        AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
+        AnkiquestCompanion.show(face, AnkiquestPose.FACE, face.layoutParams.width)
         renderAvatar()
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
@@ -389,13 +389,13 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
             val panel = views.card(content)
-            panel.addView(AnkiquestAki.image(this, if (summary.remaining == 0) R.drawable.aki_celebrate else R.drawable.aki_streak, 56))
+            panel.addView(AnkiquestAki.image(this, if (summary.remaining == 0) AnkiquestPose.HAPPY else AnkiquestPose.STREAK, 56))
             views.text(panel, getString(R.string.aq_home_last_session), heading = true)
             views.text(panel, getString(R.string.aq_home_session_summary, summary.reviews, summary.duration(this), summary.remaining))
         }
         profile?.optJSONArray("quests")?.objects()?.let { quests ->
             if (quests.isNotEmpty()) {
-                if (quests.all { it.optBoolean("done") }) content.addView(AnkiquestAki.image(this, R.drawable.aki_winner, 56))
+                if (quests.all { it.optBoolean("done") }) content.addView(AnkiquestAki.image(this, AnkiquestPose.WINNER, 56))
                 questsHeading = views.text(content, getString(R.string.aq_home_quests), heading = true)
                 quests.forEach { quest ->
                     val panel = views.card(content)
@@ -532,8 +532,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun renderDeckCopies() {
         val current = account ?: return
         val panel = views.card(content)
-        // Both companions: sharing is something friends do together.
-        if (AnkiquestCompanion.visible()) panel.addView(AnkiquestAki.image(this, R.drawable.duo_friends, 72))
+        // The companion is happy: sharing is something friends do together.
+        if (AnkiquestCompanion.visible()) panel.addView(AnkiquestAki.image(this, AnkiquestPose.HAPPY, 72))
         views.text(panel, getString(R.string.aq_copies_title), heading = true)
         views.text(panel, getString(R.string.aq_copies_description), small = true)
         copyStatus?.let { views.text(panel, it, small = true) }

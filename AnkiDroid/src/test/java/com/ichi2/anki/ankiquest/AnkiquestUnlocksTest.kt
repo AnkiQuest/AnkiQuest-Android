@@ -17,7 +17,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
@@ -52,8 +54,12 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     /** Runs once the fake server has handled a companion request, before it answers. */
     @Volatile private var beforeCompanionAnswer: () -> Unit = {}
 
+    @get:Rule
+    val folder = TemporaryFolder()
+
     @Before
     fun serve() {
+        AnkiquestTestPacks.useOfficial(folder.newFolder())
         AnkiquestCapabilities.forgetMemory()
         server =
             AnkiquestTestServer { request ->
@@ -93,6 +99,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
 
     @After
     fun stop() {
+        AnkiquestPacks.use(null)
         runCatching { server.close() }
         AnkiquestCapabilities.forgetMemory()
     }
@@ -160,24 +167,37 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         }
 
     @Test
-    fun `the app knows every live companion and milestone of the shared fixture`() {
+    fun `the app draws every live companion and knows every milestone of the shared fixture`() {
         assertTrue(live.isNotEmpty())
         for (entry in live) {
             val id = entry.getString("companion")
-            assertNotNull(Choice.entries.firstOrNull { it.id == id }, id)
+            assertTrue(id in AnkiquestCompanion.drawn, id)
             assertNotNull(Milestone.of(entry.getString("kind")), id)
         }
 
-        // Planned companions have no art yet, so the app has no choice for them.
+        // A planned companion is never offered, even where its pack is installed: the server shows no progress for it.
         val planned = UnlockFixture.objects(fixture.getJSONArray("companions")).filter { it.getString("status") == "planned" }
-        assertTrue(planned.none { entry -> Choice.entries.any { it.id == entry.getString("companion") } })
+        for (entry in planned) {
+            val choice = Choice(entry.getString("companion"))
+            assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(choice, PackOrigin.BUNDLED, Found.NONE, Choice.AKI), choice.id)
+        }
     }
+
+    @Test
+    fun `an imported companion is free`() {
+        val mine = Choice("mine")
+        assertEquals(Offer.Free, AnkiquestUnlocks.offer(mine, PackOrigin.IMPORTED, null, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(mine, PackOrigin.DOWNLOADED, null, Choice.AKI))
+    }
+
+    /** Where the test's companions come from: the bundled packs, none for no companion. */
+    private fun origin(choice: Choice): PackOrigin? = if (choice == Choice.NONE) null else PackOrigin.BUNDLED
 
     @Test
     fun `Aki and no companion are always free`() {
         for (found in listOf(null, Found.NONE, Found(setOf(Choice.COW.id), mapOf(Choice.ANKILOPE to progress(Choice.ANKILOPE, 2))))) {
-            assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.AKI, found, Choice.NONE))
-            assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.NONE, found, Choice.AKI))
+            assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.AKI, origin(Choice.AKI), found, Choice.NONE))
+            assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.NONE, origin(Choice.NONE), found, Choice.AKI))
         }
     }
 
@@ -187,8 +207,8 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         val hours = progress(Choice.COW, 3)
         val found = Found(emptySet(), mapOf(Choice.ANKILOPE to level, Choice.COW to hours))
 
-        assertEquals(Offer.Locked(level), AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.AKI))
-        assertEquals(Offer.Locked(hours), AnkiquestUnlocks.offer(Choice.COW, found, Choice.AKI))
+        assertEquals(Offer.Locked(level), AnkiquestUnlocks.offer(Choice.ANKILOPE, origin(Choice.ANKILOPE), found, Choice.AKI))
+        assertEquals(Offer.Locked(hours), AnkiquestUnlocks.offer(Choice.COW, origin(Choice.COW), found, Choice.AKI))
         assertEquals(Milestone.LEVEL, level.milestone)
         assertEquals(Milestone.STUDY_HOURS, hours.milestone)
     }
@@ -196,30 +216,33 @@ class AnkiquestUnlocksTest : RobolectricTest() {
     @Test
     fun `an unlocked companion can be chosen`() {
         val found = Found(setOf(Choice.ANKILOPE.id, Choice.COW.id), emptyMap())
-        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.AKI))
-        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, found, Choice.AKI))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, origin(Choice.ANKILOPE), found, Choice.AKI))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, origin(Choice.COW), found, Choice.AKI))
     }
 
     @Test
     fun `a companion chosen before milestones stays a choice`() {
         val found = Found(emptySet(), mapOf(Choice.ANKILOPE to progress(Choice.ANKILOPE, 2)))
-        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, found, Choice.ANKILOPE))
-        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, null, Choice.ANKILOPE))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, origin(Choice.ANKILOPE), found, Choice.ANKILOPE))
+        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.ANKILOPE, origin(Choice.ANKILOPE), null, Choice.ANKILOPE))
     }
 
     @Test
     fun `a server without progress keeps Ankilope free and the cow hidden until unlocked`() {
-        assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.ANKILOPE, Found.NONE, Choice.AKI))
-        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, Found.NONE, Choice.AKI))
-        assertEquals(Offer.Unlocked, AnkiquestUnlocks.offer(Choice.COW, Found(setOf(Choice.COW.id), emptyMap()), Choice.AKI))
+        assertEquals(Offer.Free, AnkiquestUnlocks.offer(Choice.ANKILOPE, origin(Choice.ANKILOPE), Found.NONE, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, origin(Choice.COW), Found.NONE, Choice.AKI))
+        assertEquals(
+            Offer.Unlocked,
+            AnkiquestUnlocks.offer(Choice.COW, origin(Choice.COW), Found(setOf(Choice.COW.id), emptyMap()), Choice.AKI),
+        )
     }
 
     @Test
     fun `earned companions stay hidden until the server answers`() {
-        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.ANKILOPE, null, Choice.AKI))
-        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, null, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.ANKILOPE, origin(Choice.ANKILOPE), null, Choice.AKI))
+        assertEquals(Offer.Hidden, AnkiquestUnlocks.offer(Choice.COW, origin(Choice.COW), null, Choice.AKI))
         assertNull(AnkiquestUnlocks.found(account))
-        assertEquals(listOf(Choice.AKI, Choice.NONE), AnkiquestCompanion.offers(account, Choice.AKI).keys.toList())
+        assertEquals(listOf(Choice.AKI, Choice.NONE), AnkiquestCompanion.offers(targetContext, account, Choice.AKI).keys.toList())
     }
 
     @Test
@@ -238,11 +261,11 @@ class AnkiquestUnlocksTest : RobolectricTest() {
                     Choice.COW to Offer.Unlocked,
                     Choice.NONE to Offer.Free,
                 ),
-                AnkiquestCompanion.offers(account, Choice.AKI),
+                AnkiquestCompanion.offers(targetContext, account, Choice.AKI),
             )
             assertEquals(
                 listOf(Choice.AKI, Choice.ANKILOPE, Choice.COW, Choice.NONE),
-                AnkiquestCompanion.offers(account, Choice.AKI).keys.toList(),
+                AnkiquestCompanion.offers(targetContext, account, Choice.AKI).keys.toList(),
             )
             assertTrue(requests.none { it.startsWith("POST /api/unlocks") }, "$requests")
         }
@@ -255,7 +278,10 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             AnkiquestUnlocks.sync(account)
 
             assertEquals(Found.NONE, AnkiquestUnlocks.found(account))
-            assertEquals(listOf(Choice.AKI, Choice.ANKILOPE, Choice.NONE), AnkiquestCompanion.offers(account, Choice.AKI).keys.toList())
+            assertEquals(
+                listOf(Choice.AKI, Choice.ANKILOPE, Choice.NONE),
+                AnkiquestCompanion.offers(targetContext, account, Choice.AKI).keys.toList(),
+            )
             assertTrue(requests.none { it.contains("/api/unlocks/") }, "$requests")
         }
 
@@ -309,7 +335,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             assertTrue(AnkiquestCompanion.refresh(account))
 
             assertEquals(Choice.COW, AnkiquestCompanion.choice())
-            assertEquals(Offer.Unlocked, AnkiquestCompanion.offers(account, Choice.COW)[Choice.COW])
+            assertEquals(Offer.Unlocked, AnkiquestCompanion.offers(targetContext, account, Choice.COW)[Choice.COW])
             assertTrue(requests.none { it.startsWith("POST") }, "$requests")
         }
 
@@ -326,7 +352,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
         }
 
     @Test
-    fun `unlocks that are not choices here are kept by id`() =
+    fun `every unlock is kept by id`() =
         runBlocking {
             serverHas(AnkiquestUnlocks.FEATURE, MILESTONES)
             unlocks = setOf(Choice.COW.id, ANKI_TAN)
@@ -334,7 +360,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             AnkiquestUnlocks.sync(account)
 
             val found = assertNotNull(AnkiquestUnlocks.found(account))
-            assertEquals(setOf(Choice.COW), found.unlocks)
+            assertEquals(setOf(Choice.COW, Choice(ANKI_TAN)), found.unlocks)
             assertEquals(setOf(Choice.COW.id, ANKI_TAN), found.ids)
         }
 

@@ -9,7 +9,6 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.every
@@ -40,7 +39,7 @@ private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIF
 @Config(sdk = [34])
 class AnkiquestNotificationShareTest : RobolectricTest() {
     private val requests = CopyOnWriteArrayList<Pair<Request, AnkiquestApi.Timeout>>()
-    private val art = AtomicReference<Int?>()
+    private val art = AtomicReference<AnkiquestPose?>()
     private val linked = AtomicReference<AnkiquestShare.Link?>()
 
     @Before
@@ -121,6 +120,6 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
                 .actions
                 .single()
         share(shadowOf(action.actionIntent).savedIntent)
-        assertEquals(R.drawable.aki_challenge_won, art.get(), "challenge_complete must not be drawn as a celebration")
+        assertEquals(AnkiquestPose.CHALLENGE_WON, art.get(), "challenge_complete must not be drawn as a celebration")
     }
 }

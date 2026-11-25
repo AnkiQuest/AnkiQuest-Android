@@ -27,7 +27,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
@@ -49,15 +51,20 @@ class AnkiquestMomentsTest : RobolectricTest() {
     private val account = identity.notificationAccount
     private val prefs get() = targetContext.sharedPrefs()
 
+    @get:Rule
+    val folder = TemporaryFolder()
+
     @Before
     fun signIn() {
         mockkObject(AnkiquestHomeData)
         every { AnkiquestHomeData.account(any()) } returns identity
+        AnkiquestTestPacks.useOfficial(folder.newFolder())
     }
 
     @After
     fun signOut() {
         unmockkObject(AnkiquestHomeData)
+        AnkiquestPacks.use(null)
     }
 
     private fun moment(
@@ -250,7 +257,7 @@ class AnkiquestMomentsTest : RobolectricTest() {
     fun `a companion moment shows the companion that joined`() {
         assertEquals(AnkiquestCompanion.Choice.COW, AnkiquestMoments.joined(moment("companion:cow", Kind.COMPANION)))
         assertEquals(AnkiquestCompanion.Choice.ANKILOPE, AnkiquestMoments.joined(moment("companion:ankilope", Kind.COMPANION)))
-        assertEquals(R.drawable.aki_celebrate, AnkiquestMomentCard.art(moment("companion:cow", Kind.COMPANION)))
+        assertEquals(AnkiquestPose.HAPPY, AnkiquestMomentCard.art(moment("companion:cow", Kind.COMPANION)))
 
         // A companion this app does not know, or another kind of moment, names none.
         assertNull(AnkiquestMoments.joined(moment("companion:anki_tan", Kind.COMPANION)))
@@ -381,7 +388,7 @@ class AnkiquestMomentsTest : RobolectricTest() {
         assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
 
         val card = AnkiquestMoments.pending(prefs, account).single()
-        assertEquals(R.drawable.aki_streak_blazing, AnkiquestMomentCard.art(card))
+        assertEquals(AnkiquestPose.STREAK_BLAZING, AnkiquestMomentCard.art(card))
     }
 
     @Test

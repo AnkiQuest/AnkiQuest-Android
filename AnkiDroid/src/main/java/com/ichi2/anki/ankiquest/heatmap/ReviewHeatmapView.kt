@@ -108,10 +108,8 @@ class ReviewHeatmapView
                     .visible()
             if (companion.isVisible) {
                 val pose = AnkiquestMood.ownPose(TimeManager.time.intTimeMS())
-                companion.setImageResource(
-                    com.ichi2.anki.ankiquest.AnkiquestCompanion
-                        .resource(pose),
-                )
+                com.ichi2.anki.ankiquest.AnkiquestCompanion
+                    .show(companion, pose, companion.layoutParams.width)
             }
         }
 

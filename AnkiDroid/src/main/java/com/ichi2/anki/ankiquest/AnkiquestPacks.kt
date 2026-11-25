@@ -4,6 +4,9 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.res.AssetManager
+import android.text.TextUtils
+import androidx.annotation.VisibleForTesting
+import com.ichi2.anki.R
 import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
@@ -38,6 +41,15 @@ internal object AnkiquestPacks {
                 imported = FilePackFolder(File(storage, "imported")),
             ).also { library = it }
         }
+    }
+
+    /** Shows [replacement]'s companions until the next call; null reads the app's folders again. */
+    @VisibleForTesting
+    fun use(replacement: AnkiquestPackLibrary?) {
+        synchronized(this) {
+            library = replacement
+        }
+        AnkiquestArt.clear()
     }
 
     @Volatile
@@ -117,6 +129,35 @@ internal object AnkiquestPacks {
     }
 }
 
+/**
+ * The credit and licence of every installed companion, as its pack's `companion.json` gives them,
+ * for the About screen. Imported packs are a player's own files, so their text is escaped.
+ */
+internal object AnkiquestPackCredits {
+    /** One HTML line per companion, with its licence notice under it, each ending in a line break. */
+    fun html(context: Context): String =
+        AnkiquestPacks.library(context).companions().joinToString("") { pack ->
+            lines(pack.info) { name, credit, licence -> context.getString(R.string.ankiquest_about_companion, name, credit, licence) }
+        }
+
+    /** [info]'s credit line, worded by [line] from its escaped name, credit and licence, then its notice. */
+    fun lines(
+        info: PackInfo,
+        line: (String, String, String) -> String,
+    ): String {
+        val credit = line(escape(info.name), escape(info.credit), escape(info.licence))
+        val notice =
+            info.notice
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { "<br>" + escape(it).replace("\n", "<br>") }
+                .orEmpty()
+        return "$credit$notice<br>"
+    }
+
+    private fun escape(text: String): String = TextUtils.htmlEncode(text)
+}
+
 /** Which APK this is: the full one bundles the pinned release's packs, the slim one downloads them. */
 internal enum class ApkKind(
     /** The release asset an update of this APK installs. */
@@ -154,7 +195,7 @@ internal class ArtBuild(
         private val TAG = Regex("art-([1-9][0-9]{0,8})")
         private val SHA256 = Regex("[0-9a-f]{64}")
 
-        /** A build without [ASSET], such as a debug build: a full APK with no packs pinned. */
+        /** A build without a readable [ASSET]: a full APK with no packs pinned. */
         val LOCAL = ArtBuild(ApkKind.FULL, null)
 
         /** [text] of [ASSET]; [LOCAL] when it cannot be read. */

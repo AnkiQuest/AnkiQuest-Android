@@ -53,11 +53,11 @@ class AnkiquestMoodTest : RobolectricTest() {
             val streak = today.getInt("streak")
             val goal = if (today.getBoolean("goal_reached")) Goal.REACHED else Goal.OPEN
 
-            // The mood from today's verdict, then the pose for that mood by drawable name.
+            // The mood from today's verdict, then the pose for that mood by name.
             val state = named<State>(today.getString("state"))
             val mood = AnkiquestMood.of(state, today.getInt("reviews"), streak, today.getInt("frozen_days"), goal)
             assertEquals(named<Mood>(expected.getString("mood")), mood, name)
-            assertEquals(expected.getString("pose"), targetContext.resources.getResourceEntryName(AnkiquestMood.pose(mood, streak)), name)
+            assertEquals(fixturePose(expected.getString("pose")), AnkiquestMood.pose(mood, streak).id, name)
         }
     }
 
@@ -85,7 +85,7 @@ class AnkiquestMoodTest : RobolectricTest() {
                 }
             }
         }
-        assertEquals(listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone), AnkiquestMood.poses(Mood.FIRE, 365))
+        assertEquals(listOf(AnkiquestPose.STREAK_LEGEND, AnkiquestPose.STREAK_MILESTONE), AnkiquestMood.poses(Mood.FIRE, 365))
     }
 
     @Test
@@ -94,7 +94,7 @@ class AnkiquestMoodTest : RobolectricTest() {
         val today = 20_000 * day + 5 * 3_600_000
         val pose = { endsAt: Long -> AnkiquestMood.bigPose(Mood.FIRE, 120, endsAt) }
         assertEquals(
-            setOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone),
+            setOf(AnkiquestPose.STREAK_LEGEND, AnkiquestPose.STREAK_MILESTONE),
             setOf(pose(today), pose(today + day)),
             "two days in a row show both poses",
         )

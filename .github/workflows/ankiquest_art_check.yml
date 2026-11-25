@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest art check
 
-# Runs the server's art exporter against the app's drawables, at the server commit pinned in
-# ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests,
-# merge queue groups and pushes, never on a schedule or by hand: a manual server ref would run
-# arbitrary code with the Rust cache shared with master.
+# The app draws its companions from the AnkiQuest-Art release ankiquest-art.json pins: packs as
+# assets, launcher icons from android-drawables.zip, both fetched by the build (BundleAnkiquestPacks).
+# This checks that no companion picture is committed and that every pinned asset the build fetches
+# downloads with the pinned SHA-256.
 on:
   pull_request:
-  # Required check: the merge queue waits for it on its merge commit.
+  # The merge queue waits for it on its merge commit.
   merge_group:
     types: [checks_requested]
   push:
@@ -24,38 +24,27 @@ concurrency:
 
 jobs:
   art:
-    name: App art matches the server's exporter
+    name: App art comes from the pinned Art release
     runs-on: ubuntu-latest
-    # The byte check (AnkiQuest/AnkiQuest-Server#56) encodes every drawable.
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # Check against the pinned server commit (#203), so a server merge cannot turn master red;
-      # the bump PR brings exporter changes in.
-      - name: Read the immutable server pin
-        id: server-ref
-        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: AnkiQuest/AnkiQuest-Server
-          ref: ${{ steps.server-ref.outputs.ref }}
-          path: server
-          persist-credentials: false
-
-      # The runner image ships rustup; install a minimal stable toolchain explicitly.
-      - name: Set up Rust
+      # Companion pictures are exported copies; AnkiQuest-Art releases are their only source.
+      - name: No companion picture is committed
         shell: bash
-        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
+        run: |
+          found=$(git ls-files 'AnkiDroid/src/*' | grep -E '/(aki|ankilope|anki_tan|bluma|cow|duo)_[a-z0-9_]*\.(webp|png)$' || true)
+          if [ -n "$found" ]; then echo "Committed companion pictures:"; echo "$found"; exit 1; fi
 
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: server
-
-      # A server without the exporter fails here instead of skipping the check.
-      - name: Check the app's art against the server's exporter
+      - name: The pinned assets match their SHA-256
         shell: bash
-        run: (cd server && cargo run -q -p ankiquest-xtask -- export-android-art --check "$GITHUB_WORKSPACE")
+        run: |
+          tag=$(jq -r .tag ankiquest-art.json)
+          jq -r '.assets | to_entries[] | select(.key | test("^(packs\\.json|pack-[a-z0-9_]+\\.zip|android-drawables\\.zip)$")) | "\(.value)  \(.key)"' ankiquest-art.json > art.sha256
+          while read -r _ name; do
+            curl -fsSL --retry 3 -o "$name" "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/$tag/$name"
+          done < art.sha256
+          sha256sum -c art.sha256

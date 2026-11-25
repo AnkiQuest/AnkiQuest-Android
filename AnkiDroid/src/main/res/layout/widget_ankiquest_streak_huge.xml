@@ -19,8 +19,7 @@
         android:adjustViewBounds="true"
         android:importantForAccessibility="no"
         android:maxHeight="@dimen/ankiquest_streak_companion_huge"
-        android:scaleType="fitCenter"
-        android:src="@drawable/aki_streak" />
+        android:scaleType="fitCenter" />
 
     <TextView
         android:id="@+id/ankiquest_streak_number"

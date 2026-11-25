@@ -637,7 +637,7 @@ internal class LeaderboardSection(
     private fun empty(
         @StringRes message: Int,
     ) {
-        content.addView(AnkiquestAki.image(this, R.drawable.aki_welcome, 72))
+        content.addView(AnkiquestAki.image(this, AnkiquestPose.WELCOME, 72))
         views.text(content, getString(message), heading = true)
     }
 

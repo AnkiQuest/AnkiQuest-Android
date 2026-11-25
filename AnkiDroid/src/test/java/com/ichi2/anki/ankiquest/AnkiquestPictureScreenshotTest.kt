@@ -5,7 +5,6 @@ package com.ichi2.anki.ankiquest
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.provideRoborazziContext
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import org.junit.After
 import org.junit.Test
@@ -32,7 +31,7 @@ class AnkiquestPictureScreenshotTest : ScreenshotTest() {
     fun milestone() =
         capture(
             "milestone",
-            AnkiquestShare.Card("30 days of study", "I kept learning, one day at a time.", R.drawable.aki_streak_milestone),
+            AnkiquestShare.Card("30 days of study", "I kept learning, one day at a time.", AnkiquestPose.STREAK_MILESTONE),
         )
 
     @Test
@@ -54,11 +53,11 @@ class AnkiquestPictureScreenshotTest : ScreenshotTest() {
     }
 
     @Test
-    fun goal() = capture("goal", AnkiquestShare.Card("Daily goal reached", "I reviewed 40 cards today.", R.drawable.aki_goal))
+    fun goal() = capture("goal", AnkiquestShare.Card("Daily goal reached", "I reviewed 40 cards today.", AnkiquestPose.GOAL))
 
     @Test
     fun weeklyPodium() =
-        capture("weekly_podium", AnkiquestShare.Card("My week in AnkiQuest", "I finished second this week!", R.drawable.aki_place_2))
+        capture("weekly_podium", AnkiquestShare.Card("My week in AnkiQuest", "I finished second this week!", AnkiquestPose.PLACE_2))
 
     private fun streakCard(streak: Int) =
         AnkiquestShare.Card(
@@ -72,7 +71,7 @@ class AnkiquestPictureScreenshotTest : ScreenshotTest() {
         AnkiquestShare.Card(
             "Card conquered!",
             "I learned a card I had forgotten 4 times.",
-            R.drawable.aki_deck_conquered,
+            AnkiquestPose.DECK_CONQUERED,
             listOf("不客氣 · You're welcome", "Mandarin modern 1", "11 answers · 10 days"),
         )
 

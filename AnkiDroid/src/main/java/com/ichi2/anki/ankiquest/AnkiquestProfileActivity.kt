@@ -287,7 +287,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             sections.attach(content)
         }
         failure?.let { problem ->
-            if (problem == R.string.aq_profile_hidden) content.addView(AnkiquestAki.image(this, R.drawable.aki_sleeping, 72))
+            if (problem == R.string.aq_profile_hidden) content.addView(AnkiquestAki.image(this, AnkiquestPose.ASLEEP, 72))
             views.text(content, getString(problem), small = problem != R.string.aq_profile_hidden).accessibilityLiveRegion =
                 View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
