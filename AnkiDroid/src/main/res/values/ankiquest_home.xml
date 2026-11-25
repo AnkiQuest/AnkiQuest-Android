@@ -6,6 +6,7 @@
     <color name="aq_home_text">#20384A</color>
     <color name="aq_home_muted">#5B6C76</color>
     <color name="aq_home_primary">#245FAB</color>
+    <color name="aq_home_accent">@color/aq_home_primary</color>
     <color name="aq_home_primary_text">#FFFFFF</color>
     <color name="aq_home_tint">#EAF2FF</color>
     <color name="aq_home_avatar_text">@color/aq_home_primary</color>
