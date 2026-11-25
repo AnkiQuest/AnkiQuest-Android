@@ -17,6 +17,18 @@ internal fun interface PackFetch {
     ): ByteArray
 }
 
+/** The AnkiQuest-Art release a download takes its packs from. */
+internal sealed interface PackSource {
+    /** The release the build pins (`ankiquest-art.json`): its `packs.json` must have [sha256]. */
+    data class Pinned(
+        val tag: String,
+        val sha256: String,
+    ) : PackSource
+
+    /** The latest release; its `packs.json` is taken over HTTPS from GitHub. */
+    data object Latest : PackSource
+}
+
 /** What [AnkiquestPackDownload.update] did. */
 internal sealed interface PackUpdate {
     /** Every pack of the latest release was installed already. */
@@ -29,7 +41,7 @@ internal sealed interface PackUpdate {
 }
 
 /**
- * Downloads the companion packs of the latest AnkiQuest-Art release that are newer than the
+ * Downloads the companion packs of an AnkiQuest-Art release ([PackSource]) that are newer than the
  * installed ones. Each pack must match the index's size and SHA-256 and pass the reader's checks
  * before any of them is installed.
  */
@@ -38,12 +50,19 @@ internal class AnkiquestPackDownload(
     private val fetch: PackFetch,
 ) {
     /**
-     * Brings the downloaded packs up to the latest release. Throws [PackRefused] when the release
-     * breaks a rule and [IOException] when the network fails; nothing is installed then.
+     * Brings the downloaded packs up to [source]. Throws [PackRefused] when the release breaks a
+     * rule and [IOException] when the network fails; nothing is installed then. One update runs
+     * at a time, so a second caller waits and then finds the packs installed.
      */
-    fun update(): PackUpdate {
-        val bytes = fetch.get(LATEST_INDEX, MAX_INDEX)
+    @Synchronized
+    fun update(source: PackSource = PackSource.Latest): PackUpdate {
+        val bytes = index(source)
         val index = PackIndex.parse(bytes.decodeToString())
+
+        // A pinned index is the one the build names, for the release it names.
+        if (source is PackSource.Pinned && index.tag != source.tag) {
+            throw PackRefused(PackRefusal.BAD_INDEX, "${PackFormat.RELEASE_INDEX} of ${index.tag}, pinned ${source.tag}")
+        }
 
         // Only packs newer than what is installed, all checked before any is kept.
         val wanted = index.companions.filter { it.version > library.installedVersion(it.id) }
@@ -54,6 +73,19 @@ internal class AnkiquestPackDownload(
         library.installDownloaded(packs, bytes)
         return PackUpdate.Updated(packs.map { it.info.id })
     }
+
+    /** The bytes of [source]'s `packs.json`; a pinned one must match the build's SHA-256. */
+    private fun index(source: PackSource): ByteArray =
+        when (source) {
+            PackSource.Latest -> fetch.get(LATEST_INDEX, MAX_INDEX)
+            is PackSource.Pinned -> {
+                val bytes = fetch.get(assetUrl(source.tag, PackFormat.RELEASE_INDEX), MAX_INDEX)
+                if (sha256(bytes) != source.sha256) {
+                    throw PackRefused(PackRefusal.CHECKSUM, "${PackFormat.RELEASE_INDEX} of ${source.tag}")
+                }
+                bytes
+            }
+        }
 
     /** [entry]'s pack, checked against the index and the pack rules. */
     private fun download(
