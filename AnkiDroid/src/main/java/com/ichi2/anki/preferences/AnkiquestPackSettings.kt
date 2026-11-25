@@ -11,6 +11,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestPacks
 import com.ichi2.anki.ankiquest.PackRefused
 import com.ichi2.anki.ankiquest.PackUpdate
+import com.ichi2.utils.openInputStreamSafe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -101,7 +102,7 @@ internal class AnkiquestPackSettings(
                 try {
                     val info =
                         withContext(Dispatchers.IO) {
-                            val input = context.contentResolver.openInputStream(uri) ?: throw IOException("cannot open $uri")
+                            val input = context.contentResolver.openInputStreamSafe(uri) ?: throw IOException("cannot open $uri")
                             input.use { AnkiquestPacks.library(context).import(it) }
                         }
                     fragment.getString(R.string.ankiquest_packs_imported, info.name)
@@ -110,6 +111,9 @@ internal class AnkiquestPackSettings(
                 } catch (e: PackRefused) {
                     fragment.getString(R.string.ankiquest_packs_refused, e.message)
                 } catch (e: IOException) {
+                    fragment.getString(R.string.ankiquest_packs_refused, e.message ?: e.javaClass.simpleName)
+                } catch (e: SecurityException) {
+                    // openInputStreamSafe refuses files inside app data; the picker should never offer them.
                     fragment.getString(R.string.ankiquest_packs_refused, e.message ?: e.javaClass.simpleName)
                 }
             if (fragment.isAdded) {

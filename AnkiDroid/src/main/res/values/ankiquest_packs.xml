@@ -4,7 +4,7 @@
 <resources>
     <string name="ankiquest_packs_download_key" translatable="false">ankiquestPacksDownload</string>
     <string name="ankiquest_packs_import_key" translatable="false">ankiquestPacksImport</string>
-    <string name="ankiquest_packs_download">Download companions</string>
+    <string name="ankiquest_packs_download" maxLength="41">Download companions</string>
     <string name="ankiquest_packs_downloading">Checking for new companions…</string>
     <plurals name="ankiquest_packs_installed">
         <item quantity="one">%d companion installed. Tap to check for new ones.</item>
@@ -14,7 +14,7 @@
     <string name="ankiquest_packs_up_to_date">Companions are up to date.</string>
     <string name="ankiquest_packs_downloaded">Downloaded: %1$s</string>
     <string name="ankiquest_packs_download_failed">Could not download companions: %1$s</string>
-    <string name="ankiquest_packs_import">Import companion</string>
+    <string name="ankiquest_packs_import" maxLength="41">Import companion</string>
     <string name="ankiquest_packs_import_summary">Add a companion pack (.zip) from your files. It shows on this device only.</string>
     <string name="ankiquest_packs_imported">Imported %1$s.</string>
     <string name="ankiquest_packs_refused">This companion pack was refused: %1$s</string>

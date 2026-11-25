@@ -133,7 +133,7 @@ object AnkiquestUpdater {
         val host = WeakReference(activity)
         scope.launch {
             try {
-                val release = available()
+                val release = available(AnkiquestPacks.build(activity).apk)
                 if (release != null && isNewer(release, installedRelease)) {
                     withContext(Dispatchers.Main) {
                         if (synchronized(downloadFiles) { state === check }) {
@@ -167,6 +167,7 @@ object AnkiquestUpdater {
      * @return a message to show when nothing is offered, or null when the update dialog is shown
      */
     suspend fun checkNow(activity: Activity): String? {
+        val apk = AnkiquestPacks.build(activity).apk
         val check = UpdateState.Checking()
         val active = beginCheck(check)
         if (active is UpdateState.Downloading) {
@@ -180,7 +181,7 @@ object AnkiquestUpdater {
         try {
             val release =
                 try {
-                    withContext(Dispatchers.IO) { available() }
+                    withContext(Dispatchers.IO) { available(apk) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -209,8 +210,11 @@ object AnkiquestUpdater {
         }
     }
 
-    /** The nightly channel follows whichever build is newest, so a fresh stable release is offered too. */
-    private fun available(): Release? = if (channel() == Channel.NIGHTLY) newest(nightly(), latest()) else latest()
+    /**
+     * The nightly channel follows whichever build is newest, so a fresh stable release is offered too.
+     * [apk] picks the asset: a slim install updates to the slim APK, a full one to the full APK.
+     */
+    private fun available(apk: ApkKind): Release? = if (channel() == Channel.NIGHTLY) newest(nightly(apk), latest(apk)) else latest(apk)
 
     /** The build Android would install as the bigger version; a stable release wins a tie with its own nightly. */
     internal fun newest(
@@ -227,31 +231,36 @@ object AnkiquestUpdater {
     /** Matches the version code CI gives `quest-<n>` in build.gradle.kts. */
     private fun stableCode(number: Int): Long = 50_000_000L + number * 1000L
 
-    private fun nightly(): Release? {
+    private fun nightly(apk: ApkKind): Release? {
         val request = Request.Builder().url(NIGHTLY_URL + "nightly.json").build()
         val json =
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
                 JSONObject(response.body.string())
             }
-        return parseNightly(json)
+        return parseNightly(json, apk)
     }
 
-    internal fun parseNightly(json: JSONObject): Release? {
+    /** nightly.json lists the full APK's `size` and the slim APK's `slim_size`. */
+    internal fun parseNightly(
+        json: JSONObject,
+        apk: ApkKind = ApkKind.FULL,
+    ): Release? {
         val number = json.optInt("release")
         val versionCode = json.optLong("version_code")
         if (number <= 0 || versionCode <= 0) return null
+        val size = if (apk == ApkKind.SLIM) json.optLong("slim_size") else json.optLong("size")
         return Release(
             number = number,
             name = "Nightly $TAG_PREFIX$number+${json.optInt("nightly")} (${json.optString("commit").take(7)})",
-            apkUrl = NIGHTLY_URL + "AnkiQuest.apk",
-            apkSize = json.optLong("size"),
+            apkUrl = NIGHTLY_URL + apk.file,
+            apkSize = size,
             versionCode = versionCode,
             nightly = true,
         )
     }
 
-    private fun latest(): Release? {
+    private fun latest(apk: ApkKind): Release? {
         val request =
             Request
                 .Builder()
@@ -265,19 +274,24 @@ object AnkiquestUpdater {
             }
         val tag = json.getString("tag_name")
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
-        val assets = json.getJSONArray("assets")
-        val apk =
-            assets
-                .objects()
-                .filter { it.getString("name").endsWith(".apk") }
-                .let { apks -> apks.firstOrNull { it.getString("name") == "AnkiQuest.apk" } ?: apks.firstOrNull() }
-                ?: return null
+        val asset = pickApk(json.getJSONArray("assets").objects(), apk) ?: return null
         return Release(
             number = number,
             name = json.optString("name").ifEmpty { tag },
-            apkUrl = apk.getString("browser_download_url"),
-            apkSize = apk.optLong("size"),
+            apkUrl = asset.getString("browser_download_url"),
+            apkSize = asset.optLong("size"),
         )
+    }
+
+    /** The release asset that updates an [apk] install: its own file, else the full APK, else any APK. */
+    internal fun pickApk(
+        assets: List<JSONObject>,
+        apk: ApkKind,
+    ): JSONObject? {
+        val apks = assets.filter { it.getString("name").endsWith(".apk") }
+        return apks.firstOrNull { it.getString("name") == apk.file }
+            ?: apks.firstOrNull { it.getString("name") == ApkKind.FULL.file }
+            ?: apks.firstOrNull()
     }
 
     private fun offer(

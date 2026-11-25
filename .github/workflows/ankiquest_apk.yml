@@ -98,8 +98,8 @@ jobs:
             -PupstreamCommit=${{ steps.upstream.outputs.sha }}
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
-      # The slim APK: the same build without the bundled companion packs, which it downloads in the app.
-      # Only assets differ, so Gradle reuses the compiled code of the full build.
+      # The slim APK: the same build without the bundled companion packs, which it downloads in the app
+      # from the pinned release. Only assets differ, so Gradle reuses the compiled code of the full build.
       - name: Assemble slim
         run: |
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestArt=download \
@@ -182,8 +182,8 @@ jobs:
         run: |
           jq -n --argjson release "$RELEASE" --argjson nightly "$NIGHTLY" --argjson version_code "$VERSION_CODE" \
             --arg commit "$GITHUB_SHA" --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --argjson size "$(stat -c %s AnkiQuest.apk)" \
-            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
+            --argjson size "$(stat -c %s AnkiQuest.apk)" --argjson slim_size "$(stat -c %s AnkiQuest-slim.apk)" \
+            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size, slim_size: $slim_size}' \
             > nightly.json
           gh release delete nightly --yes --cleanup-tag || true
           cp AnkiQuest.apk AnkiDroid-Quest.apk

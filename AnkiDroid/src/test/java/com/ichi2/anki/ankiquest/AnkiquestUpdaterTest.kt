@@ -227,6 +227,27 @@ class AnkiquestUpdaterTest : RobolectricTest() {
     }
 
     @Test
+    fun `a slim install updates to the slim nightly`() {
+        val nightly = AnkiquestUpdater.parseNightly(JSONObject(nightlyJson.toString()).put("slim_size", 40_000_000), ApkKind.SLIM)!!
+        assertEquals("https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/AnkiQuest-slim.apk", nightly.apkUrl)
+        assertEquals(40_000_000, nightly.apkSize)
+    }
+
+    private fun asset(name: String) = JSONObject().put("name", name).put("browser_download_url", "https://example.org/$name")
+
+    @Test
+    fun `each install updates to its own kind of APK`() {
+        val assets = listOf(asset("AnkiQuest-slim.apk"), asset("AnkiDroid-Quest.apk"), asset("AnkiQuest.apk"), asset("notes.md"))
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(assets, ApkKind.FULL)!!.getString("name"))
+        assertEquals("AnkiQuest-slim.apk", AnkiquestUpdater.pickApk(assets, ApkKind.SLIM)!!.getString("name"))
+
+        // A release from before the slim APK updates a slim install to the full one.
+        val older = listOf(asset("AnkiQuest.apk"), asset("AnkiDroid-Quest.apk"))
+        assertEquals("AnkiQuest.apk", AnkiquestUpdater.pickApk(older, ApkKind.SLIM)!!.getString("name"))
+        assertNull(AnkiquestUpdater.pickApk(listOf(asset("notes.md")), ApkKind.FULL))
+    }
+
+    @Test
     fun `a nightly is offered only when Android would install it as an upgrade`() {
         val nightly = AnkiquestUpdater.parseNightly(nightlyJson)!!
         assertTrue(AnkiquestUpdater.isNewer(nightly, installedRelease = 17, installedCode = 50_017_000))
