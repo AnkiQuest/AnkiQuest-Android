@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Preserve core poses the app does not show yet. -->
+<!-- Preserve core poses the app does not show yet. aki_sleeping and ankilope_sleeping are the
+     earlier names of aki_asleep and ankilope_asleep (AnkiQuest-Server#32): the pinned server's
+     art check still lists them. The bump to a server with #32 moves them out of the package. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/anki_tan_frozen,@drawable/anki_tan_chibi_frozen" />
+    tools:keep="@drawable/anki_tan_frozen,@drawable/anki_tan_chibi_frozen,@drawable/aki_sleeping,@drawable/ankilope_sleeping" />

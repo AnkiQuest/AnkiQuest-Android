@@ -66,6 +66,7 @@ class AnkiquestSharedFixturesTest {
                     row.getLong(3),
                     row.getLong(4),
                     row.getInt(5),
+                    row.getInt(6),
                 )
             val expected = case.getJSONObject("review")
             val keys = expected.keys().asSequence().toSet()

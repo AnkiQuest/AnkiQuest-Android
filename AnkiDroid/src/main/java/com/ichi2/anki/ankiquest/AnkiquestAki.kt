@@ -68,16 +68,17 @@ internal object AnkiquestAki {
         local: HomeLocal?,
         day: AnkiquestDay.Verdict?,
     ): Message {
-        // A streak waiting for today, or kept by a freeze, comes before anything about the decks.
-        if (mood == AnkiquestMood.Mood.SAD) {
+        // Before any study, a streak waiting for today, or kept by a freeze, comes before anything
+        // about the decks. The mood stays sad or frozen for a while after study starts; the words don't.
+        val reviewed = (day?.reviews ?: 0) > 0
+        if (!reviewed && mood == AnkiquestMood.Mood.SAD) {
             return Message.WAITING
         }
-        if (mood in frozen) {
+        if (!reviewed && mood in frozen) {
             return Message.FREEZE
         }
 
         // Otherwise the decks decide: all done after real study, or cards still due.
-        val reviewed = (day?.reviews ?: 0) > 0
         if (reviewed && local?.decks?.isNotEmpty() == true && local.decks.all { it.due == 0 }) {
             return Message.CELEBRATE
         }

@@ -16,7 +16,7 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 
 **Share pictures.** Sharing a moment or a conquered card attaches its picture, drawn on the phone when the server's picture is not ready, so it works for cards of other players and on slow connections. "Download picture" on a moment or a conquered card saves the picture to your gallery without sharing anything.
 
-**Conquered cards.** The suggested label comes from the fields on the card's front, without template text or ID fields. Two short fields, such as a word and its reading, are shown together.
+**Conquered cards.** The suggested label comes from the fields on the card's front, without template text or ID fields. Two short fields, such as a word and its reading, are shown together. A lapse counts only when you pressed Again: the app sends your review history once more, with the button pressed, to a server that stores it.
 
 **Sign-in.** The app remembers your username for each server. With only one linked sign-in, it skips the choice of provider. The Password row says how to get a first password: sign in again with a linked sign-in, or ask the person who runs your server.
 
@@ -30,4 +30,4 @@ Update your server to this companion release for "Hide for me" on Global, public
 
 Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then open Settings → AnkiQuest → Account → Sign in or create account. Later releases are offered inside the app.
 
-Study uploads contain review history (card id, timestamp, previous interval, time taken, review type and your time-zone offset), never card content. Social actions send the invitation or message you choose to share.
+Study uploads contain review history (card id, timestamp, previous interval, time taken, review type, the button pressed and your time-zone offset), never card content. Social actions send the invitation or message you choose to share.

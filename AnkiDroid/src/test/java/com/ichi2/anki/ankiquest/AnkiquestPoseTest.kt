@@ -47,11 +47,25 @@ class AnkiquestPoseTest {
                 AnkiquestCompanion.art(pose, choice)
             }
         }
+        val aki = core.map { AnkiquestCompanion.art(it, Choice.AKI) }
+        assertEquals(
+            listOf(
+                R.drawable.aki_face,
+                R.drawable.aki_asleep,
+                R.drawable.aki_celebrate,
+                R.drawable.aki_streak,
+                R.drawable.aki_sad,
+                R.drawable.aki_hopeful,
+                R.drawable.aki_frozen,
+                R.drawable.aki_neglected,
+            ),
+            aki,
+        )
         val ankilope = core.map { AnkiquestCompanion.art(it, Choice.ANKILOPE) }
         assertEquals(
             listOf(
                 R.drawable.ankilope_face,
-                R.drawable.ankilope_sleeping,
+                R.drawable.ankilope_asleep,
                 R.drawable.ankilope_celebrate,
                 // Interim until her on-fire art exists.
                 R.drawable.ankilope_study,
@@ -69,6 +83,17 @@ class AnkiquestPoseTest {
         assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.ANKILOPE))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.art(AnkiquestPose.LEECH_DEFEATED, Choice.ANKILOPE))
         assertEquals(R.drawable.ankilope_study, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, Choice.ANKILOPE))
-        assertEquals(R.drawable.aki_freeze, AnkiquestCompanion.art(AnkiquestPose.FROZEN_2, Choice.AKI))
+        // Aki has no art for the frozen levels: all three show her frozen pose.
+        assertEquals(R.drawable.aki_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_2, Choice.AKI))
+        assertEquals(R.drawable.aki_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.AKI))
+    }
+
+    @Test
+    fun `thawing and almost show the frozen and hopeful poses`() {
+        // They are moods, not poses (AnkiQuest-Server#45): each companion shows its own frozen and hopeful art.
+        for (choice in Choice.entries) {
+            assertEquals(AnkiquestCompanion.art(AnkiquestPose.FROZEN, choice), AnkiquestMood.pose(AnkiquestMood.Mood.THAWING, 0, choice))
+            assertEquals(AnkiquestCompanion.art(AnkiquestPose.HOPEFUL, choice), AnkiquestMood.pose(AnkiquestMood.Mood.ALMOST, 0, choice))
+        }
     }
 }

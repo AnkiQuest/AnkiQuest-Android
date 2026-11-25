@@ -63,10 +63,12 @@ Commit the data, SHA and any ownership/test changes together. No merge
 ordering is required. When the server change reaches master, the next bump
 has identical data or a small follow-up.
 
-The API-contract, shared-fixtures and art-check workflows accept an optional
+The API-contract and shared-fixtures workflows accept an optional
 `server_ref` on manual dispatch. Blank means the committed pin. An explicit
-ref tests its API examples, compares its data with the committed snapshot or
-checks the app art against its exporter; it does not change master. Missing/empty server examples fail clearly.
+ref tests its API examples or compares its data with the committed snapshot;
+it does not change master. Missing/empty server examples fail clearly. The art
+check runs only for pull requests, merge queue groups and master pushes, always
+using the committed pin.
 
 The server's `android-contract` check rejects removal or changed JSON types
 for Android's consumed examples; additive changes remain allowed. Server
