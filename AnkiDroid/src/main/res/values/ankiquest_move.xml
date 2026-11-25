@@ -7,7 +7,11 @@
     <string name="ankiquest_move_accept">Move</string>
     <string name="ankiquest_move_decline">No</string>
     <string name="ankiquest_move_loading">Moving your settings and login…</string>
+    <!-- The receipt when this app opens the shared AnkiDroid folder by default. -->
     <string name="ankiquest_move_done_sync">Settings and login moved. If both apps use the shared AnkiDroid folder, force-stop the old AnkiQuest in Android settings before continuing. AnkiWeb sync starts after the collection opens.</string>
     <string name="ankiquest_move_done_export">Settings and login moved. If both apps use the shared AnkiDroid folder, force-stop the old AnkiQuest in Android settings before continuing. If the apps use separate folders, export the collection from the old app and import it here.</string>
+    <!-- The receipt when this app can only use its own folder, so the collection cannot be shared. -->
+    <string name="ankiquest_move_done_private_sync">Settings and login moved. Your collection comes from AnkiWeb with the first sync, which starts now.</string>
+    <string name="ankiquest_move_done_private_export">Settings and login moved. Your collection is still in the old AnkiQuest: use Export collection there, then import the file here.</string>
     <string name="ankiquest_move_failed">The old AnkiQuest did not hand over its settings. Set up this app as usual.</string>
 </resources>
