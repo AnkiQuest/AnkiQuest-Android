@@ -15,6 +15,7 @@ import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.ankiquest.AnkiquestDebugMenu
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.storage.CollectionHelper
@@ -47,6 +48,8 @@ class DeveloperOptionsFragment : SettingsFragment() {
 
     override fun initSubscreen() {
         setupEnableDeveloperOptions()
+        // AnkiQuest: the secret debug menu for today's mood and pose.
+        AnkiquestDebugMenu.attach(this)
         requirePreference<SwitchPreferenceCompat>(R.string.dev_bottom_nav_key).isVisible =
             resources.getBoolean(R.bool.bottom_navigation_available)
         requirePreference<SwitchPreferenceCompat>(R.string.dev_material_you_key).apply {

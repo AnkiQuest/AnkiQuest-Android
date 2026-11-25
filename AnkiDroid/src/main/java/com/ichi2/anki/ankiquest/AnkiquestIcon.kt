@@ -121,11 +121,12 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     }
 
     /**
-     * The icon for [day]'s mood; the icon has one frozen face, also for a freeze in effect and
-     * thawing, one sleepy face, also for the away levels, and none for hopeful or almost.
+     * The icon for the player's own [day], with the debug menu's overrides; the icon has one frozen
+     * face, also for a freeze in effect and thawing, one sleepy face, also for the away levels, and
+     * none for hopeful or almost.
      */
     private fun mood(day: AnkiquestDay.Verdict?): Mood =
-        when (AnkiquestMood.of(day, 0, AnkiquestMood.Goal.OPEN)) {
+        when (AnkiquestMood.today(day, 0, AnkiquestMood.Goal.OPEN)) {
             AnkiquestMood.Mood.FIRE -> Mood.HAPPY
             AnkiquestMood.Mood.SAD -> Mood.WORRIED
             AnkiquestMood.Mood.FREEZE,

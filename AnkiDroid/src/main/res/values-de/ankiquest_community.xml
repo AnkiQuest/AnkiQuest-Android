@@ -102,4 +102,7 @@
         <item quantity="other">%1$s hat endlich „%2$s“ gelernt, eine Karte, die %3$d-mal vergessen wurde. 🏆</item>
     </plurals>
     <string name="aq_conquest_share_deck">Aus meinem Stapel „%1$s“.</string>
+    <string name="aq_conquest_deck">Aus deinem Stapel %1$s</string>
+    <string name="aq_conquest_popup_card">„%1$s“</string>
+    <string name="aq_conquest_popup_open">Karte ansehen</string>
 </resources>

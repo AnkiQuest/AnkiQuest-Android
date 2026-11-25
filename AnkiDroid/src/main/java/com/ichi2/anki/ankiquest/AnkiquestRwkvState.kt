@@ -30,8 +30,8 @@ internal enum class RwkvSwitch {
  * The RWKV scheduler on this phone. Only [Ready] may change scheduling; [Off] and [Refused] leave
  * Anki's own scheduler (FSRS or SM-2) in charge. With [NoRwkvEngine] the state never reaches [Ready].
  *
- * hill decided (#442) that a blocked scheduler is refused rather than left on: turning it on while
- * a check fails keeps the switch off and reports why.
+ * A blocked scheduler is refused rather than left on (#442): turning it on while a check fails
+ * keeps the switch off and reports why.
  */
 internal sealed interface RwkvState {
     /** The switch this state shows and saves. */

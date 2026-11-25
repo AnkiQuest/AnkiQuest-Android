@@ -8,4 +8,20 @@
     <string name="ankiquest_rwkv_not_enough_memory">Indisponible : ce téléphone n’a pas assez de mémoire pour ta collection. La planification ne change pas.</string>
     <string name="ankiquest_rwkv_no_model">Indisponible : choisis d’abord un fichier de modèle RWKV. La planification ne change pas.</string>
     <string name="ankiquest_rwkv_ready">Activé : RWKV planifie tes révisions.</string>
+
+    <string name="ankiquest_rwkv_forecast_title">Prévision RWKV</string>
+    <string name="ankiquest_rwkv_forecast_note">si tu arrêtes de réviser maintenant</string>
+    <string name="ankiquest_rwkv_forecast_now">dues %1$d | proches %2$d | sûres %3$d</string>
+    <string name="ankiquest_rwkv_forecast_later">dues %1$d · +%2$d dans 1 h · +%3$d dans 3 h · %4$d d’ici demain</string>
+    <string name="ankiquest_rwkv_recall_title">Rappel RWKV maintenant</string>
+    <plurals name="ankiquest_rwkv_recall_below">
+        <item quantity="one">%1$d carte sur %2$d (%3$s) sous %4$s</item>
+        <item quantity="many">%1$d cartes sur %2$d (%3$s) sous %4$s</item>
+        <item quantity="other">%1$d cartes sur %2$d (%3$s) sous %4$s</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_recall_below_targets">
+        <item quantity="one">%1$d carte sur %2$d (%3$s) sous sa rétention souhaitée</item>
+        <item quantity="many">%1$d cartes sur %2$d (%3$s) sous leur rétention souhaitée</item>
+        <item quantity="other">%1$d cartes sur %2$d (%3$s) sous leur rétention souhaitée</item>
+    </plurals>
 </resources>

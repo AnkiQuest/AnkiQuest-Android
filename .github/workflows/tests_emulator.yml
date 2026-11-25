@@ -41,12 +41,12 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: read # code-changed lists the pull request's files
     outputs:
       code: ${{ steps.changed.outputs.code }}
     steps:
       - id: changed
-        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@master
         with:
           docs: |
             *.md
@@ -75,6 +75,8 @@ jobs:
     steps:
       - id: build-matrix
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          INPUTS: ${{ toJSON(inputs) }}
         with:
           script: |
             // by default, we will run one iteration
@@ -82,7 +84,7 @@ jobs:
 
             // workflow dispatch will be a drop-down of different options
             if (context.eventName === "workflow_dispatch") {
-              const inputs = ${{ toJSON(inputs) }}
+              const inputs = JSON.parse(process.env.INPUTS)
               console.log('inputs is: ' + JSON.stringify(inputs))
 
               const iterationInput = inputs.iterations
@@ -132,7 +134,9 @@ jobs:
               "include": include
             }
       - name: Debug Output
-        run: echo "${{ steps.build-matrix.outputs.result }}"
+        env:
+          MATRIX: ${{ steps.build-matrix.outputs.result }}
+        run: echo "$MATRIX"
 
   # This uses the matrix generated from the matrix-prep stage
   # it will run unit tests on whatever OS combinations are desired
@@ -169,6 +173,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 50
 
       - name: Enable KVM group perms

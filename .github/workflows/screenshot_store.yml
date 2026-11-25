@@ -61,7 +61,10 @@ jobs:
   store-screenshot-test:
     name: ${{ github.event_name == 'pull_request' && 'test' || 'store' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Under Maven Central throttling the recording build needed 31 minutes on master e1480ce6
+    # (run 45436455564); a store run killed by its own timeout leaves the commit without a
+    # baseline, so the compare of every PR built on it fails after its wait.
+    timeout-minutes: 60
 
     permissions:
       contents: read # for clone
@@ -81,6 +84,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # AnkiQuest: the screenshot tests read AnkiQuest-Server master's API examples
       # (docs/ankiquest-server-data.md).

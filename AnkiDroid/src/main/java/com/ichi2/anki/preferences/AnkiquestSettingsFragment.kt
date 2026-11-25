@@ -252,6 +252,8 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val create = view.findViewById<CheckBox>(R.id.ankiquest_sign_in_create)
         val display = view.findViewById<EditText>(R.id.ankiquest_sign_in_display)
         val hint = view.findViewById<TextView>(R.id.ankiquest_sign_in_hint)
+        val public = view.findViewById<CheckBox>(R.id.ankiquest_sign_in_public)
+        val publicHint = view.findViewById<TextView>(R.id.ankiquest_sign_in_public_hint)
         val status = view.findViewById<TextView>(R.id.ankiquest_sign_in_status)
         val prefs = AnkiDroidApp.sharedPrefs()
         server.setText(prefs.getString(Ankiquest.PREF_URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
@@ -276,8 +278,8 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 .show()
         val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
         create.setOnCheckedChangeListener { _, creating ->
-            display.visibility = if (creating) View.VISIBLE else View.GONE
-            hint.visibility = if (creating) View.VISIBLE else View.GONE
+            val shown = if (creating) View.VISIBLE else View.GONE
+            listOf(display, public, publicHint, hint).forEach { it.visibility = shown }
             submit.setText(if (creating) R.string.ankiquest_sign_in_submit_create else R.string.ankiquest_sign_in_submit)
         }
         submit.setOnClickListener {
@@ -297,6 +299,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     display = display.text.toString().trim(),
                     create = create.isChecked,
                     code = if (code.isShown) code.text.toString().trim() else "",
+                    profile = if (public.isChecked) AnkiquestAccount.Profile.PUBLIC else AnkiquestAccount.Profile.PRIVATE,
                 )
             if (credentials.url.isEmpty() || credentials.user.isEmpty() || credentials.password.isEmpty()) {
                 status.setText(R.string.ankiquest_sign_in_missing)
