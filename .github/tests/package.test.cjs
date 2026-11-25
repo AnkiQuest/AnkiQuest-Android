@@ -11,7 +11,7 @@ const gradle = read("AnkiDroid/build.gradle.kts");
 const workflows = [".github/workflows/ankiquest_apk.yml", ".github/workflows/ankiquest_reproducible.yml"];
 
 test("every build installs as org.ankiquest.ankidroid and keeps the com.ichi2.anki namespace", () => {
-    // hill: "org.ankiquest.ankidroid"; no build keeps com.ichi2.anki (#461).
+    // The app id is org.ankiquest.ankidroid; no build keeps com.ichi2.anki (#461).
     const ids = [...gradle.matchAll(/\bapplicationId = "([^"]*)"/g)].map((match) => match[1]);
     assert.deepEqual(ids, [PACKAGE]);
     assert.match(gradle, /defaultConfig \{\n\s*applicationId = "org\.ankiquest\.ankidroid"\n/);
