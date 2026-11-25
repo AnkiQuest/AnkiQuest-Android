@@ -2,6 +2,7 @@
 @file:Suppress("DEPRECATION")
 
 import com.android.build.api.variant.FilterConfiguration.FilterType
+import com.ichi2.anki.gradle.UpstreamCommit
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.addAnkiBackendDependencies
@@ -81,12 +82,8 @@ val gitCommitHash =
 val upstreamCommitHash =
     providers
         .gradleProperty("upstreamCommit")
-        .map { sha ->
-            if (!sha.matches(Regex("[0-9a-f]{40}"))) {
-                throw GradleException("upstreamCommit must be a full commit hash")
-            }
-            sha
-        }.orElse("unknown")
+        .map(UpstreamCommit::of)
+        .orElse(UpstreamCommit.UNKNOWN)
 
 /**
  * Where the build gets its updates: -PankiquestUpdates=github|none, default none.

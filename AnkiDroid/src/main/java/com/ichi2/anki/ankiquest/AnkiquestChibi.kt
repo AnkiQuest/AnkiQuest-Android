@@ -6,7 +6,7 @@ package com.ichi2.anki.ankiquest
  * Chibi companions: an Easter egg, like Android's developer mode. Tapping a companion quickly
  * enough times in a row turns it into its chibi, once the player has unlocked that companion.
  * The rule and the chibis are the shared fixture `tests/fixtures/companion_unlock.json` in
- * AnkiQuest/ankiquest (entries of kind `taps`); the app counts and only tells the server the
+ * AnkiQuest-Server (entries of kind `taps`); the app counts and only tells the server the
  * result (`POST /api/unlocks/{user}`).
  */
 internal object AnkiquestChibi {
