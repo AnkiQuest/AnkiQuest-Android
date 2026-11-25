@@ -13,6 +13,7 @@ import android.os.Parcelable
 import androidx.annotation.CheckResult
 import androidx.annotation.RequiresApi
 import androidx.core.content.edit
+import com.ichi2.anki.ankiquest.AnkiquestMove
 import com.ichi2.anki.backend.DatabaseCorruption
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.permissions.LEGACY_POST_NOTIFICATIONS
@@ -335,6 +336,11 @@ fun selectStoragePermissions(context: Context): StoragePermissionSet {
     // `null`: no collection path is set
     val currentFolderIsLegacy = isLegacyStorage(context, setCollectionPath = false)
     if (currentFolderIsLegacy == false) {
+        return StoragePermissionSet.APP_PRIVATE
+    }
+
+    // Fresh installs of the new package must open a separate collection from the old app.
+    if (currentFolderIsLegacy == null && context.packageName == AnkiquestMove.NEW_PACKAGE) {
         return StoragePermissionSet.APP_PRIVATE
     }
 

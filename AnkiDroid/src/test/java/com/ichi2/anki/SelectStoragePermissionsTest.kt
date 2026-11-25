@@ -4,10 +4,12 @@ package com.ichi2.anki
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.ankiquest.AnkiquestMove
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.storage.CollectionHelper
 import com.ichi2.testutils.EmptyApplication
@@ -54,6 +56,18 @@ class SelectStoragePermissionsTest {
     fun startupQ() {
         assertThat(selectStoragePermissions(canManageExternalStorage = false), equalTo(StoragePermissionSet.LEGACY_ACCESS))
         assertThat(selectStoragePermissions(canManageExternalStorage = true), equalTo(StoragePermissionSet.LEGACY_ACCESS))
+    }
+
+    @Config(sdk = [27, 28])
+    @Test
+    fun `the new AnkiQuest package starts with a separate collection`() {
+        val newApp =
+            object : ContextWrapper(context) {
+                override fun getPackageName(): String = AnkiquestMove.NEW_PACKAGE
+            }
+        newApp.sharedPrefs().edit { remove(CollectionHelper.PREF_COLLECTION_PATH) }
+
+        assertThat(selectStoragePermissions(newApp), equalTo(StoragePermissionSet.APP_PRIVATE))
     }
 
     @SuppressLint("InlinedApi")
