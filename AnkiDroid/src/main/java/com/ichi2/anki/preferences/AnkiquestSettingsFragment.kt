@@ -46,6 +46,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.ankiquest.AndroidRwkvRam
 import org.ankiquest.Ankiquest
 import org.ankiquest.AnkiquestAccount
 import org.ankiquest.AnkiquestAccountSettings
@@ -64,6 +65,7 @@ import org.ankiquest.AnkiquestIcon
 import org.ankiquest.AnkiquestNotificationHealth
 import org.ankiquest.AnkiquestNotifier
 import org.ankiquest.AnkiquestPoll
+import org.ankiquest.AnkiquestRwkv
 import org.ankiquest.AnkiquestSettingsSync
 import org.ankiquest.AnkiquestSharing
 import org.ankiquest.AnkiquestSubscriptions
@@ -71,6 +73,9 @@ import org.ankiquest.AnkiquestUndo
 import org.ankiquest.AnkiquestUpdater
 import org.ankiquest.HomeAccount
 import org.ankiquest.HomeAccountChanged
+import org.ankiquest.RwkvRam
+import org.ankiquest.RwkvState
+import org.ankiquest.RwkvSwitch
 import org.json.JSONObject
 import java.util.Date
 import java.util.TimeZone
@@ -574,6 +579,50 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             openPrivacyNotice()
             true
         }
+        bindRwkv()
+    }
+
+    /**
+     * Turning the RWKV switch on runs the checks first: it stays on only if they pass, otherwise
+     * it stays off and says why (#433; hill's decision in #442). [AnkiquestRwkv] saves the switch,
+     * so the listener never lets the preference change itself.
+     */
+    private fun bindRwkv() {
+        requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_rwkv_key).setOnPreferenceChangeListener { _, enabled ->
+            if (enabled == true) {
+                runRwkv({ AnkiquestRwkv.enable(it) }) { state ->
+                    if (state is RwkvState.Refused) {
+                        showSnackbar(AnkiquestRwkv.summary(state))
+                    }
+                }
+            } else {
+                showRwkv(AnkiquestRwkv.disable())
+            }
+            false
+        }
+        runRwkv({ AnkiquestRwkv.restore(it) }) { }
+    }
+
+    /** Runs a transition that reads the phone and collection, then shows its state. */
+    private fun runRwkv(
+        transition: suspend (RwkvRam) -> RwkvState,
+        after: (RwkvState) -> Unit,
+    ) {
+        val ram = AndroidRwkvRam(requireContext().applicationContext)
+        launchCatchingTask {
+            val state = transition(ram)
+            if (!isAdded) {
+                return@launchCatchingTask
+            }
+            showRwkv(state)
+            after(state)
+        }
+    }
+
+    private fun showRwkv(state: RwkvState) {
+        val rwkv = findPreference<SwitchPreferenceCompat>(getString(R.string.ankiquest_rwkv_key)) ?: return
+        rwkv.isChecked = state.switch == RwkvSwitch.ON
+        rwkv.setSummary(AnkiquestRwkv.summary(state))
     }
 
     /**

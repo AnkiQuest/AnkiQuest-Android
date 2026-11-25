@@ -20,6 +20,7 @@ import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
+import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
@@ -41,18 +42,20 @@ internal class AnkiquestMeSections(
     private val activity: AnkiActivity,
     savedState: Bundle?,
 ) {
-    enum class Destination { RECORDS, HISTORY }
+    enum class Destination { RECORDS, HISTORY, STUDY_TIME }
 
     private val restored = savedState?.takeIf { it.getString(STATE_ACCOUNT) == AnkiquestHomeData.account()?.scope }
     private val initial = Destination.entries.firstOrNull { it.name == activity.intent.getStringExtra(EXTRA_SECTION) }
     private var pendingTarget = initial.takeIf { savedState == null }
     private val records = RecordsSection(activity, restored, initial)
     private val history = HistorySection(activity, restored, initial)
+    private val studyTime = StudyTimeSection(activity, restored, initial)
     private val root =
         LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             addView(records.root)
             addView(history.root)
+            addView(studyTime.root)
         }
 
     fun attach(parent: LinearLayout) {
@@ -63,18 +66,21 @@ internal class AnkiquestMeSections(
     fun refresh() {
         records.refresh()
         history.refresh()
+        studyTime.refresh()
     }
 
     fun save(out: Bundle) {
         out.putString(STATE_ACCOUNT, AnkiquestHomeData.account()?.scope)
         records.save(out)
         history.save(out)
+        studyTime.save(out)
     }
 
     fun showTarget() {
         when (pendingTarget) {
             Destination.RECORDS -> records.showHeader()
             Destination.HISTORY -> history.showHeader()
+            Destination.STUDY_TIME -> studyTime.showHeader()
             null -> return
         }
         pendingTarget = null
@@ -665,5 +671,92 @@ private class HistorySection(
     companion object {
         private const val STATE_YEAR = "ankiquest.history_year"
         private const val STATE_DAY = "ankiquest.history_day"
+    }
+}
+
+/** Study time from this device's collection: it needs no account and counts reviews not uploaded yet. */
+private class StudyTimeSection(
+    activity: AnkiActivity,
+    saved: Bundle?,
+    initial: AnkiquestMeSections.Destination?,
+) : MeSection(
+        activity,
+        AnkiquestMeSections.Destination.STUDY_TIME,
+        R.string.aq_study_time_title,
+        R.string.aq_study_time_loading,
+        R.id.aq_me_study_time_content,
+        R.id.aq_me_study_time_loading,
+        saved,
+        initial,
+    ) {
+    /** What the section shows: nothing read yet, the totals, or why they could not be read. */
+    private sealed interface Shown {
+        data object Loading : Shown
+
+        data class Read(
+            val totals: AnkiquestStudyTime.Totals,
+        ) : Shown
+
+        data class Failed(
+            val message: String,
+        ) : Shown
+    }
+
+    private var shown: Shown = Shown.Loading
+    private var loadJob: Job? = null
+
+    override fun saveFilters(out: Bundle) = Unit
+
+    override fun reload() {
+        loadJob?.cancel()
+        progress.isVisible = content.isVisible
+        if (shown !is Shown.Read) {
+            shown = Shown.Loading
+        }
+        render()
+        loadJob =
+            lifecycleScope.launch {
+                // TimeManager, not the host clock, so tests choose the day.
+                val now = TimeManager.time.intTimeMS()
+                shown =
+                    try {
+                        Shown.Read(withCol { AnkiquestStudyTime.load(this, now) })
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Shown.Failed(e.localizedMessage ?: e.javaClass.simpleName)
+                    }
+                progress.isVisible = false
+                render()
+            }
+    }
+
+    private fun render() {
+        val position = scroll.scrollY
+        content.removeAllViews()
+        views.text(content, getString(R.string.aq_study_time_intro), small = true)
+        when (val state = shown) {
+            Shown.Loading -> views.text(content, getString(R.string.aq_study_time_loading), small = true)
+            is Shown.Failed -> views.text(content, getString(R.string.aq_study_time_error, state.message), small = true)
+            is Shown.Read -> renderTotals(state.totals)
+        }
+        scroll.post { scroll.scrollTo(0, position) }
+    }
+
+    private fun renderTotals(totals: AnkiquestStudyTime.Totals) {
+        // The same rows, in the same order, as the add-on's Study time tab.
+        views.tiles(
+            content,
+            listOf(
+                totals.todayMs to R.string.aq_study_time_today,
+                totals.weekMs to R.string.aq_study_time_week,
+                totals.monthMs to R.string.aq_study_time_month,
+                totals.totalMs to R.string.aq_study_time_total,
+                totals.averageMs to R.string.aq_study_time_average,
+            ).map { (ms, label) -> AnkiquestStudyTime.duration(this, ms) to getString(label) },
+        )
+        if (totals.studyDays == 0) {
+            views.text(content, getString(R.string.aq_study_time_empty), small = true)
+        }
     }
 }

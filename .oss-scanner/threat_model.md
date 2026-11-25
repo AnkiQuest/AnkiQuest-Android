@@ -114,8 +114,9 @@ exposing credentials. State the attacker-controlled input, required user actions
 Android and WebView versions and permissions, and the resulting security impact.
 
 This checkout contains the Android app and its Kotlin/Java libraries. The native
-Anki backend is downloaded as a dependency from `ankidroid/Anki-Android-Backend`,
-which incorporates `ankitects/anki`. Identify the responsible component when a
+Anki backend is downloaded as a dependency from `AnkiQuest/AnkiQuest-Android-Backend`
+(a fork of `ankidroid/Anki-Android-Backend`), which incorporates `AnkiQuest/AnkiQuest-Anki`
+(a fork of `ankitects/anki`). Identify the responsible component when a
 finding crosses that boundary. For a suspected upstream Anki issue, aim for a
 small reproduction in `ankitects/anki` and keep the report concise.
 

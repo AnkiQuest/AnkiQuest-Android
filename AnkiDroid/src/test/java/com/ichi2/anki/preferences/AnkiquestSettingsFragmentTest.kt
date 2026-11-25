@@ -41,10 +41,12 @@ import org.ankiquest.AnkiquestDeckSharing.Setting
 import org.ankiquest.AnkiquestHomeData
 import org.ankiquest.AnkiquestNotifier
 import org.ankiquest.AnkiquestPoll
+import org.ankiquest.AnkiquestRwkv
 import org.ankiquest.AnkiquestSharing
 import org.ankiquest.AnkiquestSubscriptions
 import org.ankiquest.HomeAccount
 import org.ankiquest.IncomingSubscriptions
+import org.ankiquest.RwkvSwitch
 import org.ankiquest.SubscriptionRepository
 import org.json.JSONObject
 import org.junit.After
@@ -285,6 +287,33 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
         assertFalse(switch.isChecked)
         coVerify(exactly = 1) { Ankiquest.setNotificationSwitch(field, false) }
+    }
+
+    @Test
+    fun `RWKV switch is off by default and refuses to turn on without an engine`() {
+        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        assertFalse(rwkv.isVisible, "An unavailable scheduler must stay out of settings")
+        assertFalse(rwkv.isChecked)
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
+
+        // This build has no engine: the switch stays off and says why.
+        rwkv.performClick()
+        idle()
+        assertFalse(rwkv.isChecked)
+        assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+    }
+
+    @Test
+    fun `a saved RWKV switch that is now blocked opens off`() {
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestRwkv.PREF_ENABLED, true) }
+
+        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        idle()
+        assertFalse(rwkv.isVisible, "A saved switch must not expose an unavailable scheduler")
+        assertFalse(rwkv.isChecked)
+        assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test

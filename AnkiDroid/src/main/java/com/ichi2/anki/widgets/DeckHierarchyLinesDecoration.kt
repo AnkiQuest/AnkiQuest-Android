@@ -95,10 +95,13 @@ class DeckHierarchyLinesDecoration(
 
         // Gather visible views and sort them by adapter position to ensure we process them top-to-bottom.
         // RecyclerView.getChildAt() order is not guaranteed to match adapter position order, especially during animations.
+        // The deck adapter may be wrapped (e.g. in a ConcatAdapter), so only deck rows are used,
+        // indexed by their position in the deck adapter.
         val visibleViews =
             parent.children
-                .filter { parent.getChildViewHolder(it).bindingAdapter === adapter }
-                .map { parent.getChildViewHolder(it).bindingAdapterPosition to it }
+                .map { parent.getChildViewHolder(it) to it }
+                .filter { (holder, _) -> holder.bindingAdapter === adapter }
+                .map { (holder, view) -> holder.bindingAdapterPosition to view }
                 .filter { (pos, _) -> pos != RecyclerView.NO_POSITION }
                 .sortedBy { (pos, _) -> pos }
                 .toList()

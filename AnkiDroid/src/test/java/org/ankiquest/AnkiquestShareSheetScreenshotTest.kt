@@ -75,7 +75,7 @@ class AnkiquestShareSheetScreenshotTest : ScreenshotTest() {
             AnkiquestShareSheet(
                 screen,
                 identity,
-                AnkiquestSharing.MomentRef.Win(17),
+                AnkiquestShareSheet.Subject.Known(AnkiquestSharing.MomentRef.Win(17)),
                 AnkiquestShare.Card("Level 54", "I reached level 54 with 90,000 XP.", R.drawable.aki_level_up),
                 elsewhere = {},
             )

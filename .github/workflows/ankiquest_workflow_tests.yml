@@ -7,7 +7,10 @@ on:
     paths:
       - ".github/workflows/ankiquest_*.yml"
       - ".github/tests/*.test.cjs"
-      - ".github/ankiquest_screenshot_baseline.js"
+      - ".github/wait_for_screenshot_baseline.js"
+      - ".github/workflows/lint.yml"
+      - ".github/workflows/screenshot_*.yml"
+      - ".github/workflows/tests_*.yml"
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
@@ -22,13 +25,21 @@ on:
       - "**/*.xml"
       - "**/*.pro"
       - "**/META-INF/services/**"
+      # upstream-backend.test.cjs: files that could name a backend artifact
+      - "gradle/**"
+      - "**/*.gradle.kts"
+      - "buildSrc/**"
+      - "**/*.md"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
     branches: [master]
     paths:
       - ".github/workflows/ankiquest_*.yml"
       - ".github/tests/*.test.cjs"
-      - ".github/ankiquest_screenshot_baseline.js"
+      - ".github/wait_for_screenshot_baseline.js"
+      - ".github/workflows/lint.yml"
+      - ".github/workflows/screenshot_*.yml"
+      - ".github/workflows/tests_*.yml"
       - ".github/ankiquest_server_*.cjs"
       - "AnkiDroid/src/test/resources/ankiquest-server.sha"
       - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
@@ -43,6 +54,11 @@ on:
       - "**/*.xml"
       - "**/*.pro"
       - "**/META-INF/services/**"
+      # upstream-backend.test.cjs: files that could name a backend artifact
+      - "gradle/**"
+      - "**/*.gradle.kts"
+      - "buildSrc/**"
+      - "**/*.md"
 
 permissions:
   contents: read

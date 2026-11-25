@@ -2,43 +2,16 @@
 name: ankiquest art check
 
 # Runs the server's art exporter against the app's drawables, at the server commit pinned in
-# ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests and
-# pushes, never on a schedule or by hand: a manual server ref would run arbitrary code with the
-# Rust cache shared with master.
-#
-# Not a required check and not run in the merge queue, so documentation-only changes skip it
-# with paths-ignore. The globs are the documentation list of ankiquest_lint.yml's changes job
-# (.github/tests/docs-only.test.cjs).
+# ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests,
+# merge queue groups and pushes, never on a schedule or by hand: a manual server ref would run
+# arbitrary code with the Rust cache shared with master.
 on:
   pull_request:
-    paths-ignore:
-      - '*.md'
-      - '*/README.md'
-      - '*/*/README.md'
-      - '.agents/**/*.md'
-      - '.github/workflows/README.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/pull_request_template.md'
-      - '.idea/**/*.md'
-      - '.oss-scanner/*.md'
-      - 'LICENSE*'
-      - 'LICENSES/**'
-      - 'docs/**'
+  # Required check: the merge queue waits for it on its merge commit.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [master]
-    paths-ignore:
-      - '*.md'
-      - '*/README.md'
-      - '*/*/README.md'
-      - '.agents/**/*.md'
-      - '.github/workflows/README.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/pull_request_template.md'
-      - '.idea/**/*.md'
-      - '.oss-scanner/*.md'
-      - 'LICENSE*'
-      - 'LICENSES/**'
-      - 'docs/**'
 
 permissions:
   contents: read

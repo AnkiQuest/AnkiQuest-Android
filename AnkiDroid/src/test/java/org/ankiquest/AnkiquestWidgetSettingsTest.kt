@@ -16,7 +16,6 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
-import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -32,7 +31,6 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
 import java.time.Duration
 import kotlin.math.abs
 import kotlin.test.assertEquals
@@ -380,41 +378,37 @@ class AnkiquestWidgetSettingsTest : RobolectricTest() {
         block: (List<String>) -> Unit,
     ) {
         val requests = java.util.concurrent.CopyOnWriteArrayList<String>()
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { exchange ->
-            val path = exchange.requestURI.path
-            requests.add(path + (exchange.requestURI.rawQuery?.let { "?$it" } ?: ""))
-            if (path.startsWith("/api/decks/")) {
-                Thread.sleep(delay.toMillis())
-            }
-            val body =
-                when {
-                    path.startsWith("/api/decks/") -> decks
-                    path.startsWith("/api/social/") ->
-                        """{"groups":[{"id":7,"name":"Study group","members":[{"user":"ana","display":"Ana"}]}]}"""
-                    path == "/api/leaderboard" -> board().toString()
-                    else -> "{}"
+        val server =
+            AnkiquestTestServer { request ->
+                val path = request.path
+                requests.add(path + (request.uri.rawQuery?.let { "?$it" } ?: ""))
+                if (path.startsWith("/api/decks/")) {
+                    Thread.sleep(delay.toMillis())
                 }
-            val bytes = body.toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.set("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+                val body =
+                    when {
+                        path.startsWith("/api/decks/") -> decks
+                        path.startsWith("/api/social/") ->
+                            """{"groups":[{"id":7,"name":"Study group","members":[{"user":"ana","display":"Ana"}]}]}"""
+                        path == "/api/leaderboard" -> board().toString()
+                        else -> "{}"
+                    }
+                TestResponse.json(body)
+            }
         // Placing a widget would start a poll in the background, drawing the widgets meanwhile.
         mockkObject(AnkiquestPoll)
         every { AnkiquestPoll.refreshNow(any()) } just Runs
         every { AnkiquestPoll.schedule(any()) } just Runs
         try {
             AnkiDroidApp.sharedPrefs().edit {
-                putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+                putString(Ankiquest.PREF_URL, server.url)
                 putString(Ankiquest.PREF_USER, "member")
                 putString(Ankiquest.PREF_TOKEN, "member-token")
             }
             block(requests)
         } finally {
             unmockkObject(AnkiquestPoll)
-            server.stop(0)
+            server.close()
         }
     }
 
