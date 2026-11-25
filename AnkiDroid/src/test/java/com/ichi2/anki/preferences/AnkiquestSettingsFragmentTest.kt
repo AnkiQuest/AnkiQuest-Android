@@ -293,29 +293,29 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     @Test
     fun `RWKV switch is off by default and refuses to turn on without an engine`() {
-        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        val rwkv = open().switch(AnkiDroidR.string.ankiquest_rwkv_key)
         assertFalse(rwkv.isVisible, "An unavailable scheduler must stay out of settings")
         assertFalse(rwkv.isChecked)
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
+        assertEquals(targetContext.getString(AnkiDroidR.string.ankiquest_rwkv_off), rwkv.summary.toString())
 
         // This build has no engine: the switch stays off and says why.
         rwkv.performClick()
         idle()
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+        assertEquals(targetContext.getString(AnkiDroidR.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test
     fun `a saved RWKV switch that is now blocked opens off`() {
         AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestRwkv.PREF_ENABLED, true) }
 
-        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
+        val rwkv = open().switch(AnkiDroidR.string.ankiquest_rwkv_key)
         idle()
         assertFalse(rwkv.isVisible, "A saved switch must not expose an unavailable scheduler")
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+        assertEquals(targetContext.getString(AnkiDroidR.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
     }
 
     @Test

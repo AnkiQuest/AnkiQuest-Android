@@ -291,7 +291,7 @@ object AnkiquestMoments {
      * server knows the day and is often shown before the server's notice arrives; that notice's ids
      * are looked up here. Any other moment, or one the server has not confirmed yet, is unchanged.
      */
-    internal fun confirmed(
+    fun confirmed(
         prefs: SharedPreferences,
         account: String,
         moment: Moment,
