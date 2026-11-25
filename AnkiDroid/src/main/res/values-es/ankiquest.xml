@@ -96,6 +96,7 @@
     <string name="ankiquest_check_updates_summary">Instalado: %1$s</string>
     <string name="ankiquest_local_build">Versión local</string>
     <string name="ankiquest_update_none">Tienes la versión más reciente (%1$s).</string>
+    <string name="ankiquest_updates_off">Esta versión no se actualiza sola. La actualiza la tienda desde la que la instalaste.</string>
     <string name="ankiquest_update_check_failed">No se pudieron buscar actualizaciones en GitHub. Inténtalo más tarde.</string>
     <string name="ankiquest_period_hour">esta hora</string>
     <string name="ankiquest_period_day">hoy</string>

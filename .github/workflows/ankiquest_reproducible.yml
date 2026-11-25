@@ -87,7 +87,7 @@ jobs:
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache \
-            -PcustomSuffix=quest -PcustomName="AnkiQuest"
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestUpdates=github
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-${{ matrix.build }}.apk"
           cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-${{ matrix.build }}.txt"
 

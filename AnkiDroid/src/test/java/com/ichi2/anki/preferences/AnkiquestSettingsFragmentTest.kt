@@ -35,6 +35,7 @@ import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
+import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.RwkvSwitch
@@ -662,6 +663,22 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     private fun undoButton(fragment: AnkiquestSettingsFragment): android.view.View? =
         fragment.requireActivity().findViewById(com.google.android.material.R.id.snackbar_action)
+
+    @Test
+    fun `update settings show only in a self-updating build`() {
+        mockkObject(AnkiquestUpdater)
+        try {
+            for (source in AnkiquestUpdater.Source.entries) {
+                every { AnkiquestUpdater.source() } returns source
+                val fragment = open()
+                val shown = source == AnkiquestUpdater.Source.GITHUB
+                assertEquals(shown, fragment.preference<ListPreference>(R.string.ankiquest_update_channel_key).isVisible, source.name)
+                assertEquals(shown, fragment.preference<Preference>(R.string.ankiquest_check_updates_key).isVisible, source.name)
+            }
+        } finally {
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
 
     private fun open(): AnkiquestSettingsFragment {
         val intent = PreferencesActivity.getIntent(targetContext, AnkiquestSettingsFragment::class)
