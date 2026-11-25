@@ -65,5 +65,9 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": []
+    "not_yet": [
+        "share_deck_moment",
+        "share_notification",
+        "share_place"
+    ]
 }

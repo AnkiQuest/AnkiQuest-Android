@@ -8,6 +8,8 @@
     <string name="ankiquest_companion_level_progress">Niveau %1$d sur %2$d</string>
     <string name="ankiquest_companion_hours_goal">Étudier %1$d heures au total</string>
     <string name="ankiquest_companion_hours_progress">%1$d heures sur %2$d</string>
+    <string name="ankiquest_companion_streak_goal">Tenir une série de %1$d jours</string>
+    <string name="ankiquest_companion_streak_progress">%1$d jours sur %2$d</string>
     <plurals name="ankiquest_companion_chibi_hint">
         <item quantity="one">Tu es à %1$d appui de chibi</item>
         <item quantity="many">Tu es à %1$d appuis de chibi</item>

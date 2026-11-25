@@ -47,7 +47,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The companion screen with the server's unlocks example: Bluma unlocked, Ankilope locked at a level. */
+/**
+ * The companion screen with the server's unlocks example: Bluma unlocked, Ankilope locked at a level
+ * and Anki-tan at a streak.
+ */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestCompanionFragmentTest : RobolectricTest() {
     /** `GET /api/unlocks/{user}` as recorded from the pinned server: `unlocks.json`. */
@@ -77,6 +80,18 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     /** The locked Ankilope card's description: its name and both lines. */
     private val lockedAnkilope get() = lockedLines.joinToString(", ")
 
+    /** The locked Anki-tan card's description: her name, her streak goal and the example's streak. */
+    private val lockedAnkiTan: String
+        get() {
+            val progress = JSONObject(unlocksExample).getJSONObject("progress").getJSONObject(Choice.ANKI_TAN.id)
+            val goal = progress.getInt("goal")
+            return listOf(
+                "Anki-tan",
+                targetContext.getString(R.string.ankiquest_companion_streak_goal, goal),
+                targetContext.getString(R.string.ankiquest_companion_streak_progress, progress.getInt("value"), goal),
+            ).joinToString(", ")
+        }
+
     private lateinit var controller: ActivityController<PreferencesActivity>
 
     @Before
@@ -102,7 +117,10 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     @Test
     fun `each companion is a card and the chosen one is checked`() {
         val fragment = open()
-        assertEquals(listOf("Aki", lockedAnkilope, "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
+        assertEquals(
+            listOf("Aki", lockedAnkilope, "Bluma", lockedAnkiTan, "No companion"),
+            fragment.cards().map { it.contentDescription },
+        )
         assertEquals("Aki", fragment.chosen())
 
         fragment.card("Bluma").performClick()
@@ -138,7 +156,7 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
     fun `Ankilope chosen before milestones stays a choice`() {
         coEvery { AnkiquestHomeData.companion(any()) } returns "ankilope"
         val fragment = open()
-        assertEquals(listOf("Aki", "Ankilope", "Bluma", "No companion"), fragment.cards().map { it.contentDescription })
+        assertEquals(listOf("Aki", "Ankilope", "Bluma", lockedAnkiTan, "No companion"), fragment.cards().map { it.contentDescription })
         assertEquals("Ankilope", fragment.chosen())
     }
 
