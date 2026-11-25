@@ -162,8 +162,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Pull requests squash-merge, so look for the bridge's files, not a branch commit.
-          if ! git cat-file -e refs/tags/quest-24:AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/AnkiquestMoveProvider.kt; then
+          # The merge queue keeps the reviewed commit with the old-package updater notice.
+          if ! git merge-base --is-ancestor 5dc88751adc8aec5756a4f9c07dc38f4139f23da refs/tags/quest-24; then
             echo "::error::quest-24 must contain the old-package settings bridge and updater notice"
             exit 1
           fi
