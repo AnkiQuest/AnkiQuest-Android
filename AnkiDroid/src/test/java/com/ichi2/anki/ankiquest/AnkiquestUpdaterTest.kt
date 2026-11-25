@@ -328,20 +328,19 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         controller.get().setTheme(androidx.appcompat.R.style.Theme_AppCompat)
         val host = controller.setup().get()
         saveControllerForCleanup(controller)
-        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val body = "apk".toByteArray()
-        server.createContext("/apk") { exchange ->
-            exchange.use {
-                exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
-                exchange.responseBody.write(body)
+        val server =
+            AnkiquestTestServer { request ->
+                if (request.path != "/apk") {
+                    return@AnkiquestTestServer null
+                }
+                TestResponse(bytes = body)
             }
-        }
-        server.start()
         mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
         try {
             every { AnkiquestUpdater["archiveInfo"](any<Context>(), any<File>()) } returns
                 packageName?.let { name -> PackageInfo().apply { this.packageName = name } }
-            val release = AnkiquestUpdater.Release(41, "Test release", "http://127.0.0.1:${server.address.port}/apk", 3)
+            val release = AnkiquestUpdater.Release(41, "Test release", "${server.url}/apk", 3)
             ReflectionHelpers.callInstanceMethod<Unit>(
                 AnkiquestUpdater,
                 "download",
@@ -354,7 +353,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
             assertFalse(File(File(targetContext.cacheDir, "ankiquest"), "AnkiQuest.apk").exists())
             return ShadowDialog.getLatestDialog() as AlertDialog
         } finally {
-            server.stop(0)
+            server.close()
             unmockkObject(AnkiquestUpdater)
         }
     }
