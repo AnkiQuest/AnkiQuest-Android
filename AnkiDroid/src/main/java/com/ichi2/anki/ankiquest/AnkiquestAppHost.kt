@@ -104,8 +104,7 @@ object AnkiquestAppHost : AnkiquestHost {
 
     override suspend fun conqueredDeck(at: Long): String? = AnkiquestDeckNames.find(at)?.name
 
-    override suspend fun studyTime(now: Long): AnkiquestStudyTime.Totals =
-        CollectionManager.withCol { AnkiquestStudyLog.load(this, now) }
+    override suspend fun studyTime(now: Long): AnkiquestStudyTime.Totals = CollectionManager.withCol { AnkiquestStudyLog.load(this, now) }
 
     override fun chooseDeck(
         activity: FragmentActivity,
