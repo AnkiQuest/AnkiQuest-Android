@@ -18,4 +18,21 @@
     <string name="ankiquest_packs_import_summary">Add a companion pack (.zip) from your files. It shows on this device only.</string>
     <string name="ankiquest_packs_imported">Imported %1$s.</string>
     <string name="ankiquest_packs_refused">This companion pack was refused: %1$s</string>
+    <!-- Sharing an imported companion with friends through the AnkiQuest server (AnkiQuest-Server docs/companion-packs.md). -->
+    <string name="ankiquest_packs_share_key" translatable="false">ankiquestPacksShare</string>
+    <string name="ankiquest_packs_share" maxLength="41">Show a companion to friends</string>
+    <string name="ankiquest_packs_share_none">Friends see no companion of yours. Tap to choose an imported one.</string>
+    <string name="ankiquest_packs_share_shown">Friends see %1$s.</string>
+    <string name="ankiquest_packs_share_no_imports">Import a companion first.</string>
+    <string name="ankiquest_packs_share_stop">Show none</string>
+    <string name="ankiquest_packs_share_confirm">Upload %1$s to the AnkiQuest server so your friends see it? Its pictures are shared under %2$s, credited to %3$s. Only share pictures you may share.</string>
+    <string name="ankiquest_packs_share_upload">Upload</string>
+    <string name="ankiquest_packs_share_failed">Could not change the companion your friends see: %1$s</string>
+    <string name="ankiquest_packs_friend_title">%1$s's companion</string>
+    <string name="ankiquest_packs_friend_credit">%1$s, by %2$s. Licence: %3$s</string>
+    <string name="ankiquest_packs_report">Report</string>
+    <string name="ankiquest_packs_report_offensive">Offensive</string>
+    <string name="ankiquest_packs_report_copyright">Copyright</string>
+    <string name="ankiquest_packs_report_other">Something else</string>
+    <string name="ankiquest_packs_reported">Reported. You no longer see this companion.</string>
 </resources>

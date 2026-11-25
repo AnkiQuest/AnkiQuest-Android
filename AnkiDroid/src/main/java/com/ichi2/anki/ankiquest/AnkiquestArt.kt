@@ -51,6 +51,35 @@ internal object AnkiquestArt {
         val key = "pack:${pack.origin}:$id:${pack.info.version}:$name:$size"
         cache.get(key)?.let { return it }
         val bytes = library.picture(id, name) ?: return null
+        return decoded(key, bytes, size)
+    }
+
+    /**
+     * [friend]'s picture for [name] from the pack they show friends (AnkiquestPackSharing), at
+     * least [size] pixels; null when they show none, so they are drawn as without packs.
+     */
+    fun friend(
+        context: Context,
+        friend: String,
+        name: String,
+        size: Int,
+    ): Bitmap? {
+        if (size <= 0) return null
+        val shown = AnkiquestPackSharing.shownBy(friend) ?: return null
+
+        // Keyed by the pack's hash: a friend's new pack is decoded afresh.
+        val key = "friend:${shown.sha256}:$name:$size"
+        cache.get(key)?.let { return it }
+        val bytes = AnkiquestPackSharing.picture(context, friend, name) ?: return null
+        return decoded(key, bytes, size)
+    }
+
+    /** [bytes] decoded with sampling for [size] and cached under [key]. */
+    private fun decoded(
+        key: String,
+        bytes: ByteArray,
+        size: Int,
+    ): Bitmap? {
         val bounds =
             BitmapFactory.Options().apply {
                 inJustDecodeBounds = true

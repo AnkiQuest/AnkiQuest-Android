@@ -16,4 +16,19 @@
     <string name="ankiquest_packs_import_summary">Añade un paquete de compañero (.zip) desde tus archivos. Solo se muestra en este dispositivo.</string>
     <string name="ankiquest_packs_imported">%1$s importado.</string>
     <string name="ankiquest_packs_refused">Se rechazó este paquete de compañero: %1$s</string>
+    <string name="ankiquest_packs_share">Mostrar un compañero a amigos</string>
+    <string name="ankiquest_packs_share_none">Tus amigos no ven ningún compañero tuyo. Toca para elegir uno importado.</string>
+    <string name="ankiquest_packs_share_shown">Tus amigos ven a %1$s.</string>
+    <string name="ankiquest_packs_share_no_imports">Primero importa un compañero.</string>
+    <string name="ankiquest_packs_share_stop">No mostrar ninguno</string>
+    <string name="ankiquest_packs_share_confirm">¿Subir %1$s al servidor de AnkiQuest para que tus amigos lo vean? Sus imágenes se comparten bajo %2$s, con crédito a %3$s. Comparte solo imágenes que puedas compartir.</string>
+    <string name="ankiquest_packs_share_upload">Subir</string>
+    <string name="ankiquest_packs_share_failed">No se pudo cambiar el compañero que ven tus amigos: %1$s</string>
+    <string name="ankiquest_packs_friend_title">Compañero de %1$s</string>
+    <string name="ankiquest_packs_friend_credit">%1$s, de %2$s. Licencia: %3$s</string>
+    <string name="ankiquest_packs_report">Denunciar</string>
+    <string name="ankiquest_packs_report_offensive">Ofensivo</string>
+    <string name="ankiquest_packs_report_copyright">Derechos de autor</string>
+    <string name="ankiquest_packs_report_other">Otra cosa</string>
+    <string name="ankiquest_packs_reported">Denunciado. Ya no ves este compañero.</string>
 </resources>

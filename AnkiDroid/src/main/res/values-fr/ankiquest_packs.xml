@@ -16,4 +16,19 @@
     <string name="ankiquest_packs_import_summary">Ajouter un pack de compagnon (.zip) depuis tes fichiers. Il n\'apparaît que sur cet appareil.</string>
     <string name="ankiquest_packs_imported">%1$s importé.</string>
     <string name="ankiquest_packs_refused">Ce pack de compagnon a été refusé : %1$s</string>
+    <string name="ankiquest_packs_share">Montrer un compagnon aux amis</string>
+    <string name="ankiquest_packs_share_none">Vos amis ne voient aucun de vos compagnons. Touchez pour en choisir un importé.</string>
+    <string name="ankiquest_packs_share_shown">Vos amis voient %1$s.</string>
+    <string name="ankiquest_packs_share_no_imports">Importez d\'abord un compagnon.</string>
+    <string name="ankiquest_packs_share_stop">N\'en montrer aucun</string>
+    <string name="ankiquest_packs_share_confirm">Envoyer %1$s au serveur AnkiQuest pour que vos amis le voient ? Ses images sont partagées sous %2$s, créditées à %3$s. Ne partagez que des images que vous avez le droit de partager.</string>
+    <string name="ankiquest_packs_share_upload">Envoyer</string>
+    <string name="ankiquest_packs_share_failed">Impossible de changer le compagnon que voient vos amis : %1$s</string>
+    <string name="ankiquest_packs_friend_title">Compagnon de %1$s</string>
+    <string name="ankiquest_packs_friend_credit">%1$s, par %2$s. Licence : %3$s</string>
+    <string name="ankiquest_packs_report">Signaler</string>
+    <string name="ankiquest_packs_report_offensive">Choquant</string>
+    <string name="ankiquest_packs_report_copyright">Droit d\'auteur</string>
+    <string name="ankiquest_packs_report_other">Autre chose</string>
+    <string name="ankiquest_packs_reported">Signalé. Vous ne voyez plus ce compagnon.</string>
 </resources>

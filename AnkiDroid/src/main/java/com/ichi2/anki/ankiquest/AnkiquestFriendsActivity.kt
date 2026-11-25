@@ -31,8 +31,10 @@ import com.ichi2.anki.R
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONException
 import timber.log.Timber
 import java.io.IOException
@@ -199,6 +201,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         val shown = overview ?: return
         val users = (shown.incoming + shown.friends + shown.outgoing + shown.groups.flatMap { it.members } + shown.muted).map { it.user }
         if (users.isEmpty()) return
+        loadCompanions(current, turn)
         lifecycleScope.launch {
             try {
                 AnkiquestAvatars.refresh(users.distinct())
@@ -210,6 +213,82 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             }
             if (turn == generation && account?.scope == current.scope && !loading) render()
         }
+    }
+
+    /** Friends' shared companions are optional too: a friend without one shows none. */
+    private fun loadCompanions(
+        current: HomeAccount,
+        turn: Int,
+    ) {
+        val context = applicationContext
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) { AnkiquestPackSharing.refresh(context, current) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.d(e, "AnkiQuest friends' companions unavailable")
+                return@launch
+            }
+            if (turn == generation && account?.scope == current.scope && !loading) render()
+        }
+    }
+
+    /** The companion [person] shows friends, as a small face that opens its credit and a report action. */
+    private fun companion(person: AnkiquestSocial.Person): View? {
+        val shared = AnkiquestPackSharing.shownBy(person.user) ?: return null
+        val face = AnkiquestArt.friend(this, person.user, AnkiquestPose.FACE.id, views.dp(COMPANION_DP)) ?: return null
+        return ImageView(this).apply {
+            setImageBitmap(face)
+            contentDescription = getString(R.string.ankiquest_packs_friend_title, person.display)
+            setOnClickListener { showCompanion(person, shared) }
+        }
+    }
+
+    private fun showCompanion(
+        person: AnkiquestSocial.Person,
+        shared: SharedPack,
+    ) {
+        val text =
+            listOfNotNull(
+                getString(R.string.ankiquest_packs_friend_credit, shared.name, shared.credit, shared.licence),
+                shared.notice,
+            ).joinToString("\n\n")
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.ankiquest_packs_friend_title, person.display))
+            .setMessage(text)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNeutralButton(R.string.ankiquest_packs_report) { _, _ -> report(shared) }
+            .show()
+    }
+
+    /** Asks why, then reports [shared]; the server hides it for this player at once. */
+    private fun report(shared: SharedPack) {
+        val reasons =
+            listOf(
+                PackReport.OFFENSIVE to R.string.ankiquest_packs_report_offensive,
+                PackReport.COPYRIGHT to R.string.ankiquest_packs_report_copyright,
+                PackReport.OTHER to R.string.ankiquest_packs_report_other,
+            )
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.ankiquest_packs_report)
+            .setItems(reasons.map { getString(it.second) }.toTypedArray()) { _, which ->
+                val current = account ?: return@setItems
+                lifecycleScope.launch {
+                    val message =
+                        try {
+                            withContext(Dispatchers.IO) { AnkiquestPackSharing.report(current, shared.sha256, reasons[which].first) }
+                            getString(R.string.ankiquest_packs_reported)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: IOException) {
+                            e.message ?: e.javaClass.simpleName
+                        }
+                    status = message
+                    render()
+                }
+            }.setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /** Runs [work] and answers the message for its failure, or null when it worked. */
@@ -651,6 +730,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         row.addView(names, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         views.text(names, person.display).typeface = Typeface.DEFAULT_BOLD
         if (person.display != person.user) views.text(names, person.user, small = true)
+        companion(person)?.let { row.addView(it, LinearLayout.LayoutParams(views.dp(COMPANION_DP), views.dp(COMPANION_DP))) }
         return panel
     }
 
@@ -686,6 +766,9 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         const val EXTRA_INVITE = "ankiquest.invite"
 
         private const val STATE_INVITE = "invite"
+
+        /** Edge of a friend's companion face in their row. */
+        private const val COMPANION_DP = 40
 
         /** Not a message: [attempt]'s answer when the account changed under a request. */
         private const val ACCOUNT_CHANGED = -1

@@ -23,4 +23,10 @@
         android:persistent="false"
         android:title="@string/ankiquest_packs_import"
         android:summary="@string/ankiquest_packs_import_summary" />
+    <!-- An imported companion shown to friends through the server; hidden on servers without companion_packs. -->
+    <Preference
+        android:key="@string/ankiquest_packs_share_key"
+        android:persistent="false"
+        android:title="@string/ankiquest_packs_share"
+        app:isPreferenceVisible="false" />
 </PreferenceScreen>
