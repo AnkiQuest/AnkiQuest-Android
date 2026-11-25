@@ -127,6 +127,7 @@
     <string name="ankiquest_deck_expand">Expandir submazos</string>
     <string name="ankiquest_deck_apply_subdecks">Aplicar a los submazos</string>
     <string name="ankiquest_streak_studied">Estudió hoy</string>
+    <string name="ankiquest_streak_unverified">Estudiado hoy · tiempo desconocido</string>
     <string name="ankiquest_streak_pending">Aún no ha estudiado</string>
     <string name="ankiquest_streak_protected">Racha protegida · Aún no ha estudiado</string>
     <string name="ankiquest_streak_unknown">Actualiza para ver si ha estudiado hoy</string>
@@ -139,6 +140,7 @@
         <item quantity="one">Se envió %d repaso.</item>
         <item quantity="other">Se enviaron %d repasos.</item>
     </plurals>
+    <string name="aq_server_outdated">Actualiza tu servidor de AnkiQuest</string>
     <string name="ankiquest_widget_settings_title">Widget de clasificación</string>
     <string name="ankiquest_widget_settings_open">%1$s, ajustes del widget</string>
     <string name="ankiquest_widget_settings_save">Guardar widget</string>

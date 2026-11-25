@@ -45,6 +45,7 @@ import com.ichi2.anki.ankiquest.AnkiquestBoards
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
+import com.ichi2.anki.ankiquest.AnkiquestCountdownsActivity
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckSharing
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
@@ -570,6 +571,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build),
             )
         bindAction(R.string.ankiquest_check_updates_key) { AnkiquestUpdater.checkNow(requireActivity()) }
+        requirePreference<Preference>(R.string.ankiquest_countdowns_key).setOnPreferenceClickListener {
+            startActivity(AnkiquestCountdownsActivity.intent(requireContext()))
+            true
+        }
         requirePreference<Preference>(R.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
             launchCatchingTask { DebugInfoService.copyReport(requireContext()) }
             true

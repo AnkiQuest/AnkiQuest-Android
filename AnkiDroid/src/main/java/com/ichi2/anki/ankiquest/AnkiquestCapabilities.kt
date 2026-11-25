@@ -17,12 +17,37 @@ import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The optional features a server reports at `GET /api/capabilities`, so the app can use a feature as
- * soon as the server it talks to has it, whatever order the app and the server are updated in. A
- * server too old to answer reports nothing; while a server cannot be reached, the features it last
- * reported still count.
+ * The features a server reports at `GET /api/capabilities`. Optional ones switch on as soon as the
+ * server has them; [REQUIRED] ones the app uses without a fallback, so a server without one of them
+ * must be updated ([Support.OUTDATED]). A server too old to answer reports nothing; while a server
+ * cannot be reached, the features it last reported still count.
  */
 internal object AnkiquestCapabilities {
+    /** Whether [account]'s server can serve this app, as far as the app knows. */
+    enum class Support {
+        /** Not fetched yet, as when the app was offline since signing in; the server is taken to be current. */
+        LOADING,
+
+        /** The server last reported every [REQUIRED] feature. */
+        CURRENT,
+
+        /** The server last reported that it lacks a [REQUIRED] feature: "Update your AnkiQuest server". */
+        OUTDATED,
+    }
+
+    /** Features this app uses without a fallback for older servers. */
+    @VisibleForTesting
+    internal val REQUIRED =
+        setOf(
+            "activity",
+            "companion_unlocks",
+            "global_leaderboard_hide",
+            "share_deck_moment",
+            "share_moments",
+            "share_notification",
+            "share_place",
+        )
+
     @VisibleForTesting
     internal const val PREF_CAPABILITIES = "ankiquestCapabilities"
 
@@ -52,6 +77,12 @@ internal object AnkiquestCapabilities {
 
     /** The features [account]'s server last reported, without asking it again. */
     fun features(account: HomeAccount): Set<String> = lookup(account.server)?.features.orEmpty()
+
+    /** How [account]'s server stands against [REQUIRED], from what it last reported, without asking it again. */
+    fun support(account: HomeAccount): Support {
+        val last = lookup(account.server) ?: return Support.LOADING
+        return if (last.features.containsAll(REQUIRED)) Support.CURRENT else Support.OUTDATED
+    }
 
     /** Only the cached numeric version is suitable for a diagnostic report. */
     internal fun apiVersion(account: HomeAccount): Int? = lookup(account.server)?.apiVersion

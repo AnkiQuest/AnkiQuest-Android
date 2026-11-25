@@ -1,7 +1,7 @@
 AnkiDroid/src/main/assets/mathjax
 AnkiDroid/src/main/assets/jquery.min.js
 AnkiDroid/build/
-# Vendored server data must match the pinned commit byte for byte.
+# Server data copied from AnkiQuest-Server master (docs/ankiquest-server-data.md), not committed.
 AnkiDroid/src/test/resources/ankiquest/*.json
 AnkiDroid/src/test/resources/ankiquest-api/*.json
 !AnkiDroid/src/test/resources/ankiquest-api/names.json

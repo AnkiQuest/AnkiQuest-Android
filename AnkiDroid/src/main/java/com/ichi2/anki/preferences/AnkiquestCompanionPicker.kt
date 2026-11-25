@@ -167,6 +167,11 @@ internal class AnkiquestCompanionPicker(
                     context.getString(R.string.ankiquest_companion_hours_goal, progress.goal),
                     context.getString(R.string.ankiquest_companion_hours_progress, progress.value, progress.goal),
                 )
+            Milestone.STREAK ->
+                listOf(
+                    context.getString(R.string.ankiquest_companion_streak_goal, progress.goal),
+                    context.getString(R.string.ankiquest_companion_streak_progress, progress.value, progress.goal),
+                )
             null -> emptyList()
         }
 

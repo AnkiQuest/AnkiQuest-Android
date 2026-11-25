@@ -158,6 +158,7 @@
         <item>I will study later</item>
     </string-array>
     <string name="ankiquest_streak_studied">Studied today</string>
+    <string name="ankiquest_streak_unverified">Studied today · time not known</string>
     <string name="ankiquest_streak_pending">Not studied yet</string>
     <string name="ankiquest_streak_protected">Streak protected · Not studied yet</string>
     <string name="ankiquest_streak_unknown">Refresh to see today\'s study status</string>
@@ -171,4 +172,5 @@
         <item quantity="one">Sent %d review.</item>
         <item quantity="other">Sent %d reviews.</item>
     </plurals>
+    <string name="aq_server_outdated">Update your AnkiQuest server</string>
 </resources>

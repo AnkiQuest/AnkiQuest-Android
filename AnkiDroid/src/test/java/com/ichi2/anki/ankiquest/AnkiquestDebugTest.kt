@@ -13,6 +13,7 @@ import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.ankiquest.AnkiquestMood.Heat
 import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.AnkiquestMood.Rules
+import com.ichi2.anki.ankiquest.AnkiquestMood.Stage
 import com.ichi2.anki.common.preferences.sharedPrefs
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -92,10 +93,13 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `edited thresholds move each mood and heat`() {
         val rules = Rules(hopefulReviews = 3, frozen2Days = 4, frozen3Days = 6, hotDays = 3, blazingDays = 5, legendDays = 9)
-        val mood = { state: State, reviews: Int, frozen: Int -> AnkiquestMood.of(state, reviews, 12, frozen, Goal.OPEN, rules) }
+        val mood = { state: State, reviews: Int, frozen: Int ->
+            AnkiquestMood.of(state, reviews, Stage.STARTED, 12, frozen, Goal.OPEN, rules)
+        }
 
         assertEquals(Mood.SAD, mood(State.SHORT, 2, 0), "two reviews are short of the edited hopeful")
         assertEquals(Mood.HOPEFUL, mood(State.SHORT, 3, 0))
+        assertEquals(Mood.SAD, AnkiquestMood.of(State.SHORT, 2, Stage.HALF, 12, 0, Goal.OPEN, rules))
         assertEquals(Mood.FROZEN_1, mood(State.PENDING, 0, 3))
         assertEquals(Mood.FROZEN_2, mood(State.PENDING, 0, 4))
         assertEquals(Mood.FROZEN_2, mood(State.PENDING, 0, 5))

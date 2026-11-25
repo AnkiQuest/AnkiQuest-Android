@@ -128,6 +128,7 @@
         <item>Ich lerne später</item>
     </string-array>
     <string name="ankiquest_streak_studied">Heute gelernt</string>
+    <string name="ankiquest_streak_unverified">Heute studiert · Zeit unbekannt</string>
     <string name="ankiquest_streak_pending">Heute noch nicht gelernt</string>
     <string name="ankiquest_streak_protected">Lernserie geschützt · Heute noch nicht gelernt</string>
     <string name="ankiquest_streak_unknown">Aktualisieren, um den heutigen Lernstatus zu sehen</string>
@@ -140,6 +141,7 @@
         <item quantity="one">%d Wiederholung gesendet.</item>
         <item quantity="other">%d Wiederholungen gesendet.</item>
     </plurals>
+    <string name="aq_server_outdated">Aktualisiere deinen AnkiQuest-Server</string>
     <string name="ankiquest_widget_settings_title">Ranglisten-Widget</string>
     <string name="ankiquest_widget_settings_open">%1$s, Widget-Einstellungen</string>
     <string name="ankiquest_widget_settings_save">Widget speichern</string>
