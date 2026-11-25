@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <!-- AnkiquestMoveImport: the new app's first launch, when the old com.ichi2.anki.quest app is installed. -->
+    <string name="ankiquest_move_title">Move from the old AnkiQuest</string>
+    <string name="ankiquest_move_message">Move your settings and login from the old AnkiQuest?</string>
+    <string name="ankiquest_move_accept">Move</string>
+    <string name="ankiquest_move_decline">No</string>
+    <string name="ankiquest_move_loading">Moving your settings and login…</string>
+    <string name="ankiquest_move_done_sync">Settings and login moved. Your collection comes from AnkiWeb with the first sync, which starts now.</string>
+    <string name="ankiquest_move_done_export">Settings and login moved. Your collection is still in the old AnkiQuest: use Export collection there, then import the file here.</string>
+    <string name="ankiquest_move_failed">The old AnkiQuest did not hand over its settings. Set up this app as usual.</string>
+</resources>

@@ -18,12 +18,12 @@ import androidx.core.view.drawToBitmap
 import androidx.core.view.isVisible
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Size
 import com.ichi2.anki.ankiquest.AnkiquestStreakWidget.Style
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.screenshotOptions
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
@@ -95,10 +95,9 @@ class AnkiquestClearStreakScreenshotTest : ScreenshotTest() {
                 }
             }
             val directory = "build/outputs/roborazzi/${javaClass.simpleName}"
-            val options = provideRoborazziContext().options
             snapshot.captureRoboImage(
                 filePath = "$directory/${fileNamePrefix}${name}_${size.name.lowercase()}.png",
-                roborazziOptions = options.copy(compareOptions = options.compareOptions.copy(outputDirectoryPath = "$directory/diffs")),
+                roborazziOptions = screenshotOptions("$directory/diffs"),
             )
         }
     }
