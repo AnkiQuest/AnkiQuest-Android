@@ -1,0 +1,62 @@
+# Draft of metadata/org.ankiquest.ankidroid.yml for gitlab.com/fdroid/fdroiddata.
+# Not submitted. It needs the org.ankiquest.ankidroid package (#420) and the
+# -PankiquestUpdates switch (#411); see README.md here for what is open.
+Categories:
+  - Science & Education
+License: AGPL-3.0-or-later
+WebSite: https://ankiquest.org
+SourceCode: https://github.com/AnkiQuest/AnkiQuest-Android
+IssueTracker: https://github.com/AnkiQuest/AnkiQuest-Android/issues
+Changelog: https://github.com/AnkiQuest/AnkiQuest-Android/releases
+
+AutoName: AnkiQuest
+
+RepoType: git
+Repo: https://github.com/AnkiQuest/AnkiQuest-Android.git
+
+# Publishing our signed APK instead of an F-Droid-signed one (README.md,
+# "Signing"). Both lines stay commented out until the release workflow
+# publishes an APK built as below and signed with the AnkiQuest key alone.
+# Binaries: https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk
+# AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
+
+Builds:
+  # The first release as org.ankiquest.ankidroid; fill in its tag and the
+  # versionName in AnkiDroid/build.gradle.kts at that tag.
+  - versionName: 2.26.0alpha15
+    versionCode: 50025000
+    commit: quest-25
+    subdir: AnkiDroid
+    gradle:
+      - full
+    rm:
+      - tools
+      - docs
+    prebuild:
+      # As upstream AnkiDroid's recipe: no Maven publishing, no foojay JDK downloads.
+      - sed -i -e '/publishing/,/^    }/d' -e '/publish/d' ../api/build.gradle.kts
+      - sed -i -e '/foojay/d' ../settings.gradle.kts
+      # The daemon JVM criteria ask for JetBrains Runtime; build with Debian's OpenJDK.
+      - rm ../gradle/gradle-daemon-jvm.properties
+      # The same inputs ankiquest_apk.yml passes: release number from the tag,
+      # upstream AnkiDroid commit for the debug info, one universal APK.
+      - echo "fatal_warnings=false" >> ../local.properties
+      - echo "ankiquestRelease=$(git describe --tags --exact-match --match 'quest-[0-9]*' | sed 's/^quest-//')" >> ../gradle.properties
+      - git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
+      - echo "upstreamCommit=$(git merge-base HEAD FETCH_HEAD)" >> ../gradle.properties
+      - echo "systemProp.universal-apk=true" >> ../gradle.properties
+    output: build/outputs/apk/full/release/*universal*.apk
+    gradleprops:
+      - ankiquest=true
+      - customName=AnkiQuest
+      - ankiquestUpdates=none
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^quest-[0-9]+$
+# versionCode from the tag (quest-<n> is 50000000 + n * 1000), versionName
+# from the build file at that tag.
+UpdateCheckData: '|quest-([0-9]+)|AnkiDroid/build.gradle.kts|versionName = "(.*)"'
+VercodeOperation:
+  - 50000000 + %c * 1000
+CurrentVersion: 2.26.0alpha15
+CurrentVersionCode: 50025000

@@ -88,8 +88,11 @@ jobs:
           sha=$(git merge-base HEAD FETCH_HEAD)
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
+      # The build time shown on About is the commit time, as on F-Droid's build server, so
+      # F-Droid's rebuild of a release can match the released APK.
       - name: Assemble
         run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
             -PcustomSuffix=quest -PcustomName="AnkiQuest" \

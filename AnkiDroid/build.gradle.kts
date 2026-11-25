@@ -418,6 +418,13 @@ android {
         resources {
             excludes += listOf("META-INF/DEPENDENCIES")
         }
+
+        // AnkiQuest: the native libraries come stripped from their AARs. Package them as they are,
+        // so the APK does not depend on whether the build machine has an NDK to strip with
+        // (F-Droid rebuilds releases, docs/fdroid/README.md).
+        jniLibs {
+            keepDebugSymbols += "**/*.so"
+        }
     }
 }
 
