@@ -40,8 +40,7 @@ test("publishing the new package waits for the final legacy APK release", () => 
     const release = apkWorkflow.indexOf("      - name: Publish release");
     assert.ok(bridge >= 0 && bridge < release, "the bridge check must run before either publication step");
     const guard = apkWorkflow.slice(bridge, release);
-    // Pull requests squash-merge, so a branch commit is never in the tag; its files are.
-    assert.match(guard, /git cat-file -e refs\/tags\/quest-24:AnkiDroid\/src\/main\/java\/com\/ichi2\/anki\/ankiquest\/AnkiquestMoveProvider\.kt/);
+    assert.match(guard, /git merge-base --is-ancestor 5dc88751adc8aec5756a4f9c07dc38f4139f23da refs\/tags\/quest-24/);
     assert.match(guard, /gh release view quest-24/);
     assert.match(guard, /AnkiDroid-Quest\.apk/);
     assert.doesNotMatch(apkWorkflow.slice(release), /AnkiDroid-Quest\.apk/);
@@ -53,7 +52,8 @@ test("the publication guard accepts only the complete stable bridge", () => {
 
     const shell = `git() {
     case "$1" in
-        cat-file) test "$BRIDGE_COMMIT" = present ;;
+        cat-file) test "$BRIDGE_PROVIDER" = present ;;
+        merge-base) test "$BRIDGE_COMMIT" = present ;;
         grep) test "$BRIDGE_PACKAGE" = legacy ;;
         *) return 127 ;;
     esac
@@ -63,15 +63,16 @@ ${guard}`;
     const stable = { isDraft: false, isPrerelease: false, assets: [{name: "AnkiQuest.apk"}, {name: "AnkiDroid-Quest.apk"}] };
     const cases = [
         { name: "complete legacy release", info: stable, commit: "present", expected: 0 },
-        { name: "missing migration files", info: stable, commit: "absent", expected: 1 },
+        { name: "missing migration commit", info: stable, commit: "absent", expected: 1 },
+        { name: "original provider without the updater notice", info: stable, commit: "absent", provider: "present", expected: 1 },
         { name: "tag built from the new package", info: stable, commit: "present", pkg: "new", expected: 1 },
         { name: "missing legacy name", info: {...stable, assets: stable.assets.slice(0, 1)}, commit: "present", expected: 1 },
         { name: "draft", info: {...stable, isDraft: true}, commit: "present", expected: 1 },
         { name: "prerelease", info: {...stable, isPrerelease: true}, commit: "present", expected: 1 },
     ];
-    for (const { name, info, commit, pkg = "legacy", expected } of cases) {
+    for (const { name, info, commit, provider = commit, pkg = "legacy", expected } of cases) {
         const result = spawnSync("bash", ["-euo", "pipefail", "-c", shell], {
-            env: { ...process.env, GITHUB_REPOSITORY: "AnkiQuest/AnkiQuest-Android", BRIDGE_COMMIT: commit, BRIDGE_PACKAGE: pkg, BRIDGE_JSON: JSON.stringify(info) },
+            env: { ...process.env, GITHUB_REPOSITORY: "AnkiQuest/AnkiQuest-Android", BRIDGE_COMMIT: commit, BRIDGE_PROVIDER: provider, BRIDGE_PACKAGE: pkg, BRIDGE_JSON: JSON.stringify(info) },
             encoding: "utf8",
         });
         assert.equal(result.status, expected, `${name}\n${result.stderr}`);
