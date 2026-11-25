@@ -130,7 +130,8 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `edited heat changes today's fire pose`() {
         val edited = assertNotNull(Overrides.NONE.withRules(Rules(hotDays = 3)))
-        assertEquals(AnkiquestCompanion.art(AnkiquestPose.STREAK_HOT, Choice.AKI), AnkiquestMood.todayPose(Mood.FIRE, 3, edited, Choice.AKI))
+        val hot = AnkiquestCompanion.art(AnkiquestPose.STREAK_HOT, Choice.AKI)
+        assertEquals(hot, AnkiquestMood.todayPose(Mood.FIRE, 3, edited, Choice.AKI))
         assertEquals(AnkiquestMood.pose(Mood.FIRE, 3, Choice.AKI), AnkiquestMood.todayPose(Mood.FIRE, 3, Overrides.NONE, Choice.AKI))
     }
 
