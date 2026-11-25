@@ -7,8 +7,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -31,6 +31,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -265,7 +266,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         val board = launch()
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } throws IOException("offline")
 
-        board.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        board.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
 
         assertTrue(board.hasText(board.getString(R.string.aq_board_offline)))

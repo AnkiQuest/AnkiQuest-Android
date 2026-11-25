@@ -5,8 +5,8 @@ package com.ichi2.anki.ankiquest
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.provideRoborazziContext
-import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.ui.R
 import org.junit.After
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment

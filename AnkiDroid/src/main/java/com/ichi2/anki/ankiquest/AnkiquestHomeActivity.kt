@@ -27,7 +27,7 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
@@ -42,6 +42,7 @@ import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
+import com.ichi2.anki.R as AnkiDroidR
 
 /**
  * The daily study surface is native and local, like every other AnkiQuest screen: activity
@@ -134,8 +135,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 },
             )
         }
-        AnkiquestTabBar.attach(this, findViewById(R.id.aq_home_root), R.id.ankiquest_nav_today)
-        account = AnkiquestHomeData.account()
+        AnkiquestTabBar.attach(this, findViewById(R.id.aq_home_root), AnkiDroidR.id.ankiquest_nav_today)
+        account = HomeAccount.current()
         deckChoices = AnkiquestDeckChoices(this, ::selectDeck, ::copyChosen)
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
@@ -166,7 +167,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     }
 
     private fun refresh() {
-        val current = AnkiquestHomeData.account()
+        val current = HomeAccount.current()
         if (current?.scope != account?.scope) {
             // A new owner starts with empty caches and a fresh loading state.
             goalSetup = GoalSetup.READY
@@ -213,10 +214,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 val failure =
                     try {
                         val result = AnkiquestHomeData.profile(current)
-                        if (AnkiquestHomeData.account()?.scope == current.scope) {
+                        if (HomeAccount.current()?.scope == current.scope) {
                             restoreOldGoal(current, result)
                         }
-                        if (turn == generation && AnkiquestHomeData.account()?.scope == current.scope) {
+                        if (turn == generation && HomeAccount.current()?.scope == current.scope) {
                             profile = result
                             AnkiquestDailyGoal.remember(result)
                         }
@@ -256,7 +257,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         scope: String?,
     ): Boolean = turn == generation && ownsScope(scope)
 
-    private fun ownsScope(scope: String?): Boolean = account?.scope == scope && AnkiquestHomeData.account()?.scope == scope
+    private fun ownsScope(scope: String?): Boolean = account?.scope == scope && HomeAccount.current()?.scope == scope
 
     private fun applyLocal(value: HomeLocal?) {
         local = value
@@ -297,7 +298,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         renderAvatar()
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
-        val target = questsHeading?.takeIf { focus == FOCUS_QUESTS }
+        val target = questsHeading?.takeIf { focus == AnkiquestScreen.Today.QUESTS }
         if (target != null || profile != null) focus = null
         if (target != null) {
             target.doOnLayout { scroll.smoothScrollTo(0, it.top) }
@@ -501,7 +502,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         owner: HomeAccount,
         choice: AnkiquestDailyGoal.Choice,
     ) {
-        if (goalSetup == GoalSetup.SAVING || AnkiquestHomeData.account()?.scope != owner.scope) return
+        if (goalSetup == GoalSetup.SAVING || HomeAccount.current()?.scope != owner.scope) return
         goalSetup = GoalSetup.SAVING
         render()
         lifecycleScope.launch {
@@ -511,7 +512,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "AnkiQuest suggested goal could not be saved")
-                if (AnkiquestHomeData.account()?.scope == owner.scope) {
+                if (HomeAccount.current()?.scope == owner.scope) {
                     goalSetup = GoalSetup.FAILED
                     render()
                 }
@@ -523,7 +524,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         owner: HomeAccount,
         goal: AnkiquestDailyGoal.ServerGoal,
     ) {
-        if (AnkiquestHomeData.account()?.scope != owner.scope) return
+        if (HomeAccount.current()?.scope != owner.scope) return
         goalSetup = GoalSetup.READY
         profile?.put("goal", goal.json().put("chosen", true))
         refresh()
@@ -704,7 +705,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             // Commit the choice first, then replace any refresh that saw the previous deck.
             try {
                 CollectionManager.withCol {
-                    if (AnkiquestHomeData.account()?.scope == owner && decks.get(deck) != null) {
+                    if (HomeAccount.current()?.scope == owner && decks.get(deck) != null) {
                         decks.select(deck)
                     }
                 }
@@ -771,9 +772,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         const val EXTRA_SKIP_HOME = "ankiquest.skip_home"
         const val EXTRA_STUDY_DECK = "ankiquest.study_deck"
 
-        /** A section to scroll to once it is shown, such as [FOCUS_QUESTS]. */
+        /** A section to scroll to once it is shown, such as [AnkiquestScreen.Today.QUESTS]. */
         const val EXTRA_FOCUS = "ankiquest.focus"
-        const val FOCUS_QUESTS = "quests"
 
         /** The goal bar memory of the Today screen, see [AnkiquestGoalBar.show]. */
         const val SLOT_TODAY = "today"

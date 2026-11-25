@@ -19,13 +19,13 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestShareSheet.Exit
 import com.ichi2.anki.ankiquest.AnkiquestShareSheet.State
 import com.ichi2.anki.ankiquest.AnkiquestShareSheet.Step
 import com.ichi2.anki.ankiquest.AnkiquestSharing.Audience
 import com.ichi2.anki.ankiquest.AnkiquestSharing.MomentRef
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyAnkiActivity
@@ -78,8 +78,8 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @Before
     fun prepare() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
         every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
     }
@@ -87,7 +87,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare, HomeAccount.Companion)
         TimeManager.reset()
     }
 
@@ -247,7 +247,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         mockkObject(AnkiquestCapabilities)
         every { AnkiquestCapabilities.has(any(), any()) } returns true
         account = account.copy(server = server.url)
-        every { AnkiquestHomeData.account(any()) } returns account
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
         try {
             val (_, first, screen) = open()
@@ -417,7 +417,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         idle()
         assertFalse(dialog.isShowing)
         assertTrue(AnkiquestPostStudyPrompts.ready(host))
-        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestDeckShare.PREF_ASK, true))
+        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(AnkiquestPreferences.PREF_ASK_DECK_SHARE, true))
         coVerify(exactly = 0) { AnkiquestSharing.send(any(), any(), any(), any()) }
     }
 

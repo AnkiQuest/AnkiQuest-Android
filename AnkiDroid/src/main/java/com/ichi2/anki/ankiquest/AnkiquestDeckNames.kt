@@ -2,7 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.icu.lang.UCharacter
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
@@ -12,90 +11,10 @@ import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
-import java.text.Normalizer
 
 /** Collection and account -> first noticed home deck -> local sharing choice. No names are uploaded. */
 internal object AnkiquestDeckNames {
     private const val KEY = "ankiquestConquestDecks:"
-    private const val SHORT_NAME = 3
-
-    // Explicit Unicode classes, not the UNICODE_CHARACTER_CLASS flag: Android's ICU regex rejects it.
-    private val PREFIX = Regex("""^(?:#?\p{Nd}+[\s\p{Z}.)_-]+|\[[A-Za-z0-9]+\][\s\p{Z}]*)""")
-    private val SPACE = Regex("""[\s\p{Z}]+""")
-    private val WORD = Regex("""\p{L}+""")
-    private val FILING =
-        setOf(
-            "archive",
-            "archives",
-            "inbox",
-            "default",
-            "custom study session",
-            "filtered",
-            "old",
-            "done",
-            "archiv",
-            "posteingang",
-            "standard",
-            "benutzerdefiniertes lernen",
-            "gefiltert",
-            "alt",
-            "erledigt",
-            "archivo",
-            "archivados",
-            "bandeja de entrada",
-            "predeterminado",
-            "sesión de estudio personalizada",
-            "filtrado",
-            "antiguo",
-            "hecho",
-            "boîte de réception",
-            "par défaut",
-            "séance d'étude personnalisée",
-            "filtré",
-            "ancien",
-            "terminé",
-            "arquivo",
-            "arquivados",
-            "caixa de entrada",
-            "padrão",
-            "sessão de estudo personalizado",
-            "antigo",
-            "concluído",
-        )
-    private val GENERIC =
-        setOf(
-            "book",
-            "lesson",
-            "level",
-            "unit",
-            "vocab",
-            "vocabulary",
-            "cards",
-            "buch",
-            "lektion",
-            "stufe",
-            "einheit",
-            "vokabeln",
-            "karten",
-            "libro",
-            "lección",
-            "nivel",
-            "unidad",
-            "vocabulario",
-            "tarjetas",
-            "livre",
-            "leçon",
-            "niveau",
-            "unité",
-            "vocabulaire",
-            "cartes",
-            "livro",
-            "lição",
-            "nível",
-            "unidade",
-            "vocabulário",
-            "cartões",
-        )
 
     data class Source(
         val account: HomeAccount,
@@ -108,37 +27,6 @@ internal object AnkiquestDeckNames {
         val picks: List<String>,
         val save: suspend (String) -> Unit,
     )
-
-    fun clean(path: String): String {
-        val parts = parts(path)
-        val leaf = parts.lastOrNull() ?: return ""
-        val words = words(leaf)
-        val parent = parts.getOrNull(parts.lastIndex - 1)?.let(::words).orEmpty()
-        val generic =
-            leaf.codePointCount(0, leaf.length) <= SHORT_NAME ||
-                GENERIC.containsAll(words) ||
-                (words.isNotEmpty() && words != parent && parent.containsAll(words))
-        return limit((if (generic) parts.takeLast(2) else listOf(leaf)).joinToString(" › "))
-    }
-
-    private fun fold(value: String): String = UCharacter.foldCase(Normalizer.normalize(value, Normalizer.Form.NFC), true)
-
-    private fun words(value: String): Set<String> = WORD.findAll(fold(value)).map { it.value }.toSet()
-
-    private fun line(value: String): String = value.trim().replace(SPACE, " ")
-
-    // Match Python's character limit without splitting a supplementary character.
-    private fun limit(value: String): String = AnkiquestTextLimit.take(value, AnkiquestCardLabels.MAX_LABEL)
-
-    private fun parts(path: String): List<String> =
-        buildList {
-            for (raw in path.split("::")) {
-                val part = line(PREFIX.replace(raw.trim(), ""))
-                if (part.isNotEmpty() && fold(part) !in FILING && lastOrNull()?.let(::fold) != fold(part)) {
-                    add(part)
-                }
-            }
-        }
 
     suspend fun source(account: HomeAccount): Source =
         CollectionManager.withCol {
@@ -184,9 +72,9 @@ internal object AnkiquestDeckNames {
     }
 
     suspend fun find(at: Long): Deck? {
-        val account = AnkiquestHomeData.account()
+        val account = HomeAccount.current()
         return CollectionManager.withCol {
-            if (AnkiquestHomeData.account()?.scope != account?.scope) {
+            if (HomeAccount.current()?.scope != account?.scope) {
                 return@withCol null
             }
             val source = account?.let { Source(it, identity()) }
@@ -200,8 +88,8 @@ internal object AnkiquestDeckNames {
             val id = record.getString("id")
             val path = record.getString("path")
             val choices = state.optJSONObject("names")
-            val name = if (choices?.has(id) == true) choices.getString(id) else clean(path)
-            Deck(name, (listOf(name, clean(path)) + parts(path) + "").distinct()) { text ->
+            val name = if (choices?.has(id) == true) choices.getString(id) else AnkiquestDeckPaths.clean(path)
+            Deck(name, (listOf(name, AnkiquestDeckPaths.clean(path)) + AnkiquestDeckPaths.parts(path) + "").distinct()) { text ->
                 source?.let { save(it, id, text) }
             }
         }
@@ -217,7 +105,7 @@ internal object AnkiquestDeckNames {
         }
         val state = read(source)
         val names = state.optJSONObject("names") ?: JSONObject().also { state.put("names", it) }
-        names.put(id, limit(line(text)))
+        names.put(id, AnkiquestDeckPaths.typed(text))
         write(source, state)
     }
 
@@ -239,7 +127,7 @@ internal object AnkiquestDeckNames {
         }
 
     private fun Collection.owns(source: Source): Boolean =
-        AnkiquestHomeData.account()?.scope == source.account.scope && identity() == source.collection
+        HomeAccount.current()?.scope == source.account.scope && identity() == source.collection
 
     private fun key(source: Source): String = KEY + sha256(source.collection, source.account.notificationAccount)
 

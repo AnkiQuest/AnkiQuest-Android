@@ -11,8 +11,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.IntroductionActivity
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.preferences.PreferencesActivity
 import com.ichi2.anki.setIntroductionSlidesShown
 import com.ichi2.testutils.BackupManagerTestUtilities
@@ -112,7 +112,7 @@ class AnkiquestGreetingTest : RobolectricTest() {
     @Test
     fun `Aki greets even when the companion is off`() {
         signIn()
-        val account = assertNotNull(AnkiquestHomeData.account())
+        val account = assertNotNull(HomeAccount.current())
         assertTrue(AnkiquestCompanion.remember(account, "none"))
 
         val image = assertNotNull(awaitGreeting(open().get()).findViewById<ImageView>(R.id.ankiquest_greeting_image))

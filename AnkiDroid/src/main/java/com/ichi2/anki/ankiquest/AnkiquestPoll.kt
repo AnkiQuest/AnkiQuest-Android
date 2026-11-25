@@ -40,13 +40,6 @@ object AnkiquestPoll {
     /** How long after a study day ends the day-end poll runs, so the server already answers for the new day. */
     private const val DAY_END_DELAY_MS = 60_000L
 
-    internal const val PREF_CACHE = "ankiquestWidgetLeaderboard"
-
-    internal const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
-
-    /** Why the cached leaderboard leaves others out ([AnkiquestLock.name]), absent when it does not. */
-    private const val PREF_CACHE_LOCK = "ankiquestWidgetLeaderboardLock"
-
     internal fun lastSuccessfulPoll(
         prefs: SharedPreferences,
         scope: String,
@@ -99,12 +92,6 @@ object AnkiquestPoll {
         }
     }
 
-    /** Why the leaderboard cached for account [scope] leaves others out, or null when it does not. */
-    internal fun cachedLock(scope: String?): AnkiquestLock? {
-        val stored = AnkiDroidApp.sharedPrefs().getString(scopedKey(PREF_CACHE_LOCK, scope), null)
-        return AnkiquestLock.named(stored)
-    }
-
     fun refreshNow(context: Context) {
         try {
             WorkManager
@@ -124,11 +111,11 @@ object AnkiquestPoll {
         Ankiquest.uploadPending(context)
         val prefs = AnkiDroidApp.sharedPrefs()
         val configured = Ankiquest.dashboardUrl() != null
-        val pollingAccount = AnkiquestHomeData.account(prefs)
+        val pollingAccount = HomeAccount.current(prefs)
         val cacheScope = pollingAccount?.scope
-        val cacheKey = scopedKey(PREF_CACHE, cacheScope)
-        val cacheAtKey = scopedKey(PREF_CACHE_AT, cacheScope)
-        val cacheLockKey = scopedKey(PREF_CACHE_LOCK, cacheScope)
+        val cacheKey = scopedKey(AnkiquestWidget.PREF_CACHE, cacheScope)
+        val cacheAtKey = scopedKey(AnkiquestWidget.PREF_CACHE_AT, cacheScope)
+        val cacheLockKey = scopedKey(AnkiquestWidget.PREF_CACHE_LOCK, cacheScope)
         val photoAccount = runCatching { AnkiquestAvatars.account() }.getOrNull()
         val photoScope = photoAccount?.scope
         var photoBoard: JSONArray? = null
@@ -141,7 +128,7 @@ object AnkiquestPoll {
             } else {
                 val board =
                     try {
-                        Ankiquest.leaderboard()
+                        AnkiquestBoards.weekly()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -150,16 +137,17 @@ object AnkiquestPoll {
                     }
                 if (board != null) {
                     val now = TimeManager.time.intTimeMS()
+                    val lock = board.lock
                     prefs.edit {
                         putString(cacheKey, board.rows.toString())
                         putLong(cacheAtKey, now)
-                        if (board.lock == null) {
+                        if (lock == null) {
                             remove(cacheLockKey)
                         } else {
-                            putString(cacheLockKey, board.lock.name)
+                            putString(cacheLockKey, lock.name)
                         }
                     }
-                    AnkiquestWidget.render(context, board.rows, now, offline = false, board.lock)
+                    AnkiquestWidget.render(context, board.rows, now, offline = false, lock)
                     photoBoard = board.rows
                     photoFetchedAt = now
                     photoLock = board.lock
@@ -167,7 +155,7 @@ object AnkiquestPoll {
                 } else {
                     // The cached board keeps its lock, so an offline widget still says why others are missing.
                     val cached = prefs.getString(cacheKey, null)?.let { JSONArray(it) } ?: JSONArray()
-                    photoLock = cachedLock(cacheScope)
+                    photoLock = AnkiquestWidget.cachedLock(cacheScope)
                     AnkiquestWidget.render(context, cached, prefs.getLong(cacheAtKey, 0), offline = true, photoLock)
                     photoBoard = cached
                     photoFetchedAt = prefs.getLong(cacheAtKey, 0)
@@ -189,14 +177,14 @@ object AnkiquestPoll {
         }
         try {
             val profile = Ankiquest.profile()
-            if (AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
+            if (HomeAccount.current(prefs)?.scope == cacheScope) {
                 // A fresh board and profile confirm a background poll for this account.
                 if (photoBoard != null && !photoOffline && cacheScope != null) {
                     prefs.edit { putLong(scopedKey(LAST_SUCCESS, cacheScope), TimeManager.time.intTimeMS()) }
                 }
                 val delivery = pollingAccount?.let { streakDelivery(it, profile) } ?: StreakDelivery.HOLD
                 // Reading reminders can outlive an account or credential change.
-                if (AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
+                if (HomeAccount.current(prefs)?.scope == cacheScope) {
                     AnkiquestNotifier.onProfile(context, profile, delivery)
                 }
             }
@@ -242,7 +230,7 @@ object AnkiquestPoll {
                 Timber.d(e, "ankiquest optional photos could not refresh")
             }
         }
-        AnkiquestHomeData.account(prefs)?.let { AnkiquestCapabilities.current(it) }
+        HomeAccount.current(prefs)?.let { AnkiquestCapabilities.current(it) }
 
         // After the features are current, so a server that just gained settings sync is used.
         AnkiquestSettingsSync.sync(context, AnkiquestSettingsSync.Trigger.POLL)
@@ -250,7 +238,7 @@ object AnkiquestPoll {
         // Unlocks reach a new sign-in and a server that has just gained them without opening Today;
         // after the features are current, so this reads them instead of asking early.
         try {
-            AnkiquestHomeData.account(prefs)?.let { AnkiquestUnlocks.sync(it) }
+            HomeAccount.current(prefs)?.let { AnkiquestUnlocks.sync(it) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -282,8 +270,6 @@ object AnkiquestPoll {
         }
     }
 }
-
-internal enum class StreakDelivery { ALLOW, HOLD }
 
 class AnkiquestPollWorker(
     context: Context,

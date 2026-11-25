@@ -3,8 +3,8 @@
 package com.ichi2.anki.ankiquest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After

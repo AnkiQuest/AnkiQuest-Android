@@ -2,8 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.ui.R
 import org.json.JSONObject
 import org.junit.Test
 import kotlin.test.assertEquals

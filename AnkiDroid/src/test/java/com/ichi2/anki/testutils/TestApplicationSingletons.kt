@@ -3,6 +3,8 @@
 package com.ichi2.anki.testutils
 
 import android.app.Application
+import com.ichi2.anki.ankiquest.AnkiquestAppHost
+import com.ichi2.anki.ankiquest.AnkiquestHost
 import com.ichi2.anki.common.android.Animations
 import com.ichi2.anki.initializeActivitySetup
 import com.ichi2.anki.initializeDatabaseErrorDialogs
@@ -27,4 +29,5 @@ fun registerTestApplicationSingletons() {
     WidgetStatus.register(PrefsRepository(application)) { context -> AnkiDroidWidgetSmall.UpdateService().doUpdate(context) }
     Animations.setPreferencesProvider { context -> PrefsRepository(context) }
     maybeSetDefaultCollectionPath(application)
+    AnkiquestHost.install(AnkiquestAppHost)
 }

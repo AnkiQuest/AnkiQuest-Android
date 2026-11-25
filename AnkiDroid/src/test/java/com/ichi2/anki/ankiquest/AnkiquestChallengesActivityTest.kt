@@ -11,8 +11,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -37,6 +37,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -157,7 +158,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
         goals.click(goals.getString(R.string.aq_challenges_cancel))
         val dialog = ShadowDialog.getLatestDialog() as AlertDialog
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
-        advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        advanceRobolectricLooperUntil { !goals.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         advanceRobolectricLooper()
         coVerify { AnkiquestChallenges.act(identity, 1, "cancel") }
 
@@ -216,7 +217,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
             .first()
             .setText("Fresh start")
         send.performClick()
-        advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        advanceRobolectricLooperUntil { !goals.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         advanceRobolectricLooper()
         assertEquals(
             AnkiquestChallenges.NewGoal("Fresh start", false, false, 3, 7, listOf("friend"), false),
@@ -287,8 +288,8 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
         val goals = launch()
         goals.click(goals.getString(R.string.aq_challenges_accept))
 
-        goals.findViewById<View>(R.id.aq_feed_refresh).performClick()
-        advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        goals.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
+        advanceRobolectricLooperUntil { !goals.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         val accept = goals.views<TextView>().first { it.text.toString() == goals.getString(R.string.aq_challenges_accept) }
         assertFalse(accept.isEnabled, "a second change could be sent while the first is on its way")
 
@@ -302,7 +303,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
         account: String? = null,
     ): AnkiquestChallengesActivity =
         startRegularActivity<AnkiquestChallengesActivity>(AnkiquestChallengesActivity.intent(targetContext, challenge, account))
-            .also { goals -> advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible } }
+            .also { goals -> advanceRobolectricLooperUntil { !goals.findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible } }
 
     private fun AnkiquestChallengesActivity.days(count: Int) = resources.getQuantityString(R.plurals.aq_challenges_days, count, count)
 
@@ -314,7 +315,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
     ) = getString(line, done, resources.getQuantityString(unit, target, target))
 
     private inline fun <reified T : View> AnkiquestChallengesActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_feed_content).allViews.filterIsInstance<T>().toList()
+        findViewById<View>(AnkiDroidR.id.aq_feed_content).allViews.filterIsInstance<T>().toList()
 
     private fun AnkiquestChallengesActivity.texts(): List<String> = views<TextView>().map { it.text.toString() }
 
@@ -324,7 +325,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
         assertTrue(control.isEnabled, label)
         control.performClick()
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_feed_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible }
         advanceRobolectricLooper()
     }
 

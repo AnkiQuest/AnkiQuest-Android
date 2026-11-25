@@ -20,8 +20,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.setIntroductionSlidesShown
@@ -88,7 +88,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         unmockkObject(AnkiquestStudySession, AnkiquestDeckShare)
     }
 
-    private fun summary(remaining: Int = 3) = AnkiquestStudySession.Summary(6, 1, remaining, clock.intTimeMS())
+    private fun summary(remaining: Int = 3) = AnkiquestSessionSummary(6, 1, remaining, clock.intTimeMS())
 
     private fun host(): ActivityController<DeckPicker> =
         startActivityControllerNormallyOpenCollectionWithIntent(
@@ -112,7 +112,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         win: Long? = null,
     ): AnkiquestMoments.Moment {
         val moment = AnkiquestMoments.Moment(key, AnkiquestMoments.Kind.LEVEL, "Level 4", "", clock.intTimeMS(), win = win)
-        AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
+        AnkiquestMoments.offer(prefs, assertNotNull(HomeAccount.current()).notificationAccount, listOf(moment))
         return moment
     }
 
@@ -159,7 +159,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                     conquest = 100,
                     deck = "5 Archive::Mandarin::Old path",
                 )
-            AnkiquestMomentCard.show(host, AnkiquestHomeData.account(), listOf(moment), prefs)
+            AnkiquestMomentCard.show(host, HomeAccount.current(), listOf(moment), prefs)
             val card = card()
             advanceRobolectricLooper()
             assertEquals(
@@ -204,7 +204,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                     conquest = 100,
                     deck = "Old deck",
                 )
-            AnkiquestMomentCard.show(host, AnkiquestHomeData.account(), listOf(moment), prefs)
+            AnkiquestMomentCard.show(host, HomeAccount.current(), listOf(moment), prefs)
             val card = card()
             advanceRobolectricLooperUntil { lookups == 1 }
             assertNotNull(card.findViewById<View>(R.id.aq_moment_open)).performClick()
@@ -271,7 +271,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         checkbox.isChecked = true
         first.dismiss()
         advanceRobolectricLooper()
-        assertFalse(prefs.getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true))
+        assertFalse(prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true))
 
         queue()
         finish(host)
@@ -296,7 +296,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         AnkiquestMoments.present(host, prefs)
         assertTrue(card.isShowing)
         assertEquals(1, pager.adapter?.itemCount)
-        val owner = assertNotNull(AnkiquestHomeData.account()).notificationAccount
+        val owner = assertNotNull(HomeAccount.current()).notificationAccount
         assertEquals(listOf(moment), AnkiquestMoments.pending(prefs, owner))
         controller.start().resume()
         AnkiquestMoments.present(host, prefs)
@@ -309,12 +309,12 @@ class AnkiquestSessionCardTest : RobolectricTest() {
 
     @Test
     fun `a moment picture waits for resume before opening the share sheet`() {
-        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing)
-        val answer = CompletableDeferred<AnkiquestShare.Link>()
+        mockkObject(AnkiquestWins, AnkiquestShare, AnkiquestSharing)
+        val answer = CompletableDeferred<AnkiquestWins.Link>()
         val prepared = AtomicBoolean(false)
         var operation: Job? = null
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
-        coEvery { Ankiquest.shareWinLink(17, any()) } coAnswers {
+        coEvery { AnkiquestWins.link(17, any()) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }
@@ -333,7 +333,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
             advanceRobolectricLooperUntil { operation != null }
             controller.pause()
-            answer.complete(AnkiquestShare.Link("https://quest.example.test/w/card", "https://quest.example.test/w/card.png", "A win"))
+            answer.complete(AnkiquestWins.Link("https://quest.example.test/w/card", "https://quest.example.test/w/card.png", "A win"))
             advanceRobolectricLooperUntil { prepared.get() && operation?.children?.none { it.isActive } == true }
             assertNull(shadowOf(host).nextStartedActivity, "a paused moment must not open a share sheet")
             controller.resume()
@@ -342,7 +342,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             assertTrue(card.isShowing, "sharing must keep the moment available")
         } finally {
             controller.close()
-            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing)
+            unmockkObject(AnkiquestWins, AnkiquestShare, AnkiquestSharing)
         }
     }
 
@@ -404,7 +404,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         val controller = host()
         try {
             val host = controller.get()
-            val account = assertNotNull(AnkiquestHomeData.account())
+            val account = assertNotNull(HomeAccount.current())
 
             // The app sees today's minimum reached before the server has the reviews.
             val now = clock.intTimeMS()
@@ -469,7 +469,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         val controller = host()
         try {
             val host = controller.get()
-            val account = assertNotNull(AnkiquestHomeData.account())
+            val account = assertNotNull(HomeAccount.current())
 
             // The app sees today's minimum reached before the server has the reviews.
             val now = clock.intTimeMS()
@@ -536,7 +536,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
 
     @Test
     fun `Tell on a kept moment asks for recipients before sending`() {
-        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+        mockkObject(AnkiquestWins, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
         coEvery { AnkiquestSharing.win(any(), any()) } returns null
         coEvery { AnkiquestCommunity.conquest(any(), any(), any()) } throws IOException("offline")
         every { AnkiquestMomentShare.available(any()) } returns true
@@ -551,7 +551,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         val controller = host()
         try {
             val host = controller.get()
-            val identity = assertNotNull(AnkiquestHomeData.account())
+            val identity = assertNotNull(HomeAccount.current())
             // Every kept kind, including a companion unlock, uses the same chosen-recipient flow.
             val kept =
                 AnkiquestMoments.Kind.entries.mapIndexed { index, kind ->
@@ -605,10 +605,10 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                 card.dismiss()
             }
             coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
-            coVerify(exactly = 0) { Ankiquest.shareWinWithFriends(any(), any()) }
+            coVerify(exactly = 0) { AnkiquestWins.withFriends(any(), any()) }
         } finally {
             controller.close()
-            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
+            unmockkObject(AnkiquestWins, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial, AnkiquestCommunity)
         }
     }
 
@@ -734,7 +734,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                     shareTitle = "Level 4!",
                     shareBody = "I reached level 4.",
                 )
-            AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
+            AnkiquestMoments.offer(prefs, assertNotNull(HomeAccount.current()).notificationAccount, listOf(moment))
             finish(host)
             val card = card()
             card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
@@ -795,7 +795,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         case: JSONObject? = null,
         at: Long = 100,
     ): AnkiquestShare.Card {
-        mockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
+        mockkObject(AnkiquestWins, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
         val prepared = AtomicReference<AnkiquestShare.Card?>()
         val caption = AtomicReference<String?>()
         var sharedLabel = label
@@ -820,7 +820,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             )
         }
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns chosenDeck
-        coEvery { Ankiquest.shareWinLink(any(), any()) } throws IOException("offline")
+        coEvery { AnkiquestWins.link(any(), any()) } throws IOException("offline")
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
             caption.set(arg(1))
             prepared.set(arg(4))
@@ -842,7 +842,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
                     lapses = raw?.getInt("lapses") ?: 4,
                     deck = chosenDeck,
                 )
-            AnkiquestMoments.offer(prefs, assertNotNull(AnkiquestHomeData.account()).notificationAccount, listOf(moment))
+            AnkiquestMoments.offer(prefs, assertNotNull(HomeAccount.current()).notificationAccount, listOf(moment))
             finish(host)
             val card = card()
             // Every fixture case is a distinct conquest, not an already-shown moment.
@@ -874,14 +874,14 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             return assertNotNull(prepared.get())
         } finally {
             controller.close()
-            unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
+            unmockkObject(AnkiquestWins, AnkiquestShare, AnkiquestSharing, AnkiquestCommunity)
         }
     }
 
     @Test
     fun `a completed recap waits for resume without starting deck sharing while stopped`() {
         val controller = host()
-        val result = CompletableDeferred<AnkiquestStudySession.Summary>()
+        val result = CompletableDeferred<AnkiquestSessionSummary>()
         val reading = CompletableDeferred<Unit>()
         coEvery { AnkiquestStudySession.finish() } coAnswers {
             reading.complete(Unit)
@@ -910,14 +910,14 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         prefs.edit { putString(AnkiquestPreferences.PREF_TOKEN, "different-token") }
         advanceRobolectricLooper()
         assertFalse(card.isShowing)
-        assertTrue(prefs.getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true))
+        assertTrue(prefs.getBoolean(AnkiquestPreferences.PREF_SESSION_SUMMARY, true))
         coVerify(exactly = 0) { AnkiquestDeckShare.offer(any()) }
     }
 
     @Test
     fun `a waiting recap is discarded when credentials change before resume`() {
         val controller = host()
-        val result = CompletableDeferred<AnkiquestStudySession.Summary>()
+        val result = CompletableDeferred<AnkiquestSessionSummary>()
         val reading = CompletableDeferred<Unit>()
         coEvery { AnkiquestStudySession.finish() } coAnswers {
             reading.complete(Unit)

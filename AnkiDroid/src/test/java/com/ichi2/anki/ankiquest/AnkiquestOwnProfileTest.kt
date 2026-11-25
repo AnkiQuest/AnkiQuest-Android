@@ -13,9 +13,9 @@ import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import anki.collection.OpChanges
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Icon
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
@@ -352,7 +352,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
 
     @Test
     fun `a newer poll board wins over the row from an older upload`() {
-        val account = AnkiquestHomeData.account()!!
+        val account = HomeAccount.current()!!
         val now = TimeManager.time.intTimeMS()
         AnkiquestWidget.onOwnProfile(targetContext, account, profile("studied", 13, 2), now)
         val row =

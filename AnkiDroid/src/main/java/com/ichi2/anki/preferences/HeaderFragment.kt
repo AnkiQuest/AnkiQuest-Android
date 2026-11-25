@@ -23,6 +23,7 @@ import com.ichi2.anki.reviewreminders.ScheduleRemindersFragment
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.preferences.HeaderPreference
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 class HeaderFragment : SettingsFragment() {
     override val analyticsScreenNameConstant: String
@@ -271,7 +272,7 @@ class HeaderFragment : SettingsFragment() {
                 is AccessibilitySettingsFragment -> R.string.pref_accessibility_screen_key
                 is BackupLimitsSettingsFragment -> R.string.pref_backup_limits_screen_key
                 is AnkiquestSettingsFragment, is AnkiquestSignInFragment, is AnkiquestCompanionFragment,
-                -> R.string.ankiquest_screen_key
+                -> AnkiquestR.string.ankiquest_screen_key
                 is AdvancedSettingsFragment -> R.string.pref_advanced_screen_key
                 is ReviewerOptionsFragment, is ReviewerMenuSettingsFragment, is AnswerButtonsSettingsFragment ->
                     R.string.new_reviewer_options_key

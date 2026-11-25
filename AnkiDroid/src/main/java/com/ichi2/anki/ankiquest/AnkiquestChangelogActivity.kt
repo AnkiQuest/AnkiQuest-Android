@@ -14,6 +14,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /**
  * The AnkiQuest changelog: this build's release notes, with Rate AnkiQuest and a link to all
@@ -41,7 +42,7 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
 
         // The release this build is, and its notes
         findViewById<TextView>(R.id.aq_changelog_release).text =
-            AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build)
+            AnkiquestUpdater.installed() ?: getString(AnkiquestR.string.ankiquest_local_build)
         findViewById<TextView>(R.id.aq_changelog_notes).apply {
             text = AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(context)).parseAsHtml().trim()
             movementMethod = LinkMovementMethod.getInstance()

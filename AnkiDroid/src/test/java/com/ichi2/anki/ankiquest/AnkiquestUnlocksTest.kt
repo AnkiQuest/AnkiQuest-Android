@@ -5,13 +5,13 @@ package com.ichi2.anki.ankiquest
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Found
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Milestone
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Progress
+import com.ichi2.anki.ankiquest.ui.R
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -149,7 +149,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             putString(AnkiquestPreferences.PREF_USER, user)
             putString(AnkiquestPreferences.PREF_TOKEN, "token-$user")
         }
-        return requireNotNull(AnkiquestHomeData.account())
+        return requireNotNull(HomeAccount.current())
     }
 
     /** The server reports [added] from now on, as the app learns at its next capabilities check. */
@@ -272,7 +272,7 @@ class AnkiquestUnlocksTest : RobolectricTest() {
             // Signing in again with a new token keeps them: they belong to the player, not the token.
             AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestPreferences.PREF_USER, "cerro") }
             AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestPreferences.PREF_TOKEN, "renewed") }
-            assertEquals(setOf(Choice.COW), AnkiquestUnlocks.found(requireNotNull(AnkiquestHomeData.account()))?.unlocks)
+            assertEquals(setOf(Choice.COW), AnkiquestUnlocks.found(requireNotNull(HomeAccount.current()))?.unlocks)
         }
 
     @Test

@@ -3,12 +3,13 @@
 package com.ichi2.anki.preferences
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.xmlpull.v1.XmlPullParser
 import kotlin.test.assertEquals
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestSettingsMenuTest : RobolectricTest() {
@@ -75,11 +76,11 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                         R.string.ankiquest_rwkv_key,
                         R.string.ankiquest_update_channel_key,
                         R.string.ankiquest_check_updates_key,
-                        R.string.ankiquest_debug_info_key,
+                        AnkiDroidR.string.ankiquest_debug_info_key,
                         R.string.aq_privacy_key,
                     ),
             ),
-            layout(R.xml.preferences_ankiquest),
+            layout(AnkiDroidR.xml.preferences_ankiquest),
         )
     }
 
@@ -87,22 +88,22 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
     fun `only the companion and manage account lead to other screens`() {
         assertEquals(
             listOf(AnkiquestCompanionFragment::class.java.name, AnkiquestSignInFragment::class.java.name),
-            PreferenceTestUtils.getAttrFromXml(targetContext, R.xml.preferences_ankiquest, "fragment"),
+            PreferenceTestUtils.getAttrFromXml(targetContext, AnkiDroidR.xml.preferences_ankiquest, "fragment"),
         )
-        assertEquals(AnkiquestSignInFragment::class, getFragmentFromXmlRes(R.xml.preferences_ankiquest_sign_in)!!::class)
-        assertEquals(AnkiquestCompanionFragment::class, getFragmentFromXmlRes(R.xml.preferences_ankiquest_companion)!!::class)
+        assertEquals(AnkiquestSignInFragment::class, getFragmentFromXmlRes(AnkiDroidR.xml.preferences_ankiquest_sign_in)!!::class)
+        assertEquals(AnkiquestCompanionFragment::class, getFragmentFromXmlRes(AnkiDroidR.xml.preferences_ankiquest_companion)!!::class)
     }
 
     @Test
     fun `manage account holds the account's devices, data and connection`() {
-        val groups = layout(R.xml.preferences_ankiquest_sign_in).toMap()
+        val groups = layout(AnkiDroidR.xml.preferences_ankiquest_sign_in).toMap()
         assertEquals(
             keys(
                 R.string.ankiquest_url_key,
                 R.string.ankiquest_user_key,
                 R.string.ankiquest_token_key,
                 R.string.ankiquest_test_key,
-                R.string.ankiquest_debug_info_key,
+                AnkiDroidR.string.ankiquest_debug_info_key,
             ),
             groups[targetContext.getString(R.string.ankiquest_connection_key)],
         )

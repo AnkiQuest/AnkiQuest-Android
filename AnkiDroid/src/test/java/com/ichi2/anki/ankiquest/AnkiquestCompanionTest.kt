@@ -7,9 +7,9 @@ import androidx.core.content.edit
 import androidx.core.graphics.get
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.ui.R
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -28,7 +28,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
             putString(AnkiquestPreferences.PREF_USER, user)
             putString(AnkiquestPreferences.PREF_TOKEN, "token-$user")
         }
-        return requireNotNull(AnkiquestHomeData.account())
+        return requireNotNull(HomeAccount.current())
     }
 
     @Test

@@ -19,6 +19,7 @@ import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings.Who
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /**
  * A leaderboard widget's settings: whose standings it shows (friends, one of the player's groups,
@@ -98,8 +99,8 @@ class AnkiquestWidgetConfig : AnkiActivity(R.layout.activity_ankiquest_widget_se
 
     /** Asks for the player's groups and whether the server has a global board, then offers them. */
     private fun loadGroups() {
-        val account = AnkiquestHomeData.account() ?: return
-        groupsStatus.setText(R.string.ankiquest_widget_settings_groups_loading)
+        val account = HomeAccount.current() ?: return
+        groupsStatus.setText(AnkiquestR.string.ankiquest_widget_settings_groups_loading)
         groupsStatus.isVisible = true
         lifecycleScope.launch {
             try {
@@ -116,7 +117,7 @@ class AnkiquestWidgetConfig : AnkiActivity(R.layout.activity_ankiquest_widget_se
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest widget settings could not load groups")
-                groupsStatus.setText(R.string.ankiquest_widget_settings_groups_failed)
+                groupsStatus.setText(AnkiquestR.string.ankiquest_widget_settings_groups_failed)
             }
             showWho()
         }
@@ -125,17 +126,17 @@ class AnkiquestWidgetConfig : AnkiActivity(R.layout.activity_ankiquest_widget_se
     /** Offers friends, each group, and everyone when the server can show it; a saved choice stays on offer. */
     private fun showWho() {
         val language = AnkiquestLanguage.context(this)
-        val options = mutableListOf(whoKey(Who.FRIENDS, null) to language.getString(R.string.ankiquest_nav_friends))
+        val options = mutableListOf(whoKey(Who.FRIENDS, null) to language.getString(AnkiquestR.string.ankiquest_nav_friends))
         val shownGroups = groups.map { it.id to it.name }.toMutableList()
         val savedGroup = chosen.group
         if (chosen.who == Who.GROUP && savedGroup != null && shownGroups.none { it.first == savedGroup }) {
-            shownGroups += savedGroup to chosen.groupName.ifEmpty { language.getString(R.string.aq_friends_groups) }
+            shownGroups += savedGroup to chosen.groupName.ifEmpty { language.getString(AnkiquestR.string.aq_friends_groups) }
         }
         shownGroups.forEach { (id, name) -> options += whoKey(Who.GROUP, id) to name }
         // A renamed group shows its new name in the header once saved again.
         shownGroups.firstOrNull { chosen.who == Who.GROUP && it.first == savedGroup }?.let { chosen = chosen.copy(groupName = it.second) }
         if (global || chosen.who == Who.GLOBAL) {
-            options += whoKey(Who.GLOBAL, null) to language.getString(R.string.ankiquest_widget_who_global)
+            options += whoKey(Who.GLOBAL, null) to language.getString(AnkiquestR.string.ankiquest_widget_who_global)
         }
         fill(who, options, whoKey(chosen.who, chosen.group)) { key ->
             val (kind, id) = parseWho(key)

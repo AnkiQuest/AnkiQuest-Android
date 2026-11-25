@@ -21,13 +21,13 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceViewHolder
 import com.google.android.material.color.MaterialColors
-import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestGoalBar
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Milestone
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Progress
+import com.ichi2.anki.ankiquest.ui.R
 
 /**
  * One card per companion: its preview poses ([AnkiquestCompanion.preview]) with its name

@@ -31,6 +31,7 @@ import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 
 /** The same immediate mute and Undo action on both social entry points. */
 class AnkiquestMuteScreenshotTest : ScreenshotTest() {
@@ -109,7 +110,7 @@ class AnkiquestMuteScreenshotTest : ScreenshotTest() {
     ) {
         screen.window.decorView.allViews
             .filterIsInstance<TextView>()
-            .first { it.text == screen.getString(R.string.aq_friends_mute) }
+            .first { it.text == screen.getString(AnkiquestR.string.aq_friends_mute) }
             .performClick()
         // Finish the show animation without advancing through the snackbar timeout.
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))

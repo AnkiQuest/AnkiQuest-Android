@@ -7,8 +7,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -29,6 +29,7 @@ import java.net.HttpURLConnection.HTTP_FORBIDDEN
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -111,7 +112,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         val screen = controller.get()
         click(screen, R.string.ankiquest_widget_who_global)
         click(screen, R.string.aq_board_month)
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         screen.awaitBoard()
         val heading =
             screen.window.decorView.allViews.filterIsInstance<TextView>().first {
@@ -180,7 +181,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         val screen = launch().get()
         click(screen, R.string.aq_board_scope_group)
         coEvery { AnkiquestSocial.overview(identity) } returns overview().copy(groups = emptyList())
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         screen.awaitBoard()
         assertTrue(screen.getString(R.string.aq_board_group_missing) in labels(screen))
         coVerify(atLeast = 2) { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Friends) }
@@ -203,7 +204,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         assertTrue("Ana" in labels(screen))
         assertFalse(screen.getString(R.string.ankiquest_widget_who_global) in labels(screen))
         coEvery { AnkiquestBoards.hasScopes(identity) } returns true
-        screen.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        screen.findViewById<View>(AnkiDroidR.id.aq_feed_refresh).performClick()
         screen.awaitBoard()
         assertTrue(screen.getString(R.string.ankiquest_widget_who_global) in labels(screen))
     }

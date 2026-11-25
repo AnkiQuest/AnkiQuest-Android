@@ -3,7 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyApplication
 import org.json.JSONObject
 import org.junit.Test

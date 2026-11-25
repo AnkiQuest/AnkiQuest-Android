@@ -4,9 +4,9 @@ package com.ichi2.anki.ankiquest
 
 import android.view.View
 import androidx.core.view.isVisible
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooper
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooperUntil
+import com.ichi2.anki.ankiquest.ui.R
 import com.sun.net.httpserver.Headers
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
@@ -15,6 +15,7 @@ import java.net.HttpURLConnection.HTTP_OK
 import java.net.InetSocketAddress
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
+import com.ichi2.anki.R as AnkiDroidR
 
 /** One request an [AnkiquestTestServer] received, with its whole body. */
 internal class TestRequest(
@@ -106,7 +107,7 @@ internal class AnkiquestTestServer(
 internal fun AnkiquestFriendsActivity.awaitBoard() {
     advanceRobolectricLooperUntil {
         !findViewById<View>(R.id.aq_friends_board_loading).isVisible &&
-            !findViewById<View>(R.id.aq_feed_loading).isVisible
+            !findViewById<View>(AnkiDroidR.id.aq_feed_loading).isVisible
     }
     advanceRobolectricLooper()
 }

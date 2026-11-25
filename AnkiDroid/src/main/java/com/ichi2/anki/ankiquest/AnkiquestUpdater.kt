@@ -15,7 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.DeckPicker
-import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.compat.PackageInfoFlagsCompat
 import com.ichi2.anki.compat.getPackageArchiveInfoCompat

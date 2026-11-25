@@ -101,10 +101,10 @@ class AnkiquestPollTest : RobolectricTest() {
                     AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_USER, "other") }
                 }
                 if (path == "/api/avatars" && replaceBoardDuringAvatars) {
-                    val fetchedAt = cacheKey(AnkiquestPoll.PREF_CACHE_AT)
+                    val fetchedAt = cacheKey(AnkiquestWidget.PREF_CACHE_AT)
                     AnkiDroidApp.sharedPrefs().edit {
                         putLong(fetchedAt, AnkiDroidApp.sharedPrefs().getLong(fetchedAt, 0) + 1)
-                        putString(cacheKey(AnkiquestPoll.PREF_CACHE), "[{\"user\":\"newer\"}]")
+                        putString(cacheKey(AnkiquestWidget.PREF_CACHE), "[{\"user\":\"newer\"}]")
                     }
                 }
                 val inbox = path.startsWith("/api/notifications/")
@@ -142,7 +142,7 @@ class AnkiquestPollTest : RobolectricTest() {
         }
     }
 
-    private fun cacheKey(base: String) = scopedKey(base, AnkiquestHomeData.account()?.scope)
+    private fun cacheKey(base: String) = scopedKey(base, HomeAccount.current()?.scope)
 
     @Test
     @Config(sdk = [32])
@@ -246,7 +246,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
             val capabilities = requests.indexOf("/api/capabilities")
             assertTrue(capabilities > requests.indexOfFirst { it.startsWith("/api/notifications/") })
-            assertFalse(AnkiquestCapabilities.has(assertNotNull(AnkiquestHomeData.account()), "cookie_session"))
+            assertFalse(AnkiquestCapabilities.has(assertNotNull(HomeAccount.current()), "cookie_session"))
             server.requests.clear()
             assertEquals(Result.success(), worker().doWork())
             assertTrue(requests.none { it == "/api/capabilities" }, "fresh capabilities are not asked again")
@@ -289,7 +289,7 @@ class AnkiquestPollTest : RobolectricTest() {
     fun `corrupt cached leaderboard does not prevent inbox delivery`() =
         runBlocking {
             leaderboardStatus = 503
-            AnkiDroidApp.sharedPrefs().edit { putString(cacheKey(AnkiquestPoll.PREF_CACHE), "invalid JSON") }
+            AnkiDroidApp.sharedPrefs().edit { putString(cacheKey(AnkiquestWidget.PREF_CACHE), "invalid JSON") }
 
             assertEquals(Result.success(), worker().doWork())
 
@@ -374,12 +374,12 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `inbox response retains its captured account when settings change`() =
         runBlocking {
-            val expectedScope = requireNotNull(AnkiquestHomeData.account()).scope
+            val expectedScope = requireNotNull(HomeAccount.current()).scope
             switchAccountDuringInbox = true
 
             assertEquals(Result.success(), worker().doWork())
 
-            assertEquals("other", Ankiquest.player())
+            assertEquals("other", HomeAccount.current()?.user)
             verify(exactly = 1) { AnkiquestNotifier.onDeckCompletions(any(), "$url/cerro", any(), expectedScope) }
             verify(exactly = 0) { AnkiquestNotifier.onDeckCompletions(any(), "$url/other", any(), any()) }
             assertTrue(requests.none { it == "/api/avatars" })
@@ -406,7 +406,7 @@ class AnkiquestPollTest : RobolectricTest() {
     @Test
     fun `photo failure happens after inbox delivery and cannot request retry`() =
         runBlocking {
-            val expectedScope = requireNotNull(AnkiquestHomeData.account()).scope
+            val expectedScope = requireNotNull(HomeAccount.current()).scope
             avatarStatus = 503
 
             assertEquals(Result.success(), worker().doWork())

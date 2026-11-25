@@ -146,9 +146,9 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `older wins are sent to the server by notification or by place`() =
         runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
-            assertEquals(2, Ankiquest.shareWin(42, null, scope))
-            assertEquals(2, Ankiquest.shareWin(null, 1, scope))
+            val scope = HomeAccount.current()!!.scope
+            assertEquals(2, AnkiquestWins.share(42, null, scope))
+            assertEquals(2, AnkiquestWins.share(null, 1, scope))
             assertEquals(42, JSONObject(posted[0]).getLong("notification"))
             assertFalse(JSONObject(posted[0]).has("place"))
             assertEquals(1, JSONObject(posted[1]).getInt("place"))
@@ -157,9 +157,9 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a win the server keeps is shared by its id`() =
         runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
-            assertEquals(3, Ankiquest.shareWinWithFriends(17, scope))
-            val link = Ankiquest.shareWinLink(17, scope)
+            val scope = HomeAccount.current()!!.scope
+            assertEquals(3, AnkiquestWins.withFriends(17, scope))
+            val link = AnkiquestWins.link(17, scope)
             assertEquals(
                 listOf(17L to "friends", 17L to "link"),
                 posted.map {
@@ -177,11 +177,11 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a win is never shared by an account it does not belong to`() =
         runBlocking {
-            val scope = AnkiquestHomeData.account()!!.scope
+            val scope = HomeAccount.current()!!.scope
             AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "another-credential") }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWin(42, null, scope) }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWinWithFriends(17, scope) }
-            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWinLink(17, scope) }
+            assertFailsWith<HomeAccountChanged> { AnkiquestWins.share(42, null, scope) }
+            assertFailsWith<HomeAccountChanged> { AnkiquestWins.withFriends(17, scope) }
+            assertFailsWith<HomeAccountChanged> { AnkiquestWins.link(17, scope) }
             assertTrue(posted.isEmpty())
         }
 
@@ -197,7 +197,7 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Test
     fun `an unavailable server card gets a local picture and keeps the link`() {
-        val link = AnkiquestShare.Link("$base/w/token", "$base/w/huge.png", "Level 54! $base/w/token")
+        val link = AnkiquestWins.Link("$base/w/token", "$base/w/huge.png", "Level 54! $base/w/token")
         val chooser = AnkiquestShare.linkChooser(targetContext, link)
         val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
         assertEquals("image/png", send.type)
@@ -217,7 +217,7 @@ class AnkiquestShareTest : RobolectricTest() {
     fun `a downloaded picture is drawn locally for the signed-in account`() {
         val saving = assertNotNull(AnkiquestShare.download(targetContext, AnkiquestShare.Card("Level 54", "You reached level 54.")))
         assertEquals(AnkiquestGalleryActivity::class.java.name, saving.component?.className)
-        assertEquals(AnkiquestHomeData.account()!!.scope, saving.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
+        assertEquals(HomeAccount.current()!!.scope, saving.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
         val bitmap = targetContext.contentResolver.openInputStreamSafe(assertNotNull(saving.data)).use { BitmapFactory.decodeStream(it) }
         assertEquals(1080, assertNotNull(bitmap).width)
         assertTrue(posted.isEmpty(), "saving makes no link")
@@ -391,7 +391,7 @@ class AnkiquestShareTest : RobolectricTest() {
         assertEquals("Level 54", intent.getStringExtra(AnkiquestShare.EXTRA_TITLE))
         assertEquals(17, intent.getLongExtra(AnkiquestShare.EXTRA_WIN, 0))
         assertEquals(42, intent.getLongExtra(AnkiquestShare.EXTRA_NOTIFICATION, 0))
-        assertEquals(AnkiquestHomeData.account()!!.scope, intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
+        assertEquals(HomeAccount.current()!!.scope, intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
         assertTrue(intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
     }
 
@@ -405,7 +405,7 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a conquered card's win, label and a finished deck go to the server`() =
         runBlocking {
-            val account = AnkiquestHomeData.account()!!
+            val account = HomeAccount.current()!!
             assertEquals("conquered:1793183400000", AnkiquestSharing.winKey(account, 17))
             assertNull(AnkiquestSharing.winKey(account, 16), "a page that starts with another win")
             assertEquals("der Hund", AnkiquestSharing.conquestLabel(account, 1793183400000))

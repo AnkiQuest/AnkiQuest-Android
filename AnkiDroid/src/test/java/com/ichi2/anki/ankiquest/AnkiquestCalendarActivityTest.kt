@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
@@ -30,6 +30,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.R as AnkiDroidR
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
@@ -152,12 +153,12 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
         startRegularActivity<AnkiquestCalendarActivity>(AnkiquestCalendarActivity.intent(targetContext)).also { it.settle() }
 
     private fun AnkiquestCalendarActivity.settle() {
-        advanceRobolectricLooperUntil { isFinishing || !findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { isFinishing || !findViewById<View>(AnkiDroidR.id.aq_board_loading).isVisible }
         advanceRobolectricLooper()
     }
 
     private inline fun <reified T : View> AnkiquestCalendarActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
+        findViewById<View>(AnkiDroidR.id.aq_board_content).allViews.filterIsInstance<T>().toList()
 
     private fun AnkiquestCalendarActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
 

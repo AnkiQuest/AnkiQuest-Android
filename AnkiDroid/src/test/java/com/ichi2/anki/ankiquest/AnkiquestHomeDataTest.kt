@@ -6,8 +6,8 @@ import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.ui.R
 import com.ichi2.testutils.EmptyApplication
 import io.mockk.every
 import io.mockk.mockk
@@ -113,11 +113,11 @@ class AnkiquestHomeDataTest : RobolectricTest() {
         val preferences = mockk<SharedPreferences>()
         every { preferences.getString(any(), any()) } answers { stored[firstArg<String>()] }
 
-        val first = AnkiquestHomeData.account(preferences)
+        val first = HomeAccount.current(preferences)
         assertEquals(HomeAccount("https://first.example", "first member", "first-token"), first)
-        assertSame(first, AnkiquestHomeData.account(preferences), "unchanged settings keep the account and its scope")
+        assertSame(first, HomeAccount.current(preferences), "unchanged settings keep the account and its scope")
         stored = secondSettings
-        assertEquals(HomeAccount("https://second.example", "second member", "second-token"), AnkiquestHomeData.account(preferences))
+        assertEquals(HomeAccount("https://second.example", "second member", "second-token"), HomeAccount.current(preferences))
         verify(exactly = 0) { preferences.all }
     }
 
@@ -130,7 +130,7 @@ class AnkiquestHomeDataTest : RobolectricTest() {
             stored[key].also { if (key == AnkiquestPreferences.PREF_URL) stored = secondSettings }
         }
 
-        assertEquals(HomeAccount("https://second.example", "second member", "second-token"), AnkiquestHomeData.account(preferences))
+        assertEquals(HomeAccount("https://second.example", "second member", "second-token"), HomeAccount.current(preferences))
     }
 
     @Test

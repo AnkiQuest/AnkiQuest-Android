@@ -37,6 +37,7 @@ import dev.androidbroadcast.vbpd.viewBinding
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.ichi2.anki.ankiquest.ui.R as AnkiquestR
 import net.ankiweb.rsdroid.BuildConfig as BackendBuildConfig
 
 class AboutFragment : Fragment(R.layout.fragment_about) {
@@ -53,9 +54,9 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
             SimpleDateFormat(DateFormat.getBestDateTimePattern(Locale.getDefault(), "d MMM yyyy"))
                 .format(Date(BuildConfig.BUILD_TIME))
 
-        binding.version.text = AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build)
-        val entries = resources.getStringArray(R.array.ankiquest_update_channel_entries)
-        val values = resources.getStringArray(R.array.ankiquest_update_channel_values)
+        binding.version.text = AnkiquestUpdater.installed() ?: getString(AnkiquestR.string.ankiquest_local_build)
+        val entries = resources.getStringArray(AnkiquestR.array.ankiquest_update_channel_entries)
+        val values = resources.getStringArray(AnkiquestR.array.ankiquest_update_channel_values)
         val channel = AnkiquestUpdater.channel().name.lowercase()
         val channelLabel = entries.getOrNull(values.indexOf(channel)) ?: channel
         binding.updateChannel.text = getString(R.string.ankiquest_about_channel, channelLabel)
@@ -156,7 +157,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         if (icon != null) {
             binding.appLogo.setImageDrawable(icon)
         } else {
-            binding.appLogo.setImageResource(R.drawable.aki_face)
+            binding.appLogo.setImageResource(AnkiquestR.drawable.aki_face)
         }
     }
 
