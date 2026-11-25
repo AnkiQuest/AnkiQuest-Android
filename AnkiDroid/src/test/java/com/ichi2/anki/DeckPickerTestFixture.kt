@@ -17,7 +17,6 @@ import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackupManagerTestUtilities
-import org.ankiquest.deckRowsAdapter
 
 // TODO: move to testFixtures once RobolectricTest is moved
 
