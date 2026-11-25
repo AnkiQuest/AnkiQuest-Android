@@ -47,7 +47,7 @@ jobs:
     name: compare
     runs-on: ubuntu-latest
     # Allow the matching store job to finish before building the comparison.
-    timeout-minutes: 60
+    timeout-minutes: 70
 
     permissions:
       contents: read # for clone
