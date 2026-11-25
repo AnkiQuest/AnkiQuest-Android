@@ -16,6 +16,7 @@ From the [inclusion policy](https://f-droid.org/docs/Inclusion_Policy/) and the 
 | No Google Play Services, Firebase, Crashlytics or proprietary analytics | None. Analytics (opt-in) and crash reports (ask first) are upstream's, which F-Droid already ships. |
 | A fork has its own application ID, name and icon | `org.ankiquest.ankidroid` (#420), "AnkiQuest", the AnkiQuest launcher icon. Visible strings that named AnkiDroid say AnkiQuest (separate PR). |
 | No self-updates without opt-in consent | The GitHub build checks for updates every six hours. The F-Droid build passes `-PankiquestUpdates=none` (#484), which removes the check and the install permission. |
+| Assets built from or fetched by the recipe, freely licensed | The companion pictures come from the AnkiQuest-Art release `ankiquest-art.json` pins: the recipe's prebuild fetches its packs and launcher icons and checks their SHA-256 (see "Companion art"). AnkiQuest-Art's licence, Anki-tan's CC BY-SA 4.0. |
 | Anti-features declared | None; see below. |
 
 ## Anti-features
@@ -29,6 +30,20 @@ The recipe declares the anti-features upstream AnkiDroid's `metadata/com.ichi2.a
 - `NonFreeDep`, `NonFreeAdd`: no Google Play Services, Firebase or proprietary libraries in the `full` flavour.
 
 Revisit this list when a feature sends data to a new service or makes something public by default.
+
+## Companion art
+
+The app commits no companion pictures. Every build takes them from the AnkiQuest-Art release `ankiquest-art.json` pins: `BundleAnkiquestPacks` (buildSrc) bundles that release's `pack-*.zip` with `packs.json` as assets and unpacks the launcher icons' pictures from its `android-drawables.zip` as resources. It reads each file from its cache, named by SHA-256, and downloads only what is missing there.
+
+F-Droid builds the F-Droid APK like the GitHub full APK, with the art bundled. Its prebuild:
+
+1. lists `packs.json`, every `pack-*.zip` and `android-drawables.zip` with their SHA-256 from `ankiquest-art.json` into `ankiquest-art/SHA256SUMS`;
+2. downloads each from `https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/<tag>/`;
+3. checks them with `sha256sum -c` (a mismatch fails the build) and renames each to its SHA-256.
+
+`-PankiquestArtCache=ankiquest-art` points the build at that folder, so Gradle finds every file and downloads nothing; the "F-Droid APK" step passes the same property. `scanignore` keeps the scanner off the downloaded zips, which hold pictures and JSON only.
+
+A srclib of AnkiQuest-Art at the pinned commit would also work, but the packs are made by AnkiQuest-Art's Rust exporter; building them from source would add Rust and that tool to the recipe for files whose SHA-256 the pin already fixes.
 
 ## Signing
 
@@ -56,10 +71,11 @@ Signature copying itself works on our APKs: copying quest-23's signature onto th
 - The upstream commit in the debug info needs a fetch of AnkiDroid's `main` during prebuild.
 - The universal APK is the output; F-Droid removes our `signingConfig` before building.
 - The recipe's Gradle inputs and the "F-Droid APK" step must stay the same; `.github/tests/fdroid.test.cjs` compares them, and the `Binaries` file name with the uploaded one.
+- The art prefetch must list every asset the build reads; `fdroid.test.cjs` runs its listing on `ankiquest-art.json` and compares it with the pin. `-PankiquestArtCache` needs #493.
 
 ## Submitting
 
-Once #420 and #484 are merged and the first `org.ankiquest.ankidroid` release is tagged:
+Once #420, #484 and #493 are merged and the first `org.ankiquest.ankidroid` release is tagged:
 
 1. Fill in the first build in the recipe (tag, versionName, versionCode).
 2. Fork [fdroiddata](https://gitlab.com/fdroid/fdroiddata), add the recipe as `metadata/org.ankiquest.ankidroid.yml`, run `fdroid readmeta`, `fdroid rewritemeta org.ankiquest.ankidroid`, `fdroid lint org.ankiquest.ankidroid` and `fdroid build -v -l org.ankiquest.ankidroid`.

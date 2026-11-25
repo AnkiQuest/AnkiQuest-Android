@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 const assert = require("node:assert/strict");
+const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -26,6 +27,10 @@ function lastBuildList(key) {
     assert.notEqual(start, -1, `the last build must have ${key}`);
     const items = [];
     for (const line of lines.slice(start + 1)) {
+        // Comments between entries belong to the list.
+        if (/^ {6}#/.test(line)) {
+            continue;
+        }
         const item = line.match(/^ {6}- (.*)$/);
         if (!item) {
             break;
@@ -78,4 +83,31 @@ test("Binaries names the file the step uploads", () => {
 
 test("the fdroid release never becomes the latest release the updater reads", () => {
     assert.ok(fdroidStep().includes("--latest=false"));
+});
+
+// The art the build bundles comes from the AnkiQuest-Art release ankiquest-art.json pins. F-Droid
+// fetches it in prebuild and checks it against the pin before the build reads it from the cache.
+test("the recipe prefetches every pinned pack and checks its SHA-256", () => {
+    const prebuild = lastBuildList("prebuild");
+    const list = prebuild.find((line) => line.startsWith("sed -n") && line.includes("SHA256SUMS"));
+    assert.ok(list, "the prebuild lists the pinned assets");
+
+    // The listing, run on the pin, names packs.json, every pack and the launcher icons with their hashes.
+    const script = list.match(/^sed -n '([^']*)' \.\.\/ankiquest-art\.json > /);
+    assert.ok(script, list);
+    const listed = execFileSync("sed", ["-n", script[1], path.join(root, "ankiquest-art.json")], { encoding: "utf8" });
+    const pin = JSON.parse(fs.readFileSync(path.join(root, "ankiquest-art.json"), "utf8"));
+    const wanted = Object.entries(pin.assets)
+        .filter(([name]) => /^(packs\.json|pack-[a-z0-9_]+\.zip|android-drawables\.zip)$/.test(name))
+        .map(([name, sha]) => `${sha}  ${name}`);
+    assert.ok(wanted.length > 0);
+    assert.deepEqual(listed.trim().split("\n").sort(), wanted.sort());
+
+    // Each is downloaded from the pinned tag, checked, then stored by hash as the build's cache expects.
+    const steps = prebuild.join("\n");
+    assert.ok(steps.includes("https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/$tag/$name"));
+    assert.match(steps, /sha256sum -c SHA256SUMS && while read -r sum name; do mv "\$name" "\$sum"; done/);
+    assert.ok(lastBuildList("gradleprops").includes("ankiquestArtCache=ankiquest-art"));
+    assert.ok(steps.includes("mkdir -p ../ankiquest-art"));
+    assert.deepEqual(lastBuildList("scanignore"), ["ankiquest-art"]);
 });

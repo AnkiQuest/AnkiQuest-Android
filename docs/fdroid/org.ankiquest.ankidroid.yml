@@ -1,6 +1,7 @@
 # Draft of metadata/org.ankiquest.ankidroid.yml for gitlab.com/fdroid/fdroiddata.
 # Not submitted. It needs the org.ankiquest.ankidroid package (#420) and the
-# -PankiquestUpdates switch (#484); see README.md here for what is open.
+# -PankiquestUpdates switch (#484) and -PankiquestArtCache (#493); see README.md
+# here for what is open.
 # The Gradle inputs must stay those of the "F-Droid APK" step in
 # .github/workflows/ankiquest_apk.yml; .github/tests/fdroid.test.cjs checks it.
 Categories:
@@ -50,11 +51,22 @@ Builds:
       - git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
       - echo "upstreamCommit=$(git merge-base HEAD FETCH_HEAD)" >> ../gradle.properties
       - echo "systemProp.universal-apk=true" >> ../gradle.properties
+      # The companion packs and launcher icons of the AnkiQuest-Art release that
+      # ankiquest-art.json pins, checked against its SHA-256 before the build and
+      # stored by hash in ../ankiquest-art, where BundleAnkiquestPacks looks first
+      # (gradleprops ankiquestArtCache), so the build downloads no art itself.
+      - mkdir -p ../ankiquest-art
+      - sed -n 's/^ *"\(packs\.json\|pack-[a-z0-9_]*\.zip\|android-drawables\.zip\)":[[:space:]]*"\([0-9a-f]\{64\}\)".*/\2  \1/p' ../ankiquest-art.json > ../ankiquest-art/SHA256SUMS
+      - cd ../ankiquest-art && tag=$(sed -n 's/^ *"tag":[[:space:]]*"\(art-[0-9]*\)".*/\1/p' ../ankiquest-art.json) && while read -r sum name; do curl -fsSL --retry 3 -o "$name" "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/$tag/$name"; done < SHA256SUMS
+      - cd ../ankiquest-art && sha256sum -c SHA256SUMS && while read -r sum name; do mv "$name" "$sum"; done < SHA256SUMS
+    scanignore:
+      - ankiquest-art
     output: build/outputs/apk/full/release/*universal*.apk
     gradleprops:
       - ankiquest=true
       - customName=AnkiQuest
       - ankiquestUpdates=none
+      - ankiquestArtCache=ankiquest-art
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^quest-[0-9]+$
