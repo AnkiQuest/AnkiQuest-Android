@@ -42,4 +42,6 @@
     <string name="ankiquest_streak_cue_title">Aviso de sequência ao rever</string>
     <string name="ankiquest_show_global_title">Mostrar-me na classificação global</string>
     <string name="ankiquest_show_global_summary">Os jogadores com sessão iniciada veem o teu nome, avatar, nível, XP e sequência. Os perfis públicos também são visíveis sem iniciar sessão. Os teus amigos e membros dos teus grupos veem mais. Esta opção só afeta a classificação.</string>
+    <string name="ankiquest_sync_settings_title">Sincronizar definições</string>
+    <string name="ankiquest_sync_settings_summary">Mantém as definições do AnkiQuest iguais em todos os teus dispositivos. Este interruptor aplica-se só a este dispositivo.</string>
 </resources>

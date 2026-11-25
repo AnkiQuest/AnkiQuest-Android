@@ -35,6 +35,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.shadows.ShadowDialog
 import kotlin.test.assertNotNull
+import kotlin.time.Duration.Companion.minutes
 
 @RunWith(AndroidJUnit4::class)
 class ForegroundMediaNetworkTest : RobolectricTest() {
@@ -219,7 +220,7 @@ class ForegroundMediaNetworkTest : RobolectricTest() {
         }
         // The conflict path enqueues the media worker after lastSyncTime is set; the gap
         // between the two causes the work lookup to fail on slow runners.
-        advanceRobolectricLooperUntil(lazyMessage = { "the media worker was not enqueued" }) {
+        advanceRobolectricLooperUntil(timeout = 2.minutes, lazyMessage = { "the media worker was not enqueued" }) {
             manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().any { !it.state.isFinished }
         }
         return manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().single { !it.state.isFinished }

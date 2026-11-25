@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- The RWKV forecast's colours, as the anki-rwkv-forecast add-on's. -->
+<resources>
+    <color name="aq_rwkv_due">#D32F2F</color>
+    <color name="aq_rwkv_near">#EF6C00</color>
+    <color name="aq_rwkv_safe">#2E7D32</color>
+    <color name="aq_rwkv_axis">#666666</color>
+</resources>
