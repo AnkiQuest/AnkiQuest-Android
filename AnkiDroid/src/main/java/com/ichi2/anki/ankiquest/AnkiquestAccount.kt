@@ -42,7 +42,8 @@ object AnkiquestAccount {
         val token: String,
     )
 
-    fun device(): String = "AnkiDroid (${Build.MODEL})"
+    /** The name the server lists this sign-in under, as on the website's device list. */
+    fun device(): String = "AnkiQuest (${Build.MODEL})"
 
     internal fun httpRequest(
         request: Credentials,
