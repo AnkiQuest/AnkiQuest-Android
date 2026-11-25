@@ -76,9 +76,20 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             importedCopyFile = null
             refresh()
         }
+    private var passwordPrompt: PasswordPrompt = PasswordPrompt.Hidden
+    private var passwordJob: Job? = null
     private var generation = 0
     private var focus: String? = null
     private var questsHeading: View? = null
+
+    /** The card asking a player who signs in only with a token to set a password. */
+    private sealed interface PasswordPrompt {
+        data object Hidden : PasswordPrompt
+
+        data class Offered(
+            val account: HomeAccount,
+        ) : PasswordPrompt
+    }
 
     private sealed interface CopyInbox {
         data object Loading : CopyInbox
@@ -179,6 +190,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             copyInbox = CopyInbox.Loading
             copyStatus = null
             copyState = CopyState.Ready
+            passwordPrompt = PasswordPrompt.Hidden
         }
         val turn = ++generation
         lifecycleScope.launch {
@@ -199,6 +211,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         networkJob?.cancel()
         avatarJob?.cancel()
         copyJob?.cancel()
+        passwordJob?.cancel()
         if (current == null) {
             loading = false
             render()
@@ -208,6 +221,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         render()
         refreshAvatar(current, turn)
         refreshCopies(current, turn)
+        refreshPasswordPrompt(current, turn)
         networkJob =
             lifecycleScope.launch {
                 val failure =
@@ -283,6 +297,39 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     }
                 if (isCurrent(turn, current.scope)) {
                     copyInbox = result
+                    render()
+                }
+            }
+    }
+
+    /** Asks the server how the player signs in, unless Not now still hides the card. */
+    private fun refreshPasswordPrompt(
+        current: HomeAccount,
+        turn: Int,
+    ) {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val snoozedAt = AnkiquestPasswordPrompt.snoozedAt(prefs, current)
+        val now = TimeManager.time.intTimeMS()
+        if (current.token.isEmpty() || (snoozedAt != null && now - snoozedAt < AnkiquestPasswordPrompt.SNOOZE_MS)) {
+            passwordPrompt = PasswordPrompt.Hidden
+            return
+        }
+        passwordJob =
+            lifecycleScope.launch {
+                val offered =
+                    try {
+                        val methods = AnkiquestAccountSettings.methods(current)
+                        // Not now may have been chosen while the server was answering.
+                        AnkiquestPasswordPrompt.offered(methods, AnkiquestPasswordPrompt.snoozedAt(prefs, current), now)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        Timber.w(error, "AnkiQuest sign-in methods could not be loaded")
+                        false
+                    }
+                val next = if (offered) PasswordPrompt.Offered(current) else PasswordPrompt.Hidden
+                if (isCurrent(turn, current.scope) && next != passwordPrompt) {
+                    passwordPrompt = next
                     render()
                 }
             }
@@ -375,6 +422,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
+        renderPasswordPrompt()
         val signed = account?.takeIf { it.token.isNotEmpty() }
         val suggested =
             AnkiquestDailyGoal.ServerGoal
@@ -425,6 +473,29 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             if (failure == R.string.aq_home_auth) button(content, R.string.aq_home_settings) { settings() }
         }
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
+    }
+
+    /** Below the next study step, so it never stands between the player and their cards. */
+    private fun renderPasswordPrompt() {
+        val offered = passwordPrompt as? PasswordPrompt.Offered ?: return
+        val panel = views.card(content, tinted = true)
+        views.text(panel, getString(R.string.ankiquest_password_set_title), heading = true)
+        views.text(panel, getString(R.string.ankiquest_password_prompt_body))
+        button(panel, R.string.ankiquest_password_set_title, primary = true) {
+            AnkiquestPasswordPrompt.ask(this, offered.account) { hidePasswordPrompt(offered) }
+        }
+        button(panel, R.string.ankiquest_deck_share_not_now) {
+            AnkiquestPasswordPrompt.snooze(AnkiDroidApp.sharedPrefs(), offered.account, TimeManager.time.intTimeMS())
+            hidePasswordPrompt(offered)
+        }
+    }
+
+    /** Hides the card after Not now or a saved password; an answer still on its way is dropped. */
+    private fun hidePasswordPrompt(offered: PasswordPrompt.Offered) {
+        if (passwordPrompt != offered) return
+        passwordJob?.cancel()
+        passwordPrompt = PasswordPrompt.Hidden
+        render()
     }
 
     private fun renderGoal(

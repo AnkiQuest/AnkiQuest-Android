@@ -358,6 +358,41 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
     }
 
     @Test
+    fun `a token-only player sets a first password counted in characters as the server does`() {
+        // Each emoji is one character but two UTF-16 units.
+        val five = "\uD83D\uDE00".repeat(5)
+        val many = "\uD83D\uDE00".repeat(129)
+        val tokenOnly =
+            Methods(account = false, password = false, providers = emptyList(), signIn = AnkiquestAccountSettings.SignIn.TOKEN_ONLY)
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns tokenOnly
+        coEvery { AnkiquestAccountSettings.setPassword(any(), null, many, false) } returns withPassword
+        val fragment = open().second
+        fragment.password().performClick()
+        idle()
+        val dialog = latest()
+        val (password, repeat) = dialog.edits()
+        assertEquals(2, dialog.edits().size, "the new password twice, no current one")
+
+        password.setText(five)
+        repeat.setText(five)
+        positive(dialog)
+        assertEquals(
+            targetContext.getString(R.string.ankiquest_password_length),
+            dialog
+                .texts()
+                .last()
+                .text
+                .toString(),
+        )
+        coVerify(exactly = 0) { AnkiquestAccountSettings.setPassword(any(), any(), any(), any()) }
+
+        password.setText(many)
+        repeat.setText(many)
+        positive(dialog)
+        coVerify(exactly = 1) { AnkiquestAccountSettings.setPassword(any(), null, many, false) }
+    }
+
+    @Test
     fun `the password row says what setting one takes for each kind of account`() {
         val fragment = open().second
         assertEquals(targetContext.getString(R.string.ankiquest_password_title), fragment.password().title)
