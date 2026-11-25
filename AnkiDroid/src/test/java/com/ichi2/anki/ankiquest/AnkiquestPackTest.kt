@@ -375,6 +375,50 @@ class AnkiquestPackTest {
         assertEquals(PackRefusal.BAD_INDEX, refusal { AnkiquestPackDownload(library(), fetch).update() })
     }
 
+    /** The SHA-256 of [bytes] as lower-case hex. */
+    private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    /** [fetch] serving its index as release [version]'s `packs.json` too, as a pinned download asks for it. */
+    private fun pinnedRelease(
+        version: Int,
+        fetch: FakeFetch,
+    ): FakeFetch {
+        val index = fetch.assets.getValue(AnkiquestPackDownload.LATEST_INDEX)
+        return FakeFetch(fetch.assets + (AnkiquestPackDownload.assetUrl("art-$version", PackFormat.RELEASE_INDEX) to index))
+    }
+
+    @Test
+    fun `the pinned release is checked against the build's checksum`() {
+        val library = library()
+        val fetch = pinnedRelease(2, release(2, mapOf("aki" to pack(version = 2))))
+        val index = fetch.assets.getValue(AnkiquestPackDownload.LATEST_INDEX)
+        val result = AnkiquestPackDownload(library, fetch).update(PackSource.Pinned("art-2", sha256(index)))
+        assertEquals(PackUpdate.Updated(listOf("aki")), result)
+        assertEquals(AnkiquestPackDownload.assetUrl("art-2", PackFormat.RELEASE_INDEX), fetch.asked.first())
+        assertTrue(AnkiquestPackDownload.LATEST_INDEX !in fetch.asked)
+    }
+
+    @Test
+    fun `a pinned index that does not match the build's checksum installs nothing`() {
+        val library = library()
+        val fetch = pinnedRelease(2, release(2, mapOf("aki" to pack(version = 2))))
+        val wrong = PackSource.Pinned("art-2", "0".repeat(64))
+        assertEquals(PackRefusal.CHECKSUM, refusal { AnkiquestPackDownload(library, fetch).update(wrong) })
+        assertTrue(library.companions().isEmpty())
+        assertNull(library.index())
+    }
+
+    @Test
+    fun `a pinned index of another release is refused`() {
+        val fetch = release(3, mapOf("aki" to pack(version = 3)))
+        val index = fetch.assets.getValue(AnkiquestPackDownload.LATEST_INDEX)
+        val misplaced = FakeFetch(fetch.assets + (AnkiquestPackDownload.assetUrl("art-2", PackFormat.RELEASE_INDEX) to index))
+        assertEquals(
+            PackRefusal.BAD_INDEX,
+            refusal { AnkiquestPackDownload(library(), misplaced).update(PackSource.Pinned("art-2", sha256(index))) },
+        )
+    }
+
     @Test
     fun `downloads go only to GitHub over HTTPS`() {
         val allowed = { url: String -> GithubPackFetch.allowed(url.toHttpUrl()) }

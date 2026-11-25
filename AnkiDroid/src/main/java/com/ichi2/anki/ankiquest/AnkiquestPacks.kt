@@ -35,8 +35,17 @@ internal object AnkiquestPacks {
         }
     }
 
-    /** A downloader for [context]'s library over AnkiQuest's HTTP client. */
-    fun download(context: Context) = AnkiquestPackDownload(library(context), GithubPackFetch(AnkiquestHttp.client))
+    @Volatile
+    private var download: AnkiquestPackDownload? = null
+
+    /** The downloader for [context]'s library over AnkiQuest's HTTP client, created once so updates never overlap. */
+    fun download(context: Context): AnkiquestPackDownload {
+        download?.let { return it }
+        synchronized(this) {
+            download?.let { return it }
+            return AnkiquestPackDownload(library(context), GithubPackFetch(AnkiquestHttp.client)).also { download = it }
+        }
+    }
 }
 
 /** The bundled packs in assets under [root]; empty in a build without them. */
