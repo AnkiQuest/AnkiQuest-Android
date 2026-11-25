@@ -60,14 +60,20 @@ class SelectStoragePermissionsTest {
 
     @Config(sdk = [27, 28])
     @Test
-    fun `the new AnkiQuest package starts with a separate collection`() {
-        val newApp =
-            object : ContextWrapper(context) {
-                override fun getPackageName(): String = AnkiquestMove.NEW_PACKAGE
+    fun `a fresh install of the new AnkiQuest package shares AnkiDroid's collection`() {
+        // All AnkiDroid apps open the same public folder; the package must not change the choice.
+        val packages = listOf(ANKIDROID_PACKAGE, AnkiquestMove.OLD_PACKAGE, AnkiquestMove.NEW_PACKAGE)
+        val selected =
+            packages.map { name ->
+                val app =
+                    object : ContextWrapper(context) {
+                        override fun getPackageName(): String = name
+                    }
+                app.sharedPrefs().edit { remove(CollectionHelper.PREF_COLLECTION_PATH) }
+                selectStoragePermissions(app)
             }
-        newApp.sharedPrefs().edit { remove(CollectionHelper.PREF_COLLECTION_PATH) }
 
-        assertThat(selectStoragePermissions(newApp), equalTo(StoragePermissionSet.APP_PRIVATE))
+        assertThat(selected, equalTo(packages.map { StoragePermissionSet.LEGACY_ACCESS }))
     }
 
     @SuppressLint("InlinedApi")
@@ -166,5 +172,8 @@ class SelectStoragePermissionsTest {
         const val BEFORE_Q = Build.VERSION_CODES.Q - 1
         const val Q = Build.VERSION_CODES.Q
         const val R_OR_AFTER = Build.VERSION_CODES.R
+
+        // Upstream AnkiDroid's application ID.
+        const val ANKIDROID_PACKAGE = "com.ichi2.anki"
     }
 }
