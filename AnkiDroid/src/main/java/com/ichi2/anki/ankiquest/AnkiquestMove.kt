@@ -16,8 +16,8 @@ import java.security.MessageDigest
 /**
  * Moving from the old package, `com.ichi2.anki.quest`, to the new one, `org.ankiquest.ankidroid`.
  * The final old-package release exposes its settings and logins. This app verifies that release
- * before [AnkiquestMoveImport] offers to read them on first launch. The collection follows through
- * sync or export and import; see [AnkiquestMoveImport.Next].
+ * before [AnkiquestMoveImport] offers to read them on first launch. The apps can open the same
+ * collection in the shared AnkiDroid folder. Separate folders need sync or export and import.
  */
 internal object AnkiquestMove {
     const val OLD_PACKAGE = "com.ichi2.anki.quest"

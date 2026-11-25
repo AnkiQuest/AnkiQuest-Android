@@ -5,8 +5,8 @@
     <string name="ankiquest_move_message">¿Traer tus ajustes y tu inicio de sesión del AnkiQuest anterior?</string>
     <string name="ankiquest_move_accept">Traer</string>
     <string name="ankiquest_move_decline">No</string>
-    <string name="ankiquest_move_done_sync">Ajustes e inicio de sesión traídos. Tu colección llega desde AnkiWeb con la primera sincronización, que empieza ahora.</string>
-    <string name="ankiquest_move_done_export">Ajustes e inicio de sesión traídos. Tu colección sigue en el AnkiQuest anterior: usa allí «Exportar colección» e importa el archivo aquí.</string>
+    <string name="ankiquest_move_done_sync">Ajustes e inicio de sesión traídos. Si las dos aplicaciones usan la misma carpeta de AnkiDroid, fuerza la detención del AnkiQuest anterior en los ajustes de Android antes de continuar. La sincronización con AnkiWeb comienza al abrir la colección.</string>
+    <string name="ankiquest_move_done_export">Ajustes e inicio de sesión traídos. Si las dos aplicaciones usan la misma carpeta de AnkiDroid, fuerza la detención del AnkiQuest anterior en los ajustes de Android antes de continuar. Si usan carpetas distintas, exporta la colección desde la aplicación anterior e importa el archivo aquí.</string>
     <string name="ankiquest_move_failed">El AnkiQuest anterior no entregó sus ajustes. Configura esta aplicación como siempre.</string>
     <string name="ankiquest_move_loading">Transfiriendo tus ajustes e inicio de sesión…</string>
 </resources>

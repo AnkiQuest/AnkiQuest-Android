@@ -72,7 +72,7 @@ AnkiQuest `org.ankiquest.ankidroid` installs alongside the old `com.ichi2.anki.q
 
 1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
 2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). On Android 9 and later, the official app offers to move settings, AnkiQuest sign-in and AnkiWeb sign-in on first launch.
-3. If both apps use the public `AnkiDroid` folder, the new app opens the same collection; close the old app first. Otherwise, with an AnkiWeb login, sync your collection in the new app. Without one, use **Export collection** (with scheduling and media) in the old app, then import the file in the new app. Android 7 and 8 and builds signed outside the official releases use this collection transfer and a fresh sign-in.
+3. If both apps use the public `AnkiDroid` folder, the new app opens the same collection. Force-stop the old AnkiQuest in Android settings before opening the collection in the new app. If the apps use separate folders, sync your collection with AnkiWeb or use **Export collection** (with scheduling and media) in the old app and import the file in the new one. On Android 7 and 8, and with builds signed outside the official releases, sign in again in the new app.
 4. Uninstall the old app once your cards are in the new one.
 
 Obtainium users can remove the old entry and add AnkiQuest again. Apps using the AnkiDroid API find the new package through `org.ankiquest:api` and the `org.ankiquest.ankidroid.flashcards` provider. Automations start a sync with `org.ankiquest.ankidroid.DO_SYNC`.
