@@ -46,7 +46,11 @@ internal class AssetPackFolder(
 ) : PackFolder {
     override fun ids(): List<String> =
         try {
-            assets.list(root).orEmpty().filter { PackFormat.validId(it) }.sorted()
+            assets
+                .list(root)
+                .orEmpty()
+                .filter { PackFormat.validId(it) }
+                .sorted()
         } catch (e: IOException) {
             emptyList()
         }
