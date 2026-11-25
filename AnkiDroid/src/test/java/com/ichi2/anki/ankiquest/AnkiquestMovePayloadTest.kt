@@ -71,7 +71,7 @@ class AnkiquestMovePayloadTest : RobolectricTest() {
     fun `applying fills the new app and keeps its own install settings`() {
         val prefs = targetContext.getSharedPreferences("ankiquest-move-target", Context.MODE_PRIVATE)
         prefs.edit {
-            putString("deckPath", "/data/user/0/org.ankiquest/files/AnkiDroid")
+            putString("deckPath", "/data/user/0/org.ankiquest.ankidroid/files/AnkiDroid")
             putString("lastVersion", "2.25")
             putString("theme", "0")
         }
@@ -79,7 +79,7 @@ class AnkiquestMovePayloadTest : RobolectricTest() {
 
         AnkiquestMovePayload.apply(prefs, payload, exclusions)
 
-        assertEquals("/data/user/0/org.ankiquest/files/AnkiDroid", prefs.getString("deckPath", null))
+        assertEquals("/data/user/0/org.ankiquest.ankidroid/files/AnkiDroid", prefs.getString("deckPath", null))
         assertEquals("2.25", prefs.getString("lastVersion", null))
         assertEquals(settings, prefs.all - setOf("deckPath", "lastVersion"))
     }

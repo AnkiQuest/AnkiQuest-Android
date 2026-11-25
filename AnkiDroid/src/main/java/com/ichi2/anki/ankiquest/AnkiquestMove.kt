@@ -11,7 +11,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 
 /**
- * Moving from the old package, `com.ichi2.anki.quest`, to the new one, `org.ankiquest`.
+ * Moving from the old package, `com.ichi2.anki.quest`, to the new one, `org.ankiquest.ankidroid`.
  * Android cannot update an app into another package, so the same code runs as both apps, and the
  * package it runs as decides its [Role]: the old app serves its settings and logins through
  * [AnkiquestMoveProvider], the new one offers to import them on first launch
@@ -19,7 +19,7 @@ import androidx.core.net.toUri
  */
 internal object AnkiquestMove {
     const val OLD_PACKAGE = "com.ichi2.anki.quest"
-    const val NEW_PACKAGE = "org.ankiquest"
+    const val NEW_PACKAGE = "org.ankiquest.ankidroid"
 
     /** The old app's provider: `${applicationId}.ankiquestmove` in src/quest/AndroidManifest.xml. */
     const val AUTHORITY = "$OLD_PACKAGE.ankiquestmove"
@@ -38,7 +38,7 @@ internal object AnkiquestMove {
         /** `com.ichi2.anki.quest`: serves its settings to the new app. */
         OLD,
 
-        /** `org.ankiquest`: offers to import them. */
+        /** `org.ankiquest.ankidroid`: offers to import them. */
         NEW,
 
         /** Every other build (AnkiDroid, debug builds, tests): takes no part. */

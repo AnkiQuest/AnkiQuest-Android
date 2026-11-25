@@ -1,6 +1,6 @@
 AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): study, shared goals, and progress in one place.
 
-**Moving to the new app.** AnkiQuest is moving to its own package, org.ankiquest. This release hands its settings, AnkiQuest login and AnkiWeb login to the new app, which asks for them on first launch. Your collection follows by an AnkiWeb sync, or without AnkiWeb by Export collection here and import in the new app.
+**Moving to the new app.** AnkiQuest is moving to its own package, org.ankiquest.ankidroid. This release hands its settings, AnkiQuest login and AnkiWeb login to the new app, which asks for them on first launch. Your collection follows by an AnkiWeb sync, or without AnkiWeb by Export collection here and import in the new app.
 
 **Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 

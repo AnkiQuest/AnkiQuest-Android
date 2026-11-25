@@ -20,8 +20,16 @@ class AnkiquestMoveTest : RobolectricTest() {
     @Test
     fun `the running package decides the role`() {
         assertEquals(Role.OLD, Role.of("com.ichi2.anki.quest"))
-        assertEquals(Role.NEW, Role.of("org.ankiquest"))
-        for (other in listOf("com.ichi2.anki", "com.ichi2.anki.debug", "org.ankiquest.debug", "org.ankiquest.anki", "dev.hilll.anki", "")) {
+        assertEquals(Role.NEW, Role.of("org.ankiquest.ankidroid"))
+        for (other in listOf(
+            "com.ichi2.anki",
+            "com.ichi2.anki.debug",
+            "org.ankiquest.ankidroid.debug",
+            "org.ankiquest",
+            "org.ankiquest.anki",
+            "dev.hilll.anki",
+            "",
+        )) {
             assertEquals(Role.NONE, Role.of(other), other)
         }
     }
@@ -37,7 +45,8 @@ class AnkiquestMoveTest : RobolectricTest() {
             null,
             "com.ichi2.anki",
             "com.ichi2.anki.quest",
-            "org.ankiquest.debug",
+            "org.ankiquest.ankidroid.debug",
+            "org.ankiquest",
             "org.ankiquest.anki",
             "com.example.thief",
         )) {
