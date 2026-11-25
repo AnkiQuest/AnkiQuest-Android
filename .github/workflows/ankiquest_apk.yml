@@ -155,10 +155,10 @@ jobs:
             --title "AnkiQuest ${{ steps.release.outputs.number }}" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
-      - name: Publish nightly
+      - name: Nightly manifest
+        id: nightly
         if: github.ref == 'refs/heads/master' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}
           NIGHTLY: ${{ steps.release.outputs.nightly }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
@@ -168,9 +168,16 @@ jobs:
             --argjson size "$(stat -c %s AnkiQuest.apk)" \
             '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
             > nightly.json
-          gh release delete nightly --yes --cleanup-tag || true
           cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk nightly.json \
-            --prerelease --latest=false --target "$GITHUB_SHA" \
-            --title "AnkiQuest nightly" \
-            --notes "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."
+
+      # Updates the release in place and retries the release API; see the action.
+      - name: Publish nightly
+        if: steps.nightly.outcome == 'success'
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/nightly-release@master
+        with:
+          title: AnkiQuest nightly
+          notes: "Built from ${{ github.sha }} after quest-${{ steps.release.outputs.number }}. Untested: pick the nightly update channel in AnkiQuest settings to get these."
+          files: |
+            AnkiQuest.apk
+            AnkiDroid-Quest.apk
+            nightly.json
