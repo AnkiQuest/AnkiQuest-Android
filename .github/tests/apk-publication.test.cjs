@@ -39,9 +39,13 @@ function fakeBuild(t) {
     return { dir, apk };
 }
 
+// The new package's download names. AnkiDroid-Quest.apk stays with the old package's final
+// release, quest-24.
+const names = ["AnkiQuest-arm64-v8a.apk", "AnkiQuest.apk", "AnkiQuest-armeabi-v7a.apk", "AnkiQuest-x86_64.apk", "AnkiQuest-x86.apk", "AnkiQuest.aab"];
+
 for (const channel of ["release", "nightly"]) {
-    test(channel + " keeps the APK downloaded by older released apps", (t) => {
-        const { dir, apk } = fakeBuild(t);
+    test(channel + " publishes the new download names without the legacy alias", (t) => {
+        const { dir } = fakeBuild(t);
         const bin = path.join(dir, "bin");
         const capture = path.join(dir, "published");
         const options = {
@@ -50,35 +54,27 @@ for (const channel of ["release", "nightly"]) {
                 ...process.env,
                 PATH: bin + path.delimiter + process.env.PATH,
                 GH_CAPTURE: capture,
-                GITHUB_REF_NAME: "quest-24",
+                GITHUB_REF_NAME: "quest-25",
                 GITHUB_SHA: "synthetic-commit",
-                RELEASE: "24",
+                RELEASE: "25",
                 NIGHTLY: "3",
-                VERSION_CODE: "50024003",
+                VERSION_CODE: "50025003",
             },
             encoding: "utf8",
         };
         execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Assets")], options);
         const assets = JSON.parse(fs.readFileSync(path.join(dir, "assets.json"), "utf8"));
-        assert.ok(assets.some(asset => asset.name === legacyApk), "Released updaters still require " + legacyApk);
-        assert.deepEqual(fs.readFileSync(path.join(dir, legacyApk)), apk, "The alias must keep the signed APK bytes");
+        assert.deepEqual(assets.map(asset => asset.name), names);
+        assert.ok(!fs.existsSync(path.join(dir, legacyApk)), legacyApk + " belongs to the old package");
 
-        const publish = stepScript("Publish " + channel).replaceAll("$" + "{{ steps.release.outputs.number }}", "24");
+        const publish = stepScript("Publish " + channel).replaceAll("$" + "{{ steps.release.outputs.number }}", "25");
         execFileSync("bash", ["-euo", "pipefail", "-c", publish], options);
         const args = fs.readFileSync(capture, "utf8").split("\0");
         const create = args.lastIndexOf("create");
         assert.ok(create >= 0, "A release must be created");
-        assert.ok(args.slice(create).includes(legacyApk), "The legacy APK must be attached to the release");
+        for (const name of names) {
+            assert.ok(args.slice(create).includes(name), name + " must be attached to the release");
+        }
+        assert.ok(!args.slice(create).includes(legacyApk), legacyApk + " must not be attached");
     });
 }
-
-// quest-2 to quest-19 download the first .apk of the release's asset list, which GitHub sorts by
-// name. The legacy alias, the universal APK, must sort before the ABI APKs, which some devices
-// cannot install.
-test("older released apps find the universal APK first", (t) => {
-    const { dir } = fakeBuild(t);
-    execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Assets")], { cwd: dir, encoding: "utf8" });
-    const names = JSON.parse(fs.readFileSync(path.join(dir, "assets.json"), "utf8")).map(asset => asset.name);
-    const apks = names.filter(name => name.endsWith(".apk")).sort();
-    assert.equal(apks[0], legacyApk);
-});

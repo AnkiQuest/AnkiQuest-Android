@@ -101,7 +101,7 @@ jobs:
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
-          quest=(--no-build-cache -PcustomSuffix=quest -PcustomName="AnkiQuest"
+          quest=(--no-build-cache -Pankiquest -PcustomName="AnkiQuest"
             -PupstreamCommit=${{ steps.upstream.outputs.sha }})
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestUpdates=github "${quest[@]}"
           ./gradlew :AnkiDroid:bundlePlayRelease -PankiquestUpdates=none "${quest[@]}"

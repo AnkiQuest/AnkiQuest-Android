@@ -47,6 +47,9 @@
                 android:description="@string/read_write_permission_description"
                 android:protectionLevel="dangerous"
                 />
+    <!-- CardContentProvider rejects callers that do not request its permission, the app's own
+         instrumented tests included. The API library only requests AnkiDroid's. -->
+    <uses-permission android:name="${applicationId}.permission.READ_WRITE_DATABASE" />
 
     <supports-screens
         android:anyDensity="true"
@@ -232,9 +235,9 @@
                 <data android:mimeType="image/svg" />
             </intent-filter>
 
-            <!-- Tasker DO_SYNC intent -->
+            <!-- Tasker DO_SYNC intent: AnkiQuest's own action, not AnkiDroid's (#461) -->
             <intent-filter>
-                <action android:name="com.ichi2.anki.DO_SYNC" />
+                <action android:name="org.ankiquest.ankidroid.DO_SYNC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

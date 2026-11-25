@@ -55,7 +55,7 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 <div style="display:flex;">
 
 1. Create an account on an AnkiQuest server, such as [ankiquest.org](https://ankiquest.org). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
-2. Download an APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest): `AnkiQuest-arm64-v8a.apk` for most phones, or `AnkiQuest.apk`, which runs on every device, if unsure. `AnkiQuest-armeabi-v7a.apk` is for older 32-bit phones, `AnkiQuest-x86_64.apk` and `AnkiQuest-x86.apk` for emulators and Chromebooks. `AnkiQuest.aab` is for Google Play and does not install. The app installs next to AnkiDroid as "AnkiQuest" and offers later releases itself, for the same device type. Sync your collection through AnkiWeb as usual.
+2. Download an APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest): `AnkiQuest-arm64-v8a.apk` for most phones, or `AnkiQuest.apk`, which runs on every device, if unsure. `AnkiQuest-armeabi-v7a.apk` is for older 32-bit phones, `AnkiQuest-x86_64.apk` and `AnkiQuest-x86.apk` for emulators and Chromebooks. `AnkiQuest.aab` is for Google Play and does not install. The app installs next to AnkiDroid as "AnkiQuest" (package `org.ankiquest.ankidroid`) and offers later releases itself, for the same device type. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
@@ -65,6 +65,17 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 In Obtainium, set "Filter APKs by regular expression" to `^AnkiQuest-arm64-v8a\.apk$` for most phones, or `^AnkiQuest\.apk$` for the universal APK.
 
 </div>
+
+### Moving from com.ichi2.anki.quest
+
+AnkiQuest `org.ankiquest.ankidroid` installs alongside the old `com.ichi2.anki.quest` app.
+
+1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
+2. Install the new app from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). On Android 9 and later, the official app offers to move settings, AnkiQuest sign-in and AnkiWeb sign-in on first launch.
+3. With an AnkiWeb login, sync your collection in the new app. Without one, use **Export collection** (with scheduling and media) in the old app, then import the file in the new app. Android 7 and 8 and builds signed outside the official releases use this collection transfer and a fresh sign-in.
+4. Uninstall the old app once your cards are in the new one.
+
+Obtainium users can remove the old entry and add AnkiQuest again. Apps using the AnkiDroid API find the new package through `org.ankiquest:api` and the `org.ankiquest.ankidroid.flashcards` provider. Automations start a sync with `org.ankiquest.ankidroid.DO_SYNC`.
 
 ### Verify the APK
 
@@ -78,9 +89,9 @@ SHA-1:   74:A5:0A:AA:20:37:2D:88:B2:B7:42:64:66:34:7B:9F:7C:28:31:E9
 Compare the fingerprint with one of:
 
 - [AppVerifier](https://github.com/soupslurpr/AppVerifier) or [Obtainium](https://github.com/ImranR98/Obtainium), which show the installed app's signing certificate.
-- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. It shows one signer, `CN=AnkiQuest, O=float3`.
+- `apksigner verify --print-certs AnkiQuest.apk`, from Android SDK build-tools. It shows one signer, `CN=AnkiQuest, O=float3`; compare its SHA-256 fingerprint with the one above.
 
-Releases, nightlies and the F-Droid build are signed with this key alone, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml): every signature scheme, no other key and no key rotation lineage. Builds without the release key (forks, workflow runs without the signing secret) are signed with a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`) whose password is in this repository. Don't install them as AnkiQuest.
+Releases, nightlies and the F-Droid build of `org.ankiquest.ankidroid` are signed with this key alone, in [ankiquest_apk.yml](.github/workflows/ankiquest_apk.yml): every signature scheme, no other key and no key rotation lineage. The final `com.ichi2.anki.quest` release, quest-24, keeps the earlier signing lineage so it can update the existing app. Builds without the release key (forks, workflow runs without the signing secret) are signed with a public test key (`tools/fallback-release-keystore.jks`, `CN=Sahil Ahmad`) whose password is in this repository. Don't install them as AnkiQuest.
 
 For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wiki](https://github.com/ankidroid/Anki-Android/wiki) and community ([Discord](https://discord.gg/qjzcRTx), [Reddit](https://www.reddit.com/r/Anki), [Anki forums](https://forums.ankiweb.net/)) apply here too. Report AnkiQuest bugs and ideas in [Issues](https://github.com/AnkiQuest/AnkiQuest-Android/issues).
 
@@ -96,7 +107,7 @@ The GitHub release APK is built with:
 
 ```sh
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" ./gradlew :AnkiDroid:assembleFullRelease \
-  -Duniversal-apk=true -PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestUpdates=github
+  -Duniversal-apk=true -Pankiquest -PcustomName="AnkiQuest" -PankiquestUpdates=github
 ```
 
 `-PankiquestUpdates=github` builds in the self-updater, which installs new releases from GitHub and requests `REQUEST_INSTALL_PACKAGES`. Without it (`none`, the default) the app neither checks for updates nor requests the permission: use that for store builds (F-Droid, IzzyOnDroid, Play), whose store updates them. Rebuilding the release APK for comparison takes `github`, as in `ankiquest_reproducible.yml`.
