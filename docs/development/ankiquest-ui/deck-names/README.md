@@ -27,7 +27,7 @@ session's actions stack vertically so Share cannot wrap letter by letter.
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestDeckNameScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestDeckNameScreenshotTest' \
   -Pscreenshot -Ptheme=light,dark -Proborazzi.test.record=true
 ```
 

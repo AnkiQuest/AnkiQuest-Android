@@ -39,7 +39,7 @@ Reproduce the captures with:
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests com.ichi2.anki.ankiquest.AnkiquestMeScreenshotTest \
+  --tests org.ankiquest.AnkiquestMeScreenshotTest \
   -PtestMaxParallelForks=1 -Pscreenshot -Ptheme=light,dark \
   -Proborazzi.test.record=true -PaccessibilityScan
 ```

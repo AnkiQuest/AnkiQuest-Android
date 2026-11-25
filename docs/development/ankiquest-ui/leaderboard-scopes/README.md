@@ -24,8 +24,8 @@ Reproduce from the repository root:
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestLeaderboardScopesScreenshotTest' \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestFriendsScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestLeaderboardScopesScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestFriendsScreenshotTest' \
   -Pscreenshot '-Ptheme=light,dark' '-Proborazzi.test.record=true' \
   -PtestMaxParallelForks=1
 ```

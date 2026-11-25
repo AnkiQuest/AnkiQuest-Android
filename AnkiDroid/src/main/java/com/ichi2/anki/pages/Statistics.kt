@@ -13,7 +13,6 @@ import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestRwkvStats
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.time.getTimestamp
 import com.ichi2.anki.databinding.PageStatisticsBinding
@@ -25,6 +24,7 @@ import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.updateBottomNavOnScroll
 import com.ichi2.anki.withProgress
 import dev.androidbroadcast.vbpd.viewBinding
+import org.ankiquest.AnkiquestRwkvStats
 import timber.log.Timber
 
 class Statistics : PageFragment(R.layout.page_statistics) {

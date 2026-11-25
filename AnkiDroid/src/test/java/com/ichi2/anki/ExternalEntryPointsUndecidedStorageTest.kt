@@ -94,17 +94,17 @@ class ExternalEntryPointsUndecidedStorageTest : RobolectricTest() {
             // the widget host configures a newly added widget
             "com.ichi2.widget.deckpicker.DeckPickerWidgetConfig",
             "com.ichi2.widget.cardanalysis.CardAnalysisWidgetConfig",
-            "com.ichi2.anki.ankiquest.AnkiquestWidgetConfig",
+            "org.ankiquest.AnkiquestWidgetConfig",
             ->
                 Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 1)
             "com.ichi2.anki.receiver.SdCardReceiver" -> Intent(Intent.ACTION_MEDIA_EJECT, "file:///storage/emulated/0".toUri())
             // the widget host redraws the widgets
             "com.ichi2.widget.AddNoteWidget",
             "com.ichi2.widget.AnkiDroidWidgetSmall",
-            "com.ichi2.anki.ankiquest.AnkiquestWidget",
-            "com.ichi2.anki.ankiquest.AnkiquestTransparentWidget",
-            "com.ichi2.anki.ankiquest.AnkiquestStreakWidget",
-            "com.ichi2.anki.ankiquest.AnkiquestClearStreakWidget",
+            "org.ankiquest.AnkiquestWidget",
+            "org.ankiquest.AnkiquestTransparentWidget",
+            "org.ankiquest.AnkiquestStreakWidget",
+            "org.ankiquest.AnkiquestClearStreakWidget",
             ->
                 Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(1))
             else -> fail("define the externally-sent intent for new entry point: $this")

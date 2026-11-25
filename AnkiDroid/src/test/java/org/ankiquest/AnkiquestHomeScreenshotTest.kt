@@ -1,0 +1,166 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package org.ankiquest
+
+import android.provider.Settings
+import android.view.View
+import android.widget.TextView
+import androidx.core.view.allViews
+import androidx.core.view.isVisible
+import androidx.core.widget.NestedScrollView
+import com.ichi2.anki.R
+import com.ichi2.anki.ScreenshotTest
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.robolectric.RuntimeEnvironment
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/** Opt-in visual QA; the normal unit-test task excludes ScreenshotTestCategory. */
+class AnkiquestHomeScreenshotTest : ScreenshotTest() {
+    override fun applyDeviceConfig() {
+        super.applyDeviceConfig()
+        if (device == DeviceConfig.PHONE) {
+            RuntimeEnvironment.setQualifiers("w320dp-h740dp-port-mdpi")
+        }
+    }
+
+    @Before
+    fun prepareHome() {
+        val identity = HomeAccount("https://anki.example.test", "sam", "visual-test-token")
+        val profile =
+            JSONObject()
+                .put("level", 4)
+                .put("streak", 3)
+                // A running streak not studied yet today: the card shows Aki's sad pose.
+                .put("streak_state", "pending")
+                .put("day_ends_at", DAY_ENDS_AT)
+                .put("xp_into_level", 120)
+                .put("xp_for_next", 250)
+                .put(
+                    "quests",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("title", "A little practice")
+                            .put("progress", 6)
+                            .put("target", 10)
+                            .put("done", false),
+                    ),
+                )
+        mockkObject(AnkiquestHomeData)
+        every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
+        coEvery { AnkiquestHomeData.profile(any()) } returns profile
+    }
+
+    @After
+    fun clearHomeMocks() {
+        unmockkObject(AnkiquestHomeData)
+        RuntimeEnvironment.setFontScale(1f)
+    }
+
+    @Test
+    fun today() = captureToday()
+
+    @Test
+    fun todayLargeText() = captureToday(largeText = true)
+
+    @Test
+    fun delayedProfile() {
+        coEvery { AnkiquestHomeData.profile(any()) } coAnswers {
+            withContext(Dispatchers.IO) {
+                delay(1_000)
+                JSONObject()
+                    .put("level", 4)
+                    .put("streak", 3)
+                    .put("streak_state", "pending")
+                    .put("day_ends_at", DAY_ENDS_AT)
+            }
+        }
+        captureToday(prefix = "today_delayed")
+    }
+
+    @Test
+    fun suggestedGoal() = captureSuggestedGoal(1f)
+
+    @Test
+    fun suggestedGoalLargeText() = captureSuggestedGoal(2f)
+
+    private fun captureSuggestedGoal(fontScale: Float) {
+        RuntimeEnvironment.setFontScale(fontScale)
+        coEvery { AnkiquestHomeData.profile(any()) } returns
+            JSONObject().put(
+                "goal",
+                AnkiquestDailyGoal.Choice.DEFAULT
+                    .json()
+                    .put("chosen", false),
+            )
+        val home =
+            startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
+        advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible }
+        val heading =
+            home.window.decorView.allViews
+                .filterIsInstance<TextView>()
+                .single { it.text == home.getString(R.string.ankiquest_goal_setup_title) }
+        home.findViewById<NestedScrollView>(R.id.aq_home_scroll).scrollTo(0, (heading.parent as View).top)
+        advanceRobolectricLooper()
+        captureScreen("suggested_goal_${(fontScale * 100).toInt()}percent")
+    }
+
+    @Test
+    fun todayGoal() {
+        Settings.Global.putFloat(targetContext.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
+        val goal =
+            AnkiquestDailyGoal.Status(
+                day = 1,
+                minutes = 7,
+                streakMinutes = 10,
+                studiedCards = 48,
+                mode = AnkiquestDailyGoal.Mode.CARDS,
+                goal = AnkiquestDailyGoal.Goal(140),
+            )
+        coEvery { AnkiquestHomeData.local() } returns
+            HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12, goal = goal, secondsPerCard = 6.0)
+        captureToday(prefix = "today_goal")
+    }
+
+    private fun captureToday(
+        largeText: Boolean = false,
+        prefix: String = "today",
+    ) {
+        RuntimeEnvironment.setFontScale(if (largeText) 2f else 1f)
+        val home =
+            startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
+        // Draining Main alone can finish while the profile request is still on IO.
+        advanceRobolectricLooperUntil {
+            !home.findViewById<View>(R.id.aq_home_loading).isVisible &&
+                home.window.decorView.allViews
+                    .filterIsInstance<TextView>()
+                    .any { it.text == home.getString(R.string.aq_home_streak_level, 3, 4) }
+        }
+        assertFalse(home.findViewById<View>(R.id.aq_home_loading).isVisible, "capture must await the profile")
+        assertTrue(
+            home.window.decorView.allViews
+                .filterIsInstance<TextView>()
+                .any { it.text == home.getString(R.string.aq_home_streak_level, 3, 4) },
+            "capture must include the fixture's streak and level",
+        )
+        val size = if (device == DeviceConfig.PHONE) "320dp" else "default"
+        captureScreen("${prefix}_${size}${if (largeText) "_200percent" else ""}")
+    }
+
+    private companion object {
+        /** A day that never ends while the screenshots run. */
+        const val DAY_ENDS_AT = 4_102_444_800_000L
+    }
+}

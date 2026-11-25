@@ -49,9 +49,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.DeckPickerFloatingActionMenu.CloseAnimation
-import com.ichi2.anki.ankiquest.awaitDeckHolder
-import com.ichi2.anki.ankiquest.awaitInitialDeckHolder
-import com.ichi2.anki.ankiquest.deckRowsAdapter
 import com.ichi2.anki.browser.CardBrowserFragment
 import com.ichi2.anki.browser.CardBrowserViewModel.RowSelection
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -109,6 +106,9 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import net.ankiweb.rsdroid.BackendException.BackendDbException.BackendDbCorruptException
+import org.ankiquest.awaitDeckHolder
+import org.ankiquest.awaitInitialDeckHolder
+import org.ankiquest.deckRowsAdapter
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.containsString

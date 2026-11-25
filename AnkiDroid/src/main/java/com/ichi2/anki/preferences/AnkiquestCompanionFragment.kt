@@ -8,20 +8,20 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestChibi
-import com.ichi2.anki.ankiquest.AnkiquestChibi.Step
-import com.ichi2.anki.ankiquest.AnkiquestCompanion
-import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
-import com.ichi2.anki.ankiquest.AnkiquestHomeData
-import com.ichi2.anki.ankiquest.AnkiquestUnlocks
-import com.ichi2.anki.ankiquest.AnkiquestWidget
-import com.ichi2.anki.ankiquest.HomeAccount
-import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.ankiquest.AnkiquestChibi
+import org.ankiquest.AnkiquestChibi.Step
+import org.ankiquest.AnkiquestCompanion
+import org.ankiquest.AnkiquestCompanion.Choice
+import org.ankiquest.AnkiquestHomeData
+import org.ankiquest.AnkiquestUnlocks
+import org.ankiquest.AnkiquestWidget
+import org.ankiquest.HomeAccount
+import org.ankiquest.HomeAccountChanged
 
 /**
  * The study companion, chosen from a card per companion that previews its poses. The choice is

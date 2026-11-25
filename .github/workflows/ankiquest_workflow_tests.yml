@@ -18,6 +18,13 @@ on:
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
       - "docs/graphics/banner.toml"
+      # ankiquest-names.test.cjs checks the names the app publishes and AnkiQuest's packages.
+      - "**/*.kt"
+      - "**/*.java"
+      - "**/*.kts"
+      - "**/*.xml"
+      - "**/*.pro"
+      - "**/META-INF/services/**"
       # upstream-backend.test.cjs: files that could name a backend artifact
       - "gradle/**"
       - "**/*.gradle.kts"
@@ -40,6 +47,13 @@ on:
       - ".github/labeler.yml"
       - ".github/dependabot.yml"
       - "docs/graphics/banner.toml"
+      # ankiquest-names.test.cjs checks the names the app publishes and AnkiQuest's packages.
+      - "**/*.kt"
+      - "**/*.java"
+      - "**/*.kts"
+      - "**/*.xml"
+      - "**/*.pro"
+      - "**/META-INF/services/**"
       # upstream-backend.test.cjs: files that could name a backend artifact
       - "gradle/**"
       - "**/*.gradle.kts"

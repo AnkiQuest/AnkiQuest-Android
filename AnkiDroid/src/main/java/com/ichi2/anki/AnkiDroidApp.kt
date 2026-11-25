@@ -25,7 +25,6 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import anki.collection.OpChanges
 import com.ichi2.anki.analytics.initializeAnalytics
 import com.ichi2.anki.analytics.launchPreviousAnrReporting
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.browser.IdsFile
 import com.ichi2.anki.browser.SharedPreferencesLastDeckIdRepository
 import com.ichi2.anki.common.android.AdaptionUtil
@@ -92,6 +91,7 @@ import com.ichi2.widget.deckpicker.DeckPickerWidget
 import com.ichi2.widget.restoreRecurringAlarms
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.ankiquest.Ankiquest
 import timber.log.Timber
 import timber.log.Timber.DebugTree
 import java.io.File

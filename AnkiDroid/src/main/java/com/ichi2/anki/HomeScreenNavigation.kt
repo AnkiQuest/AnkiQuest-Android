@@ -19,14 +19,14 @@ import com.google.android.material.behavior.HideViewOnScrollBehavior
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.color.MaterialColors
 import com.ichi2.anki.BottomNavController.NavigationItem
-import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
-import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.browser.CardBrowserFragment
 import com.ichi2.anki.browser.CardBrowserViewModel
 import com.ichi2.anki.browser.IdsFile
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.pages.Statistics
+import org.ankiquest.AnkiquestDeckPickerHooks
+import org.ankiquest.AnkiquestNavigation
 import com.google.android.material.R as MaterialR
 
 /**

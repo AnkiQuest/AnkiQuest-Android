@@ -14,6 +14,6 @@ These are simulated screens; device Accessibility Scanner verification
 remains pending.
 
 Record with `:AnkiDroid:testPlayDebugUnitTest`, filtering to
-`com.ichi2.anki.ankiquest.AnkiquestHomeScreenshotTest.today*` and
-`com.ichi2.anki.ankiquest.AnkiquestMeScreenshotTest`, and properties
+`org.ankiquest.AnkiquestHomeScreenshotTest.today*` and
+`org.ankiquest.AnkiquestMeScreenshotTest`, and properties
 `-Pscreenshot -Ptheme=light,dark -Proborazzi.test.record=true`.

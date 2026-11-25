@@ -3,12 +3,6 @@
 package com.ichi2.anki
 
 import androidx.activity.ComponentActivity
-import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
-import com.ichi2.anki.ankiquest.AnkiquestGalleryActivity
-import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
-import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
-import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
-import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.instantnoteeditor.InstantNoteEditorActivity
 import com.ichi2.testutils.ActivityList
 import com.ichi2.testutils.ActivityList.ActivityLaunchParam
@@ -18,6 +12,12 @@ import com.ichi2.testutils.saveState
 import com.ichi2.testutils.savedStateHandlePaths
 import com.ichi2.testutils.savedStateHandlePathsToKey
 import com.ichi2.testutils.withLaunchPayload
+import org.ankiquest.AnkiquestFeedActivity
+import org.ankiquest.AnkiquestGalleryActivity
+import org.ankiquest.AnkiquestHistoryActivity
+import org.ankiquest.AnkiquestLeaderboardActivity
+import org.ankiquest.AnkiquestRecordsActivity
+import org.ankiquest.AnkiquestShareActivity
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.empty
 import org.junit.Test

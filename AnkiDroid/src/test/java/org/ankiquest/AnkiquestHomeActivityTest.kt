@@ -1,0 +1,737 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package org.ankiquest
+
+import android.content.Intent
+import android.view.View
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.SearchView
+import androidx.core.content.edit
+import androidx.core.view.allViews
+import androidx.core.view.isVisible
+import androidx.core.view.size
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.ichi2.anki.CommonString
+import com.ichi2.anki.DeckPicker
+import com.ichi2.anki.R
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.dialogs.DeckSelectionDialog
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
+import java.io.IOException
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import com.ichi2.anki.ankicommon.R as AnkiCommonR
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [33], qualifiers = "w320dp-h640dp")
+class AnkiquestHomeActivityTest : RobolectricTest() {
+    private val identity = HomeAccount("https://anki.example.test", "member", "secret")
+    private val profile =
+        JSONObject()
+            .put("level", 2)
+            .put("streak", 3)
+            .put(
+                "quests",
+                JSONArray().put(JSONObject().put("title", "A little practice").put("progress", 6).put("target", 10)),
+            )
+
+    @Before
+    fun prepareHome() {
+        mockkObject(AnkiquestHomeData)
+        every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
+        coEvery { AnkiquestHomeData.profile(identity) } returns profile
+        // Otherwise the activity really asks anki.example.test, and the render that follows waits on that socket.
+        coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
+    }
+
+    @After
+    fun clearHomeMocks() {
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies)
+    }
+
+    @Test
+    fun `an empty unstudied deck is clearly labelled nothing scheduled today`() {
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 0, 0, 0)), 12)
+        val home = launch()
+        assertTrue(home.hasText("Nothing scheduled today"))
+    }
+
+    @Test
+    fun `learning later shows its next time without inviting an empty study session`() {
+        val next =
+            com.ichi2.anki.common.time.TimeManager.time
+                .intTimeMS() + 3_600_000L
+        val daily = DailyDeckState(0, 1, 1, next)
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 0, 0, 0, daily)), 12)
+        val home = launch()
+        assertTrue(home.hasTextContaining("Learning later today"))
+        assertFalse(home.hasText(home.getString(R.string.aq_home_study_due, 0)))
+    }
+
+    @Test
+    fun `completed deck has a done state without an empty study action`() {
+        val daily = DailyDeckState(0, 0, 1)
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 0, 0, 0, daily)), 12)
+        val home = launch()
+        assertTrue(home.hasText("Done today"))
+        assertFalse(home.hasText(home.getString(R.string.aq_home_study_due, 0)))
+    }
+
+    @Test
+    fun `Today studies the local focus deck and shows server quests`() {
+        val home = launch()
+        assertTrue(home.hasText("Spanish"))
+        assertTrue(home.hasText(home.getString(R.string.aq_home_streak_level, 3, 2)))
+        assertTrue(home.hasText("A little practice"))
+        home.click(home.getString(R.string.aq_home_study_due, 24))
+        val study = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(DeckPicker::class.java.name, study.component?.className)
+        assertEquals(12L, study.getLongExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK, 0))
+        assertTrue(study.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
+        assertEquals(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP, study.flags)
+    }
+
+    @Test
+    fun `Today shows the closing week while the player's day still counts for it`() {
+        val endsAt =
+            com.ichi2.anki.common.time.TimeManager.time
+                .intTimeMS() + 60 * 60 * 1000L
+        val closing = JSONObject().put("xp", 1234).put("ends_at", endsAt)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("closing_week", closing)
+        val home = launch()
+        val line =
+            assertNotNull(AnkiquestBoards.ownWeekLine(home, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(home.hasText(line))
+    }
+
+    @Test
+    fun `Today shows the next week while the player's day already counts for it`() {
+        val switch =
+            com.ichi2.anki.common.time.TimeManager.time
+                .intTimeMS() + 60 * 60 * 1000L
+        val next = JSONObject().put("xp", 1234).put("starts_at", switch)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("next_week", next)
+        val home = launch()
+        val line =
+            assertNotNull(AnkiquestBoards.ownWeekLine(home, AnkiquestBoards.NextWeek(1234, switch), switch - 1))
+        assertTrue(home.hasText(line))
+    }
+
+    @Test
+    fun `offline Today keeps local study`() {
+        coEvery { AnkiquestHomeData.profile(identity) } throws IOException("offline")
+        val home = launch()
+        assertTrue(home.hasText("Spanish"))
+        assertTrue(home.hasText(home.getString(R.string.aq_home_offline)))
+        assertFalse(home.hasText("A little practice"))
+    }
+
+    @Test
+    fun `a failed local refresh replaces the stale deck with a failure`() {
+        val controller = launchController()
+        val home = controller.get()
+        assertTrue(home.hasText("Spanish"))
+        coEvery { AnkiquestHomeData.local() } throws IOException("collection unavailable")
+
+        controller.pause().resume()
+        advanceRobolectricLooper()
+
+        assertFalse(home.hasText("Spanish"))
+        assertTrue(home.hasText(home.getString(R.string.aq_home_local_unavailable)))
+    }
+
+    @Test
+    fun `a deck choice survives a refresh while the picker is open`() {
+        val spanish = col.decks.id("Spanish")
+        val geography = col.decks.id("Geography")
+        val decks = listOf(HomeDeck(spanish, "Spanish", 1, 0, 0), HomeDeck(geography, "Geography", 2, 0, 0))
+        col.decks.select(spanish)
+        coEvery { AnkiquestHomeData.local() } coAnswers { HomeLocal(decks, col.decks.selected()) }
+        val controller = launchController()
+        val home = controller.get()
+        home.click(home.getString(R.string.aq_home_change_deck))
+        home.supportFragmentManager.executePendingTransactions()
+        val picker = assertNotNull(home.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        controller.pause().resume()
+        advanceRobolectricLooper()
+
+        chooseNativeDeck(picker, "Geography")
+        advanceRobolectricLooperUntil { home.hasText("Geography") }
+        assertEquals(geography, col.decks.selected())
+    }
+
+    @Test
+    fun `a pending local result for an old account is ignored`() {
+        val other = HomeAccount("https://anki.example.test", "other", "another-token")
+        val waiting = CompletableDeferred<HomeLocal>()
+        var switched = false
+        coEvery { AnkiquestHomeData.local() } coAnswers {
+            if (switched) HomeLocal(listOf(HomeDeck(19, "Geography", 1, 0, 0)), 19) else waiting.await()
+        }
+        coEvery { AnkiquestHomeData.profile(other) } returns profile
+        coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+        val controller = launchController()
+        val home = controller.get()
+        switched = true
+        every { AnkiquestHomeData.account(any()) } returns other
+        controller.pause().resume()
+        advanceRobolectricLooperUntil { home.hasText("Geography") }
+
+        waiting.complete(HomeLocal(listOf(HomeDeck(12, "Spanish", 1, 0, 0)), 12))
+        advanceRobolectricLooper()
+        assertTrue(home.hasText("Geography"))
+        assertFalse(home.hasText("Spanish"))
+    }
+
+    @Test
+    fun `a new account loads copies without the previous failure`() {
+        val other = HomeAccount("https://anki.example.test", "other", "another-token")
+        val waiting = CompletableDeferred<JSONObject>()
+        mockkObject(AnkiquestDeckCopies)
+        try {
+            coEvery { AnkiquestDeckCopies.inbox(identity) } throws IOException("offline")
+            coEvery { AnkiquestDeckCopies.inbox(other) } coAnswers { waiting.await() }
+            coEvery { AnkiquestHomeData.profile(other) } returns profile
+            coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+            val controller = launchController()
+            val home = controller.get()
+            val failure = home.getString(R.string.aq_copies_unavailable)
+            advanceRobolectricLooperUntil { home.hasText(failure) }
+
+            every { AnkiquestHomeData.account(any()) } returns other
+            controller.pause().resume()
+            advanceRobolectricLooper()
+
+            assertFalse(home.hasText(failure))
+            assertTrue(home.hasText(home.getString(R.string.aq_home_loading_local)))
+        } finally {
+            waiting.cancel()
+            unmockkObject(AnkiquestDeckCopies)
+        }
+    }
+
+    @Test
+    fun `rejected credentials point to settings`() {
+        coEvery { AnkiquestHomeData.profile(identity) } throws AnkiquestHttpException(401)
+        val home = launch()
+        assertTrue(home.hasText(home.getString(R.string.aq_home_auth)))
+        assertTrue(home.hasText(home.getString(R.string.aq_home_settings)))
+    }
+
+    @Test
+    fun `three tabs and the avatar keep the native destinations`() {
+        val home = launch()
+        val nav = home.findViewById<BottomNavigationView>(R.id.ankiquest_tab_bar)
+        assertEquals(3, nav.menu.size)
+
+        nav.selectedItemId = R.id.ankiquest_nav_friends
+        val friends = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, friends.component?.className)
+        assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+
+        home.findViewById<View>(R.id.aq_home_account).performClick()
+        val progress = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestProfileActivity::class.java.name, progress.component?.className, "Me is the native profile")
+        assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+
+        home.findViewById<View>(R.id.aq_home_activity).performClick()
+        val feed = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, feed.component?.className)
+        assertNull(feed.getStringExtra(AnkiquestFriendsSections.EXTRA_FEED_ACCOUNT))
+
+        nav.selectedItemId = R.id.ankiquest_nav_decks
+        val decks = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(DeckPicker::class.java.name, decks.component?.className)
+        assertFalse(decks.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK))
+        assertTrue(decks.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
+        assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+    }
+
+    @Test
+    fun `Today offers the server's suggested goal without saving it automatically`() {
+        val choice = AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, 21)
+        val suggested = choice.json().put("chosen", false)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("goal", suggested)
+        mockkObject(AnkiquestDailyGoal)
+        try {
+            coEvery { AnkiquestDailyGoal.save(identity, choice, restart = true, prefs = any()) } returns
+                AnkiquestDailyGoal.ServerGoal(choice, chosen = true)
+            val home = launch()
+            assertTrue(home.hasText(home.getString(R.string.ankiquest_goal_setup_title)))
+            assertTrue(home.hasText(AnkiquestDailyGoal.describe(home, choice)))
+            coVerify(exactly = 0) { AnkiquestDailyGoal.save(any(), any(), any(), any()) }
+
+            home.click(home.getString(CommonString.save))
+            advanceRobolectricLooper()
+            coVerify(exactly = 1) { AnkiquestDailyGoal.save(identity, choice, restart = true, prefs = any()) }
+            assertFalse(home.hasText(home.getString(R.string.ankiquest_goal_setup_title)))
+        } finally {
+            unmockkObject(AnkiquestDailyGoal)
+        }
+    }
+
+    @Test
+    fun `Today restores a chosen device goal only before its first cached profile`() {
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit {
+            putString(AnkiquestDailyGoal.PREF_MODE, "cards")
+            putInt(AnkiquestDailyGoal.PREF_CARDS, 20)
+        }
+        val choice = AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.CARDS, 20)
+        val suggested =
+            AnkiquestDailyGoal.Choice.DEFAULT
+                .json()
+                .put("chosen", false)
+        val restored = choice.json().put("chosen", true)
+        coEvery { AnkiquestHomeData.profile(identity) } returnsMany
+            listOf(JSONObject(profile.toString()).put("goal", suggested), JSONObject(profile.toString()).put("goal", restored))
+        mockkObject(AnkiquestSharing)
+        try {
+            coEvery { AnkiquestSharing.goal(identity) } returns suggested
+            coEvery { AnkiquestSharing.saveGoal(identity, any()) } returns restored
+            val controller = launchController()
+            val home = controller.get()
+            assertEquals(choice, AnkiquestDailyGoal.cached(prefs, identity.scope)?.choice)
+            assertFalse(home.hasText(home.getString(R.string.ankiquest_goal_setup_title)))
+
+            controller.pause().resume()
+            advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible }
+            coVerify(exactly = 1) { AnkiquestSharing.goal(identity) }
+            coVerify(exactly = 1) { AnkiquestSharing.saveGoal(identity, any()) }
+        } finally {
+            unmockkObject(AnkiquestSharing)
+        }
+    }
+
+    @Test
+    fun `the daily goal is changed on Today, from the server's goal`() {
+        val goal = AnkiquestDailyGoal.Status(100, 4, 10, 2, AnkiquestDailyGoal.Mode.CARDS, AnkiquestDailyGoal.Goal(20))
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12, goal = goal)
+        mockkObject(AnkiquestDailyGoal, AnkiquestGoalDialog)
+        try {
+            coEvery { AnkiquestDailyGoal.fetch(identity, any()) } throws IOException("offline")
+            val home = launch()
+            assertTrue(home.hasText(home.getString(R.string.aq_goal_today)))
+            home.click(home.getString(R.string.aq_goal_change))
+            coVerify { AnkiquestDailyGoal.fetch(identity, any()) }
+        } finally {
+            unmockkObject(AnkiquestDailyGoal, AnkiquestGoalDialog)
+        }
+    }
+
+    @Test
+    fun `Today links to the study history and the records`() {
+        val home = launch()
+        for (label in listOf(R.string.aq_history_title, R.string.aq_records_title)) {
+            home.click(home.getString(label))
+            assertEquals(AnkiquestProfileActivity::class.java.name, assertNotNull(shadowOf(home).nextStartedActivity).component?.className)
+        }
+    }
+
+    private fun launch(): AnkiquestHomeActivity = launchController().get()
+
+    @Test
+    fun `focus deck choices use the searchable native picker`() {
+        val home = launch()
+        home.click(home.getString(R.string.aq_home_change_deck))
+        home.supportFragmentManager.executePendingTransactions()
+        assertNotNull(home.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+    }
+
+    @Test
+    fun `focus choice survives rotation and rejects a later account change`() {
+        val spanish = col.decks.id("Spanish")
+        val geography = col.decks.id("Geography")
+        col.decks.select(spanish)
+        coEvery { AnkiquestHomeData.local() } returns
+            HomeLocal(listOf(HomeDeck(spanish, "Spanish", 1, 0, 0), HomeDeck(geography, "Geography", 1, 0, 0)), spanish)
+        val controller = launchController()
+        controller.get().click(controller.get().getString(R.string.aq_home_change_deck))
+        controller.recreate()
+        advanceRobolectricLooper()
+        val picker =
+            assertNotNull(controller.get().supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        assertTrue(assertNotNull(picker.dialog).isShowing)
+        switchCopyOwner()
+        chooseNativeDeck(picker, "Geography")
+        assertEquals(spanish, col.decks.selected(), "A choice for the previous account must not be committed")
+    }
+
+    @Test
+    fun `deck copy starts with the focus deck and requires recipients`() {
+        mockCopies()
+        val home = launch()
+        home.click(home.getString(R.string.aq_copies_share))
+        home.supportFragmentManager.executePendingTransactions()
+        val form = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        val save = assertNotNull(form.getButton(AlertDialog.BUTTON_POSITIVE), "One form must show the deck and recipients")
+        assertTrue(
+            form.findViewById<View>(android.R.id.content)!!.allViews.filterIsInstance<TextView>().any {
+                it.text.toString() ==
+                    "Spanish"
+            },
+        )
+        assertFalse(save.isEnabled)
+        pickCopyFriend(form)
+        assertTrue(save.isEnabled)
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+    }
+
+    @Test
+    fun `a restored focus choice can select another deck`() {
+        val spanish = col.decks.id("Spanish")
+        val geography = col.decks.id("Geography")
+        col.decks.select(spanish)
+        coEvery { AnkiquestHomeData.local() } returns
+            HomeLocal(listOf(HomeDeck(spanish, "Spanish", 1, 0, 0), HomeDeck(geography, "Geography", 1, 0, 0)), spanish)
+        val controller = launchController()
+        controller.get().click(controller.get().getString(R.string.aq_home_change_deck))
+        controller.recreate()
+        advanceRobolectricLooper()
+        val picker =
+            assertNotNull(controller.get().supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        chooseNativeDeck(picker, "Geography")
+        assertEquals(geography, col.decks.selected())
+    }
+
+    @Test
+    fun `copy recipients survive recreation without sending`() {
+        mockCopies()
+        val controller = launchController()
+        val form = copyDialog(controller.get())
+        pickCopyFriend(form)
+        controller.recreate()
+        advanceRobolectricLooper()
+        val restored = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(restored.isShowing, "The selected copy and its recipients must survive recreation")
+        assertTrue(restored.listView.isItemChecked(0))
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+        restored.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+    }
+
+    @Test
+    fun `copy choices survive switching apps`() {
+        mockCopies()
+        val controller = launchController()
+        val form = copyDialog(controller.get())
+        pickCopyFriend(form)
+        controller.pause().stop()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+        controller.start().resume()
+        advanceRobolectricLooper()
+        val fragment = assertNotNull(controller.get().supportFragmentManager.findFragmentByTag(AnkiquestCopyDialog.TAG))
+        val restored = assertNotNull((fragment as AnkiquestCopyDialog).dialog as? AlertDialog)
+        assertTrue(restored.isShowing)
+        assertTrue(restored.listView.isItemChecked(0))
+        restored.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+    }
+
+    @Test
+    fun `focus choices survive switching apps`() {
+        val controller = launchController()
+        val home = controller.get()
+        home.click(home.getString(R.string.aq_home_change_deck))
+        home.supportFragmentManager.executePendingTransactions()
+        controller.pause().stop()
+        advanceRobolectricLooper()
+        controller.start().resume()
+        advanceRobolectricLooper()
+        val picker = assertNotNull(home.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        assertTrue(assertNotNull(picker.dialog).isShowing)
+    }
+
+    @Test
+    fun `an empty copy form explains missing friends`() {
+        val home = launch()
+        AnkiquestCopyDialog
+            .newInstance(identity, listOf(HomeDeck(12, "Spanish", 1, 0, 0)), 12, emptyList())
+            .showNow(home.supportFragmentManager, AnkiquestCopyDialog.TAG)
+        val form = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(
+            form.findViewById<View>(android.R.id.content)!!.allViews.filterIsInstance<TextView>().any {
+                it.text.toString() == home.getString(R.string.aq_copies_no_friends)
+            },
+            "An empty recipient list must explain why Send is disabled",
+        )
+        assertFalse(form.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+    }
+
+    @Test
+    fun `changing the copy deck uses native search and retains its recipients`() {
+        mockCopies()
+        val spanish = col.decks.id("Spanish")
+        val geography = col.decks.id("Geography")
+        coEvery { AnkiquestHomeData.local() } returns
+            HomeLocal(listOf(HomeDeck(spanish, "Spanish", 1, 0, 0), HomeDeck(geography, "Geography", 1, 0, 0)), spanish)
+        val home = launch()
+        val form = copyDialog(home)
+        pickCopyFriend(form)
+        form
+            .findViewById<View>(android.R.id.content)!!
+            .allViews
+            .filterIsInstance<TextView>()
+            .first { it.text == home.getString(R.string.aq_copies_choose_deck) }
+            .performClick()
+        val fragment = assertNotNull(home.supportFragmentManager.findFragmentByTag(AnkiquestCopyDialog.TAG))
+        val picker = assertNotNull(fragment.childFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG) as? DeckSelectionDialog)
+        val search =
+            picker.binding.toolbar.menu
+                .findItem(AnkiCommonR.id.action_filter)
+        search.expandActionView()
+        (search.actionView as SearchView).setQuery("geog", false)
+        advanceRobolectricLooperUntil {
+            picker.binding.decks.adapter!!
+                .itemCount == 1
+        }
+        chooseNativeDeck(picker, "Geography")
+        assertTrue(form.listView.isItemChecked(0))
+        form.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, geography, "Geography", listOf("friend-a"), any()) }
+    }
+
+    @Test
+    fun `cancelled copy form cannot send through a retained button`() {
+        mockCopies()
+        val form = copyDialog(launch())
+        pickCopyFriend(form)
+        val send = form.getButton(AlertDialog.BUTTON_POSITIVE)
+        form.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        advanceRobolectricLooper()
+        send.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `restoring a copy form under changed credentials discards it`() {
+        mockCopies()
+        val controller = launchController()
+        val form = copyDialog(controller.get())
+        pickCopyFriend(form)
+        val replacement = identity.copy(token = "replacement-token")
+        every { AnkiquestHomeData.account(any()) } returns replacement
+        coEvery { AnkiquestHomeData.profile(replacement) } returns profile
+        coEvery { AnkiquestHomeData.companion(replacement) } throws IOException("offline")
+        controller.recreate()
+        advanceRobolectricLooper()
+        assertNull(controller.get().supportFragmentManager.findFragmentByTag(AnkiquestCopyDialog.TAG))
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `copy recipients are dismissed when the account changes`() {
+        mockCopies()
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        switchCopyOwner()
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        assertFalse(recipients.isShowing, "the previous account's friends must not remain visible")
+    }
+
+    @Test
+    fun `a retained copy Save cannot share for a replacement account`() {
+        mockCopies()
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        pickCopyFriend(recipients)
+        val save = recipients.getButton(AlertDialog.BUTTON_POSITIVE)
+        switchCopyOwner()
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a retained copy Save cannot start after leaving Today`() {
+        mockCopies()
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        pickCopyFriend(recipients)
+        val save = recipients.getButton(AlertDialog.BUTTON_POSITIVE)
+        controller.pause().stop()
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `an owned recipient selection sends once and clears the busy state`() {
+        mockCopies()
+        val home = launch()
+        val recipients = copyDialog(home)
+        pickCopyFriend(recipients)
+        val save = recipients.getButton(AlertDialog.BUTTON_POSITIVE)
+        save.performClick()
+        advanceRobolectricLooper()
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+        assertTrue(home.hasText(home.getString(R.string.aq_copies_sent)))
+        assertTrue(copyDialog(home).isShowing)
+    }
+
+    @Test
+    fun `a stopped copy upload cannot leave Today permanently busy`() {
+        mockCopies()
+        val completion = CompletableDeferred<JSONObject>()
+        coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } coAnswers { completion.await() }
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        pickCopyFriend(recipients)
+        recipients.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        controller.pause().stop()
+        completion.complete(JSONObject())
+        advanceRobolectricLooper()
+        controller.start().resume()
+        advanceRobolectricLooper()
+        assertTrue(copyDialog(controller.get()).isShowing)
+    }
+
+    @Test
+    fun `an earlier copy cannot finish a newer send`() {
+        mockCopies()
+        val earlier = CompletableDeferred<JSONObject>()
+        val latest = CompletableDeferred<JSONObject>()
+        var uploads = 0
+        coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } coAnswers {
+            if (uploads++ == 0) {
+                earlier.await()
+            } else {
+                latest.await()
+            }
+        }
+        val controller = launchController()
+        val home = controller.get()
+        val first = copyDialog(home)
+        pickCopyFriend(first)
+        first.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+
+        // Returning to the same account must not revive its previous request's UI ownership.
+        switchCopyOwner()
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        every { AnkiquestHomeData.account(any()) } returns identity
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        val second = copyDialog(home)
+        pickCopyFriend(second)
+        second.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        val shareButton = {
+            home.findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().first {
+                it.text.toString() == home.getString(R.string.aq_copies_share) && it.isClickable
+            }
+        }
+        earlier.complete(JSONObject())
+        advanceRobolectricLooper()
+        assertFalse(shareButton().isEnabled, "Only the newer send may release its busy state")
+        latest.complete(JSONObject())
+        advanceRobolectricLooper()
+        assertTrue(shareButton().isEnabled)
+        coVerify(exactly = 2) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+    }
+
+    private fun mockCopies() {
+        mockkObject(AnkiquestDeckCopies)
+        coEvery { AnkiquestDeckCopies.inbox(any()) } returns
+            JSONObject()
+                .put("friends", JSONArray().put(JSONObject().put("user", "friend-a").put("display", "Friend A")))
+                .put("offers", JSONArray())
+        coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } returns JSONObject()
+    }
+
+    private fun switchCopyOwner() {
+        val other = HomeAccount("https://anki.example.test", "other", "other-token")
+        every { AnkiquestHomeData.account(any()) } returns other
+        coEvery { AnkiquestHomeData.profile(other) } returns profile
+        coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+    }
+
+    private fun copyDialog(home: AnkiquestHomeActivity): AlertDialog {
+        home.click(home.getString(R.string.aq_copies_share))
+        home.supportFragmentManager.executePendingTransactions()
+        advanceRobolectricLooper()
+        return assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog).also { assertTrue(it.isShowing) }
+    }
+
+    private fun chooseNativeDeck(
+        picker: DeckSelectionDialog,
+        name: String,
+    ) {
+        val rows = picker.binding.decks
+        advanceRobolectricLooperUntil { rows.adapter!!.itemCount > 0 }
+        val row =
+            (0 until rows.adapter!!.itemCount).mapNotNull { rows.findViewHolderForAdapterPosition(it) }.single {
+                it.itemView
+                    .findViewById<TextView>(AnkiCommonR.id.deck_text_view)
+                    .text
+                    .toString() == name
+            }
+        assertTrue(row.itemView.performClick())
+        advanceRobolectricLooper()
+    }
+
+    private fun pickCopyFriend(dialog: AlertDialog) {
+        val choices = dialog.listView
+        assertTrue(choices.performItemClick(choices.getChildAt(0), 0, choices.getItemIdAtPosition(0)))
+        assertTrue(choices.isItemChecked(0), "the fixture must select a recipient before testing Save")
+    }
+
+    private fun launchController() =
+        startActivityControllerNormallyOpenCollectionWithIntent(
+            AnkiquestHomeActivity::class.java,
+            AnkiquestHomeActivity.intent(targetContext),
+        ).also { controller ->
+            advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_home_loading).isVisible }
+        }
+
+    private fun AnkiquestHomeActivity.hasText(value: String): Boolean =
+        findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().any { it.text.toString() == value }
+
+    private fun AnkiquestHomeActivity.hasTextContaining(value: String): Boolean =
+        findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().any { it.text.toString().contains(value) }
+
+    private fun AnkiquestHomeActivity.click(label: String) {
+        val control =
+            findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().first {
+                it.text.toString() == label && it.isClickable
+            }
+        assertTrue(control.isEnabled)
+        control.performClick()
+        advanceRobolectricLooper()
+    }
+}

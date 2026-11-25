@@ -121,7 +121,7 @@ jobs:
           command: ./gradlew robolectricSdkDownload --daemon
 
       - name: Run the contract test
-        run: ./gradlew :AnkiDroid:testFullDebugUnitTest --tests 'com.ichi2.anki.ankiquest.AnkiquestApiContractTest' --daemon
+        run: ./gradlew :AnkiDroid:testFullDebugUnitTest --tests 'org.ankiquest.AnkiquestApiContractTest' --daemon
 
       - name: Report Unit Test Results
         if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''

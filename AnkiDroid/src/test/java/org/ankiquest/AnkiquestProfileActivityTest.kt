@@ -1,0 +1,392 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package org.ankiquest
+
+import android.os.Looper
+import android.view.View
+import android.widget.TextView
+import androidx.core.view.allViews
+import androidx.core.view.isVisible
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.preferences.PreferencesActivity
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
+import java.io.IOException
+import java.time.Duration
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [33], qualifiers = "w320dp-h640dp")
+class AnkiquestProfileActivityTest : RobolectricTest() {
+    private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
+    private val profile = AnkiquestBoards.parseProfile(JSONObject(AnkiquestBoardsTest.PROFILE))
+    private val own =
+        AnkiquestBoards.PlayerPage(
+            profile,
+            own = true,
+            wins = listOf(AnkiquestBoards.Win("Daily goal reached!", "5 cards today in 0 minutes.", 1793183400)),
+        )
+
+    @Before
+    fun prepareProfile() {
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+        every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
+        every { AnkiquestSubscriptions.repository } returns repository
+        coEvery { repository.load(any()) } throws IOException("offline")
+        coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(emptyList())
+        coEvery { AnkiquestRecords.scopes(any()) } returns emptyList()
+        coEvery { AnkiquestRecords.study(any(), any()) } throws IOException("offline")
+    }
+
+    private val repository = mockk<SubscriptionRepository>()
+
+    @After
+    fun clearProfileMocks() {
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+    }
+
+    private fun overview(vararg muted: String) =
+        AnkiquestSocial.Overview(
+            friends = emptyList(),
+            incoming = emptyList(),
+            outgoing = emptyList(),
+            muted = muted.map { AnkiquestSocial.Person(it, it.replaceFirstChar(Char::uppercase)) },
+            groups = emptyList(),
+            public = true,
+        )
+
+    @Test
+    fun `another player can be muted and their deck alerts stopped from their profile`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        coEvery { repository.load(identity) } returns IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.setSubscribed(identity, "cerro", false) } returns
+            IncomingSubscriptions(true, setOf("cerro"), listOf(IncomingSender("cerro", "Cerro")))
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        assertTrue(screen.hasText(screen.getString(R.string.aq_friends_mute)))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        assertTrue(screen.hasText(stop))
+
+        coEvery { repository.load(identity) } returns IncomingSubscriptions(true, setOf("cerro"), listOf(IncomingSender("cerro", "Cerro")))
+        screen.click(stop)
+        advanceRobolectricLooper()
+        coVerify { repository.setSubscribed(identity, "cerro", false) }
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")))
+    }
+
+    @Test
+    fun `profile mute applies immediately and offers Undo`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        coEvery { AnkiquestSocial.change(identity, any()) } returns overview("cerro")
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        screen.views<TextView>().first { it.text == screen.getString(R.string.aq_friends_mute) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("cerro")) }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("cerro")) }
+    }
+
+    @Test
+    fun `the notification action stops deck alerts even when the profile cannot load`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } throws IOException("profile offline")
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.load(identity) } returns settings
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await() }
+        coEvery { repository.setSubscribed(identity, "cerro", true) } returns settings
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        // Startup drains the looper through snackbar timeouts. Finish the request after startup
+        // so the test inspects Undo while it is visible, just as the player would.
+        stopped.complete(settings.copy(unsubscribedSenders = setOf("cerro")))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
+    fun `notification Stop and Undo refresh the profile subscription control`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        val initial = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        var settings = initial
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        val restored = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.load(identity) } coAnswers { settings }
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await().also { settings = it } }
+        coEvery { repository.setSubscribed(identity, "cerro", true) } coAnswers { restored.await().also { settings = it } }
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        val start = screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")
+        assertTrue(screen.hasText(stop))
+
+        // Complete each write after startup so Undo is inspected before its timeout.
+        stopped.complete(initial.copy(unsubscribedSenders = setOf("cerro")))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertTrue(screen.hasText(start), "Stop must reload the profile's subscription")
+        assertFalse(screen.hasText(stop))
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertFalse(screen.views<TextView>().first { it.text.toString() == start }.isEnabled, "Undo must block a competing write")
+
+        restored.complete(initial)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertFalse(screen.hasText(start))
+        assertTrue(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled)
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", true) }
+    }
+
+    @Test
+    fun `the profile subscription waits for notification Stop and recovers after failure`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        val settings = IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.load(identity) } returns settings
+        val stopped = CompletableDeferred<IncomingSubscriptions>()
+        coEvery { repository.setSubscribed(identity, "cerro", false) } coAnswers { stopped.await() }
+        val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestDeckAlerts.intent(targetContext, identity, "cerro", 31))
+        val stop = screen.getString(R.string.aq_deck_alerts_stop, "Cerro")
+        assertFalse(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled, "Stop is already being sent")
+
+        stopped.completeExceptionally(IOException("offline"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertTrue(screen.views<TextView>().first { it.text.toString() == stop }.isEnabled, "A failed request must allow retry")
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        coVerify(exactly = 1) { repository.setSubscribed(identity, "cerro", false) }
+    }
+
+    @Test
+    fun `controls the server cannot tell about stay hidden, and the player's own profile pauses streak protection`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val theirs = launch("cerro")
+        advanceRobolectricLooper()
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_friends_mute)))
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_profile_freezes_pause)))
+
+        val mine = launch()
+        assertTrue(mine.hasText(mine.getString(R.string.aq_profile_freezes_pause)))
+        assertFalse(mine.hasText(mine.getString(R.string.aq_friends_mute)))
+    }
+
+    @Test
+    fun `pause and resume apply immediately and Undo restores the previous protection`() {
+        mockkObject(Ankiquest)
+        try {
+            for (initial in listOf(true, false)) {
+                var enabled = initial
+                val changes = mutableListOf<Boolean>()
+                coEvery { AnkiquestBoards.player(identity, "hill") } answers {
+                    own.copy(profile = profile.copy(freezesEnabled = enabled))
+                }
+                coEvery { Ankiquest.setStreakProtection(any()) } answers {
+                    enabled = firstArg()
+                    changes.add(enabled)
+                    enabled
+                }
+                val screen = launch()
+                advanceRobolectricLooper()
+                val label = if (initial) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume
+                screen.views<TextView>().first { it.text == screen.getString(label) }.performClick()
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+                assertEquals(listOf(!initial), changes)
+                assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+                assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_count, profile.freezes)))
+                val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+                undo.performClick()
+                undo.performClick()
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+                assertEquals(listOf(!initial, initial), changes, "Undo restores the setting once")
+            }
+        } finally {
+            unmockkObject(Ankiquest)
+        }
+    }
+
+    @Test
+    fun `a failed protection change keeps the setting and offers no Undo`() {
+        mockkObject(Ankiquest)
+        try {
+            coEvery { Ankiquest.setStreakProtection(false) } throws IOException("offline")
+            val screen = launch()
+            advanceRobolectricLooper()
+            screen.views<TextView>().first { it.text == screen.getString(R.string.aq_profile_freezes_pause) }.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            coVerify(exactly = 1) { Ankiquest.setStreakProtection(false) }
+            assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+            assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_ready)))
+            assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        } finally {
+            unmockkObject(Ankiquest)
+        }
+    }
+
+    @Test
+    fun `the protection explanation belongs beside its control on Me`() {
+        val screen = launch()
+        assertTrue(screen.hasText(screen.getString(R.string.ankiquest_streak_protection_summary)))
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+    }
+
+    @Test
+    fun `the player's own profile shows level, streak, freezes, quests, wins and achievements`() {
+        val screen = launch()
+        coVerify { AnkiquestBoards.player(identity, "hill") }
+        assertEquals(screen.getString(R.string.ankiquest_me), screen.findViewById<TextView>(R.id.aq_board_title).text.toString())
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_level, 2)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_level_progress, "1", "280", 3, "101")))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_count, 2)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_ready)))
+        assertTrue(screen.hasText(screen.getString(R.string.ankiquest_streak_studied)))
+        assertTrue(screen.hasText("Review 15 cards"))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_wins)))
+        assertTrue(screen.hasText("Daily goal reached!"))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_leech)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_best_hour)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_unlocked, 1, 3)))
+        assertTrue(screen.hasText("Done"))
+        screen.click(screen.getString(R.string.aq_home_settings))
+        assertEquals(PreferencesActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `a closing week still counting shows its XP until it closes`() {
+        val endsAt = TimeManager.time.intTimeMS() + 60 * 60 * 1000L
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns
+            own.copy(profile = profile.copy(ownWeek = AnkiquestBoards.ClosingWeek(1234, endsAt)))
+        val screen = launch()
+        val line = assertNotNull(AnkiquestBoards.ownWeekLine(screen, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(screen.hasText(line))
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own
+        val without = launch()
+        assertFalse(without.hasText(line))
+    }
+
+    @Test
+    fun `a next week already counting shows its XP until the board switches`() {
+        val switch = TimeManager.time.intTimeMS() + 60 * 60 * 1000L
+        val next = AnkiquestBoards.NextWeek(1234, switch)
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own.copy(profile = profile.copy(ownWeek = next))
+        val screen = launch()
+        val line = assertNotNull(AnkiquestBoards.ownWeekLine(screen, next, switch - 1))
+        assertTrue(line.startsWith(screen.getString(R.string.aq_next_week, "1,234", "").trim()), line)
+        assertTrue(screen.hasText(line))
+    }
+
+    @Test
+    fun `another player's profile has no wins or settings`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val screen = launch("cerro")
+        assertEquals("Cerro", screen.findViewById<TextView>(R.id.aq_board_title).text.toString())
+        assertFalse(screen.hasText(screen.getString(R.string.aq_home_settings)))
+        assertFalse(screen.hasText(screen.getString(R.string.aq_profile_wins)))
+        screen.click(screen.getString(R.string.aq_profile_leaderboard))
+        assertEquals(AnkiquestFriendsActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `records and history expand on Me while another player's history stays private`() {
+        val mine = launch()
+        coVerify(exactly = 0) { AnkiquestRecords.records(any(), any()) }
+        coVerify(exactly = 0) { AnkiquestRecords.study(any(), any()) }
+        mine.click(mine.getString(R.string.aq_records_title))
+        assertNull(shadowOf(mine).nextStartedActivity, "records stay on Me")
+        advanceRobolectricLooperUntil { mine.hasText(mine.getString(R.string.aq_records_empty)) }
+        mine.click(mine.getString(R.string.aq_history_title))
+        assertNull(shadowOf(mine).nextStartedActivity, "history stays on Me")
+        advanceRobolectricLooperUntil { mine.hasText(mine.getString(R.string.aq_history_intro)) }
+
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val theirs = launch("cerro")
+        assertTrue(theirs.hasText(theirs.getString(R.string.aq_records_title)))
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_history_title)), "another player's history is private")
+    }
+
+    @Test
+    fun `many achievements show the closest first until all are asked for`() {
+        val many =
+            (1..10).map {
+                AnkiquestBoards.Achievement("Goal $it", "", 10, it.toLong(), 100, null)
+            }
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own.copy(profile = profile.copy(achievements = many))
+        val screen = launch()
+        assertTrue(screen.hasText("Goal 10"))
+        assertFalse(screen.hasText("Goal 1"))
+        screen.click(screen.getString(R.string.aq_profile_show_all))
+        assertTrue(screen.hasText("Goal 1"))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_show_fewer)))
+    }
+
+    @Test
+    fun `a hidden player and a failure say so`() {
+        coEvery { AnkiquestBoards.player(identity, "ghost") } throws AnkiquestBoards.NotVisible()
+        val hidden = launch("ghost")
+        assertTrue(hidden.hasText(hidden.getString(R.string.aq_profile_hidden)))
+
+        coEvery { AnkiquestBoards.player(identity, "hill") } throws IOException("offline")
+        val offline = launch()
+        assertTrue(offline.hasText(offline.getString(R.string.aq_board_offline)))
+        offline.click(offline.getString(R.string.aq_home_settings))
+        assertEquals(PreferencesActivity::class.java.name, shadowOf(offline).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `without an account the profile asks to connect`() {
+        every { AnkiquestHomeData.account(any()) } returns null
+        val screen = launch()
+        assertTrue(screen.hasText(screen.getString(R.string.aq_board_connect)))
+        coVerify(exactly = 0) { AnkiquestBoards.player(any(), any()) }
+    }
+
+    private fun launch(user: String? = null): AnkiquestProfileActivity =
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, user))
+            .also { screen -> advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible } }
+
+    private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =
+        findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
+
+    private fun AnkiquestProfileActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+
+    private fun AnkiquestProfileActivity.click(label: String) {
+        val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
+        control.performClick()
+        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooper()
+    }
+}

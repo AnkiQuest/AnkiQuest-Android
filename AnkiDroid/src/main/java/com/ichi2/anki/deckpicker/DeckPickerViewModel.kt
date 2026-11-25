@@ -21,7 +21,6 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.InitialActivity
 import com.ichi2.anki.OnErrorListener
 import com.ichi2.anki.StoragePermissionSet
-import com.ichi2.anki.ankiquest.AnkiquestDeckListStates
 import com.ichi2.anki.common.destinations.BrowserDestination
 import com.ichi2.anki.common.destinations.DeckOptionsDestination
 import com.ichi2.anki.common.destinations.NoteEditorDestination
@@ -67,6 +66,7 @@ import net.ankiweb.rsdroid.BackendException
 import net.ankiweb.rsdroid.RustCleanup
 import net.ankiweb.rsdroid.exceptions.BackendInvalidInputException.BackendCollectionNotOpenException
 import net.ankiweb.rsdroid.exceptions.BackendNetworkException
+import org.ankiquest.AnkiquestDeckListStates
 import timber.log.Timber
 import kotlin.time.Duration.Companion.minutes
 import com.ichi2.anki.common.destinations.Destination as NavigateDestination
@@ -122,7 +122,7 @@ class DeckPickerViewModel :
      */
     private val flowOfRefreshDeckList = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    private val dailyDeckStates = MutableStateFlow<Map<DeckId, com.ichi2.anki.ankiquest.DailyDeckState>>(emptyMap())
+    private val dailyDeckStates = MutableStateFlow<Map<DeckId, org.ankiquest.DailyDeckState>>(emptyMap())
 
     val flowOfDeckList =
         combineTransform(

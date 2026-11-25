@@ -139,7 +139,8 @@ object ExternalEntryPoints {
         }.distinct().sortedBy { it.className }
     }
 
-    private fun isAnkiDroid(componentName: String) = componentName.startsWith("com.ichi2")
+    // AnkiQuest's components are in org.ankiquest (#461).
+    private fun isAnkiDroid(componentName: String) = componentName.startsWith("com.ichi2") || componentName.startsWith("org.ankiquest.")
 
     /**
      * Maps an activity to an [EntryPoint]: [alias] when [ActivityInfo.targetActivity] is set (the

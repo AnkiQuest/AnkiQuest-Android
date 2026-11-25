@@ -36,9 +36,9 @@ Reproduce the screenshots with:
 
 ```sh
 ./gradlew :AnkiDroid:testPlayDebugUnitTest \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestFriendsScreenshotTest' \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestFeedScreenshotTest' \
-  --tests 'com.ichi2.anki.ankiquest.AnkiquestMuteScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestFriendsScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestFeedScreenshotTest' \
+  --tests 'org.ankiquest.AnkiquestMuteScreenshotTest' \
   -PtestMaxParallelForks=1 -Pscreenshot -Ptheme=light,dark \
   -Proborazzi.test.record=true
 ```

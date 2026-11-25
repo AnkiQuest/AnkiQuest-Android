@@ -17,11 +17,6 @@ import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
-import com.ichi2.anki.ankiquest.AnkiquestIcon
-import com.ichi2.anki.ankiquest.AnkiquestLinks
-import com.ichi2.anki.ankiquest.AnkiquestUpdater
-import com.ichi2.anki.ankiquest.openAnkiquestLink
 import com.ichi2.anki.common.destinations.ChangelogDestination
 import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.common.utils.android.showThemedToast
@@ -34,6 +29,11 @@ import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.utils.VersionUtils.pkgVersionName
 import com.ichi2.utils.show
 import dev.androidbroadcast.vbpd.viewBinding
+import org.ankiquest.AnkiquestChangelogActivity
+import org.ankiquest.AnkiquestIcon
+import org.ankiquest.AnkiquestLinks
+import org.ankiquest.AnkiquestUpdater
+import org.ankiquest.openAnkiquestLink
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

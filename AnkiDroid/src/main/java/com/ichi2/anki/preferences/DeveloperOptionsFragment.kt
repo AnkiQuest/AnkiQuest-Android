@@ -15,7 +15,6 @@ import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
-import com.ichi2.anki.ankiquest.AnkiquestDebugMenu
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.storage.CollectionHelper
@@ -32,6 +31,7 @@ import com.ichi2.utils.setWebContentsDebuggingEnabled
 import com.ichi2.utils.show
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.ankiquest.AnkiquestDebugMenu
 import org.json.JSONArray
 import timber.log.Timber
 import java.io.File

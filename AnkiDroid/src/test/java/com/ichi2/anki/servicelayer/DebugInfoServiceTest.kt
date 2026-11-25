@@ -11,10 +11,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.Ankiquest
-import com.ichi2.anki.ankiquest.AnkiquestCapabilities
-import com.ichi2.anki.ankiquest.scopedKey
 import com.ichi2.anki.common.preferences.sharedPrefs
+import org.ankiquest.Ankiquest
+import org.ankiquest.AnkiquestCapabilities
+import org.ankiquest.scopedKey
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test

@@ -17,10 +17,10 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestLinks
 import com.ichi2.anki.dialogs.help.HelpItem.Action.Rate
 import io.mockk.mockk
 import io.mockk.verify
+import org.ankiquest.AnkiquestLinks
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith

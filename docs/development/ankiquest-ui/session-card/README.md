@@ -12,5 +12,5 @@ pages after an accessibility scroll. These are simulated screens; device
 Accessibility Scanner verification remains pending.
 
 Record with `:AnkiDroid:testPlayDebugUnitTest`, filtering to
-`com.ichi2.anki.ankiquest.AnkiquestSessionScreenshotTest`, and properties
+`org.ankiquest.AnkiquestSessionScreenshotTest`, and properties
 `-Pscreenshot -Ptheme=light,dark -Proborazzi.test.record=true`.

@@ -7,14 +7,14 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.awaitDeckHolder
-import com.ichi2.anki.ankiquest.awaitInitialDeckHolder
-import com.ichi2.anki.ankiquest.deckRowsAdapter
 import com.ichi2.anki.deckpicker.DeckFilters
 import com.ichi2.anki.deckpicker.DisplayDeckNode
 import com.ichi2.anki.deckpicker.filterAndFlattenDisplay
 import com.ichi2.anki.widgets.deckNodeDiffCallback
 import com.ichi2.anki.withDeckPicker
+import org.ankiquest.awaitDeckHolder
+import org.ankiquest.awaitInitialDeckHolder
+import org.ankiquest.deckRowsAdapter
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
