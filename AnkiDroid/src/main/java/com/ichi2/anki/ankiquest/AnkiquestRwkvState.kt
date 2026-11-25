@@ -3,21 +3,18 @@
 package com.ichi2.anki.ankiquest
 
 /**
- * Why the RWKV scheduler cannot run (#433), in the order [RwkvChecks] tests them: a check that
- * fails hides the ones after it.
+ * Why the RWKV scheduler cannot run (#433). [RwkvChecks] tests the first two in this order, and a
+ * check that fails hides the ones after it; [BACKEND_FAILED] comes from the engine once they pass.
  */
 internal enum class RwkvBlocker {
-    /** This build has no RWKV engine. The engine needs a forked Anki backend that does not exist yet. */
-    NO_ENGINE,
-
-    /** The engine has no native library for any of this phone's ABIs. */
-    UNSUPPORTED_ABI,
-
     /** The phone has too little RAM for this collection's model state; see [RwkvMemory]. */
     NOT_ENOUGH_MEMORY,
 
-    /** No model file is chosen. The weights have no redistributable licence, so the app cannot bundle one. */
+    /** No verified two-head model is imported. The weights have no redistributable licence, so the app ships none. */
     NO_MODEL,
+
+    /** The backend refused the models (`RwkvPrepareOffline` failed). */
+    BACKEND_FAILED,
 }
 
 /** The player's RWKV switch in AnkiQuest's settings. Off by default. */
@@ -27,8 +24,19 @@ internal enum class RwkvSwitch {
 }
 
 /**
- * The RWKV scheduler on this phone. Only [Ready] may change scheduling; [Off] and [Refused] leave
- * Anki's own scheduler (FSRS or SM-2) in charge. With [NoRwkvEngine] the state never reaches [Ready].
+ * Whether this process handed the backend a model. The backend keeps a model it was given until the
+ * process ends: it has no call to drop one.
+ */
+internal enum class RwkvLoad {
+    LOADED,
+    NOT_LOADED,
+}
+
+/**
+ * The RWKV scheduler on this phone. In [Ready] the backend orders the review queues of presets set
+ * to RWKV-Instant and gives RWKV-Curve presets their intervals; [Off] and [Refused] leave Anki's own
+ * scheduler (FSRS or SM-2) in charge. [Stopping] is off, but a model loaded earlier in this process
+ * keeps scheduling until the app restarts.
  *
  * A blocked scheduler is refused rather than left on (#442): turning it on while a check fails
  * keeps the switch off and reports why.
@@ -37,7 +45,7 @@ internal sealed interface RwkvState {
     /** The switch this state shows and saves. */
     val switch: RwkvSwitch
 
-    /** The player has not turned it on, or turned it off. */
+    /** The player has not turned it on, or turned it off, and no model is loaded. */
     data object Off : RwkvState {
         override val switch = RwkvSwitch.OFF
     }
@@ -49,47 +57,52 @@ internal sealed interface RwkvState {
         override val switch = RwkvSwitch.OFF
     }
 
-    /** On, and every check passed. */
+    /** On: every check passed, and the backend accepted the models. */
     data object Ready : RwkvState {
         override val switch = RwkvSwitch.ON
+    }
+
+    /** Off, but the model loaded in this process schedules until the app restarts. */
+    data object Stopping : RwkvState {
+        override val switch = RwkvSwitch.OFF
     }
 
     /** The player turns it on: [Ready] if every check passes, otherwise [Refused] with the first failure. */
     fun enable(checks: RwkvChecks): RwkvState = checks.verdict()
 
     /** The player turns it off. */
-    fun disable(): RwkvState = Off
+    fun disable(load: RwkvLoad): RwkvState =
+        when (load) {
+            RwkvLoad.LOADED -> Stopping
+            RwkvLoad.NOT_LOADED -> Off
+        }
 
-    /**
-     * Runs the checks again, as when the settings open or the collection grows. A [Ready] scheduler
-     * that now fails a check is refused; the off states stay as they are.
-     */
-    fun recheck(checks: RwkvChecks): RwkvState =
+    /** The backend refused the models: a [Ready] scheduler is refused; the off states stay. */
+    fun fail(): RwkvState =
         when (this) {
-            Off, is Refused -> this
-            Ready -> checks.verdict()
+            Ready -> Refused(RwkvBlocker.BACKEND_FAILED)
+            Off, Stopping, is Refused -> this
         }
 
     companion object {
-        /** The state for the saved [switch], as when the settings screen opens. A saved "on" that is now blocked is refused. */
+        /** The state for the saved [switch], as when the app starts or the settings open. A saved "on" that is now blocked is refused. */
         fun restore(
             switch: RwkvSwitch,
             checks: RwkvChecks,
+            load: RwkvLoad,
         ): RwkvState =
             when (switch) {
                 RwkvSwitch.ON -> Off.enable(checks)
-                RwkvSwitch.OFF -> Off
+                RwkvSwitch.OFF -> Off.disable(load)
             }
     }
 }
 
-/** What the RWKV checks look at, read from the phone and the collection by the caller. */
+/** What the RWKV checks look at, read from the phone, the collection and the model store by the caller. */
 internal data class RwkvChecks(
-    val engine: RwkvEngine,
-    val deviceAbis: List<String>,
     val totalRamBytes: Long,
     val cards: Int,
-    val model: RwkvModel?,
+    val models: RwkvModels?,
 ) {
     /** [RwkvState.Ready], or [RwkvState.Refused] with the first check that fails. */
     fun verdict(): RwkvState {
@@ -98,16 +111,10 @@ internal data class RwkvChecks(
     }
 
     private fun blocker(): RwkvBlocker? {
-        if (engine.availability == RwkvEngine.Availability.ABSENT) {
-            return RwkvBlocker.NO_ENGINE
-        }
-        if (deviceAbis.none { it in engine.abis }) {
-            return RwkvBlocker.UNSUPPORTED_ABI
-        }
         if (!RwkvMemory.fits(totalRamBytes, cards)) {
             return RwkvBlocker.NOT_ENOUGH_MEMORY
         }
-        if (model == null) {
+        if (models == null) {
             return RwkvBlocker.NO_MODEL
         }
         return null
@@ -118,6 +125,7 @@ internal data class RwkvChecks(
  * Whether the phone has RAM for the RWKV state of a collection. The only published phone figure
  * is kuma3 14 (#433): the int8 Small model on a Pixel 8a used 505 MB of RAM for a 22,000-card
  * collection. State grows per card and note, so the estimate scales that figure by card count.
+ * The app accepts only Small and Tiny models ([RwkvLock]), for which this figure holds.
  */
 internal object RwkvMemory {
     private const val MIB = 1024L * 1024L
@@ -132,9 +140,9 @@ internal object RwkvMemory {
     const val BYTES_PER_CARD = (MEASURED_BYTES + MEASURED_CARDS - 1) / MEASURED_CARDS
 
     /**
-     * The scheduler may use at most this fraction (1/n) of the phone's RAM: a quarter, as hill
-     * decided (#442). Not measured; Anki and the reviewer need room beside the model state. A
-     * quarter allows kuma3's 22,000 cards on a 4 GB phone but not on a 2 GB one.
+     * The scheduler may use at most this fraction (1/n) of the phone's RAM: a quarter (#442). Not
+     * measured; Anki and the reviewer need room beside the model state. A quarter allows kuma3's
+     * 22,000 cards on a 4 GB phone but not on a 2 GB one.
      */
     const val RAM_SHARE = 4L
 

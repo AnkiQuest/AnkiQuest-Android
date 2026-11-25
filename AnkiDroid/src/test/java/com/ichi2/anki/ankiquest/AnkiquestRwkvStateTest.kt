@@ -3,36 +3,21 @@
 package com.ichi2.anki.ankiquest
 
 import org.junit.Test
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AnkiquestRwkvStateTest {
     private val gib = 1024L * 1024L * 1024L
-    private val arm64 = "arm64-v8a"
-    private val model = RwkvModel("/models/small-int8.bin")
-
-    /** An engine that is present for [abis] and never called by the checks. */
-    private class FakeEngine(
-        override val abis: Set<String>,
-    ) : RwkvEngine {
-        override val availability = RwkvEngine.Availability.PRESENT
-
-        override suspend fun rebuild(
-            model: RwkvModel,
-            reviews: Sequence<RwkvReview>,
-        ): Unit = error("not used")
-
-        override suspend fun score(cardIds: List<Long>): Map<Long, Double> = error("not used")
-    }
+    private val entry = RwkvLock.ENTRIES.first { it.head == RwkvHead.TWO_HEAD }
+    private val models = RwkvModels(RwkvModelFile(entry, File("/models/${entry.sha256}.bin")), instant = null)
 
     private fun checks(
-        engine: RwkvEngine = FakeEngine(setOf(arm64)),
-        abis: List<String> = listOf(arm64),
         ram: Long = 8 * gib,
         cards: Int = 22_000,
-        model: RwkvModel? = this.model,
-    ) = RwkvChecks(engine, abis, ram, cards, model)
+        models: RwkvModels? = this.models,
+    ) = RwkvChecks(ram, cards, models)
 
     private fun refused(reason: RwkvBlocker) = RwkvState.Refused(reason)
 
@@ -44,81 +29,77 @@ class AnkiquestRwkvStateTest {
     }
 
     @Test
-    fun `enabling without an engine is refused and checks nothing else`() {
-        // No ABI, RAM or model either: the engine check comes first.
-        val none = checks(engine = NoRwkvEngine, abis = emptyList(), ram = 0, model = null)
-        assertEquals(refused(RwkvBlocker.NO_ENGINE), RwkvState.Off.enable(none))
-    }
-
-    @Test
-    fun `enabling on an unsupported ABI is refused`() {
-        assertEquals(refused(RwkvBlocker.UNSUPPORTED_ABI), RwkvState.Off.enable(checks(abis = listOf("x86"))))
-    }
-
-    @Test
-    fun `enabling with too little memory is refused`() {
-        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = 1_900_000_000L)))
+    fun `enabling with too little memory is refused before the model is looked at`() {
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = 1_900_000_000L, models = null)))
     }
 
     @Test
     fun `enabling without a model is refused`() {
-        assertEquals(refused(RwkvBlocker.NO_MODEL), RwkvState.Off.enable(checks(model = null)))
+        assertEquals(refused(RwkvBlocker.NO_MODEL), RwkvState.Off.enable(checks(models = null)))
     }
 
     @Test
-    fun `a refused scheduler stays off`() {
-        assertEquals(RwkvSwitch.OFF, refused(RwkvBlocker.NO_ENGINE).switch)
-        assertEquals(RwkvSwitch.OFF, RwkvState.Off.switch)
-    }
-
-    @Test
-    fun `enabling again after a refusal is ready once the blocker is gone`() {
-        val refused = RwkvState.Off.enable(checks(model = null))
-        assertEquals(RwkvState.Ready, refused.enable(checks()))
-    }
-
-    @Test
-    fun `disabling goes off from every state`() {
-        for (state in listOf(RwkvState.Off, RwkvState.Ready, refused(RwkvBlocker.NO_ENGINE))) {
-            assertEquals(RwkvState.Off, state.disable())
+    fun `every state but ready shows the switch off`() {
+        for (state in listOf(RwkvState.Off, RwkvState.Stopping) + RwkvBlocker.entries.map(::refused)) {
+            assertEquals(RwkvSwitch.OFF, state.switch, "$state")
         }
     }
 
     @Test
-    fun `rechecking keeps the off states as they are`() {
-        assertEquals(RwkvState.Off, RwkvState.Off.recheck(checks()))
-        // A refusal does not turn itself on when the blocker goes away; the player turns it on.
-        assertEquals(refused(RwkvBlocker.NO_MODEL), refused(RwkvBlocker.NO_MODEL).recheck(checks()))
+    fun `enabling again after a refusal is ready once the blocker is gone`() {
+        val refused = RwkvState.Off.enable(checks(models = null))
+        assertEquals(RwkvState.Ready, refused.enable(checks()))
     }
 
     @Test
-    fun `rechecking a ready state keeps it ready while the checks pass`() {
-        assertEquals(RwkvState.Ready, RwkvState.Ready.recheck(checks()))
+    fun `enabling while stopping is ready again`() {
+        assertEquals(RwkvState.Ready, RwkvState.Stopping.enable(checks()))
     }
 
     @Test
-    fun `rechecking a ready state refuses it when the collection outgrows memory`() {
-        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Ready.recheck(checks(cards = 100_000)))
+    fun `disabling without a loaded model is off from every state`() {
+        for (state in listOf(RwkvState.Off, RwkvState.Ready, RwkvState.Stopping, refused(RwkvBlocker.NO_MODEL))) {
+            assertEquals(RwkvState.Off, state.disable(RwkvLoad.NOT_LOADED))
+        }
+    }
+
+    @Test
+    fun `disabling with a loaded model stops at the next restart`() {
+        // The backend has no call to drop a model, so it keeps scheduling until the process ends.
+        assertEquals(RwkvState.Stopping, RwkvState.Ready.disable(RwkvLoad.LOADED))
+        assertEquals(RwkvSwitch.OFF, RwkvState.Stopping.switch)
+    }
+
+    @Test
+    fun `a backend failure refuses a ready scheduler and leaves the off states alone`() {
+        assertEquals(refused(RwkvBlocker.BACKEND_FAILED), RwkvState.Ready.fail())
+        assertEquals(RwkvState.Off, RwkvState.Off.fail())
+        assertEquals(RwkvState.Stopping, RwkvState.Stopping.fail())
+        assertEquals(refused(RwkvBlocker.NO_MODEL), refused(RwkvBlocker.NO_MODEL).fail())
     }
 
     @Test
     fun `restoring follows the saved switch`() {
-        assertEquals(RwkvState.Off, RwkvState.restore(RwkvSwitch.OFF, checks()))
-        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks()))
+        assertEquals(RwkvState.Off, RwkvState.restore(RwkvSwitch.OFF, checks(), RwkvLoad.NOT_LOADED))
+        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks(), RwkvLoad.NOT_LOADED))
+        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks(), RwkvLoad.LOADED))
+    }
+
+    @Test
+    fun `restoring a saved off with a loaded model is stopping`() {
+        assertEquals(RwkvState.Stopping, RwkvState.restore(RwkvSwitch.OFF, checks(), RwkvLoad.LOADED))
     }
 
     @Test
     fun `restoring a saved on that is now blocked is refused and off`() {
-        val state = RwkvState.restore(RwkvSwitch.ON, checks(model = null))
+        val state = RwkvState.restore(RwkvSwitch.ON, checks(models = null), RwkvLoad.NOT_LOADED)
         assertEquals(refused(RwkvBlocker.NO_MODEL), state)
         assertEquals(RwkvSwitch.OFF, state.switch)
     }
 
     @Test
-    fun `the app has no engine yet so turning it on is always refused`() {
-        assertEquals(refused(RwkvBlocker.NO_ENGINE), RwkvState.Off.enable(checks(engine = NoRwkvEngine)))
-        assertEquals(RwkvEngine.Availability.ABSENT, NoRwkvEngine.availability)
-        assertEquals(null, NoRwkvModel.chosen())
+    fun `restoring a ready state refuses it when the collection outgrows memory`() {
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.restore(RwkvSwitch.ON, checks(cards = 100_000), RwkvLoad.LOADED))
     }
 
     @Test

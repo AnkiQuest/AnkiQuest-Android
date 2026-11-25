@@ -2,12 +2,22 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_rwkv_title">Agendador RWKV (experimental)</string>
-    <string name="ankiquest_rwkv_off">Agenda as revisões com um modelo RWKV em vez do FSRS. Precisa de um ficheiro de modelo e de memória suficiente.</string>
-    <string name="ankiquest_rwkv_no_engine">Indisponível: esta versão do AnkiQuest ainda não tem motor RWKV. O agendamento não muda.</string>
-    <string name="ankiquest_rwkv_unsupported_abi">Indisponível: o motor RWKV não funciona no processador deste telemóvel. O agendamento não muda.</string>
-    <string name="ankiquest_rwkv_not_enough_memory">Indisponível: este telemóvel tem pouca memória para a tua coleção. O agendamento não muda.</string>
-    <string name="ankiquest_rwkv_no_model">Indisponível: escolhe primeiro um ficheiro de modelo RWKV. O agendamento não muda.</string>
-    <string name="ankiquest_rwkv_ready">Ativado: o RWKV agenda as tuas revisões.</string>
+    <string name="ankiquest_rwkv_off">Deixa um modelo RWKV agendar as predefinições que você puser em RWKV. Precisa de arquivos de modelo importados e memória suficiente.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Indisponível: este celular tem pouca memória para sua coleção. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_no_model">Indisponível: importe primeiro um modelo RWKV de duas cabeças. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_backend_failed">Indisponível: o motor RWKV não conseguiu carregar os arquivos de modelo. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_ready">Ativado: o RWKV agenda as predefinições postas em RWKV.</string>
+    <string name="ankiquest_rwkv_stopping">Desativado. O RWKV continua agendando até o AnkiQuest reiniciar.</string>
+    <string name="ankiquest_rwkv_models_title">Arquivos de modelo RWKV</string>
+    <string name="ankiquest_rwkv_models_none">Nenhum importado.</string>
+    <string name="ankiquest_rwkv_import_message">O AnkiQuest não inclui pesos RWKV: eles não têm licença de redistribuição. Da versão %1$s de JSchoreels/anki-rwkv, baixe o zip de duas cabeças Small ou Tiny e, se quiser, o zip Instant-only do mesmo tamanho, e leia o WEIGHTS-NOTICE.md dele. Depois escolha aqui os zips ou os arquivos weights.f32.bin deles. Só ficam os arquivos cujo SHA-256 corresponde a um modelo conhecido.</string>
+    <string name="ankiquest_rwkv_import_choose">Escolher arquivos</string>
+    <string name="ankiquest_rwkv_import_release">Abrir versão</string>
+    <string name="ankiquest_rwkv_imported">Importado: %1$s</string>
+    <string name="ankiquest_rwkv_import_unknown">Não importado: nenhum arquivo corresponde a um modelo RWKV conhecido.</string>
+    <string name="ankiquest_rwkv_import_unreadable">Não importado: não foi possível ler o arquivo.</string>
+    <string name="ankiquest_rwkv_presets_title">Predefinições RWKV</string>
+    <string name="ankiquest_rwkv_presets_summary">Escolha quais predefinições o RWKV agenda. Salvo na predefinição e sincronizado.</string>
 
     <string name="ankiquest_rwkv_forecast_title">Previsão RWKV</string>
     <string name="ankiquest_rwkv_forecast_note">se parares de rever agora</string>

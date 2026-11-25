@@ -2,12 +2,22 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_rwkv_title">RWKV-Planer (experimentell)</string>
-    <string name="ankiquest_rwkv_off">Plant Wiederholungen mit einem RWKV-Modell statt mit FSRS. Braucht eine Modelldatei und genug Arbeitsspeicher.</string>
-    <string name="ankiquest_rwkv_no_engine">Nicht verfügbar: Diese Version von AnkiQuest hat noch keine RWKV-Engine. Die Planung bleibt unverändert.</string>
-    <string name="ankiquest_rwkv_unsupported_abi">Nicht verfügbar: Die RWKV-Engine läuft nicht auf dem Prozessor dieses Handys. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_off">Lässt ein RWKV-Modell die Optionsgruppen planen, die du auf RWKV stellst. Braucht importierte Modelldateien und genug Arbeitsspeicher.</string>
     <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für deine Sammlung. Die Planung bleibt unverändert.</string>
-    <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Wähle zuerst eine RWKV-Modelldatei. Die Planung bleibt unverändert.</string>
-    <string name="ankiquest_rwkv_ready">An: RWKV plant deine Wiederholungen.</string>
+    <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Importiere zuerst ein RWKV-Two-Head-Modell. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_backend_failed">Nicht verfügbar: Die RWKV-Engine konnte die Modelldateien nicht laden. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_ready">An: RWKV plant die Optionsgruppen, die auf RWKV stehen.</string>
+    <string name="ankiquest_rwkv_stopping">Aus. RWKV plant weiter, bis AnkiQuest neu startet.</string>
+    <string name="ankiquest_rwkv_models_title">RWKV-Modelldateien</string>
+    <string name="ankiquest_rwkv_models_none">Keine importiert.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe. Lade aus dem Release %1$s von JSchoreels/anki-rwkv das Two-Head-Zip in Small oder Tiny herunter, wenn du willst auch das Instant-only-Zip derselben Größe, und lies dessen WEIGHTS-NOTICE.md. Wähle dann hier die Zips oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
+    <string name="ankiquest_rwkv_import_choose">Dateien wählen</string>
+    <string name="ankiquest_rwkv_import_release">Release öffnen</string>
+    <string name="ankiquest_rwkv_imported">Importiert: %1$s</string>
+    <string name="ankiquest_rwkv_import_unknown">Nicht importiert: Keine Datei passt zu einem bekannten RWKV-Modell.</string>
+    <string name="ankiquest_rwkv_import_unreadable">Nicht importiert: Die Datei konnte nicht gelesen werden.</string>
+    <string name="ankiquest_rwkv_presets_title">RWKV-Optionsgruppen</string>
+    <string name="ankiquest_rwkv_presets_summary">Wähle, welche Optionsgruppen RWKV plant. Wird in der Optionsgruppe gespeichert und synchronisiert.</string>
 
     <string name="ankiquest_rwkv_forecast_title">RWKV-Prognose</string>
     <string name="ankiquest_rwkv_forecast_note">wenn du jetzt aufhörst zu wiederholen</string>

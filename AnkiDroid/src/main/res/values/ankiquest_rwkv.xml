@@ -3,12 +3,25 @@
 <resources>
     <string name="ankiquest_rwkv_key" translatable="false">ankiquestRwkv</string>
     <string name="ankiquest_rwkv_title" maxLength="41">RWKV scheduler (experimental)</string>
-    <string name="ankiquest_rwkv_off">Schedule reviews with an RWKV model instead of FSRS. Needs a model file and enough memory.</string>
-    <string name="ankiquest_rwkv_no_engine">Not available: this version of AnkiQuest has no RWKV engine yet. Scheduling is unchanged.</string>
-    <string name="ankiquest_rwkv_unsupported_abi">Not available: the RWKV engine doesn\'t run on this phone\'s processor. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_models_key" translatable="false">ankiquestRwkvModels</string>
+    <string name="ankiquest_rwkv_presets_key" translatable="false">ankiquestRwkvPresets</string>
+    <string name="ankiquest_rwkv_off">Lets an RWKV model schedule the presets you set to RWKV. Needs imported model files and enough memory.</string>
     <string name="ankiquest_rwkv_not_enough_memory">Not available: this phone has too little memory for your collection. Scheduling is unchanged.</string>
-    <string name="ankiquest_rwkv_no_model">Not available: choose an RWKV model file first. Scheduling is unchanged.</string>
-    <string name="ankiquest_rwkv_ready">On: RWKV schedules your reviews.</string>
+    <string name="ankiquest_rwkv_no_model">Not available: import an RWKV two-head model first. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_backend_failed">Not available: the RWKV engine could not load the model files. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_ready">On: RWKV schedules the presets set to RWKV.</string>
+    <string name="ankiquest_rwkv_stopping">Off. RWKV keeps scheduling until AnkiQuest restarts.</string>
+    <string name="ankiquest_rwkv_models_title">RWKV model files</string>
+    <string name="ankiquest_rwkv_models_none">None imported.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest ships no RWKV weights: they have no licence for redistribution. From the %1$s release of JSchoreels/anki-rwkv, download the Small or Tiny two-head zip, and if you like the Instant-only zip of the same size, and read its WEIGHTS-NOTICE.md. Then choose the zips or their weights.f32.bin files here. Only files whose SHA-256 matches a known model are kept.</string>
+    <string name="ankiquest_rwkv_import_choose">Choose files</string>
+    <string name="ankiquest_rwkv_import_release">Open release</string>
+    <string name="ankiquest_rwkv_imported">Imported: %1$s</string>
+    <string name="ankiquest_rwkv_import_unknown">Not imported: no file matches a known RWKV model.</string>
+    <string name="ankiquest_rwkv_import_unreadable">Not imported: the file could not be read.</string>
+    <string name="ankiquest_rwkv_presets_title">RWKV presets</string>
+    <string name="ankiquest_rwkv_presets_summary">Choose which deck presets RWKV schedules. Saved in the preset and synced.</string>
+    <string name="ankiquest_rwkv_preset_item" translatable="false">%1$s (%2$s)</string>
 
     <!-- RWKV statistics, worded as Pedrubik2000's anki-rwkv-forecast add-on. -->
     <string name="ankiquest_rwkv_forecast_title">RWKV forecast</string>
