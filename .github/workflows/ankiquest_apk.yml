@@ -111,9 +111,10 @@ jobs:
           done
           cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab AnkiQuest.aab
 
-      # APKs get the AnkiQuest key with a lineage from the fallback key, so installs signed with
-      # either accept the update. The bundle is jar-signed with the AnkiQuest key as its upload
-      # key until Play has an upload key of its own (#319).
+      # Every published APK is signed with the AnkiQuest key alone, on every scheme, no test key and
+      # no rotation lineage. apksigner replaces the fallback key's signature Gradle wrote. The
+      # bundle is jar-signed with the AnkiQuest key as its upload key until Play has an upload key
+      # of its own (#319).
       - name: Sign with the AnkiQuest release key
         id: sign
         env:
@@ -131,12 +132,15 @@ jobs:
           echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           for apk in AnkiQuest.apk AnkiQuest-*.apk; do
-            "$apksigner" sign \
-              --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
-              --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
-              --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
-              "$apk"
-            "$apksigner" verify --min-sdk-version 28 --print-certs "$apk" | grep -q "CN=AnkiQuest"
+            "$apksigner" sign --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD "$apk"
+
+            # One signer on every scheme, the AnkiQuest key, and no lineage.
+            certs=$("$apksigner" verify --verbose --print-certs "$apk")
+            echo "$certs" | grep -q "^Signer #1 certificate DN: CN=AnkiQuest"
+            if echo "$certs" | grep -q "^Signer #2\|CN=Sahil Ahmad\|lineage"; then
+              echo "::error::$apk has another signer or a lineage"
+              exit 1
+            fi
           done
 
           # Replace the fallback key's jar signature on the bundle.
