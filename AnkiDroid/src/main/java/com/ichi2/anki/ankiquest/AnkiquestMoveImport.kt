@@ -51,12 +51,12 @@ internal object AnkiquestMoveImport {
         ) : State
     }
 
-    /** How the collection, which stays in the old app's storage, reaches the new app. */
+    /** What to do after importing settings. Shared folders already contain the collection. */
     enum class Next {
         /** An AnkiWeb login moved: sync. */
         SYNC,
 
-        /** No AnkiWeb login: export the collection in the old app and import the file here. */
+        /** No AnkiWeb login: show how to export and import if the apps use separate folders. */
         EXPORT,
     }
 
