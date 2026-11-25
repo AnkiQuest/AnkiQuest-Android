@@ -13,6 +13,8 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 
 **Review heatmap.** The heatmap says on what share of the days since your first review you studied, and "Today" jumps back to the current day. It is translated into German, Spanish, French and Portuguese.
 
+**RWKV scheduler (experimental).** Off by default. RWKV, a neural network that predicts recall, can choose review cards (RWKV-Instant) or set answer intervals (RWKV-Curve) in the presets you pick, as the JSchoreels desktop fork does. AnkiQuest ships no RWKV weights, since they have no licence for redistribution: download the Small or Tiny files from JSchoreels/anki-rwkv, import them in Settings → AnkiQuest → RWKV model files, turn on RWKV scheduler and choose presets under RWKV presets. While it runs, Statistics shows an RWKV forecast and a chart of each card's recall.
+
 **Sharing.** One share sheet sends a moment to friends or groups in AnkiQuest, with an optional note, or to another app with "More apps…". It covers conquered cards, session moments, companion unlocks, your weekly place and finished decks. Undo takes back only that send.
 
 **Player profiles.** From a player's profile you can send or answer a friend request, send a message, or invite them to a group.
