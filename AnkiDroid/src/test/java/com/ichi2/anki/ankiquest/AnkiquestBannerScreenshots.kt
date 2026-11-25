@@ -181,10 +181,14 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns
             AnkiquestBoards.Leaderboard(AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK))
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * DAY
-        val board =
-            startRegularActivity<AnkiquestFriendsActivity>(
-                AnkiquestFriendsSections.boardIntent(targetContext, AnkiquestBoards.Period.WEEK.query, null),
-            )
+        // Open the board from Friends so the banner always shows the top of the screen.
+        val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
+        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        val heading = board.getString(R.string.ankiquest_dashboard_title)
+        board.window.decorView.allViews
+            .filterIsInstance<TextView>()
+            .first { it.text == heading && it.isClickable }
+            .performClick()
         advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         captureScreen("4_leaderboard")
     }

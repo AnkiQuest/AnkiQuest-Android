@@ -5,10 +5,12 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -45,10 +47,17 @@ object AnkiquestUpdater {
 
     private const val LATEST_URL = "https://api.github.com/repos/AnkiQuest/AnkiQuest-Android/releases/latest"
     private const val NIGHTLY_URL = "https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/"
+    private const val RELEASES_URL = "https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest"
     private const val TAG_PREFIX = "quest-"
     const val PREF_CHANNEL = "ankiquestUpdateChannel"
     private const val PREF_CHECKED_AT = "ankiquestUpdateCheckedAt"
     private const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
+
+    /** What a downloaded APK is to this app, by its package name. */
+    internal enum class Download { OWN, MOVED, UNREADABLE }
+
+    /** How a download ended, which decides the dialog shown afterwards. */
+    private enum class Finish { CANCELLED, INSTALLING, MOVED, FAILED }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client =
@@ -96,6 +105,20 @@ object AnkiquestUpdater {
         val versionCode: Long = 0,
         val nightly: Boolean = false,
     )
+
+    /**
+     * An APK of another package is not an update: Android would install it as a second app
+     * without the collection, so the updater points to the release page instead.
+     */
+    internal fun classify(
+        own: String,
+        downloaded: String?,
+    ): Download =
+        when (downloaded) {
+            null -> Download.UNREADABLE
+            own -> Download.OWN
+            else -> Download.MOVED
+        }
 
     /** Makes the next deck list visit check again, e.g. after switching channel. */
     fun checkSoon() = AnkiDroidApp.sharedPrefs().edit { remove(PREF_CHECKED_AT) }
@@ -376,8 +399,7 @@ object AnkiquestUpdater {
         val app = activity.applicationContext
         scope.launch {
             var output: File? = null
-            var installed = false
-            var failed = false
+            var finish = Finish.CANCELLED
             try {
                 val file = apkFile(app).also { output = it }
                 // The file guard serializes cleanup and the download claim.
@@ -388,38 +410,72 @@ object AnkiquestUpdater {
                         progress?.update(app.getString(R.string.ankiquest_update_downloading, done))
                     }
                 }
-                withContext(Dispatchers.Main) {
-                    val host = progress?.attached()
-                    val uri = FileProvider.getUriForFile(app, AnkiquestGallery.authority(app), file)
-                    val install =
-                        Intent(Intent.ACTION_VIEW)
-                            .setDataAndType(uri, "application/vnd.android.package-archive")
-                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    (host ?: app).startActivity(install)
-                    installed = true
-                }
+
+                // Install only an APK of this package; see classify.
+                finish =
+                    when (classify(app.packageName, archiveInfo(app, file)?.packageName)) {
+                        Download.UNREADABLE -> Finish.FAILED
+                        Download.MOVED -> Finish.MOVED
+                        Download.OWN -> {
+                            install(app, file)
+                            Finish.INSTALLING
+                        }
+                    }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update download failed")
-                failed = true
+                finish = Finish.FAILED
             } finally {
-                if (!installed) {
+                if (finish != Finish.INSTALLING) {
                     synchronized(downloadFiles) { output?.let(::deleteDownloads) }
                 }
                 withContext(NonCancellable + Dispatchers.Main) {
                     val host = progress?.attached()
                     finishProgress()
                     synchronized(downloadFiles) { state = UpdateState.Idle }
-                    if (failed && host != null) {
-                        AlertDialog
-                            .Builder(host)
-                            .setMessage(R.string.ankiquest_update_failed)
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show()
+                    if (host != null) {
+                        showFinish(host, finish)
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun install(
+        app: Context,
+        file: File,
+    ) = withContext(Dispatchers.Main) {
+        val host = progress?.attached()
+        val uri = FileProvider.getUriForFile(app, AnkiquestGallery.authority(app), file)
+        val install =
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        (host ?: app).startActivity(install)
+    }
+
+    private fun showFinish(
+        host: Activity,
+        finish: Finish,
+    ) {
+        when (finish) {
+            Finish.CANCELLED, Finish.INSTALLING -> return
+            Finish.FAILED ->
+                AlertDialog
+                    .Builder(host)
+                    .setMessage(R.string.ankiquest_update_failed)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            Finish.MOVED ->
+                AlertDialog
+                    .Builder(host)
+                    .setTitle(R.string.ankiquest_moved_title)
+                    .setMessage(R.string.ankiquest_moved_message)
+                    .setPositiveButton(R.string.ankiquest_moved_open) { _, _ ->
+                        host.startActivity(Intent(Intent.ACTION_VIEW, RELEASES_URL.toUri()))
+                    }.setNegativeButton(R.string.ankiquest_update_later, null)
+                    .show()
         }
     }
 
@@ -482,11 +538,14 @@ object AnkiquestUpdater {
     private fun archiveVersionCode(
         context: Context,
         file: File,
-    ): Long? =
+    ): Long? = archiveInfo(context, file)?.let { PackageInfoCompat.getLongVersionCode(it) }
+
+    private fun archiveInfo(
+        context: Context,
+        file: File,
+    ): PackageInfo? =
         runCatching {
-            context.packageManager
-                .getPackageArchiveInfoCompat(file.path, PackageInfoFlagsCompat.EMPTY)
-                ?.let { PackageInfoCompat.getLongVersionCode(it) }
+            context.packageManager.getPackageArchiveInfoCompat(file.path, PackageInfoFlagsCompat.EMPTY)
         }.getOrNull()
 
     private suspend fun fetch(

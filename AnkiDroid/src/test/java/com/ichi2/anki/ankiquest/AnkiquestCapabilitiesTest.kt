@@ -11,6 +11,8 @@ import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -83,6 +85,27 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
             AnkiquestCapabilities.refresh(account)
             body = "not json"
             assertEquals(emptySet(), AnkiquestCapabilities.refresh(account))
+        }
+
+    @Test
+    fun `support is loading until fetched, then current or outdated`() =
+        runBlocking {
+            // Offline since signing in: nothing fetched yet is not an old server.
+            assertEquals(AnkiquestCapabilities.Support.LOADING, AnkiquestCapabilities.support(account))
+
+            body = JSONObject().put("version", 1).put("features", JSONArray(AnkiquestCapabilities.REQUIRED)).toString()
+            AnkiquestCapabilities.refresh(account)
+            assertEquals(AnkiquestCapabilities.Support.CURRENT, AnkiquestCapabilities.support(account))
+
+            // An unreachable server keeps what it last reported.
+            status = 503
+            AnkiquestCapabilities.refresh(account)
+            assertEquals(AnkiquestCapabilities.Support.CURRENT, AnkiquestCapabilities.support(account))
+
+            status = 200
+            body = """{"version":1,"features":["activity","wins"]}"""
+            AnkiquestCapabilities.refresh(account)
+            assertEquals(AnkiquestCapabilities.Support.OUTDATED, AnkiquestCapabilities.support(account))
         }
 
     @Test

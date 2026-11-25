@@ -11,7 +11,6 @@ const workflows = path.join(__dirname, "../workflows");
 const REQUIRED = [
     "ankiquest_api_contract.yml",
     "ankiquest_art_check.yml",
-    "ankiquest_fixtures.yml",
     "lint.yml",
     "screenshot_compare.yml",
     "tests_unit.yml",

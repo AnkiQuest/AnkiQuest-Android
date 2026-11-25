@@ -6,7 +6,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 
 // Upstream AnkiDroid's backend group. AnkiQuest-Android builds only on org.ankiquest's backend
-// artifacts, published from AnkiQuest-Android-Backend (hill, 2026-11-21).
+// artifacts, published from AnkiQuest-Android-Backend.
 private const val UPSTREAM_BACKEND_GROUP = "io.github.david-allison"
 
 /**

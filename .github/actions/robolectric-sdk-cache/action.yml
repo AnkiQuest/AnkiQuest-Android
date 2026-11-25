@@ -55,6 +55,8 @@ runs:
         path: ~/.robolectric-ro-cache
         key: ${{ steps.restore.outputs.cache-primary-key }}
 
+    # A fixed path, not input, so nothing a pull request controls reaches
+    # the environment file.
     - name: Use the Robolectric SDK cache
       shell: bash
-      run: echo "GRADLE_RO_DEP_CACHE=$HOME/.robolectric-ro-cache" >> "$GITHUB_ENV"
+      run: echo "GRADLE_RO_DEP_CACHE=$HOME/.robolectric-ro-cache" >> "$GITHUB_ENV" # zizmor: ignore[github-env]

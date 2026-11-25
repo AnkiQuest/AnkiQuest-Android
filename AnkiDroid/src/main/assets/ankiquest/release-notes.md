@@ -7,6 +7,7 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 **Today.** The streak flame stays unlit until today counts. A day counted from answers without review times, such as those AnkiQuest Lite reads, shows "Studied today · time not known". Friends' study stays hidden until you upload your first reviews, and the leaderboard, Records and the leaderboard widget say so. Between Monday and the weekly board's switch, Today and your profile show the XP already counting for next week. The Home card no longer repeats "study" while cards are due.
 
 **Countdowns.** Today counts down to your events and exams, each with an optional deck. The list stays the same on all your devices, the desktop add-on included.
+**Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
 
 **Study time.** Me has a Study time section: today, this week, this month, total and per study day, from this collection's review history, uploaded or not.
 
@@ -25,6 +26,7 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 **Sign-in.** Accounts with two-factor authentication ask for the authenticator or recovery code after the password. Manage account links to the website to set it up. Players signed in with a token from the server's configuration are asked to set a password. New accounts use ankiquest.org; saved accounts on the old address move there by themselves.
 
 **Notifications.** Streak warnings wait until your quiet hours end.
+**Conquered cards.** The suggested label comes from the fields on the card's front, without template text or ID fields. Two short fields, such as a word and its reading, are shown together. A lapse counts only when you pressed Again: the app sends your review history once more, with the button pressed, to a server that stores it.
 
 **Rate and report.** About and the AnkiQuest changelog have "Rate AnkiQuest". "Report a bug" opens the bug form again instead of "No suitable app found".
 

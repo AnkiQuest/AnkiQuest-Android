@@ -304,7 +304,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val frozen = profile?.optInt("frozen_days") ?: 0
             // Until the server answers for a new day, a counted day carries into it: the streak waits.
             val today = day ?: carriedDay(own, row, now)
-            val mood = AnkiquestMood.of(today, frozen, goalState)
+            // The debug menu's overrides change only the player's own widget.
+            val debug = if (own) AnkiquestDebug.current() else AnkiquestDebug.Overrides.NONE
+            val mood = AnkiquestMood.today(today, frozen, goalState, debug)
 
             // Aki shows the mood when chosen; otherwise only the flame does.
             val companionVisible = AnkiquestCompanion.visible()
@@ -313,9 +315,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 val days = (if (day != null) streak else today?.streak) ?: 0
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
-                        AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now)
+                        AnkiquestMood.bigPose(mood, days, me?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now, debug)
                     } else {
-                        AnkiquestMood.pose(mood, days)
+                        AnkiquestMood.todayPose(mood, days, debug)
                     }
                 setCompanion(views, context, aki, companionPx(context, size, options))
             }
@@ -324,15 +326,19 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 R.id.ankiquest_streak_label,
                 language.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak ?: 0),
             )
-            val status =
+            val verdict =
                 when {
                     ownDay != null -> AnkiquestDay.words(language, ownDay)
                     board == null -> language.getString(R.string.ankiquest_widget_unconfigured)
                     me == null -> language.getString(R.string.ankiquest_streak_unknown)
                     else -> AnkiquestWidget.streakLabel(language, me, state)
                 }
+            // The debug menu's overrides are marked where the status is.
+            val status = listOfNotNull(AnkiquestDebug.marker(language, debug), verdict).joinToString(" · ")
             views.setTextViewText(R.id.ankiquest_streak_status, status)
             fitLegacyStatus(views, language, size, status)
+            // The flame and the milestone line come from today, so the status follows it too.
+            setBigStatus(views, language, size, today)
             val progress = setMinimumProgress(views, language, day, status, size)
             val goal = setGoalProgress(views, language, day, me.takeIf { player == Ankiquest.player() }, now)
             if (style == Style.TRANSPARENT && progress != null) {
@@ -457,6 +463,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         ): String? {
             val current = streak?.takeIf { it > 0 }
             val tier = current?.let { days -> StreakTier.entries.lastOrNull { it.days <= days } }
+
+            // One flame per layout, beside the number on every size, coloured by the day's state.
             val drawable = tier?.drawable(flame)
             views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, drawable ?: 0, 0)
             fitLegacyNumber(views, context, size, number, drawable, style)
@@ -464,11 +472,32 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 return null
             }
 
-            // The milestone's flame shows only once today counts; until then the line asks for study.
+            // The line under the number: the next milestone once today counts, until then a nudge.
             val label = current?.let { AnkiquestMood.line(context, flame, it) }
             views.setTextViewText(R.id.ankiquest_streak_milestone, label.orEmpty())
             views.setViewVisibility(R.id.ankiquest_streak_milestone, if (label == null) View.GONE else View.VISIBLE)
             return label
+        }
+
+        /**
+         * The big layouts' status line. Their lit flame already says that today counts, so a counted
+         * day keeps only what the flame cannot say: that the server does not have it yet. [day] is
+         * the one the flame shows, carried from yesterday until the server answers.
+         */
+        private fun setBigStatus(
+            views: RemoteViews,
+            context: Context,
+            size: Size,
+            day: AnkiquestDay.Verdict?,
+        ) {
+            if (size != Size.LARGE && size != Size.HUGE) {
+                return
+            }
+            val id = R.id.ankiquest_streak_status
+            if (day?.awaitingUpload == true) {
+                views.setTextViewText(id, context.getString(R.string.ankiquest_streak_unsent))
+            }
+            views.setViewVisibility(id, if (day?.met == true && !day.awaitingUpload) View.GONE else View.VISIBLE)
         }
 
         /** Android 7 lacks native autosizing; fit the guaranteed minimum widget width there. */
@@ -544,7 +573,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val container = R.id.ankiquest_streak_meter
             val tone =
                 when {
-                    day?.label == State.STUDIED -> Tone.WARM
+                    day?.label == State.STUDIED || day?.label == State.UNVERIFIED -> Tone.WARM
                     day?.label == State.PROTECTED -> Tone.BLUE
                     (day?.streak ?: 0) > 0 -> Tone.AMBER
                     else -> Tone.GRAY

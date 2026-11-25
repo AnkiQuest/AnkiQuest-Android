@@ -13,6 +13,9 @@ on:
                 type: string
     # and in the future schedule...
 
+permissions:
+    contents: read
+
 jobs:
     post_notices:
         permissions:
@@ -21,13 +24,15 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+              env:
+                INPUTS: ${{ toJSON(inputs) }}
               with:
                   script: |
                       // First get the month we are working on and prepare our PR query range
                       // Format for the dates is "YYYY-MM-DD", and an example is "2022-05-01" and "2022-05-31"
                       // Getting inputs in github-script requires some fancy mode-switching to "github templating" syntax
                       // https://stackoverflow.com/a/70999557/9910298
-                      var inputs = ${{ toJSON(inputs) }}
+                      var inputs = JSON.parse(process.env.INPUTS)
                       let startDate = inputs['startDate'];
                       let endDate = inputs['endDate'];
 

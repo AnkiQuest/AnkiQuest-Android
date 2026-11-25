@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 
 /**
  * Checks this client against `tests/fixtures/clients.json` from the ankiquest server, which the
- * desktop add-on and website share. The ankiquest_fixtures workflow keeps this copy identical.
+ * desktop add-on and website share. CI copies it from server master before the tests.
  */
 class AnkiquestSharedFixturesTest {
     private val fixtures =
@@ -66,6 +66,7 @@ class AnkiquestSharedFixturesTest {
                     row.getLong(3),
                     row.getLong(4),
                     row.getInt(5),
+                    row.getInt(6),
                 )
             val expected = case.getJSONObject("review")
             val keys = expected.keys().asSequence().toSet()
