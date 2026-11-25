@@ -20,7 +20,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class TemplatePreviewerViewModelTest : JvmTest() {
@@ -116,6 +118,16 @@ class TemplatePreviewerViewModelTest : JvmTest() {
                 assertThat(cardsWithEmptyFronts!!.await(), equalTo(listOf(true, false)))
             }
         }
+
+    @Test
+    fun `empty front is detected with the old and the new help link`() {
+        val oldLink = "<a href='https://docs.ankiweb.net/templates/errors.html#front-of-card-is-blank'>"
+        val newLink = "<a href='https://docs.ankiweb.net/manual/templates/errors#front-of-card-is-blank'>"
+
+        assertTrue(TemplatePreviewerViewModel.hasEmptyFrontLink("<div>${oldLink}More info</a></div>"))
+        assertTrue(TemplatePreviewerViewModel.hasEmptyFrontLink("<div>${newLink}More info</a></div>"))
+        assertFalse(TemplatePreviewerViewModel.hasEmptyFrontLink("<div>front</div>"))
+    }
 
     @Test
     fun `previewed card is listed after card 1 is deleted - Issue 20919`() =

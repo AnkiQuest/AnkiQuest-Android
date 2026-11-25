@@ -27,7 +27,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
-import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.VisibleForTesting
 
 class TemplatePreviewerViewModel(
@@ -122,7 +121,7 @@ class TemplatePreviewerViewModel(
                                         deckId = arguments.deckId,
                                     ).renderOutput(this)
                             }.questionText
-                        EMPTY_FRONT_LINK in questionText
+                        hasEmptyFrontLink(questionText)
                     }
                 }
         }
@@ -274,8 +273,15 @@ class TemplatePreviewerViewModel(
         }
 
     companion object {
-        @Language("HTML")
-        private const val EMPTY_FRONT_LINK = """<a href='https://docs.ankiweb.net/templates/errors.html#front-of-card-is-blank'>"""
+        /**
+         * End of the help link the backend adds to a blank front. Only the anchor is matched:
+         * the page moved from `templates/errors.html` to `manual/templates/errors` (ankitects/anki#5777).
+         */
+        private const val EMPTY_FRONT_LINK = "#front-of-card-is-blank'>"
+
+        /** Whether [questionText] is the backend's "front of card is blank" message. */
+        @VisibleForTesting
+        fun hasEmptyFrontLink(questionText: String) = EMPTY_FRONT_LINK in questionText
     }
 }
 
