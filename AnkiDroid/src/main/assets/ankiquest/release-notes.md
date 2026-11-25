@@ -1,32 +1,32 @@
 AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): study, shared goals, and progress in one place.
 
-**Three tabs.** The bottom bar now has Decks, Today and Friends. Tap your avatar on Today to open Me, which holds Records, Study history and streak protection. Activity and Leaderboard are sections of Friends.
+**Moving to the new app.** This is the final update under `com.ichi2.anki.quest`. The next AnkiQuest installs alongside this one as `org.ankiquest.ankidroid`. On Android 9 and later, the official new app offers to move settings and sign-ins on first launch. On Android 7 and 8, sign in again in the new app. Sync your collection through AnkiWeb, or export it here and import it there. Keep this app installed until your collection is in the new one.
+
+**Study companion.** Settings → AnkiQuest → Study companion is its own screen. Ankilope joins you at level 30 and Bluma after 10 hours of study; locked companions show their condition and progress. Aki greets you once after you install or update. Your companion's pose follows your streak on Today and the widgets: asleep, sad before today's study, hopeful after some, on fire once today counts, or frozen after a day a freeze kept.
+
+**Today.** The streak flame stays unlit until today counts. Friends' study stays hidden until you upload your first reviews, and the leaderboard, Records and the leaderboard widget say so. Between Monday and the weekly board's switch, Today and your profile show the XP already counting for next week. The Home card no longer repeats "study" while cards are due.
 
 **Study time.** Me has a Study time section: today, this week, this month, total and per study day, from this collection's review history, uploaded or not.
 
-**Friends, Group and Global leaderboards.** The leaderboard switches between Friends, one of your groups and Global, with the server's ranks. Your own row says when it is not shown to others. On Global, "Hide for me" removes a player from your board only; they are not notified. "Hidden players" lists them, each with "Show again". "Show me on the global leaderboard" under Settings → AnkiQuest → Sharing decides whether you are listed.
+**Review heatmap.** The heatmap says on what share of the days since your first review you studied, and "Today" jumps back to the current day. It is translated into German, Spanish, French and Portuguese.
 
-**Undo.** Muting someone, pausing or resuming streak protection, and saving deck sharing now take effect at once and offer Undo. Undoing a change to several decks gives each deck back its previous recipients.
+**Sharing.** One share sheet sends a moment to friends or groups in AnkiQuest, with an optional note, or to another app with "More apps…". It covers conquered cards, session moments, companion unlocks, your weekly place and finished decks. Undo takes back only that send.
 
-**Today counts.** "Streak safe" is now "Today counts ✓". When reviews are waiting to upload, it says why: not uploaded yet, waiting for a connection, sign in again to upload, server error, or upload refused. When your reviews reach the streak minimum, a short cue appears over the reviewer without blocking taps; turn it off with "Streak cue while reviewing". The day's streak moment comes once, as a card or a silent notification. After studying, the session recap and your moments share one card, and they are kept if you leave the app.
+**Deck alerts.** Each deck alert offers Stop for its sender, with Undo. Today's focus and deck copy use AnkiDroid's searchable deck list.
 
-**Streak widget.** Every size shows today's progress toward the streak minimum, counting reviews not uploaded yet, and your daily goal. The flame changes at 7, 30, 100 and 365 days, and the widget shows the days left to the next milestone. A new "AnkiQuest Streak — Transparent" widget has no background. The companion in the large and huge sizes is no longer blurry on high-resolution screens.
+**Conquered cards.** Conquered cards show a readable deck name, which you can edit, shorten to a part of the path, or leave out.
 
-**Aki and Ankilope.** New poses for challenges (sent, won and lost), nudges, a review backlog and first, second and third place on the leaderboard.
+**Sync settings.** Rank and streak notifications, the session recap, the mood icon, opening on Today, the deck-sharing prompt and the streak cue stay the same on all your devices, the desktop add-on included, on servers that support it.
 
-**Share pictures.** Sharing a moment or a conquered card attaches its picture, drawn on the phone when the server's picture is not ready, so it works for cards of other players and on slow connections. "Download picture" on a moment or a conquered card saves the picture to your gallery without sharing anything.
+**Sign-in.** Accounts with two-factor authentication ask for the authenticator or recovery code after the password. Manage account links to the website to set it up. New accounts use ankiquest.org; saved accounts on the old address move there by themselves.
 
-**Conquered cards.** The suggested label comes from the fields on the card's front, without template text or ID fields. Two short fields, such as a word and its reading, are shown together.
+**Notifications.** Streak warnings wait until your quiet hours end.
 
-**Sign-in.** The app remembers your username for each server. With only one linked sign-in, it skips the choice of provider. The Password row says how to get a first password: sign in again with a linked sign-in, or ask the person who runs your server.
+**Rate and report.** About and the AnkiQuest changelog have "Rate AnkiQuest". "Report a bug" opens the bug form again instead of "No suitable app found".
 
-**About and bug reports.** About shows the AnkiQuest release, update channel and source, with "Report a bug" and "Copy debug info". Crash reports no longer include AnkiQuest settings or account data.
+**Fixes.** A review on a freeze-protected day counts toward today instead of reading "not studied yet". A failed certificate check is named as such instead of "waiting for a connection". The share sheet's Send works and the sheet is translated. Deck name patterns no longer crash. Moments about a companion this build cannot draw wait for an update that can.
 
-**Fixes.** A launcher icon change no longer closes a review in progress. After switching accounts, the previous account's leaderboard, notifications and deck sharing no longer appear. Two update checks no longer open two prompts. Each heatmap day can be selected on its own with TalkBack. Avatar initials are readable in the dark theme. The Card analysis widget fits its content at small sizes.
-
-This release includes the latest AnkiDroid changes.
-
-Update your server to this companion release for "Hide for me" on Global, public profiles listed on Global unless their player turns it off, and fewer details in Global rows of players outside your friends and groups. With an older server, "Hide for me" and the Global switch do not appear.
+This release includes the latest AnkiDroid changes. Companion pictures come from AnkiQuest-Art art-9.
 
 Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then open Settings → AnkiQuest → Account → Sign in or create account. Later releases are offered inside the app.
 
