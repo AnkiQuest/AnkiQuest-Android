@@ -8,4 +8,20 @@
     <string name="ankiquest_rwkv_not_enough_memory">Indisponível: este telemóvel tem pouca memória para a tua coleção. O agendamento não muda.</string>
     <string name="ankiquest_rwkv_no_model">Indisponível: escolhe primeiro um ficheiro de modelo RWKV. O agendamento não muda.</string>
     <string name="ankiquest_rwkv_ready">Ativado: o RWKV agenda as tuas revisões.</string>
+
+    <string name="ankiquest_rwkv_forecast_title">Previsão RWKV</string>
+    <string name="ankiquest_rwkv_forecast_note">se parares de rever agora</string>
+    <string name="ankiquest_rwkv_forecast_now">vencidos %1$d | perto %2$d | seguros %3$d</string>
+    <string name="ankiquest_rwkv_forecast_later">vencidos %1$d · +%2$d em 1 h · +%3$d em 3 h · %4$d até amanhã</string>
+    <string name="ankiquest_rwkv_recall_title">Recordação RWKV agora</string>
+    <plurals name="ankiquest_rwkv_recall_below">
+        <item quantity="one">%1$d de %2$d cartão (%3$s) abaixo de %4$s</item>
+        <item quantity="many">%1$d de %2$d cartões (%3$s) abaixo de %4$s</item>
+        <item quantity="other">%1$d de %2$d cartões (%3$s) abaixo de %4$s</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_recall_below_targets">
+        <item quantity="one">%1$d de %2$d cartão (%3$s) abaixo da retenção desejada</item>
+        <item quantity="many">%1$d de %2$d cartões (%3$s) abaixo da retenção desejada</item>
+        <item quantity="other">%1$d de %2$d cartões (%3$s) abaixo da retenção desejada</item>
+    </plurals>
 </resources>
