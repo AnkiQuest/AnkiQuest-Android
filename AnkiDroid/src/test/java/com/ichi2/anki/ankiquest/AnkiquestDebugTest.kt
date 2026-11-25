@@ -58,7 +58,8 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `only overrides that change something are active`() {
         assertFalse(Overrides.NONE.active)
-        assertFalse(Overrides.NONE.forceMood(Mood.FIRE).computeToday().active)
+        val computed = Overrides.NONE.forceMood(Mood.FIRE).computeToday()
+        assertFalse(computed.active)
         assertTrue(Overrides.NONE.forcePose(AnkiquestPose.HAPPY).active)
     }
 
