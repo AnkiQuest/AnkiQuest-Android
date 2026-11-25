@@ -13,6 +13,7 @@ import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestRwkvStats
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.time.getTimestamp
 import com.ichi2.anki.databinding.PageStatisticsBinding
@@ -59,6 +60,8 @@ class Statistics : PageFragment(R.layout.page_statistics) {
             }
         }
         registerDeckSelectedHandler(action = ::onDeckSelected)
+        // AnkiQuest: RWKV forecast and recall, only while the RWKV scheduler is on.
+        AnkiquestRwkvStats.attach(this, binding.appBar)
         requireActivity().launchCatchingTask {
             withProgress {
                 val deckName =

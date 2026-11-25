@@ -50,6 +50,7 @@
     <string name="ankiquest_sign_in_display">Anzeigename (optional)</string>
     <string name="ankiquest_sign_in_create">Neues Konto erstellen</string>
     <string name="ankiquest_sign_in_hint">Benutzernamen bestehen aus Kleinbuchstaben, Ziffern, - und _. Passwörter brauchen mindestens 10 Zeichen.</string>
+    <string name="ankiquest_sign_in_public_hint">Alle können dein Profil öffnen und du stehst in der globalen Rangliste.</string>
     <string name="ankiquest_sign_in_submit">Anmelden</string>
     <string name="ankiquest_sign_in_submit_create">Konto erstellen</string>
     <string name="ankiquest_sign_in_missing">Server, Benutzername und Passwort ausfüllen.</string>
@@ -140,4 +141,18 @@
         <item quantity="one">%d Wiederholung gesendet.</item>
         <item quantity="other">%d Wiederholungen gesendet.</item>
     </plurals>
+    <string name="ankiquest_widget_settings_title">Ranglisten-Widget</string>
+    <string name="ankiquest_widget_settings_open">%1$s, Widget-Einstellungen</string>
+    <string name="ankiquest_widget_settings_save">Widget speichern</string>
+    <string name="ankiquest_widget_settings_scale">Textgröße</string>
+    <string name="ankiquest_widget_settings_timeframe">Zeitraum</string>
+    <string name="ankiquest_widget_settings_groups_failed">Deine Gruppen konnten nicht geladen werden</string>
+    <string name="ankiquest_widget_settings_groups_loading">Deine Gruppen werden geladen…</string>
+    <string name="ankiquest_widget_scale_auto">Automatisch (passt ins Widget)</string>
+    <string name="ankiquest_widget_scale_extra_large">Sehr groß</string>
+    <string name="ankiquest_widget_scale_large">Groß</string>
+    <string name="ankiquest_widget_scale_medium">Mittel</string>
+    <string name="ankiquest_widget_scale_small">Klein</string>
+    <string name="ankiquest_widget_global_unavailable">Dieser Server hat noch keine globale Rangliste</string>
+    <string name="ankiquest_widget_who_global">Global</string>
 </resources>

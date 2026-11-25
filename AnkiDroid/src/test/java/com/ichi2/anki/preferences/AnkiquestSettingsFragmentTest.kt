@@ -219,6 +219,37 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     }
 
     @Test
+    fun `creating an account asks for a public profile, unticked`() {
+        AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
+        val sent = mutableListOf<AnkiquestAccount.Credentials>()
+        mockkObject(AnkiquestAccount)
+        try {
+            coEvery { AnkiquestAccount.submit(any(), any()) } answers {
+                val credentials = firstArg<AnkiquestAccount.Credentials>()
+                sent += credentials
+                AnkiquestAccount.Signed(credentials.url, credentials.user, "device-token")
+            }
+            val fragment = open()
+            fragment.preference<Preference>(R.string.ankiquest_sign_in_key).performClick()
+            val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+            val public = dialog.findViewById<CheckBox>(R.id.ankiquest_sign_in_public)!!
+            assertFalse(public.isShown, "asked only when creating an account")
+            dialog.findViewById<CheckBox>(R.id.ankiquest_sign_in_create)!!.isChecked = true
+            assertTrue(public.isShown)
+            assertFalse(public.isChecked, "private unless the player ticks it")
+            assertTrue(dialog.findViewById<TextView>(R.id.ankiquest_sign_in_public_hint)!!.isShown)
+            dialog.findViewById<EditText>(R.id.ankiquest_sign_in_password)!!.setText("long enough pw")
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(listOf(AnkiquestAccount.Profile.PRIVATE), sent.map { it.profile })
+            assertTrue(sent.single().create)
+        } finally {
+            unmockkObject(AnkiquestAccount)
+        }
+    }
+
+    @Test
     fun `changing the server refreshes the suggested username without replacing a typed name`() {
         AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
         val fragment = open()
