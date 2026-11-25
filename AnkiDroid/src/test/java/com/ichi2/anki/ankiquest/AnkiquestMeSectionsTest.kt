@@ -254,7 +254,12 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     private fun awaitSections(me: AnkiquestProfileActivity) {
         advanceRobolectricLooperUntil {
-            listOf(AnkiDroidR.id.aq_board_loading, R.id.aq_me_records_loading, R.id.aq_me_history_loading, R.id.aq_me_study_time_loading).none {
+            listOf(
+                AnkiDroidR.id.aq_board_loading,
+                R.id.aq_me_records_loading,
+                R.id.aq_me_history_loading,
+                R.id.aq_me_study_time_loading,
+            ).none {
                 me.findViewById<View>(it).isVisible
             }
         }
