@@ -43,7 +43,7 @@ Signature copying itself works on our APKs: copying quest-23's signature onto th
 
 ## Submitting
 
-hill submits, once #420 and #411 are merged and the first `org.ankiquest.ankidroid` release is tagged:
+Once #420 and #411 are merged and the first `org.ankiquest.ankidroid` release is tagged:
 
 1. Fill in the first build in the recipe (tag, versionName, versionCode).
 2. Fork [fdroiddata](https://gitlab.com/fdroid/fdroiddata), add the recipe as `metadata/org.ankiquest.ankidroid.yml`, run `fdroid readmeta`, `fdroid rewritemeta org.ankiquest.ankidroid`, `fdroid lint org.ankiquest.ankidroid` and `fdroid build -v -l org.ankiquest.ankidroid`.
