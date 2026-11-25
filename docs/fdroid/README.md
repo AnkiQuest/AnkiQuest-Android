@@ -3,7 +3,7 @@
 How AnkiQuest gets into F-Droid's main repository. Nothing is submitted yet.
 
 - [`org.ankiquest.ankidroid.yml`](org.ankiquest.ankidroid.yml): draft recipe for [fdroiddata](https://gitlab.com/fdroid/fdroiddata), `metadata/org.ankiquest.ankidroid.yml`.
-- [`fastlane/metadata/android/en-US/`](../../fastlane/metadata/android/en-US): the store listing F-Droid reads from this repository (title, descriptions, screenshots, changelog).
+- [`fastlane/metadata/android/en-US/`](../../fastlane/metadata/android/en-US): the store listing F-Droid reads from this repository (title, descriptions, changelog). It has no screenshots yet: the five screens `AnkiquestBannerScreenshots` records for the README banner would serve, saved to `images/phoneScreenshots/`. Without `images/icon.png` F-Droid shows the APK's launcher icon.
 
 ## What F-Droid checks
 
