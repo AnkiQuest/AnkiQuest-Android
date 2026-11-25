@@ -19,6 +19,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMood
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
+import com.ichi2.anki.ankiquest.ownPose
 import com.ichi2.anki.common.time.TimeManager
 import java.text.NumberFormat
 import java.time.LocalDate

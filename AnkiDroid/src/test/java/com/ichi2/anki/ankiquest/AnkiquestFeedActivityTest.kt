@@ -38,13 +38,13 @@ import kotlin.test.assertTrue
 @Config(sdk = [33], qualifiers = "w320dp-h640dp")
 class AnkiquestFeedActivityTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "member", "secret")
-    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+    private val page = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedSamples.PAGE))
 
     @Before
     fun prepareFeed() {
-        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns page
         coEvery { AnkiquestFeed.markRead(identity, any()) } returns Unit
         coEvery { AnkiquestFeed.markAllRead(identity, any()) } returns Unit
@@ -55,7 +55,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare, HomeAccount.Companion)
     }
 
     @Test
@@ -298,7 +298,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     @Test
     fun `an older server's list has no filters or read state`() {
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
-            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedTest.LEGACY))
+            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedSamples.LEGACY))
         val feed = launch()
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_legacy)))
         assertFalse(feed.hasText(feed.getString(R.string.aq_feed_messages)))
@@ -321,7 +321,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the feed asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val feed = launch()
         assertTrue(feed.hasText(feed.getString(R.string.aq_feed_connect)))
         coVerify(exactly = 0) { AnkiquestFeed.page(any(), any(), any(), any()) }

@@ -58,9 +58,9 @@ class AnkiquestFriendsWinTest : RobolectricTest() {
             }
         base = server.url
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, base)
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "hill-token")
+            putString(AnkiquestPreferences.PREF_URL, base)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "hill-token")
         }
         account = AnkiquestHomeData.account()!!
     }

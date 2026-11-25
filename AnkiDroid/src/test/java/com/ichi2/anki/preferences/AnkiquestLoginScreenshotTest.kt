@@ -8,9 +8,9 @@ import androidx.preference.Preference
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.HomeAccount
 import io.mockk.justRun
 import io.mockk.mockkObject
@@ -33,9 +33,9 @@ class AnkiquestLoginScreenshotTest : ScreenshotTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://ankiquest.example")
-            putString(Ankiquest.PREF_USER, "member")
-            putString(Ankiquest.PREF_TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://ankiquest.example")
+            putString(AnkiquestPreferences.PREF_USER, "member")
+            putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
         AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
         mockkObject(AnkiquestPoll)

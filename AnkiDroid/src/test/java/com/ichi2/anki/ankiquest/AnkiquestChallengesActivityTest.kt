@@ -48,8 +48,8 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
     @Before
     fun prepareGoals() {
         TimeManager.resetWith(MockTime(EXAMPLE_NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestChallenges)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestChallenges, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestChallenges.overview(identity) } returns overview
         coEvery { AnkiquestChallenges.act(identity, any(), any()) } returns accepted
         coEvery { AnkiquestChallenges.weekly(identity, any(), any()) } returns overview
@@ -57,7 +57,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
 
     @After
     fun clearGoalMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestChallenges)
+        unmockkObject(AnkiquestHomeData, AnkiquestChallenges, HomeAccount.Companion)
     }
 
     @Test
@@ -274,7 +274,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the screen asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val goals = launch()
         assertTrue(goals.hasText(goals.getString(R.string.aq_challenges_connect)))
         coVerify(exactly = 0) { AnkiquestChallenges.overview(any()) }

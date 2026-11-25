@@ -130,7 +130,7 @@ internal object AnkiquestMomentCard {
     ) {
         private enum class Exit { DONE, CONTINUE, PROGRESS, REPLACED, CLOSED }
 
-        private val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
+        private val owner = HomeAccount.fingerprint(prefs.all)
         private val lifecycle = host.lifecycle
         private val parentScope = host.lifecycleScope
         private val jobs = SupervisorJob(parentScope.coroutineContext[Job])
@@ -260,7 +260,7 @@ internal object AnkiquestMomentCard {
             dialog.dismiss()
         }
 
-        private fun ownsAccount(): Boolean = owner == AnkiquestNavigation.accountFingerprint(prefs.all)
+        private fun ownsAccount(): Boolean = owner == HomeAccount.fingerprint(prefs.all)
 
         private fun close(destination: Exit) {
             if (!dialog.isShowing) {

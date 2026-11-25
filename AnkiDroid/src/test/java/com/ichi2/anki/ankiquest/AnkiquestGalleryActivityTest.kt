@@ -38,8 +38,8 @@ class AnkiquestGalleryActivityTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestGallery)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestGallery, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         every { AnkiquestGallery.save(any(), source, account) } answers {
             saves.incrementAndGet()
             "content://media/external/images/media/42".toUri()
@@ -50,7 +50,7 @@ class AnkiquestGalleryActivityTest : RobolectricTest() {
     @After
     fun cleanup() {
         advanceRobolectricLooper()
-        unmockkObject(AnkiquestHomeData, AnkiquestGallery)
+        unmockkObject(AnkiquestHomeData, AnkiquestGallery, HomeAccount.Companion)
     }
 
     private fun intent() =
@@ -125,7 +125,7 @@ class AnkiquestGalleryActivityTest : RobolectricTest() {
     fun `changing account during the permission prompt cancels saving`() {
         val activity = build().setup().get()
         val request = assertNotNull(shadowOf(activity).lastRequestedPermission)
-        every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other")
+        every { HomeAccount.current(any()) } returns account.copy(user = "other")
         activity.onRequestPermissionsResult(
             request.requestCode,
             request.requestedPermissions,

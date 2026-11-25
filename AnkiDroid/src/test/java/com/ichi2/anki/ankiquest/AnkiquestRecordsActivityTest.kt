@@ -38,8 +38,8 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
 
     @Before
     fun prepareRecords() {
-        mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
         coEvery { AnkiquestRecords.records(identity, any()) } returns AnkiquestRecords.Records(boards)
         coEvery { AnkiquestRecords.scopes(identity) } returns emptyList()
@@ -47,7 +47,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
 
     @After
     fun clearRecordMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
+        unmockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards, HomeAccount.Companion)
     }
 
     @Test
@@ -151,7 +151,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the records ask to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val records = launch()
         assertTrue(records.hasText(records.getString(R.string.aq_records_connect)))
         coVerify(exactly = 0) { AnkiquestRecords.records(any(), any()) }

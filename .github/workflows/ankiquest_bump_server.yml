@@ -79,7 +79,7 @@ jobs:
             git checkout -b bot/server-bump
           fi
           node "$RUNNER_TEMP/ankiquest_server_snapshot.cjs" copy server
-          git add AnkiDroid/src/test/resources/ankiquest-api AnkiDroid/src/test/resources/ankiquest AnkiDroid/src/test/resources/ankiquest-server.sha
+          git add ankiquest-core/src/test/resources/ankiquest-api ankiquest-core/src/test/resources/ankiquest ankiquest-core/src/test/resources/ankiquest-server.sha
           if ! git diff --cached --quiet; then
             git commit --signoff -m "Bump server to $(git -C server rev-parse --short HEAD)"
           fi
@@ -101,7 +101,7 @@ jobs:
             const path = require('node:path');
             const { readPin } = require(path.join(process.env.RUNNER_TEMP, 'ankiquest_server_snapshot.cjs'));
             const { updatePullRequest, serverCommits } = require(path.join(process.env.RUNNER_TEMP, 'ankiquest_server_bump.cjs'));
-            const from = execFileSync('git', ['show', 'origin/master:AnkiDroid/src/test/resources/ankiquest-server.sha'], { encoding: 'utf8' }).trim();
+            const from = execFileSync('git', ['show', 'origin/master:ankiquest-core/src/test/resources/ankiquest-server.sha'], { encoding: 'utf8' }).trim();
             const to = readPin(process.cwd());
             const commits = serverCommits('server', from, to);
             await updatePullRequest({ github, context, from, to, commits });

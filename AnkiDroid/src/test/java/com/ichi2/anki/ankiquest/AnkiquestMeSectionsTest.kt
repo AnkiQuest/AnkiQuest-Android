@@ -58,8 +58,8 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords)
-        every { AnkiquestHomeData.account(any()) } answers { account }
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } answers { account }
         coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
         coEvery { AnkiquestRecords.records(any(), any()) } returns AnkiquestRecords.Records(boards)
         coEvery { AnkiquestRecords.scopes(any()) } returns listOf(AnkiquestRecords.Scope.CIRCLE, club)
@@ -69,7 +69,7 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestRecords, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

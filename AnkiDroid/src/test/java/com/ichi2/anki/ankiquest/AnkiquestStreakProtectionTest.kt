@@ -41,9 +41,9 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         server = AnkiquestTestServer { TestResponse(status, response.toByteArray()) }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, server.url)
-            putString(Ankiquest.PREF_USER, "cerro two")
-            putString(Ankiquest.PREF_TOKEN, "saved-token")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
+            putString(AnkiquestPreferences.PREF_USER, "cerro two")
+            putString(AnkiquestPreferences.PREF_TOKEN, "saved-token")
         }
     }
 
@@ -86,7 +86,7 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
     @Test
     fun `missing token does not send a request`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
             assertFailsWith<IllegalStateException> { Ankiquest.setStreakProtection(true) }
             assertTrue(requests.isEmpty())
         }

@@ -173,9 +173,9 @@ class AnkiquestMoodTest : RobolectricTest() {
     fun `the heatmap companion shows today's mood`() {
         val now = TimeManager.time.intTimeMS()
         targetContext.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://study.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://study.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         val today = JSONObject().put("starts_at", now - HOUR).put("reviews", 0).put("streak_minutes", 10)
         AnkiquestDay.remember(

@@ -43,8 +43,8 @@ class AnkiquestProtectionScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepareProtection() {
-        mockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         val profile = AnkiquestBoards.parseProfile(JSONObject(AnkiquestBoardsTest.PROFILE))
         coEvery { AnkiquestBoards.player(identity, identity.user) } answers {
             AnkiquestBoards.PlayerPage(profile.copy(freezesEnabled = enabled), own = true, wins = emptyList())
@@ -58,7 +58,7 @@ class AnkiquestProtectionScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanupProtection() {
-        unmockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars)
+        unmockkObject(Ankiquest, AnkiquestHomeData, AnkiquestBoards, AnkiquestAvatars, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

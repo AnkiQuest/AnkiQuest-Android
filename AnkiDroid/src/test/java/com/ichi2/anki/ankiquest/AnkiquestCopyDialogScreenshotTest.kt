@@ -42,8 +42,8 @@ class AnkiquestCopyDialogScreenshotTest : ScreenshotTest() {
         val account = HomeAccount("https://quest.example.test", "sam", "visual-test-token")
         val deck = "Languages::Spanish vocabulary"
         val id = col.decks.id(deck)
-        mockkObject(AnkiquestHomeData, AnkiquestDeckCopies)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestDeckCopies, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(id, deck, 3, 0, 0)), id)
         coEvery { AnkiquestHomeData.profile(any()) } throws IOException("offline")
         coEvery { AnkiquestHomeData.companion(any()) } throws IOException("offline")
@@ -58,7 +58,7 @@ class AnkiquestCopyDialogScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies)
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

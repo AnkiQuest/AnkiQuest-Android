@@ -445,7 +445,7 @@ internal object AnkiquestDailyGoal {
             col.db
                 .query(
                     "select count(distinct cid), coalesce(sum(time), 0) from revlog " +
-                        "where id >= ? and ${AnkiquestDay.UPLOADED_REVIEWS}",
+                        "where id >= ? and ${RevlogSource.UPLOADED_REVIEWS}",
                     (cutoff - 86_400) * 1000,
                 ).use { cursor ->
                     cursor.moveToFirst()
@@ -481,7 +481,7 @@ internal object AnkiquestDailyGoal {
             backlog,
             AnkiquestDecks.studyDay(col, TimeManager.time.intTimeMS()),
             server,
-            AnkiquestDay.unsent(col, server),
+            AnkiquestDay.unsent(RevlogSource(col), server),
         )
     }
 

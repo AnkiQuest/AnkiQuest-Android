@@ -49,9 +49,9 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     @Before
     fun prepareBoard() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards, HomeAccount.Companion)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
-        every { AnkiquestHomeData.account(any()) } returns identity
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns AnkiquestBoards.Leaderboard(week)
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * 24 * 60 * 60 * 1000L
@@ -59,7 +59,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
 
     @After
     fun clearBoardMocks() {
-        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards, HomeAccount.Companion)
     }
 
     @Test
@@ -203,7 +203,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the board asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val board = launch()
         assertTrue(board.hasText(board.getString(R.string.aq_board_connect)))
         coVerify(exactly = 0) { AnkiquestBoards.leaderboard(any(), any()) }
@@ -224,7 +224,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         assertTrue(board.hasText("Ana"))
         val other = HomeAccount("https://anki.example.test", "other", "other-token")
         val waiting = CompletableDeferred<AnkiquestBoards.Leaderboard>()
-        every { AnkiquestHomeData.account(any()) } returns other
+        every { HomeAccount.current(any()) } returns other
         coEvery { AnkiquestBoards.leaderboard(other, any()) } coAnswers { waiting.await() }
         coEvery { AnkiquestBoards.weekEnds(other) } returns null
         try {
@@ -249,7 +249,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         val board = controller.get()
         assertTrue(board.hasText("Ana"))
         val other = HomeAccount("https://other.example.test", "bo", "other-token")
-        every { AnkiquestHomeData.account(any()) } returns other
+        every { HomeAccount.current(any()) } returns other
         coEvery { AnkiquestBoards.leaderboard(other, any()) } throws IOException("offline")
 
         controller.pause().resume()

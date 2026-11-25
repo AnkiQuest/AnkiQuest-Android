@@ -75,9 +75,9 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         AnkiquestCapabilities.forgetMemory()
         server = AnkiquestTestServer { answer(it) }
         targetContext.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.PREF_URL, server.url)
-            putString(Ankiquest.PREF_USER, "cerro")
-            putString(Ankiquest.PREF_TOKEN, "secret")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
+            putString(AnkiquestPreferences.PREF_USER, "cerro")
+            putString(AnkiquestPreferences.PREF_TOKEN, "secret")
         }
     }
 

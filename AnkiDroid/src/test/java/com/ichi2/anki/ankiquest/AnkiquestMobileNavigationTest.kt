@@ -30,9 +30,9 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     @Before
     fun configure() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "member name")
-            putString(Ankiquest.PREF_TOKEN, "member-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "member name")
+            putString(AnkiquestPreferences.PREF_TOKEN, "member-token")
         }
     }
 
@@ -62,20 +62,20 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
 
     @Test
     fun `changing credentials invalidates the presentation identity`() {
-        val before = AnkiquestNavigation.accountFingerprint()
+        val before = HomeAccount.fingerprint()
         assertFalse(before.contains("member-token"))
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement-token") }
-        assertNotEquals(before, AnkiquestNavigation.accountFingerprint())
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "replacement-token") }
+        assertNotEquals(before, HomeAccount.fingerprint())
     }
 
     @Test
     fun `presentation identity captures fallback member in the same settings snapshot`() {
         val preferences = AnkiDroidApp.sharedPrefs()
         preferences.edit {
-            remove(Ankiquest.PREF_USER)
+            remove(AnkiquestPreferences.PREF_USER)
             putString("username", "original-member")
         }
-        val before = AnkiquestNavigation.accountFingerprint()
+        val before = HomeAccount.fingerprint()
         val changingPreferences = mockk<SharedPreferences>()
         every { changingPreferences.all } answers {
             val snapshot = preferences.all
@@ -85,11 +85,11 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         val previousOverride = SharedPreferencesTestHook.override
         try {
             SharedPreferencesTestHook.override = changingPreferences
-            assertEquals(before, AnkiquestNavigation.accountFingerprint())
+            assertEquals(before, HomeAccount.fingerprint())
         } finally {
             SharedPreferencesTestHook.override = previousOverride
         }
-        assertNotEquals(before, AnkiquestNavigation.accountFingerprint())
+        assertNotEquals(before, HomeAccount.fingerprint())
     }
 
     @Test

@@ -54,6 +54,7 @@ import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync
 import com.ichi2.anki.ankiquest.AnkiquestSharing
@@ -253,7 +254,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val hint = view.findViewById<TextView>(R.id.ankiquest_sign_in_hint)
         val status = view.findViewById<TextView>(R.id.ankiquest_sign_in_status)
         val prefs = AnkiDroidApp.sharedPrefs()
-        server.setText(prefs.getString(Ankiquest.PREF_URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
+        server.setText(prefs.getString(AnkiquestPreferences.PREF_URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
         user.setText(AnkiquestAccountSettings.signInUsername(server.text.toString()))
         var usernameEdited = false
         var updatingSuggestion = false
@@ -308,9 +309,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     val signed = AnkiquestAccount.submit(credentials)
                     if (!isAdded) return@launch
                     prefs.edit {
-                        putString(Ankiquest.PREF_URL, signed.url)
-                        putString(Ankiquest.PREF_USER, signed.user)
-                        putString(Ankiquest.PREF_TOKEN, signed.token)
+                        putString(AnkiquestPreferences.PREF_URL, signed.url)
+                        putString(AnkiquestPreferences.PREF_USER, signed.user)
+                        putString(AnkiquestPreferences.PREF_TOKEN, signed.token)
                     }
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
@@ -840,7 +841,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         if (key != null && AnkiquestSettingsSync.Setting.entries.any { it.pref == key }) {
             findPreference<SwitchPreferenceCompat>(key)?.let { it.isChecked = sharedPreferences.getBoolean(key, it.isChecked) }
         }
-        if (key in setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)) {
+        if (key in setOf(AnkiquestPreferences.PREF_URL, AnkiquestPreferences.PREF_USER, AnkiquestPreferences.PREF_TOKEN)) {
             pictureAccount = null
             pictureEditor?.dismiss()
             pictureEditor = null

@@ -32,8 +32,8 @@ class AnkiquestDeckNameScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestDeckNames, AnkiquestShare, AnkiquestCommunity)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(AnkiquestHomeData, AnkiquestDeckNames, AnkiquestShare, AnkiquestCommunity, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns account
         coEvery { AnkiquestDeckNames.find(100) } returns
             AnkiquestDeckNames.Deck(
                 name,
@@ -52,7 +52,7 @@ class AnkiquestDeckNameScreenshotTest : ScreenshotTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestDeckNames, AnkiquestShare, AnkiquestCommunity)
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckNames, AnkiquestShare, AnkiquestCommunity, HomeAccount.Companion)
         RuntimeEnvironment.setFontScale(1f)
     }
 

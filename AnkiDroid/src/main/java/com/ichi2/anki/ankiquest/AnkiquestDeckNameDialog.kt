@@ -64,7 +64,7 @@ internal object AnkiquestDeckNameDialog {
         val field =
             MaterialAutoCompleteTextView(host).apply {
                 setSingleLine(true)
-                filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
+                filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestCardLabels.MAX_LABEL))
                 threshold = 0
                 setAdapter(ArrayAdapter(host, android.R.layout.simple_dropdown_item_1line, deck.picks.filter(String::isNotEmpty)))
                 setText(deck.name, false)

@@ -18,7 +18,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Device
@@ -29,6 +28,7 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Summary
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
+import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import io.mockk.coEvery
@@ -80,9 +80,9 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
     fun prepare() {
         TimeManager.resetWith(MockTime(NOW))
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example")
-            putString(Ankiquest.PREF_USER, "ana")
-            putString(Ankiquest.PREF_TOKEN, "test-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example")
+            putString(AnkiquestPreferences.PREF_USER, "ana")
+            putString(AnkiquestPreferences.PREF_TOKEN, "test-token")
         }
         mockkObject(AnkiquestAccountSettings, AnkiquestCapabilities)
         coEvery { AnkiquestAccountSettings.methods(any()) } returns withPassword
@@ -136,7 +136,7 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
 
     @Test
     fun `without an account it asks to sign in first`() {
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_TOKEN, "") }
         val fragment = open().second
         assertEquals(targetContext.getString(R.string.ankiquest_account_configure), fragment.status().summary)
         coVerify(exactly = 0) { AnkiquestAccountSettings.methods(any()) }

@@ -49,8 +49,8 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @Before
     fun prepareProfile() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
-        every { AnkiquestHomeData.account(any()) } returns identity
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, HomeAccount.Companion)
+        every { HomeAccount.current(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         every { AnkiquestSubscriptions.repository } returns repository
@@ -64,7 +64,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @After
     fun clearProfileMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords, HomeAccount.Companion)
     }
 
     private fun overview(vararg muted: String) =
@@ -368,7 +368,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @Test
     fun `without an account the profile asks to connect`() {
-        every { AnkiquestHomeData.account(any()) } returns null
+        every { HomeAccount.current(any()) } returns null
         val screen = launch()
         assertTrue(screen.hasText(screen.getString(R.string.aq_board_connect)))
         coVerify(exactly = 0) { AnkiquestBoards.player(any(), any()) }

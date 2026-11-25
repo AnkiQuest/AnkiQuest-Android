@@ -49,9 +49,9 @@ class AnkiquestApiCallTest : RobolectricTest() {
 
     private fun signIn(token: String) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, url)
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, token)
+            putString(AnkiquestPreferences.PREF_URL, url)
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, token)
         }
     }
 

@@ -90,9 +90,9 @@ class AnkiquestWidgetLockTest : RobolectricTest() {
                 TestResponse.json(body, headers = lock)
             }
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, server.url)
-            putString(Ankiquest.PREF_USER, "aldanita")
-            putString(Ankiquest.PREF_TOKEN, "aldanita-token")
+            putString(AnkiquestPreferences.PREF_URL, server.url)
+            putString(AnkiquestPreferences.PREF_USER, "aldanita")
+            putString(AnkiquestPreferences.PREF_TOKEN, "aldanita-token")
         }
     }
 

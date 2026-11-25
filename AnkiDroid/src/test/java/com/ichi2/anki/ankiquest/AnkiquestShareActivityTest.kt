@@ -50,8 +50,16 @@ class AnkiquestShareActivityTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
-        every { AnkiquestHomeData.account(any()) } returns account
+        mockkObject(
+            AnkiquestHomeData,
+            Ankiquest,
+            AnkiquestShare,
+            AnkiquestSharing,
+            AnkiquestMomentShare,
+            AnkiquestSocial,
+            HomeAccount.Companion,
+        )
+        every { HomeAccount.current(any()) } returns account
         coEvery { Ankiquest.shareWinLink(17, account.scope) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
@@ -65,7 +73,15 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     @After
     fun cleanup() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        unmockkObject(
+            AnkiquestHomeData,
+            Ankiquest,
+            AnkiquestShare,
+            AnkiquestSharing,
+            AnkiquestMomentShare,
+            AnkiquestSocial,
+            HomeAccount.Companion,
+        )
     }
 
     private fun intent() =
@@ -101,7 +117,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
                 ).setup()
         saveControllerForCleanup(controller)
         advanceRobolectricLooperUntil { operation != null }
-        every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other")
+        every { HomeAccount.current(any()) } returns account.copy(user = "other")
         label.complete("PRIVATE LABEL FROM OLD ACCOUNT")
         advanceRobolectricLooperUntil { operation?.isCompleted == true }
         assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
@@ -191,7 +207,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
                 .toList()
         content.filterIsInstance<CheckBox>().single().isChecked = true
         val next = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-        every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other")
+        every { HomeAccount.current(any()) } returns account.copy(user = "other")
         next.performClick()
         advanceRobolectricLooper()
         coVerify(exactly = 0) { AnkiquestSharing.setConquestLabel(any(), any(), any()) }
@@ -224,7 +240,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
         val activity = controller.get()
         advanceRobolectricLooperUntil { operation != null }
         controller.pause()
-        every { AnkiquestHomeData.account(any()) } returns account.copy(user = "other")
+        every { HomeAccount.current(any()) } returns account.copy(user = "other")
         answer.complete(link)
         ready()
         controller.resume()

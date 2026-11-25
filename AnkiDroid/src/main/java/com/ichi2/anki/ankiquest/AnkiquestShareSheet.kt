@@ -171,7 +171,7 @@ internal class AnkiquestShareSheet(
         val finished = deck()
         if (deckName != null && finished != null) {
             val field = deckName
-            field.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestShare.MAX_LABEL))
+            field.filters = arrayOf(AnkiquestTextLimit.filter(AnkiquestCardLabels.MAX_LABEL))
             field.setText(finished.name)
             content.addView(field, wide())
             field.doAfterTextChanged { text ->

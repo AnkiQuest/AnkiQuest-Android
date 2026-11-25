@@ -201,7 +201,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                     setText(suggestion)
                     hint = language.getString(R.string.ankiquest_share_card_hint)
                     isSingleLine = true
-                    filters = arrayOf(InputFilter.LengthFilter(AnkiquestShare.MAX_LABEL))
+                    filters = arrayOf(InputFilter.LengthFilter(AnkiquestCardLabels.MAX_LABEL))
                     isEnabled = include.isChecked
                 }
             include.setOnCheckedChangeListener { _, checked -> field.isEnabled = checked }
@@ -227,7 +227,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                             }
                             return@setPositiveButton
                         }
-                        val label = AnkiquestShare.chosenLabel(include.isChecked, field.text?.toString())
+                        val label = AnkiquestCardLabels.chosenLabel(include.isChecked, field.text?.toString())
                         lifecycleScope.launch {
                             try {
                                 if (!ownsCard(owner)) {

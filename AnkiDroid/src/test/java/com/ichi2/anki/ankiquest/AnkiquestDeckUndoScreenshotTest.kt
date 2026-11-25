@@ -51,9 +51,9 @@ class AnkiquestDeckUndoScreenshotTest : ScreenshotTest() {
         // not depend on how far that has got (#379). Without animations both are in their final place.
         setSystemAnimationsEnabled(false)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://anki.example.test")
-            putString(Ankiquest.PREF_USER, "hill")
-            putString(Ankiquest.PREF_TOKEN, "screenshot-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://anki.example.test")
+            putString(AnkiquestPreferences.PREF_USER, "hill")
+            putString(AnkiquestPreferences.PREF_TOKEN, "screenshot-token")
         }
         mockkObject(Ankiquest, AnkiquestPoll, AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions)
         justRun { Ankiquest.onActivityResumed(any()) }

@@ -54,9 +54,9 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             }
         url = server.url
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, url)
-            putString(Ankiquest.PREF_USER, "member name")
-            putString(Ankiquest.PREF_TOKEN, " member-secret ")
+            putString(AnkiquestPreferences.PREF_URL, url)
+            putString(AnkiquestPreferences.PREF_USER, "member name")
+            putString(AnkiquestPreferences.PREF_TOKEN, " member-secret ")
         }
     }
 
@@ -82,7 +82,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `public server reads still work without a configured token`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
 
             Ankiquest.leaderboard()
             Ankiquest.profile()
@@ -101,15 +101,15 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             val captured = read()
             if (readingUnderTest.get() == true) {
                 preferences.edit {
-                    putString(Ankiquest.PREF_URL, "https://private.example.test")
-                    putString(Ankiquest.PREF_TOKEN, "new-private-secret")
+                    putString(AnkiquestPreferences.PREF_URL, "https://private.example.test")
+                    putString(AnkiquestPreferences.PREF_TOKEN, "new-private-secret")
                 }
             }
             return captured
         }
         every { changingPreferences.getString(any(), any()) } answers { preferences.getString(firstArg(), secondArg()) }
-        every { changingPreferences.getString(Ankiquest.PREF_URL, any()) } answers {
-            switchServerAfter { preferences.getString(Ankiquest.PREF_URL, secondArg()) }
+        every { changingPreferences.getString(AnkiquestPreferences.PREF_URL, any()) } answers {
+            switchServerAfter { preferences.getString(AnkiquestPreferences.PREF_URL, secondArg()) }
         }
         every { changingPreferences.all } answers { switchServerAfter { preferences.all } }
         SharedPreferencesTestHook.override = changingPreferences
@@ -118,7 +118,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     private suspend fun <T> readingSettings(block: suspend () -> T): T = withContext(readingUnderTest.asContextElement(true)) { block() }
 
     private fun assertServerSwitched() =
-        assertEquals("https://private.example.test", targetContext.sharedPrefs().getString(Ankiquest.PREF_URL, ""))
+        assertEquals("https://private.example.test", targetContext.sharedPrefs().getString(AnkiquestPreferences.PREF_URL, ""))
 
     @Test
     fun `account changes never send new server credentials to the captured server`() =
@@ -135,7 +135,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `tokenless settings checks remain anonymous after account changes`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
+            AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestPreferences.PREF_TOKEN) }
             switchServerDuringSettingsRead()
 
             readingSettings { Ankiquest.runFromSettings(targetContext, uploadAll = false) }
@@ -147,7 +147,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `a saved plain http address on the internet is signed out with the reason shown`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "http://quest.example/") }
+            AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestPreferences.PREF_URL, "http://quest.example/") }
 
             assertNull(HomeAccount.current())
             assertFalse(Ankiquest.isConfigured())

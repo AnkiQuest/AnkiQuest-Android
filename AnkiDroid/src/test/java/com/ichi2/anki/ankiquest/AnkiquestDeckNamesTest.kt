@@ -40,9 +40,9 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
 
     private fun account(user: String) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.PREF_URL, "https://quest.example.test")
-            putString(Ankiquest.PREF_USER, user)
-            putString(Ankiquest.PREF_TOKEN, "synthetic-$user-token")
+            putString(AnkiquestPreferences.PREF_URL, "https://quest.example.test")
+            putString(AnkiquestPreferences.PREF_USER, user)
+            putString(AnkiquestPreferences.PREF_TOKEN, "synthetic-$user-token")
         }
     }
 
@@ -184,6 +184,6 @@ class AnkiquestDeckNamesTest : RobolectricTest() {
             col.removeCardsAndOrphanedNotes(listOf(card.id))
             assertEquals("Animals", AnkiquestDeckNames.find(at)?.name)
             assertNull(AnkiquestDeckNames.find(at + 1))
-            assertTrue(AnkiquestDeckNames.clean("word ".repeat(100)).length <= AnkiquestShare.MAX_LABEL)
+            assertTrue(AnkiquestDeckNames.clean("word ".repeat(100)).length <= AnkiquestCardLabels.MAX_LABEL)
         }
 }
