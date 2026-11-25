@@ -748,7 +748,7 @@ internal object AnkiquestMomentCard {
         /**
          * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
          * chosen friends, or for a streak card it has not confirmed yet, whose friends wait for the
-         * upload (hill, 2026-11-20); Android's share sheet otherwise.
+         * upload; Android's share sheet otherwise.
          */
         private fun share(
             shown: Moment,

@@ -32,12 +32,12 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: read # code-changed lists the pull request's files
     outputs:
       code: ${{ steps.changed.outputs.code }}
     steps:
       - id: changed
-        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@5ab685e7013b865630f96530ca8c654344738fa8
+        uses: AnkiQuest/AnkiQuest-Dev/.github/actions/code-changed@master
         with:
           docs: |
             *.md
@@ -64,6 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 2
 
       - name: Configure JDK
@@ -135,6 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 1
 
         # Handled under the pre-commit hook: ./gradlew installGitHook

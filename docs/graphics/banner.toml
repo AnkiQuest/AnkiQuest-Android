@@ -11,10 +11,11 @@ record = ["./gradlew", ":AnkiDroid:recordRoborazziPlayDebug", "-Pscreenshot", "-
 readme = "docs/graphics/logos/banner_readme.png"
 social = "docs/graphics/logos/social_preview.png"
 
-# The pose master, in the AnkiQuest-Server checkout. Shorter than on the
+# The pose master, from the AnkiQuest-Art release that ankiquest-art.json pins,
+# staged at art/ by AnkiQuest-Dev's banner workflow. Shorter than on the
 # other banners, so the phones start below it.
 [companion]
-pose = "static/duo/friends.png"
+pose = "art/duo/friends.png"
 height = 116
 
 # Back to front, so nearer phones cover the ones behind them. Left to

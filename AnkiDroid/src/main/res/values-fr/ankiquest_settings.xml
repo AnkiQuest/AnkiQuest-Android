@@ -42,4 +42,6 @@
     <string name="ankiquest_streak_cue_title">Signal de série pendant les révisions</string>
     <string name="ankiquest_show_global_title">M’afficher au classement mondial</string>
     <string name="ankiquest_show_global_summary">Les joueurs connectés voient ton nom, ton avatar, ton niveau, tes XP et ta série. Les profils publics sont aussi visibles sans connexion. Tes amis et les membres de tes groupes en voient plus. Ce réglage concerne uniquement le classement.</string>
+    <string name="ankiquest_sync_settings_title">Synchroniser les réglages</string>
+    <string name="ankiquest_sync_settings_summary">Garde les réglages AnkiQuest identiques sur tous tes appareils. Ce réglage ne s’applique qu’à cet appareil.</string>
 </resources>

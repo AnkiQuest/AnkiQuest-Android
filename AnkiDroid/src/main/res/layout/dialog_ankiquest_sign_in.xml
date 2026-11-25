@@ -62,6 +62,21 @@
             android:maxLength="40"
             android:visibility="gone" />
 
+        <!-- Asked when creating an account; unticked, so profiles are private unless chosen. -->
+        <CheckBox
+            android:id="@+id/ankiquest_sign_in_public"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/aq_friends_public"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/ankiquest_sign_in_public_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ankiquest_sign_in_public_hint"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/ankiquest_sign_in_hint"
             android:layout_width="match_parent"

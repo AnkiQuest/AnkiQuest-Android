@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- The RWKV forecast's colours, as the anki-rwkv-forecast add-on's night mode. -->
+<resources>
+    <color name="aq_rwkv_due">#EF5350</color>
+    <color name="aq_rwkv_near">#FFA726</color>
+    <color name="aq_rwkv_safe">#66BB6A</color>
+    <color name="aq_rwkv_axis">#AAAAAA</color>
+</resources>

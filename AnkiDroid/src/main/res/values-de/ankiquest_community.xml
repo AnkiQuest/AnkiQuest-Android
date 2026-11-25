@@ -108,4 +108,7 @@
     </plurals>
     <string name="aq_server_outdated">Dafür braucht es einen neueren AnkiQuest-Server. Bitte die Person, die deinen betreibt, ihn zu aktualisieren.</string>
     <string name="aq_conquest_share_deck">Aus meinem Stapel „%1$s“.</string>
+    <string name="aq_conquest_deck">Aus deinem Stapel %1$s</string>
+    <string name="aq_conquest_popup_card">„%1$s“</string>
+    <string name="aq_conquest_popup_open">Karte ansehen</string>
 </resources>

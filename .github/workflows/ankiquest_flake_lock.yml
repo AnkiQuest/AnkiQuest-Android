@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ankiquest-flake-lock
@@ -18,6 +18,8 @@ jobs:
     name: Open a flake.lock update pull request
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write # pushes the flake.lock branch
     steps:
       - name: Require the sync token
         env:
@@ -31,6 +33,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: master
+          # A later step pushes the flake.lock branch with this token.
+          persist-credentials: true # zizmor: ignore[artipacked]
 
       - name: Install Nix
         uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
