@@ -19,9 +19,6 @@ internal class Pack(
  * imported packs go through the same checks; limits hold whatever the zip's headers claim.
  */
 internal object AnkiquestPackReader {
-    /** Largest pack file. */
-    const val MAX_ARCHIVE = 32L * 1024 * 1024
-
     /** Most entries in a pack. */
     const val MAX_ENTRIES = 128
 
@@ -47,7 +44,7 @@ internal object AnkiquestPackReader {
         input: InputStream,
         names: PoseNames,
     ): Pack {
-        val entries = entries(BoundedStream(input, MAX_ARCHIVE))
+        val entries = entries(BoundedStream(input, PackFormat.MAX_ARCHIVE))
         val index = entries[PackFormat.PACK_INDEX] ?: throw PackRefused(PackRefusal.MISSING_FILE, PackFormat.PACK_INDEX)
         val info = PackInfo.parse(index.decodeToString(), names)
         val pictures = entries - PackFormat.PACK_INDEX
