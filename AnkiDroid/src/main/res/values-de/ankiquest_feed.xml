@@ -33,6 +33,9 @@
     <string name="aq_feed_reply_to">Antwort an %1$s</string>
     <string name="aq_feed_send">Senden</string>
     <string name="aq_feed_reply_done">Deine Antwort wurde gesendet.</string>
+    <string name="aq_feed_invite_declined">Einladung abgelehnt.</string>
+    <string name="aq_feed_invite_joined">Du bist der Gruppe beigetreten.</string>
+    <string name="aq_feed_invite_failed">Die Einladung konnte nicht beantwortet werden.</string>
     <string name="aq_feed_reply_failed">Deine Antwort wurde nicht gesendet.</string>
     <string name="aq_feed_reply_sent">Antwort gesendet</string>
     <string name="aq_feed_read_failed">Der Lesestatus wurde nicht gespeichert.</string>

@@ -298,6 +298,20 @@ internal class FeedSection(
                 item.challengeId?.let { goal ->
                     views.button(panel, getString(R.string.aq_feed_view_invitation), primary = true) { openGoal(item, goal) }
                 }
+                item.invitation?.let { group ->
+                    val waiting = item.id in busy
+                    views.button(
+                        panel,
+                        getString(R.string.aq_friends_join),
+                        primary = true,
+                        enabled = !waiting,
+                    ) { answer(item, group, Answer.JOIN) }
+                    views.button(
+                        panel,
+                        getString(R.string.aq_challenges_decline),
+                        enabled = !waiting,
+                    ) { answer(item, group, Answer.DECLINE) }
+                }
             }
             if (current.actionCount > attention.size) {
                 views.button(panel, getString(R.string.aq_feed_all_invitations)) {
@@ -379,6 +393,19 @@ internal class FeedSection(
         item.challengeId?.let { goal ->
             val label = if (item.actionRequired) R.string.aq_feed_view_invitation else R.string.aq_feed_open_goal
             views.chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
+        }
+        item.invitation?.let { group ->
+            views.chip(
+                actions,
+                getString(R.string.aq_friends_join),
+                primary = true,
+                enabled = !waiting,
+            ) { answer(item, group, Answer.JOIN) }
+            views.chip(
+                actions,
+                getString(R.string.aq_challenges_decline),
+                enabled = !waiting,
+            ) { answer(item, group, Answer.DECLINE) }
         }
         if (item.answerable) {
             quickReply(item.kind)?.let { words ->
@@ -495,6 +522,40 @@ internal class FeedSection(
             }
         }
         getString(R.string.aq_feed_reply_done)
+    }
+
+    /** How the player answers an invitation to a group. */
+    private enum class Answer { JOIN, DECLINE }
+
+    /** Joins or declines the group [item] invites to; the server marks the row read and answered. */
+    private fun answer(
+        item: AnkiquestFeed.Item,
+        group: Long,
+        answer: Answer,
+    ) = act(item, R.string.aq_feed_invite_failed) { current ->
+        val action =
+            when (answer) {
+                Answer.JOIN -> AnkiquestSocial.Change.AcceptInvite(group)
+                Answer.DECLINE -> AnkiquestSocial.Change.DeclineInvite(group)
+            }
+        val overview = AnkiquestSocial.change(current, action)
+
+        // The row is answered now: read, and no longer waiting for the player.
+        read(listOf(item.id))
+        change(item.id) { it.copy(actionRequired = false) }
+        page =
+            page?.let { latest ->
+                latest.copy(
+                    attention = latest.attention.filter { it.id != item.id },
+                    actionCount = (latest.actionCount - 1).coerceAtLeast(0),
+                )
+            }
+        val joined = overview.groups.firstOrNull { it.id == group }
+        when {
+            answer == Answer.DECLINE -> getString(R.string.aq_feed_invite_declined)
+            joined != null -> getString(R.string.aq_friends_joined, joined.name)
+            else -> getString(R.string.aq_feed_invite_joined)
+        }
     }
 
     private fun markRead(item: AnkiquestFeed.Item) =

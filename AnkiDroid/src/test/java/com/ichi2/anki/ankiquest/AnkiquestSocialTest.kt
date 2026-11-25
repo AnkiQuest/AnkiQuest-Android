@@ -36,6 +36,76 @@ class AnkiquestSocialTest {
     }
 
     @Test
+    fun `the overview says where the player stands with someone and which groups they can join`() {
+        val overview = AnkiquestSocial.parse(JSONObject(example("social")))
+        assertEquals(AnkiquestSocial.Relation.FRIENDS, overview.relation("friend"))
+        assertEquals(AnkiquestSocial.Relation.ASKED, overview.relation("ana"))
+        assertEquals(AnkiquestSocial.Relation.REQUESTED, overview.relation("cerro"))
+        assertEquals(AnkiquestSocial.Relation.NONE, overview.relation("bobby"))
+
+        // Only the owned group has a link to share, and Ana is in it already.
+        assertEquals(listOf("Spanish club"), overview.invitable("friend").map { it.name })
+        assertEquals(emptyList(), overview.invitable("ana"))
+    }
+
+    @Test
+    fun `invitations read for the invitee and the owner, and decide which groups are left to invite to`() {
+        // The server's social_invitation.json and group_invite.json examples.
+        val invitee =
+            AnkiquestSocial.parse(
+                JSONObject(example("social_invitation")).apply {
+                    // Keep malformed-row coverage alongside the canonical valid invitation.
+                    getJSONArray("invitations")
+                        .put(JSONObject("""{"group":0,"name":"x","from":{"user":"a"}}"""))
+                        .put(JSONObject("""{"group":2,"name":"y"}"""))
+                },
+            )
+        assertEquals(
+            listOf(AnkiquestSocial.Invitation(1, "Spanish club", 1, AnkiquestSocial.Person("hill", "hill"))),
+            invitee.invitations,
+            "rows without a group or a sender are skipped",
+        )
+        val owner = AnkiquestSocial.parse(JSONObject(example("group_invite")))
+        assertEquals(
+            listOf("cerro"),
+            owner.groups
+                .single()
+                .invited
+                .map { it.user },
+        )
+        assertEquals(listOf("Spanish club"), owner.invitedTo("cerro").map { it.name })
+        assertEquals(emptyList(), owner.invitedTo("ana"))
+
+        // Sent invitations are not sent again; a link can always be shared again.
+        assertEquals(emptyList(), owner.invitable("cerro", AnkiquestSocial.InviteMode.DIRECT))
+        assertEquals(listOf("Spanish club"), owner.invitable("cerro", AnkiquestSocial.InviteMode.LINK).map { it.name })
+        assertEquals(listOf("Spanish club"), owner.invitable("ana", AnkiquestSocial.InviteMode.DIRECT).map { it.name })
+        assertEquals(emptyList(), owner.invitable("hill", AnkiquestSocial.InviteMode.DIRECT), "members are not invited")
+        val linkless = owner.copy(groups = owner.groups.map { it.copy(invite = null) })
+        assertEquals(listOf("Spanish club"), linkless.invitable("ana", AnkiquestSocial.InviteMode.DIRECT).map { it.name })
+        assertEquals(emptyList(), linkless.invitable("ana", AnkiquestSocial.InviteMode.LINK))
+    }
+
+    @Test
+    fun acceptedInviteExample() {
+        val accepted = AnkiquestSocial.parse(JSONObject(example("group_invite_accept")))
+        val group = accepted.groups.single()
+        assertEquals(1L, group.id)
+        assertEquals("Spanish club", group.name)
+        assertEquals(setOf("cerro", "hill"), group.members.map { it.user }.toSet())
+        assertEquals(false, group.owner)
+        assertNull(group.invite)
+        assertEquals(emptyList(), accepted.invitations)
+    }
+
+    @Test
+    fun `a server that reports group invites invites directly, an older one by link`() {
+        assertEquals(AnkiquestSocial.InviteMode.DIRECT, AnkiquestSocial.InviteMode.of(setOf("mute", AnkiquestSocial.FEATURE_INVITES)))
+        assertEquals(AnkiquestSocial.InviteMode.LINK, AnkiquestSocial.InviteMode.of(setOf("mute")))
+        assertEquals(AnkiquestSocial.InviteMode.LINK, AnkiquestSocial.InviteMode.of(emptySet()))
+    }
+
+    @Test
     fun `unusable rows are skipped and a missing display name falls back to the username`() {
         val overview =
             AnkiquestSocial.parse(
@@ -64,6 +134,9 @@ class AnkiquestSocialTest {
         assertEquals("""{"action":"leave","group":2}""", body(AnkiquestSocial.Change.Leave(2)))
         assertEquals("""{"action":"remove","group":2,"member":"ana"}""", body(AnkiquestSocial.Change.Remove(2, "ana")))
         assertEquals("""{"action":"visibility","public":true}""", body(AnkiquestSocial.Change.Visibility(true)))
+        assertEquals("""{"action":"invite","group":2,"user":"ana"}""", body(AnkiquestSocial.Change.Invite(2, "ana")))
+        assertEquals("""{"action":"accept_invite","group":2}""", body(AnkiquestSocial.Change.AcceptInvite(2)))
+        assertEquals("""{"action":"decline_invite","group":2}""", body(AnkiquestSocial.Change.DeclineInvite(2)))
     }
 
     @Test

@@ -44,8 +44,13 @@ internal object AnkiquestFeed {
         val replyTo: Pair<String, String>?,
         val image: String?,
         val reacted: Boolean,
+        /** The group a `group_invite` row invites the player to. */
+        val group: Long? = null,
     ) {
         val unread: Boolean get() = readAt == null
+
+        /** The group this row invites the player to while the invitation waits for an answer. */
+        val invitation: Long? get() = group.takeIf { kind == GROUP_INVITE && actionRequired }
 
         /** A friend's win or deck completion, which can be cheered once. */
         val cheerable: Boolean get() = sender.isNotEmpty() && (kind == "share" || kind == "completion")
@@ -87,6 +92,9 @@ internal object AnkiquestFeed {
     )
 
     const val PAGE_SIZE = 50
+
+    /** A row inviting the player to a group, answered with [AnkiquestSocial.Change.AcceptInvite] or [AnkiquestSocial.Change.DeclineInvite]. */
+    const val GROUP_INVITE = "group_invite"
 
     /** The most ids `POST /api/activity/{user}/read` accepts at once. */
     private const val READ_BATCH = 200
@@ -140,7 +148,7 @@ internal object AnkiquestFeed {
         return parseLegacy(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) })
     }
 
-    /** What [account] sent: replies and nudges, with when they were read. */
+    /** What [account] sent: messages, replies and nudges, with when they were read. */
     suspend fun sent(
         account: HomeAccount,
         before: Long? = null,
@@ -269,6 +277,7 @@ internal object AnkiquestFeed {
             replyTo = replyTo?.takeIf { (title, body) -> title.isNotEmpty() || body.isNotEmpty() },
             image = json.text("image").ifEmpty { null },
             reacted = json.optBoolean("reacted"),
+            group = json.positive("group"),
         )
     }
 
