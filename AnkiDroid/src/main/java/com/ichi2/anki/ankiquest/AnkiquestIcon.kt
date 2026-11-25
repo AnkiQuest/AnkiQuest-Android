@@ -120,9 +120,9 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         return mood(AnkiquestDay.judgeOwn(AnkiquestDay.carried(server, now), now, prefs))
     }
 
-    /** The icon for [day]'s mood; the icon has one frozen face, also for thawing, and none for hopeful or almost. */
+    /** The player's own [day] uses one frozen face and the default face for hopeful and almost. */
     private fun mood(day: AnkiquestDay.Verdict?): Mood =
-        when (AnkiquestMood.of(day, 0, AnkiquestMood.Goal.OPEN)) {
+        when (AnkiquestMood.today(day, 0, AnkiquestMood.Goal.OPEN)) {
             AnkiquestMood.Mood.FIRE -> Mood.HAPPY
             AnkiquestMood.Mood.SAD -> Mood.WORRIED
             AnkiquestMood.Mood.FROZEN_1,
