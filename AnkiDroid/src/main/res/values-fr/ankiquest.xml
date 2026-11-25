@@ -124,6 +124,7 @@
         <item>J’étudierai plus tard</item>
     </string-array>
     <string name="ankiquest_streak_studied">A étudié aujourd’hui</string>
+    <string name="ankiquest_streak_unverified">Étudié aujourd’hui · durée inconnue</string>
     <string name="ankiquest_streak_pending">Pas encore étudié</string>
     <string name="ankiquest_streak_protected">Série protégée · Pas encore étudié</string>
     <string name="ankiquest_streak_unknown">Actualise pour voir l’état des études aujourd’hui</string>

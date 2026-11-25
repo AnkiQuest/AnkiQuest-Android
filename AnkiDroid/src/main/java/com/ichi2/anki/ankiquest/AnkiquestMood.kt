@@ -140,8 +140,8 @@ internal object AnkiquestMood {
         frozenDays: Int,
         goal: Goal,
     ): Mood {
-        // Today counts, or the goal says the player did what they planned.
-        if (state == State.STUDIED || goal == Goal.REACHED) {
+        // Today counts, on exact or observed answers, or the goal says the player did what they planned.
+        if (state == State.STUDIED || state == State.UNVERIFIED || goal == Goal.REACHED) {
             return Mood.FIRE
         }
         if (state == State.UNKNOWN) {

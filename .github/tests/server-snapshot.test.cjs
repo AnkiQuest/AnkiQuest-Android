@@ -110,10 +110,9 @@ test("the server baseline is an immutable commit, with explicit example ownershi
     ]);
 });
 
-test("normal contract, fixture and art runs never substitute server master", () => {
+test("normal contract and fixture runs never substitute server master", () => {
     for (const name of [
         "ankiquest_api_contract.yml",
-        "ankiquest_art_check.yml",
         "ankiquest_fixtures.yml",
     ]) {
         const workflow = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
@@ -134,4 +133,11 @@ test("only data workflows accept a manual server ref", () => {
     }
     const art = fs.readFileSync(path.join(root, ".github/workflows", "ankiquest_art_check.yml"), "utf8");
     assert.doesNotMatch(art, /workflow_dispatch|server_ref/);
+});
+
+test("the art check runs a fixed exporter commit, never server master", () => {
+    const art = fs.readFileSync(path.join(root, ".github/workflows", "ankiquest_art_check.yml"), "utf8");
+    assert.match(art, /\n  EXPORTER: [0-9a-f]{40}\n/);
+    assert.match(art, /ref: \$\{\{ env\.EXPORTER \}\}/);
+    assert.doesNotMatch(art, /\bref: master\b/);
 });

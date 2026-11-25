@@ -786,7 +786,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     }
                 val icon =
                     when (state) {
-                        AnkiquestDay.State.STUDIED -> R.drawable.ankiquest_streak_studied
+                        AnkiquestDay.State.STUDIED, AnkiquestDay.State.UNVERIFIED -> R.drawable.ankiquest_streak_studied
                         AnkiquestDay.State.PROTECTED -> R.drawable.ankiquest_streak_protected
                         else -> R.drawable.ankiquest_streak_pending
                     }
@@ -837,7 +837,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
         ): String = AnkiquestDay.words(languageContext, state, entry.optLong("today_minutes"), entry.optLong("streak_minutes"))
 
         /**
-         * studied, protected, short (under the minimum), pending, or unknown when the data is stale or missing,
+         * studied, unverified, protected, short (under the minimum), pending, or unknown when the data is stale or missing,
          * as [AnkiquestDay] judges the row.
          */
         internal fun streakState(entry: JSONObject): AnkiquestDay.State =

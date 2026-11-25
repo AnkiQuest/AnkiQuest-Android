@@ -813,7 +813,7 @@ internal class LeaderboardSection(
 
     private fun streakIcon(state: AnkiquestDay.State): Int =
         when (state) {
-            AnkiquestDay.State.STUDIED -> R.drawable.ankiquest_streak_studied
+            AnkiquestDay.State.STUDIED, AnkiquestDay.State.UNVERIFIED -> R.drawable.ankiquest_streak_studied
             AnkiquestDay.State.PROTECTED -> R.drawable.ankiquest_streak_protected
             else -> R.drawable.ankiquest_streak_pending
         }

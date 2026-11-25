@@ -77,6 +77,8 @@
     "not_yet": [
         "crash_report",
         "crash_report_stored",
+        "leaderboard_observed",
+        "observations",
         "share_deck_moment",
         "share_notification",
         "share_place",

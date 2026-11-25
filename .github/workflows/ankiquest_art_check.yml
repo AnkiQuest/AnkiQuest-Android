@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest art check
 
-# Runs the server's art exporter against the app's drawables, at the server commit pinned in
-# ankiquest-server.sha. It builds and runs the server's code, so it only runs for pull requests,
-# merge queue groups and pushes, never on a schedule or by hand: a manual server ref would run
-# arbitrary code with the Rust cache shared with master.
+# Runs the server's art exporter against the app's drawables, at EXPORTER below: AnkiQuest-Server
+# master no longer has the Android exporter (the masters moved to AnkiQuest-Art), so the check stays
+# on the last server commit this app's drawables were exported with, independent of the data pin in
+# ankiquest-server.sha. It goes once the drawables come from the pinned AnkiQuest-Art release. It
+# builds and runs the server's code, so it only runs for pull requests, merge queue groups and
+# pushes, never on a schedule or by hand: a manual server ref would run arbitrary code with the
+# Rust cache shared with master.
 on:
   pull_request:
   # Required check: the merge queue waits for it on its merge commit.
@@ -15,6 +18,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # The AnkiQuest-Server commit whose export-android-art wrote the app's drawables.
+  EXPORTER: 97e32a5610628b1c4eb8f3210c9307661bcc4470
 
 concurrency:
   # A newer push to a pull request cancels its older run. Every other run (master pushes,
@@ -35,14 +42,10 @@ jobs:
 
       # Check against the pinned server commit (#203), so a server merge cannot turn master red;
       # the bump PR brings exporter changes in.
-      - name: Read the immutable server pin
-        id: server-ref
-        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: AnkiQuest/AnkiQuest-Server
-          ref: ${{ steps.server-ref.outputs.ref }}
+          ref: ${{ env.EXPORTER }}
           path: server
           persist-credentials: false
 

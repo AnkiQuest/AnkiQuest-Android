@@ -33,13 +33,16 @@ class AnkiquestDayTest {
 
     private fun JSONObject.nullableString(name: String): String? = if (isNull(name)) null else getString(name)
 
+    private fun JSONObject.nullableLong(name: String): Long? = if (isNull(name)) null else getLong(name)
+
     @Test
     fun `today's verdict with unsent reviews matches the server`() {
         val cases = fixtures.getJSONArray("cases").objects()
         check(cases.size >= 10)
         for (case in cases) {
             val name = case.getString("name")
-            val reviews = case.getJSONArray("pending").objects().map { AnkiquestDay.Review(it.getLong("id"), it.getLong("time_ms")) }
+            // An observed answer (AnkiQuest Lite) has no time_ms.
+            val reviews = case.getJSONArray("pending").objects().map { AnkiquestDay.Review(it.getLong("id"), it.nullableLong("time_ms")) }
             val verdict = AnkiquestDay.judge(AnkiquestDay.Server.profile(case.getJSONObject("server")), reviews, case.getLong("now_ms"))
             if (case.isNull("expected")) {
                 assertNull(verdict, name)
@@ -55,11 +58,11 @@ class AnkiquestDayTest {
             assertEquals(expected.getInt("minutes"), verdict.minutes, name)
             assertEquals(expected.getInt("streak_minutes"), verdict.streakMinutes, name)
             assertEquals(expected.getInt("unsent"), verdict.unsent, name)
-            assertEquals(
-                verdict.met && case.getJSONObject("server").getString("streak_state") != "studied",
-                verdict.awaitingUpload,
-                name,
-            )
+            assertEquals(expected.optInt("observed"), verdict.observed, name)
+
+            // Waiting for the upload: today counts here, and the server has not counted it yet.
+            val counted = case.getJSONObject("server").getString("streak_state") in setOf("studied", "unverified")
+            assertEquals(verdict.met && !counted, verdict.awaitingUpload, name)
 
             // Cases from server commits before the day's words were pinned have no label.
             if (expected.has("label")) {

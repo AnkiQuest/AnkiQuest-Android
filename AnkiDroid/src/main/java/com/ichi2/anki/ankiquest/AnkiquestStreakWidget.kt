@@ -569,7 +569,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val container = R.id.ankiquest_streak_meter
             val tone =
                 when {
-                    day?.label == State.STUDIED -> Tone.WARM
+                    day?.label == State.STUDIED || day?.label == State.UNVERIFIED -> Tone.WARM
                     day?.label == State.PROTECTED -> Tone.BLUE
                     (day?.streak ?: 0) > 0 -> Tone.AMBER
                     else -> Tone.GRAY
