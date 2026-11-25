@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 
 /**
  * Checks [AnkiquestDay] against `tests/fixtures/day_verdicts.json` from the ankiquest server, which
- * the server works out with its own calculation. The ankiquest_fixtures workflow keeps this copy identical.
+ * the server works out with its own calculation. CI copies it from server master before the tests.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
