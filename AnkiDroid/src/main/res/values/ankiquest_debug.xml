@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- The secret debug menu in developer options. Developer options are English only, as upstream's. -->
+<resources>
+    <string name="ankiquest_debug_title" translatable="false">AnkiQuest mood and pose</string>
+    <string name="ankiquest_debug_summary_off" translatable="false">No overrides. Force today\'s mood or pose, or change the mood thresholds, on this phone only.</string>
+    <string name="ankiquest_debug_summary_on" translatable="false">Overrides on. Mood: %1$s. Pose: %2$s. Thresholds: %3$s.</string>
+    <string name="ankiquest_debug_rules_shared" translatable="false">shared</string>
+    <string name="ankiquest_debug_rules_edited" translatable="false">edited</string>
+    <string name="ankiquest_debug_mood" translatable="false">Mood: %s</string>
+    <string name="ankiquest_debug_pose" translatable="false">Pose: %s</string>
+    <string name="ankiquest_debug_mood_title" translatable="false">Today\'s mood</string>
+    <string name="ankiquest_debug_pose_title" translatable="false">Today\'s pose</string>
+    <string name="ankiquest_debug_computed" translatable="false">Computed (no override)</string>
+    <string name="ankiquest_debug_thresholds" translatable="false">Mood thresholds</string>
+    <string name="ankiquest_debug_shared" translatable="false">Shared values</string>
+    <string name="ankiquest_debug_clear" translatable="false">Clear all overrides</string>
+    <string name="ankiquest_debug_hopeful_reviews" translatable="false">Reviews for hopeful (1 or more)</string>
+    <string name="ankiquest_debug_frozen_2_days" translatable="false">Frozen days for frozen 2 (2 or more)</string>
+    <string name="ankiquest_debug_frozen_3_days" translatable="false">Frozen days for frozen 3 (more than frozen 2)</string>
+    <string name="ankiquest_debug_hot_days" translatable="false">Streak days for hot (2 or more)</string>
+    <string name="ankiquest_debug_blazing_days" translatable="false">Streak days for blazing (more than hot)</string>
+    <string name="ankiquest_debug_legend_days" translatable="false">Streak days for legend (more than blazing)</string>
+    <string name="ankiquest_debug_invalid" translatable="false">Not saved: each threshold must be in range and above the one before it.</string>
+    <string name="ankiquest_debug_marker" translatable="false">Debug override</string>
+</resources>
