@@ -13,6 +13,6 @@
     <string name="aq_optimize_open">Open deck options</string>
     <string name="aq_optimize_snooze">Remind me in a week</string>
     <string name="aq_optimize_dismiss">Dismiss</string>
-    <string name="aq_optimize_setting">Remind me to optimize presets</string>
+    <string name="aq_optimize_setting" maxLength="41">Remind me to optimize presets</string>
     <string name="aq_optimize_setting_summary">When Optimize All Presets last ran at least 30 days and 1,000 reviews ago</string>
 </resources>

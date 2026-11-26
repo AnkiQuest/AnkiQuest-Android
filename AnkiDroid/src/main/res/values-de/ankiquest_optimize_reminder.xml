@@ -11,6 +11,6 @@
     <string name="aq_optimize_open">Stapeloptionen öffnen</string>
     <string name="aq_optimize_snooze">In einer Woche erinnern</string>
     <string name="aq_optimize_dismiss">Verwerfen</string>
-    <string name="aq_optimize_setting">An das Optimieren der Voreinstellungen erinnern</string>
+    <string name="aq_optimize_setting">Erinnern, Voreinstellungen zu optimieren</string>
     <string name="aq_optimize_setting_summary">Wenn „Alle Voreinstellungen optimieren“ zuletzt vor mindestens 30 Tagen und 1.000 Wiederholungen lief</string>
 </resources>
