@@ -8,12 +8,13 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ioDispatcher
 import com.ichi2.testutils.EmptyApplication
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -25,21 +26,21 @@ class AnkiquestRwkvImportTest : RobolectricTest(loadBackend = false) {
     fun `import hashes the picked files on the io dispatcher`() =
         runTest {
             val saved = ioDispatcher
-            val dispatched = AtomicBoolean()
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            var dispatched = false
             ioDispatcher =
                 object : CoroutineDispatcher() {
-                    // Runs the block inline, so the test only records that import dispatched.
                     override fun dispatch(
-                        context: kotlin.coroutines.CoroutineContext,
+                        context: CoroutineContext,
                         block: Runnable,
                     ) {
-                        dispatched.set(true)
-                        block.run()
+                        dispatched = true
+                        dispatcher.dispatch(context, block)
                     }
                 }
             try {
                 val results = AnkiquestRwkv.import(targetContext, listOf { ByteArray(0).inputStream() })
-                assertTrue(dispatched.get(), "import must dispatch its file hashing onto ioDispatcher, like download")
+                assertTrue(dispatched, "import must dispatch its file hashing onto ioDispatcher, like download")
                 assertEquals(RwkvImportError.UNKNOWN_FILE, (results.single() as RwkvImport.Rejected).error)
             } finally {
                 ioDispatcher = saved
