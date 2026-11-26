@@ -6,6 +6,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { execFileSync } = require("node:child_process");
 
 const RESOURCES = "AnkiDroid/src/test/resources";
@@ -23,6 +24,12 @@ const SKIP = { ankiquest: ["companion_poses.json"] };
 const PIN = "ankiquest-art.json";
 const ART_RELEASES = "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download";
 const ART_POSES = "poses.json";
+// Art's own folder in the test resources, so the pinned release's file never mixes with the
+// server data that `copy` replaces on every fetch.
+const ART_DIR = "ankiquest-art";
+// Every unit-test, contract, screenshot and banner run downloads the pose list; one retry
+// survives a transient 5xx or a dropped connection, while a 4xx (a wrong pin) fails at once.
+const DOWNLOAD_ATTEMPTS = 2;
 // Android's own example catalog, kept next to the copied examples.
 const CATALOG = "names.json";
 const CONTENT = Object.freeze({ SERVER: "server", CATALOG: "catalog" });
@@ -109,19 +116,32 @@ function copy(root, server) {
     }
 }
 
-// Copies the pinned AnkiQuest-Art release's poses.json next to the server data: the pose list
-// the tests pin the pose enum to, replacing the server fixture they used to read. The bytes are
-// checked against the SHA-256 `ankiquest-art.json` pins, as the other Art assets are. Returns the
-// release tag.
-// Downloads `url`'s bytes; overridable for tests.
-async function downloadBytes(url) {
-    const response = await globalThis.fetch(url);
-    if (!response?.ok) {
-        throw new Error(`download failed: HTTP ${response?.status} ${url}`);
+// Downloads `url`'s bytes, retrying a transient failure once; overridable for tests.
+async function downloadBytes(url, attempts = DOWNLOAD_ATTEMPTS) {
+    let lastError;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        let response;
+        try {
+            response = await globalThis.fetch(url);
+        } catch (error) {
+            lastError = error;
+            continue;
+        }
+        if (response.ok) {
+            return Buffer.from(await response.arrayBuffer());
+        }
+        lastError = new Error(`download failed: HTTP ${response.status} ${url}`);
+        if (Math.floor(response.status / 100) !== 5) {
+            throw lastError;
+        }
     }
-    return Buffer.from(await response.arrayBuffer());
+    throw lastError;
 }
 
+// Copies the pinned AnkiQuest-Art release's poses.json into the test resources' Art folder: the
+// pose list the tests pin the pose enum to, replacing the server fixture they used to read. The
+// bytes are checked against the SHA-256 `ankiquest-art.json` pins, as the other Art assets are.
+// Returns the release tag.
 async function pinnedPoses(root, download = downloadBytes) {
     const pin = JSON.parse(fs.readFileSync(path.join(root, PIN), "utf8"));
     const tag = pin.tag;
@@ -133,12 +153,12 @@ async function pinnedPoses(root, download = downloadBytes) {
         throw new Error(`${PIN} pins no SHA-256 for ${ART_POSES}`);
     }
     const bytes = Buffer.from(await download(`${ART_RELEASES}/${tag}/${ART_POSES}`));
-    const actual = require("node:crypto").createHash("sha256").update(bytes).digest("hex");
+    const actual = crypto.createHash("sha256").update(bytes).digest("hex");
     if (actual !== expected) {
         throw new Error(`${ART_POSES}: SHA-256 ${actual}, but ${PIN} pins ${expected}`);
     }
     JSON.parse(bytes.toString("utf8"));
-    const target = path.join(root, RESOURCES, "ankiquest", ART_POSES);
+    const target = path.join(root, RESOURCES, ART_DIR, ART_POSES);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, bytes);
     return tag;
@@ -180,24 +200,24 @@ function parse(args) {
 
 if (require.main === module) {
     (async () => {
-    try {
-        const [command, ...rest] = process.argv.slice(2);
-        if (command !== "fetch") {
-            throw new Error("Use fetch [--ref <ref>] [<server checkout>]");
+        try {
+            const [command, ...rest] = process.argv.slice(2);
+            if (command !== "fetch") {
+                throw new Error("Use fetch [--ref <ref>] [<server checkout>]");
+            }
+            const options = parse(rest);
+            const root = process.cwd();
+            if (options.server !== undefined) {
+                copy(root, options.server);
+                console.log(`Copied server data from ${options.server}`);
+            } else {
+                console.log(`AnkiQuest-Server ${options.ref} at ${fetch(root, options.ref)}`);
+            }
+            console.log(`AnkiQuest-Art ${await pinnedPoses(root)}`);
+        } catch (error) {
+            console.error(error.message);
+            process.exitCode = 1;
         }
-        const options = parse(rest);
-        const root = process.cwd();
-        if (options.server !== undefined) {
-            copy(root, options.server);
-            console.log(`Copied server data from ${options.server}`);
-        } else {
-            console.log(`AnkiQuest-Server ${options.ref} at ${fetch(root, options.ref)}`);
-        }
-        console.log(`AnkiQuest-Art ${await pinnedPoses(root)}`);
-    } catch (error) {
-        console.error(error.message);
-        process.exitCode = 1;
-    }
     })();
 }
 

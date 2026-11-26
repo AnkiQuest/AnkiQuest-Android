@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 class AnkiquestPoseTest {
     private val fixture =
         JSONObject(
-            checkNotNull(javaClass.classLoader?.getResource("ankiquest/poses.json")) { "missing Art poses" }.readText(),
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest-art/poses.json")) { "missing Art poses" }.readText(),
         )
 
     @Test

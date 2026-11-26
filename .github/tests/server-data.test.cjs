@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+const crypto = require("node:crypto");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -53,7 +54,7 @@ test("the server's companion poses are not copied; Art's are pinned instead", t 
 test("the art poses are downloaded from the pinned release and checked", async t => {
     const { app, res } = fixture(t);
     const poses = '{"core": ["face", "asleep"]}\n';
-    const sha = require("node:crypto").createHash("sha256").update(poses).digest("hex");
+    const sha = crypto.createHash("sha256").update(poses).digest("hex");
     const pin = path.join(app, "ankiquest-art.json");
     fs.writeFileSync(pin, JSON.stringify({ "tag": "art-11", "assets": { "poses.json": sha } }));
     const downloads = [];
@@ -63,15 +64,55 @@ test("the art poses are downloaded from the pinned release and checked", async t
     };
     await data.pinnedPoses(app, fetched);
     assert.deepEqual(downloads, ["https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/art-11/poses.json"]);
-    assert.equal(fs.readFileSync(path.join(res, "ankiquest/poses.json"), "utf8"), poses);
+    assert.equal(fs.readFileSync(path.join(res, "ankiquest-art/poses.json"), "utf8"), poses);
 
     fs.writeFileSync(pin, JSON.stringify({ "tag": "art-11", "assets": { "poses.json": "0".repeat(64) } }));
-    fs.unlinkSync(path.join(res, "ankiquest/poses.json"));
+    fs.unlinkSync(path.join(res, "ankiquest-art/poses.json"));
     await assert.rejects(() => data.pinnedPoses(app, fetched), /SHA-256/);
-    assert.ok(!fs.existsSync(path.join(res, "ankiquest/poses.json")));
+    assert.ok(!fs.existsSync(path.join(res, "ankiquest-art/poses.json")));
 
     fs.writeFileSync(pin, JSON.stringify({ "tag": null, "assets": {} }));
     await assert.rejects(() => data.pinnedPoses(app, fetched), /AnkiQuest-Art release/);
+
+    // A pin that names a release but no poses.json entry names nothing to download.
+    fs.writeFileSync(pin, JSON.stringify({ "tag": "art-11", "assets": {} }));
+    await assert.rejects(() => data.pinnedPoses(app, fetched), /pins no SHA-256/);
+});
+
+test("a transient download failure is retried once", async t => {
+    const { app, res } = fixture(t);
+    const poses = '{"core": ["face", "asleep"]}\n';
+    const sha = crypto.createHash("sha256").update(poses).digest("hex");
+    fs.writeFileSync(path.join(app, "ankiquest-art.json"), JSON.stringify({ "tag": "art-11", "assets": { "poses.json": sha } }));
+    const downloaded = globalThis.fetch;
+    t.after(() => { globalThis.fetch = downloaded; });
+    let calls = 0;
+    globalThis.fetch = async () => {
+        calls++;
+        if (calls === 1) {
+            return new Response("busy", { status: 503 });
+        }
+        return new Response(poses);
+    };
+    assert.equal(await data.pinnedPoses(app), "art-11");
+    assert.equal(calls, 2);
+    assert.equal(fs.readFileSync(path.join(res, "ankiquest-art/poses.json"), "utf8"), poses);
+});
+
+test("a wrong pin fails the download at once", async t => {
+    const { app, res } = fixture(t);
+    const sha = crypto.createHash("sha256").update("x").digest("hex");
+    fs.writeFileSync(path.join(app, "ankiquest-art.json"), JSON.stringify({ "tag": "art-11", "assets": { "poses.json": sha } }));
+    const downloaded = globalThis.fetch;
+    t.after(() => { globalThis.fetch = downloaded; });
+    let calls = 0;
+    globalThis.fetch = async () => {
+        calls++;
+        return new Response("gone", { status: 404 });
+    };
+    await assert.rejects(() => data.pinnedPoses(app), /HTTP 404/);
+    assert.equal(calls, 1);
+    assert.ok(!fs.existsSync(path.join(res, "ankiquest-art/poses.json")));
 });
 
 test("a second copy removes examples the server dropped and adds new ones", t => {
