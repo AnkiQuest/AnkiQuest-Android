@@ -61,6 +61,38 @@ runs:
         path: .ankiquest-art-cache
         key: ${{ steps.restore.outputs.cache-primary-key }}
 
+    # TEMPORARY, drop before merging: the shared rules from AnkiQuest-Server's
+    # CI run for AnkiQuest/AnkiQuest-Server#168, laid out as a rules release,
+    # until a rules-<N> release has the Android assets.
+    - name: Download the shared rules preview
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        repository: AnkiQuest/AnkiQuest-Server
+        run-id: 45909024009
+        github-token: ${{ github.token }}
+        pattern: ankiquest-rules-*
+        path: ${{ runner.temp }}/rules-artifacts
+
+    - name: Lay out the shared rules preview
+      shell: bash
+      run: |
+        from="$RUNNER_TEMP/rules-artifacts"
+        to=.ankiquest-rules-preview
+        mkdir -p "$to"
+        cp "$from/ankiquest-rules-android/kotlin/org/ankiquest/rules/ankiquest_rules.kt" "$to/"
+        for abi in arm64-v8a armeabi-v7a x86 x86_64; do
+          cp "$from/ankiquest-rules-android/jniLibs/$abi/libankiquest_rules.so" "$to/libankiquest_rules-android-$abi.so"
+        done
+        for platform in linux-x86_64 windows-x86_64 macos-arm64 macos-x86_64; do
+          for lib in "$from/ankiquest-rules-$platform"/*ankiquest_rules.*; do
+            case "$lib" in *.py) continue ;; esac
+            name=${lib##*/}
+            cp "$lib" "$to/${name%.*}-$platform.${name##*.}"
+          done
+        done
+        (cd "$to" && sha256sum ./* | sed 's| \./| |' > "$RUNNER_TEMP/rules-sums" && mv "$RUNNER_TEMP/rules-sums" SHA256SUMS && cat SHA256SUMS)
+        echo "ANKIQUEST_RULES_DIR=$PWD/$to" >> "$GITHUB_ENV" # zizmor: ignore[github-env]
+
     # A fixed value, not input, so nothing a pull request controls reaches the
     # environment file.
     - name: Use the art cache
