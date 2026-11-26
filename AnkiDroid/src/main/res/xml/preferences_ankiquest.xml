@@ -130,6 +130,10 @@
             android:persistent="false"
             android:summary="@string/ankiquest_rwkv_models_none"
             android:title="@string/ankiquest_rwkv_models_title" />
+        <Preference
+            android:key="@string/ankiquest_rwkv_guide_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_rwkv_guide_title" />
         <ListPreference
             android:defaultValue="stable"
             android:entries="@array/ankiquest_update_channel_entries"

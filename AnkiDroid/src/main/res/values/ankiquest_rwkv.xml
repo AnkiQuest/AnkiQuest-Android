@@ -10,6 +10,8 @@
     <string name="ankiquest_rwkv_backend_failed">Not available: the RWKV engine could not load the model files. Scheduling is unchanged.</string>
     <string name="ankiquest_rwkv_ready">On: RWKV schedules the presets set to RWKV in deck options.</string>
     <string name="ankiquest_rwkv_models_title" maxLength="41">RWKV model files</string>
+    <string name="ankiquest_rwkv_guide_key" translatable="false">ankiquestRwkvGuide</string>
+    <string name="ankiquest_rwkv_guide_title" maxLength="41">How RWKV works</string>
     <string name="ankiquest_rwkv_models_none">None imported.</string>
     <string name="ankiquest_rwkv_import_message">AnkiQuest ships no RWKV weights: they have no licence for redistribution and are for personal and research use only (WEIGHTS-NOTICE.md of the %1$s release of JSchoreels/anki-rwkv). Download fetches a size\'s models from that release on GitHub. Or download its two-head zip, and if you like the Instant-only zip of the same size, yourself and choose the zips or their weights.f32.bin files. Only files whose SHA-256 matches a known model are kept.</string>
     <string name="ankiquest_rwkv_import_choose">Choose files</string>

@@ -627,6 +627,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             showRwkvImport()
             true
         }
+        requirePreference<Preference>(R.string.ankiquest_rwkv_guide_key).setOnPreferenceClickListener {
+            startActivity(AnkiquestChangelogActivity.guideIntent(requireContext()))
+            true
+        }
         runRwkv({ context, ram -> AnkiquestRwkv.restore(context, ram) }) { }
     }
 
