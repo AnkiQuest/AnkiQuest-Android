@@ -132,7 +132,7 @@ internal class RwkvOfferAdapter(
         convertView: View?,
         parent: ViewGroup,
     ): View {
-        val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.ankiquest_rwkv_offer_row, parent, false)
+        val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_ankiquest_rwkv_offer, parent, false)
         val offer = getItem(position)
         val text = words.text(offer, list.device.collection)
         val title = view.findViewById<TextView>(R.id.aq_rwkv_offer_title)
