@@ -72,3 +72,6 @@ hs_err_pid*
 
 # Claude Code related
 /.claude/worktrees/
+
+# AnkiQuest-Art downloads by SHA-256 (CI fills it; see .github/actions/ankiquest-art-cache)
+/.ankiquest-art-cache/

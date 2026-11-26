@@ -18,5 +18,5 @@ in static/ankilope/ in AnkiQuest/AnkiQuest-Server, with records in
 docs/branding/core-poses-2026-11/. The repository licence applies.
 
 These poses were generated with OpenAI image_gen, which did not expose
-its model identifier. Android WebPs are generated from the masters by
-the repository's Rust export-android-art tool.
+its model identifier. Android WebPs are AnkiQuest-Art's exported copies,
+from the release pinned in ankiquest-art.json.
