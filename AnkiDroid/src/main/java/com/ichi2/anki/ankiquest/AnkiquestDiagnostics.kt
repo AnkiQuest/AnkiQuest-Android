@@ -20,6 +20,7 @@ internal object AnkiquestDiagnostics {
         buildString {
             appendLine("AnkiQuest Release = ${BuildConfig.ANKIQUEST_RELEASE}")
             appendLine("AnkiQuest Nightly = ${BuildConfig.ANKIQUEST_NIGHTLY}")
+            appendLine("AnkiQuest Point = ${BuildConfig.ANKIQUEST_POINT}")
             appendLine("AnkiQuest Commit = ${BuildConfig.GIT_COMMIT_HASH}")
             appendLine("AnkiDroid Upstream Commit = ${BuildConfig.UPSTREAM_COMMIT_HASH}")
 
