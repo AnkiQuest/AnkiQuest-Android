@@ -126,6 +126,7 @@ class AnkiquestRwkvStateTest {
         // INTEGRATION.md section 11.1: 13,973 cards and 13,198 notes; Big at int8 state 491 MB estimated
         // (506 MB measured), Small at int8 state 192 MB.
         val collection = RwkvCollection(cards = 13_973, notes = 13_198)
+
         fun mb(entry: RwkvLockEntry) = RwkvMemory.needed(listOf(entry), collection) / 1_000_000
         assertEquals(491L, mb(model(RwkvSize.BIG, RwkvHead.TWO_HEAD)))
         assertEquals(192L, mb(model(RwkvSize.SMALL, RwkvHead.TWO_HEAD)))

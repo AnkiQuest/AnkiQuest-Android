@@ -185,7 +185,8 @@ class AnkiquestRwkvModelsTest {
         val big = bytes(120, 7)
         val store = RwkvModelStore(dir, lock + entry("sm91s2", RwkvSize.BIG, RwkvHead.TWO_HEAD, big))
         assertEquals("sm91s2", (store.import(big.inputStream()) as RwkvImport.Imported).entries.single().id)
-        assertEquals(RwkvSize.BIG, store.models(RwkvVerify.HASH)?.twoHead?.entry?.size)
+        val models = assertNotNull(store.models(RwkvVerify.HASH))
+        assertEquals(RwkvSize.BIG, models.twoHead.entry.size)
     }
 
     private fun fixture(name: String) = checkNotNull(javaClass.classLoader?.getResource("rwkv/$name")) { "missing $name" }.readText()
