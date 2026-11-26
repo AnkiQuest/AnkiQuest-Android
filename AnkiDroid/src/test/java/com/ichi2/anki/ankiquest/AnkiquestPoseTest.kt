@@ -9,13 +9,14 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 /**
- * Checks [AnkiquestPose] against `tests/fixtures/companion_poses.json` from AnkiQuest-Server, which
- * the desktop add-on also uses.
+ * Checks [AnkiquestPose] against the pinned AnkiQuest-Art release's `poses.json`, which the
+ * server-data fetch copies into the test resources and the desktop add-on also reads from its
+ * pinned release.
  */
 class AnkiquestPoseTest {
     private val fixture =
         JSONObject(
-            checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_poses.json")) { "missing companion poses" }.readText(),
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest-art/poses.json")) { "missing Art poses" }.readText(),
         )
 
     @Test
