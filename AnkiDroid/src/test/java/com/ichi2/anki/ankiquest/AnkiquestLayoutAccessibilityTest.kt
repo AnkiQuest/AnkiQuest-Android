@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.android.R as CommonR
 import com.ichi2.testutils.EmptyApplication
 import org.junit.Test
 import org.junit.experimental.categories.Category
@@ -63,10 +64,14 @@ class AnkiquestLayoutAccessibilityTest : RobolectricTest(loadBackend = false) {
     /** Every image in every layout AnkiQuest defines, with the layout's resource entry name. */
     private fun images(): List<Pair<String, ImageView>> {
         val context = targetContext
+        // The layouts draw in the app's own theme; the runner's default one cannot inflate them.
+        context.setTheme(CommonR.style.Theme_AnkiDroid)
         val inflater = LayoutInflater.from(context)
         return R.layout::class.java.fields
             .map { it.getInt(null) }
-            .filter { id -> context.resources.getResourceName(id).substringAfterLast('/').contains("ankiquest") }
+            .filter { id ->
+                context.resources.getResourceName(id).substringAfterLast('/').contains("ankiquest")
+            }
             .flatMap { id ->
                 val layout = context.resources.getResourceEntryName(id)
                 val root = inflater.inflate(id, LinearLayout(context), false)

@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.android.R as CommonR
 import com.ichi2.testutils.EmptyApplication
 import org.junit.Test
 import org.junit.experimental.categories.Category
@@ -67,6 +68,9 @@ class AnkiquestContrastTest : RobolectricTest(loadBackend = false) {
 
     /** `attr`'s colour in this test's day or night theme. */
     private fun resolve(attr: Int): Int {
+        // The deck rows draw in the app's own theme, whose night variant is the dark row,
+        // not in the runner's default one.
+        targetContext.setTheme(CommonR.style.Theme_AnkiDroid)
         val typed = targetContext.theme.obtainStyledAttributes(intArrayOf(attr))
         return typed.getColor(0, 0).also { typed.recycle() }
     }
