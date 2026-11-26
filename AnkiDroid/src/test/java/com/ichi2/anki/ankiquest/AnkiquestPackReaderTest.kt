@@ -31,11 +31,13 @@ class AnkiquestPackReaderTest {
     }
 
     @Test
-    fun the_companion_index_and_only_it_is_required() {
-        assertEquals(PackRefusal.MISSING_FILE, refused(zip("aki_face.webp" to webp())))
-
-        val pack = read(zip("companion.json" to index(poses = """{"face":"aki_face.webp"}""")))
-        assertEquals(emptyMap(), pack.pictures)
+    fun the_companion_index_alone_is_not_a_pack() {
+        assertEquals(PackRefusal.MISSING_FILE, refused(zip("aki_face.webp" to webp())), "no index")
+        assertEquals(
+            PackRefusal.MISSING_FILE,
+            refused(zip("companion.json" to index(poses = """{"face":"aki_face.webp"}"""))),
+            "the pose's file is missing",
+        )
     }
 
     @Test
@@ -55,9 +57,11 @@ class AnkiquestPackReaderTest {
             refused(
                 zip(
                     "companion.json" to index(poses = """{"face":"aki_face.webp"}"""),
+                    "aki_face.webp" to webp(),
                     "extra.png" to png(),
                 ),
             ),
+            "nothing the index does not name",
         )
     }
 

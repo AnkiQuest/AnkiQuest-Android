@@ -137,7 +137,16 @@ class AnkiquestCommunityTest {
         val plain = AnkiquestCommunity.parseConquest(base)
         assertEquals("hill", plain.display, "a blank display falls back to the username")
         assertEquals("Mandarin modern 1", plain.label)
-        assertEquals(1767139200000, plain.since, "an answer without history starts at its conquest")
+        assertEquals(1764547200000, plain.since, "the conquest's own since is kept")
+        val undated =
+            AnkiquestCommunity.parseConquest(
+                JSONObject(
+                    """
+                    {"user": "hill", "conquest": {"at": 1767139200000}, "label": "Mandarin modern 1"}
+                    """,
+                ),
+            )
+        assertEquals(1767139200000, undated.since, "a conquest without since starts at its at")
         assertFalse(plain.mine)
         assertFalse(plain.undoable(1767139200000))
 

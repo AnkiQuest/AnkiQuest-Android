@@ -164,8 +164,17 @@ class AnkiquestPackFormatTest {
         assertEquals(
             PackRefusal.MISSING_CORE_POSE,
             refused(
-                info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp","winner":"aki_win.webp"}"""),
+                info(poses = """{"face":"aki_face.webp","winner":"aki_win.webp"}"""),
+                "a pack without every core pose",
             ),
+        )
+        assertEquals(
+            mapOf("face" to "aki_face.webp", "asleep" to "aki_asleep.webp", "winner" to "aki_win.webp"),
+            PackInfo.parse(
+                info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp","winner":"aki_win.webp"}"""),
+                names,
+            ).poses,
+            "a known extension is a picture the pack may have",
         )
     }
 
