@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # The README banner (docs/graphics/logos/banner_readme.png) and the social preview, drawn by
 # AnkiQuest-Dev's shared ankiquest-banner from docs/graphics/banner.toml: the five screens
-# AnkiquestBannerScreenshots records and the duo master at the pinned server commit.
+# AnkiquestBannerScreenshots records and the duo master of the pinned AnkiQuest-Art release.
 #
 # A pull request touching them or their inputs fails unless the committed images have the drawn
 # pixels; the drawings are uploaded as the `banner` artifact. A release tag proposes new images to
@@ -16,7 +16,6 @@ on:
     paths:
       - '.github/workflows/ankiquest_banner.yml'
       - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
-      - 'AnkiDroid/src/test/resources/ankiquest-server.sha'
       - 'ankiquest-art.json'
       - 'docs/graphics/banner.toml'
       - 'docs/graphics/logos/banner_readme.png'
@@ -56,6 +55,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # The banner's screens read AnkiQuest-Server master's API examples (docs/ankiquest-server-data.md).
+      - name: Fetch AnkiQuest-Server data
+        run: node .github/ankiquest_server_data.cjs fetch
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:

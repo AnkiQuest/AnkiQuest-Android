@@ -2,8 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.app.PendingIntent
-import android.content.Context
 import android.os.Bundle
 import android.text.InputFilter
 import android.widget.LinearLayout
@@ -15,19 +13,17 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withResumed
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
-import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.ioDispatcher
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
- * Passes on a win from a notification: to friends in AnkiQuest, or anywhere else through Android's
- * share sheet, from [AnkiquestShareSheet] where the server allows it. A conquered card first asks
- * whether to show what the card was.
+ * Passes on a win from a notification through [AnkiquestShareSheet]: to friends in AnkiQuest, or
+ * anywhere else through Android's share sheet. A conquered card first asks whether to show what the
+ * card was.
  */
 class AnkiquestShareActivity : AnkiActivity() {
     private var cardOwner: AnkiquestDialogOwner? = null
@@ -55,16 +51,11 @@ class AnkiquestShareActivity : AnkiActivity() {
             return
         }
         val share = Share(win, notification, place, title, body, scope)
-        when {
-            intent.getStringExtra(AnkiquestShare.EXTRA_DESTINATION) == AnkiquestShare.DESTINATION_FRIENDS -> {
-                if (!withRecipients(current, share)) {
-                    shareWithFriends(applicationContext, share)
-                    finish()
-                }
-            }
-            win != null && intent.getStringExtra(AnkiquestShare.EXTRA_TOPIC) == "conquered" -> askAboutCard(current, win, share)
-            else -> chooseDestination(share)
+        if (win != null && intent.getStringExtra(AnkiquestShare.EXTRA_TOPIC) == "conquered") {
+            askAboutCard(current, win, share)
+            return
         }
+        withRecipients(current, share)
     }
 
     override fun onStop() {
@@ -87,65 +78,30 @@ class AnkiquestShareActivity : AnkiActivity() {
         val scope: String,
     )
 
-    /**
-     * Where the win goes. Servers that take chosen friends get AnkiQuest's own share sheet, with
-     * other apps one tap away. Otherwise, from Android 14 the share sheet itself offers AnkiQuest
-     * friends next to the other apps; older versions ask first, then open the share sheet for other apps.
-     */
-    private fun chooseDestination(share: Share) {
-        val account = AnkiquestHomeData.account()?.takeIf { it.scope == share.scope }
-        if (account != null && withRecipients(account, share)) {
-            return
-        }
-        if (AnkiquestShare.sheetOffersFriends()) {
-            shareElsewhere(share, AnkiquestShare.friendsTarget(this, intent))
-            return
-        }
-        val language = AnkiquestLanguage.context(this)
-        val choices =
-            arrayOf<CharSequence>(
-                language.getString(R.string.ankiquest_share_friends),
-                language.getString(R.string.ankiquest_share_elsewhere),
-            )
-        var leaving = false
-        AlertDialog
-            .Builder(this)
-            .setTitle(language.getString(R.string.ankiquest_share_title))
-            .setItems(choices) { _, which ->
-                if (which == 0) {
-                    shareWithFriends(applicationContext, share)
-                } else {
-                    leaving = true
-                    shareElsewhere(share, null)
-                }
-            }.setOnDismissListener { if (!leaving) finish() }
-            .show()
-    }
-
-    /** The normal share action and Android's AnkiQuest shortcut use the same recipient choice. */
+    /** AnkiQuest's share sheet for [share]: chosen friends and groups, or other apps. */
     private fun withRecipients(
         account: HomeAccount,
         share: Share,
-    ): Boolean {
+    ) {
         val reference =
             when {
                 share.win != null -> AnkiquestSharing.MomentRef.Win(share.win)
                 share.place != null -> AnkiquestSharing.MomentRef.Place(share.place)
                 share.notification != null -> AnkiquestSharing.MomentRef.Notification(share.notification)
-                else -> return false
+                else -> null
             }
-        if (!AnkiquestMomentShare.available(account, reference)) {
-            return false
+        if (reference == null || AnkiquestServerUpdate.refuse(this, account)) {
+            finish()
+            return
         }
         AnkiquestShareSheet(
             this,
             account,
             AnkiquestShareSheet.Subject.Known(reference),
             AnkiquestShare.Card(share.title, share.body, AnkiquestShare.art(intent, share.place)),
-            elsewhere = { shareElsewhere(share, null) },
+            elsewhere = { shareElsewhere(share) },
             closed = { if (it != AnkiquestShareSheet.Exit.ELSEWHERE) finish() },
         ).show()
-        return true
     }
 
     /**
@@ -288,17 +244,20 @@ class AnkiquestShareActivity : AnkiActivity() {
             return
         }
         closeCard(owner)
-        chooseDestination(share)
+        val account = AnkiquestHomeData.account()?.takeIf { it.scope == share.scope }
+        if (account == null) {
+            showThemedToast(this, AnkiquestLanguage.context(this).getString(R.string.ankiquest_share_account_changed), shortLength = false)
+            finish()
+            return
+        }
+        withRecipients(account, share)
     }
 
     /**
      * Prefer the canonical picture within the short deadline; otherwise draw the notification's
-     * public content locally. [friends] adds the sheet's AnkiQuest destination.
+     * public content locally.
      */
-    private fun shareElsewhere(
-        share: Share,
-        friends: PendingIntent?,
-    ) {
+    private fun shareElsewhere(share: Share) {
         lifecycleScope.launch {
             val language = AnkiquestLanguage.context(this@AnkiquestShareActivity)
             val failure =
@@ -319,9 +278,9 @@ class AnkiquestShareActivity : AnkiActivity() {
                     val chooser =
                         withContext(ioDispatcher) {
                             if (link == null) {
-                                AnkiquestShare.textChooser(applicationContext, share.title, share.body, friends, art)
+                                AnkiquestShare.textChooser(applicationContext, share.title, share.body, art)
                             } else {
-                                AnkiquestShare.linkChooser(applicationContext, link, friends, card)
+                                AnkiquestShare.linkChooser(applicationContext, link, card)
                             }
                         }
                     if (AnkiquestHomeData.account()?.scope != share.scope) {
@@ -346,37 +305,6 @@ class AnkiquestShareActivity : AnkiActivity() {
                 }
             failure?.let { showThemedToast(this@AnkiquestShareActivity, language.getString(it), shortLength = false) }
             finish()
-        }
-    }
-
-    private fun shareWithFriends(
-        context: Context,
-        share: Share,
-    ) {
-        applicationScope.launch {
-            val language = AnkiquestLanguage.context(context)
-            val message =
-                try {
-                    val friends =
-                        if (share.win != null) {
-                            Ankiquest.shareWinWithFriends(share.win, share.scope)
-                        } else {
-                            Ankiquest.shareWin(share.notification, share.place, share.scope)
-                        }
-                    if (friends == 0) {
-                        language.getString(R.string.ankiquest_share_nobody)
-                    } else {
-                        language.resources.getQuantityString(R.plurals.ankiquest_share_sent, friends, friends)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: HomeAccountChanged) {
-                    language.getString(R.string.ankiquest_share_account_changed)
-                } catch (e: Exception) {
-                    Timber.w(e, "ankiquest share failed")
-                    language.getString(R.string.ankiquest_share_failed)
-                }
-            launch(Dispatchers.Main) { showThemedToast(context, message, shortLength = false) }
         }
     }
 }

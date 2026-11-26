@@ -194,12 +194,15 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         timeout-minutes: 5
         with:
-          # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
-          cache-provider: basic
-          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
-          # Builds on other branches will only read from master branch cache writes
-          # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+          # The gradle-cache action below caches the dependencies, one entry per job group
+          cache-disabled: true
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: restore
+          group: emulator
 
         # Cache only the per-change emulator: the 16 KB snapshot costs about 2.5 GiB.
       - name: AVD cache
@@ -244,6 +247,16 @@ jobs:
             -x lintVitalPlayRelease --daemon --no-configuration-cache; else
             ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark
             --daemon --no-configuration-cache; fi
+
+        # The packaging above resolves every dependency this job needs, so the cache is
+        # saved here, before an emulator failure could skip it.
+      - name: Save Gradle cache
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: save
+          group: emulator
+          key: ${{ steps.gradle-cache.outputs.key }}
+          hit: ${{ steps.gradle-cache.outputs.hit }}
 
       - name: Install Android Emulator
         # Retry to work around https://github.com/ReactiveCircus/android-emulator-runner/issues/496
@@ -354,6 +367,34 @@ jobs:
       - name: Report Emulator Test Results
         if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/**/TEST-*.xml') != ''
         run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected adb-log.txt --title "Emulator test failures" --suite ":AnkiDroid:connectedPlayReleaseAndroidTest"
+
+      # Only the quest build (-PcustomSuffix=quest) has the launcher aliases, so the run above skips
+      # AnkiquestIconAliasTest. Debug, so R8 cannot remove what only the test calls.
+      - name: Run Quest Launcher Icon Test
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        timeout-minutes: 20
+        env:
+          TEST_RELEASE_BUILD: false
+        with:
+          api-level: ${{ matrix.api-level }}
+          force-avd-creation: false
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
+          ram-size: ${{ env.EMULATOR_RAM_SIZE }}
+          pre-emulator-launch-script: ${{ env.EMULATOR_PRE_LAUNCH_SCRIPT }}
+          sdcard-path-or-size: 100M
+          disable-animations: true
+          # The run above leaves its release-signed test APK installed for coverage; a debug-signed one
+          # cannot replace it (INSTALL_FAILED_UPDATE_INCOMPATIBLE), so remove it first.
+          script: |
+            ./gradlew :AnkiDroid:uninstallAll --daemon
+            bash .github/with_emulator_log.sh adb-log.txt ./gradlew :AnkiDroid:connectedPlayDebugAndroidTest -PcustomSuffix=quest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.ankiquest.AnkiquestIconAliasTest -Pandroid.testInstrumentationRunnerArguments.ankiquestQuestBuild=true --daemon
+
+      - name: Report Quest Launcher Icon Test Results
+        if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/debug/**/TEST-*.xml') != ''
+        run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected/debug adb-log.txt --title "Quest launcher icon test failures" --suite ":AnkiDroid:connectedPlayDebugAndroidTest"
 
       - name: Build Release Smoke Test
         run: |

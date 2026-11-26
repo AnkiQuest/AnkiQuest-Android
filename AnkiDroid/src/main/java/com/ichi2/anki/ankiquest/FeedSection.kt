@@ -133,7 +133,7 @@ internal class FeedSection(
                                 val next = AnkiquestFeed.page(current, category, unreadOnly, before)
                                 if (turn == generation && current.scope == AnkiquestHomeData.account()?.scope) {
                                     page = if (before == null) next else page?.let { append(it, next) } ?: next
-                                    if (next.unfiltered || next.legacy) {
+                                    if (next.unfiltered) {
                                         category = AnkiquestFeed.Category.ALL
                                         unreadOnly = false
                                     }
@@ -180,7 +180,8 @@ internal class FeedSection(
             R.string.aq_feed_account_changed
         } catch (e: AnkiquestHttpException) {
             Timber.w(e, "AnkiQuest activity request refused")
-            if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_feed_server_error
+            AnkiquestServerUpdate.message(account, e)
+                ?: if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_feed_server_error
         } catch (e: IOException) {
             Timber.w(e, "AnkiQuest activity unreachable")
             R.string.aq_feed_offline
@@ -258,35 +259,32 @@ internal class FeedSection(
 
     private fun renderInbox() {
         val current = page
-        if (current?.legacy != true) {
-            views.choices(
-                content,
-                AnkiquestFeed.Category.entries.map { it to categoryLabel(it, current) },
-                selected = category,
-                enabled = !loading,
-            ) { choice ->
-                if (choice != category) {
-                    category = choice
-                    page = null
-                    load(more = false)
-                } else {
-                    render()
-                }
-            }
-            views.chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
-                unreadOnly = !unreadOnly
+        views.choices(
+            content,
+            AnkiquestFeed.Category.entries.map { it to categoryLabel(it, current) },
+            selected = category,
+            enabled = !loading,
+        ) { choice ->
+            if (choice != category) {
+                category = choice
                 page = null
                 load(more = false)
+            } else {
+                render()
             }
+        }
+        views.chip(content, getString(R.string.aq_feed_unread_only), checked = unreadOnly, enabled = !loading) {
+            unreadOnly = !unreadOnly
+            page = null
+            load(more = false)
         }
         if (current == null) {
             if (loading) views.text(content, getString(R.string.aq_feed_loading), small = true)
             return
         }
-        if (current.unread > 0 && !current.legacy) {
+        if (current.unread > 0) {
             views.button(content, getString(R.string.aq_feed_mark_all_read), enabled = !markingAll) { markAllRead() }
         }
-        if (current.legacy) views.text(content, getString(R.string.aq_feed_legacy), small = true)
         val attention = current.attention.takeIf { category == AnkiquestFeed.Category.ALL }.orEmpty()
         if (attention.isNotEmpty() && current.actionCount > 0) {
             val panel = views.card(content, tinted = true)
@@ -297,6 +295,20 @@ internal class FeedSection(
                 if (item.body.isNotEmpty()) views.text(panel, item.body)
                 item.challengeId?.let { goal ->
                     views.button(panel, getString(R.string.aq_feed_view_invitation), primary = true) { openGoal(item, goal) }
+                }
+                item.invitation?.let { group ->
+                    val waiting = item.id in busy
+                    views.button(
+                        panel,
+                        getString(R.string.aq_friends_join),
+                        primary = true,
+                        enabled = !waiting,
+                    ) { answer(item, group, Answer.JOIN) }
+                    views.button(
+                        panel,
+                        getString(R.string.aq_challenges_decline),
+                        enabled = !waiting,
+                    ) { answer(item, group, Answer.DECLINE) }
                 }
             }
             if (current.actionCount > attention.size) {
@@ -325,7 +337,7 @@ internal class FeedSection(
                     day = itemDay
                     views.text(content, dayLabel(item.createdAt), heading = true).setPadding(0, views.dp(16), 0, 0)
                 }
-                renderItem(item, current.legacy)
+                renderItem(item)
             }
         }
         if (current.nextBefore != null) {
@@ -346,11 +358,8 @@ internal class FeedSection(
             else -> R.string.aq_feed_empty
         }
 
-    private fun renderItem(
-        item: AnkiquestFeed.Item,
-        legacy: Boolean,
-    ) {
-        val unread = !legacy && item.unread
+    private fun renderItem(item: AnkiquestFeed.Item) {
+        val unread = item.unread
         val panel = views.card(content, tinted = unread)
         views.text(panel, item.heading, heading = true)
         val time = DateUtils.formatDateTime(this, item.createdAt * 1000, DateUtils.FORMAT_SHOW_TIME)
@@ -379,6 +388,19 @@ internal class FeedSection(
         item.challengeId?.let { goal ->
             val label = if (item.actionRequired) R.string.aq_feed_view_invitation else R.string.aq_feed_open_goal
             views.chip(actions, getString(label), primary = item.actionRequired) { openGoal(item, goal) }
+        }
+        item.invitation?.let { group ->
+            views.chip(
+                actions,
+                getString(R.string.aq_friends_join),
+                primary = true,
+                enabled = !waiting,
+            ) { answer(item, group, Answer.JOIN) }
+            views.chip(
+                actions,
+                getString(R.string.aq_challenges_decline),
+                enabled = !waiting,
+            ) { answer(item, group, Answer.DECLINE) }
         }
         if (item.answerable) {
             quickReply(item.kind)?.let { words ->
@@ -484,7 +506,7 @@ internal class FeedSection(
     ) = act(item, R.string.aq_feed_reply_failed) { current ->
         AnkiquestFeed.reply(current, item, message)
         change(item.id) { it.copy(replied = true) }
-        if (item.unread && page?.legacy != true) {
+        if (item.unread) {
             try {
                 AnkiquestFeed.markRead(current, listOf(item.id))
                 read(listOf(item.id))
@@ -495,6 +517,40 @@ internal class FeedSection(
             }
         }
         getString(R.string.aq_feed_reply_done)
+    }
+
+    /** How the player answers an invitation to a group. */
+    private enum class Answer { JOIN, DECLINE }
+
+    /** Joins or declines the group [item] invites to; the server marks the row read and answered. */
+    private fun answer(
+        item: AnkiquestFeed.Item,
+        group: Long,
+        answer: Answer,
+    ) = act(item, R.string.aq_feed_invite_failed) { current ->
+        val action =
+            when (answer) {
+                Answer.JOIN -> AnkiquestSocial.Change.AcceptInvite(group)
+                Answer.DECLINE -> AnkiquestSocial.Change.DeclineInvite(group)
+            }
+        val overview = AnkiquestSocial.change(current, action)
+
+        // The row is answered now: read, and no longer waiting for the player.
+        read(listOf(item.id))
+        change(item.id) { it.copy(actionRequired = false) }
+        page =
+            page?.let { latest ->
+                latest.copy(
+                    attention = latest.attention.filter { it.id != item.id },
+                    actionCount = (latest.actionCount - 1).coerceAtLeast(0),
+                )
+            }
+        val joined = overview.groups.firstOrNull { it.id == group }
+        when {
+            answer == Answer.DECLINE -> getString(R.string.aq_feed_invite_declined)
+            joined != null -> getString(R.string.aq_friends_joined, joined.name)
+            else -> getString(R.string.aq_feed_invite_joined)
+        }
     }
 
     private fun markRead(item: AnkiquestFeed.Item) =
@@ -540,7 +596,9 @@ internal class FeedSection(
     ) {
         startActivity(AnkiquestChallengesActivity.intent(this, goal))
         val current = account ?: return
-        if (!item.unread || page?.legacy == true) return
+        if (!item.unread) {
+            return
+        }
         lifecycleScope.launch {
             val problem = attempt { AnkiquestFeed.markRead(current, listOf(item.id)) }
             if (problem == null && account?.scope == current.scope) {

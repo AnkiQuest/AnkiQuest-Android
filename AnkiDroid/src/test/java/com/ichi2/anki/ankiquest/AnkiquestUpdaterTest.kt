@@ -40,6 +40,7 @@ import java.net.HttpURLConnection
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -311,6 +312,10 @@ class AnkiquestUpdaterTest : RobolectricTest() {
     fun `an apk of another package shows the move instead of installing`() {
         val shown = download(packageName = "org.ankiquest.ankidroid.other")
         assertEquals(targetContext.getString(R.string.ankiquest_moved_title), shown.title)
+        val message = assertNotNull(shown.message)
+        assertContains(message, "shared AnkiDroid folder")
+        assertContains(message, "force-stop this app")
+        assertContains(message, "separate folders, sync with AnkiWeb or export")
     }
 
     @Test

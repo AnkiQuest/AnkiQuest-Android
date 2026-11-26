@@ -64,6 +64,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
     private const val PREF_RESYNCED_AT = "ankiquestResyncedAt"
+    private const val PREF_EASE_RESEND = "ankiquestEaseResend"
     const val NUDGES = "nudges"
     const val CELEBRATIONS = "celebrations"
 
@@ -229,31 +230,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             JSONObject().put("decks", JSONArray()).put(name, enabled),
         )
     }
-
-    /**
-     * Shares a win with everyone in the player's circle through `/api/share`: one of their own
-     * [notification]s, or their current [place] on this week's board. Answers how many friends got it.
-     *
-     * @param expectedScope the [HomeAccount.scope] the win belongs to; another signed-in account never shares it
-     */
-    suspend fun shareWin(
-        notification: Long?,
-        place: Int?,
-        expectedScope: String,
-    ): Int =
-        share(
-            JSONObject().apply {
-                notification?.let { put("notification", it) }
-                place?.let { put("place", it) }
-            },
-            expectedScope,
-        ).optInt("recipients")
-
-    /** Sends the server's [win] to everyone in the player's circle; answers how many friends got it. */
-    suspend fun shareWinWithFriends(
-        win: Long,
-        expectedScope: String,
-    ): Int = share(JSONObject().put("win", win).put("to", "friends"), expectedScope).optInt("recipients")
 
     /** The public link for the server's [win], with its card and invitation text; the server makes it once and reuses it. */
     internal suspend fun shareWinLink(
@@ -751,6 +727,99 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val prefs = AnkiDroidApp.sharedPrefs()
         val account = owner.notificationAccount
         migrateUploadMark(prefs, account)
+        val send = suspend { uploadReviews(owner, resync, onlyTest, catalog, everything, progress) }
+
+        // The one resend of the history with the button (AnkiquestEaseResend) is checked on the
+        // uploads that already reach back (resync, everything, first upload), not after each answer.
+        val markKey = markKey(account)
+        val firstUpload = !(prefs.contains(markKey) && prefs.getBoolean(initialSyncKey(account), false))
+        val resend = AnkiquestEaseResend.of(prefs.getString(easeResendKey(account), null))
+        val due = !onlyTest && resend == AnkiquestEaseResend.State.PENDING && (resync || everything || firstUpload)
+        if (!due) {
+            return send()
+        }
+
+        // An upload from the first review sends the whole history with the button itself.
+        val covered = everything || prefs.getLong(markKey, 0L) == 0L
+        saveEaseResend(prefs, account, AnkiquestEaseResend.start(resend))
+        val profile =
+            try {
+                send()
+            } catch (e: Exception) {
+                saveEaseResend(prefs, account, AnkiquestEaseResend.fail(AnkiquestEaseResend.State.SENDING))
+                throw e
+            }
+        val check = resendHistory(owner, covered)
+        saveEaseResend(prefs, account, AnkiquestEaseResend.finish(AnkiquestEaseResend.State.SENDING, check))
+        return profile
+    }
+
+    /**
+     * Resends [owner]'s whole review history with the button, silently and in batches the server
+     * accepts, if its server last named [AnkiquestEaseResend.FEATURE]. A failure is reported, never
+     * thrown, so the upload before it stands.
+     */
+    private suspend fun resendHistory(
+        owner: HomeAccount,
+        covered: Boolean,
+    ): AnkiquestEaseResend.Check {
+        try {
+            // An older server drops the button, so the resend waits until it names the feature.
+            // The cached capabilities decide: the upload asks the server for nothing more.
+            if (!AnkiquestCapabilities.has(owner, AnkiquestEaseResend.FEATURE)) {
+                return AnkiquestEaseResend.Check.UNSUPPORTED
+            }
+            if (covered) {
+                return AnkiquestEaseResend.Check.COVERED
+            }
+
+            val clock = clock()
+            val stamps = AnkiquestReviewOffsets.read(AnkiDroidApp.sharedPrefs())
+            AnkiquestEaseResend.sendHistory(
+                MAX_PENDING,
+                read = { after -> pendingReviews(after).objects() },
+                id = { it.getLong("id") },
+            ) { rows ->
+                val body =
+                    JSONObject()
+                        .put("clock", clock)
+                        .put("silent", true)
+                        .put("reviews", AnkiquestReviewOffsets.stamp(JSONArray(rows), stamps))
+                val request =
+                    AnkiquestApi
+                        .request(owner, "api/reviews/${owner.encodedUser}")
+                        .post(AnkiquestApi.body(body))
+                        .build()
+                AnkiquestApi.call(owner, request, recheck = false) { AnkiquestApi.jsonObject(it) }
+            }
+            return AnkiquestEaseResend.Check.RESENT
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest history resend with the button failed; it is tried again later")
+            return AnkiquestEaseResend.Check.FAILED
+        }
+    }
+
+    private fun saveEaseResend(
+        prefs: SharedPreferences,
+        account: String,
+        state: AnkiquestEaseResend.State,
+    ) {
+        prefs.edit { putString(easeResendKey(account), state.stored) }
+    }
+
+    /** The reviews after the mark (or from [resync] or [everything], see [upload]) in batches. */
+    private suspend fun uploadReviews(
+        owner: HomeAccount,
+        resync: Boolean,
+        onlyTest: Boolean,
+        catalog: Boolean,
+        everything: Boolean,
+        progress: ((sent: Int, total: Int) -> Unit)?,
+    ): JSONObject {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val account = owner.notificationAccount
         val markKey = markKey(account)
         val mark = prefs.getLong(markKey, 0L)
         val initialSyncKey = initialSyncKey(account)
@@ -865,6 +934,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     private fun resyncedKey(account: String) = "$PREF_RESYNCED_AT:$account"
 
+    @VisibleForTesting
+    internal fun easeResendKey(account: String) = "$PREF_EASE_RESEND:$account"
+
     /**
      * Gives the upload mark that older versions kept for every account to the [account] it belongs to.
      *
@@ -950,7 +1022,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             val rows = JSONArray()
             db
                 .query(
-                    "select id, cid, lastIvl, ivl, time, type from revlog " +
+                    "select id, cid, lastIvl, ivl, time, type, ease from revlog " +
                         "where id > ? and ease > 0 and type < 4 order by id limit ${limit.coerceAtLeast(0)}",
                     afterId,
                 ).use { cursor ->
@@ -963,6 +1035,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                                 cursor.getLong(3),
                                 cursor.getLong(4),
                                 cursor.getInt(5),
+                                cursor.getInt(6),
                             ),
                         )
                     }

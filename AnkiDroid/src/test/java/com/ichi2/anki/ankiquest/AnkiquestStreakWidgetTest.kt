@@ -237,7 +237,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun `two frozen days before today show the second frozen pose`() {
+    fun `two frozen days before today show Aki frozen`() {
         val now = TimeManager.time.intTimeMS()
         val row = me(10, "protected", 0)
         val heatmap = JSONArray()
@@ -258,7 +258,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                 .apply(targetContext, FrameLayout(targetContext))
         val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
         val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap)
-        val frozen = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_freeze, minOf(shown.width, shown.height)))
+        val frozen = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_frozen, minOf(shown.width, shown.height)))
         assertTrue(shown.sameAs(frozen))
     }
 
@@ -440,7 +440,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
-        assertEquals(11, aki.size)
+        assertEquals(10, aki.size)
         val poses = aki + ankilopeMoodPoses.values
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

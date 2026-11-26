@@ -12,8 +12,14 @@ const WAIT_MINUTES = (ATTEMPTS * RETRY_MS) / 60_000;
 
 // The baseline belongs to the PR base, the master commit behind a queue group, or the push itself.
 async function baseCommit({ github, context }) {
-    if (context.payload.pull_request) {
-        return context.payload.pull_request.base;
+    // The event's base.sha can lag the base branch; the checked-out merge commit's first parent
+    // is the base GitHub merged into.
+    const pullRequest = context.payload.pull_request;
+    if (pullRequest) {
+        const {
+            data: { parents },
+        } = await github.rest.repos.getCommit({ ...context.repo, ref: context.sha });
+        return { sha: parents[0].sha, ref: pullRequest.base.ref };
     }
 
     // A group's parent can be an earlier queue group with no recorded screenshots.

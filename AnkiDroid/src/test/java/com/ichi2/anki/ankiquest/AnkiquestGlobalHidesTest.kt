@@ -8,7 +8,6 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
@@ -19,7 +18,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -39,15 +37,6 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
             val people = runBlocking { AnkiquestGlobalHides.load(account) }
             assertEquals(listOf(AnkiquestGlobalHides.Player("ana", "Ana")), people)
             assertEquals(listOf(Request("GET", "/api/leaderboard/hidden/hill", "Bearer test-token", "")), requests.toList())
-        }
-    }
-
-    @Test
-    fun `older servers have no hide controls and receive no hidden-list request`() {
-        withServer { account, requests ->
-            coEvery { AnkiquestCapabilities.current(account) } returns setOf("global_leaderboard")
-            assertNull(runBlocking { AnkiquestGlobalHides.load(account) })
-            assertTrue(requests.isEmpty())
         }
     }
 
@@ -105,15 +94,6 @@ class AnkiquestGlobalHidesTest : RobolectricTest() {
                     runBlocking { AnkiquestGlobalHides.change(account, "ana", AnkiquestGlobalHides.Action.HIDE) }
                 }
             assertEquals(HTTP_CONFLICT, failure.code)
-        }
-    }
-
-    @Test
-    fun `cancelled capability discovery does not become unsupported`() {
-        withServer { account, requests ->
-            coEvery { AnkiquestCapabilities.current(account) } throws CancellationException("screen left")
-            assertFailsWith<CancellationException> { runBlocking { AnkiquestGlobalHides.load(account) } }
-            assertTrue(requests.isEmpty())
         }
     }
 
