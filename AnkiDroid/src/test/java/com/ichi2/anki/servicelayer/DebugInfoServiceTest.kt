@@ -72,6 +72,7 @@ class DebugInfoServiceTest : RobolectricTest() {
             val report = DebugInfoService.getDebugInfo(targetContext)
 
             assertContains(report, "AnkiQuest Release = ")
+            assertContains(report, "AnkiQuest Point = 0")
             assertContains(report, "Server host = study.example.test  \n")
             assertContains(report, "Signed in = true")
             assertContains(report, "Device token present = true")

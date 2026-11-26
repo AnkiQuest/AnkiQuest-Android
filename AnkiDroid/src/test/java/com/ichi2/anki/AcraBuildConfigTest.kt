@@ -34,6 +34,7 @@ class AcraBuildConfigTest {
             containsInAnyOrder(
                 "ACRA_URL",
                 "ANKIQUEST_NIGHTLY",
+                "ANKIQUEST_POINT",
                 "ANKIQUEST_RELEASE",
                 "APPLICATION_ID",
                 "BACKEND_VERSION",
