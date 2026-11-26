@@ -6,11 +6,3 @@ version = 1
 path = "**.kt"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Contributors to the AnkiDroid project"
-
-# Archived Anki-tan exports, kept with their licence. See
-# docs/art-archive/anki-tan/README.md and docs/art-archive/anki-tan/LICENSE.
-[[annotations]]
-path = "docs/art-archive/anki-tan/*.webp"
-precedence = "override"
-SPDX-FileCopyrightText = "Shigeyuki <https://www.patreon.com/Shigeyuki>"
-SPDX-License-Identifier = "CC-BY-SA-4.0"
