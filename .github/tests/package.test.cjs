@@ -36,6 +36,12 @@ test("the AnkiQuest build no longer comes from customSuffix=quest", () => {
     }
 });
 
+test("the launcher icon test selects the AnkiQuest build", () => {
+    const workflow = read(".github/workflows/tests_emulator.yml");
+    assert.ok(!workflow.includes("-PcustomSuffix=quest"), "the emulator workflow uses the retired AnkiQuest flag");
+    assert.match(workflow, /:AnkiDroid:connectedPlayDebugAndroidTest -Pankiquest [^\n]*AnkiquestIconAliasTest\b/);
+});
+
 test("the APK workflow fails unless the built APK has the AnkiQuest package", () => {
     const workflow = read(".github/workflows/ankiquest_apk.yml");
     const step = workflow.slice(workflow.indexOf("- name: Package and version code"));
