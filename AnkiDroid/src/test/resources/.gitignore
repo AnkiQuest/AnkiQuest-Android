@@ -3,3 +3,6 @@
 /ankiquest/
 /ankiquest-api/*.json
 !/ankiquest-api/names.json
+# The pinned AnkiQuest-Art release's poses, copied by
+# `node .github/ankiquest_art_data.cjs fetch`.
+/ankiquest-art/

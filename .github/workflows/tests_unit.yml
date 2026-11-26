@@ -206,6 +206,12 @@ jobs:
         shell: bash
         run: node .github/ankiquest_server_data.cjs fetch
 
+      # AnkiQuest: the pose list comes from the pinned AnkiQuest-Art release (ankiquest-art.json).
+      - name: Fetch the pinned AnkiQuest-Art poses
+        if: needs.changes.outputs.code != 'false'
+        shell: bash
+        run: node .github/ankiquest_art_data.cjs
+
       - name: Set up Codecov
         id: codecov
         # Flake runs repeat the same tests. Only the first iteration uploads coverage.
