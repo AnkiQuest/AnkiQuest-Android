@@ -35,8 +35,10 @@ class AnkiquestPackFormatTest {
         assertTrue(names.knows("winner"))
         assertFalse(names.knows("leech_kun"))
 
-        val cycle = PoseNames(core = listOf("face"), fallbacks = mapOf("a" to "b", "b" to "a"))
-        val refused = assertFailsWith<PackRefused> { cycle.chain("a") }
+        val refused =
+            assertFailsWith<PackRefused> {
+                PoseNames(core = listOf("face"), fallbacks = mapOf("a" to "b", "b" to "a"))
+            }
         assertEquals(PackRefusal.BAD_INDEX, refused.reason)
     }
 
@@ -141,12 +143,12 @@ class AnkiquestPackFormatTest {
 
     @Test
     fun a_pack_index_lists_its_pictures_by_pose() {
-        val info = PackInfo.parse(info(poses = """{"face":"aki_face.webp"}"""), names)
+        val info = PackInfo.parse(info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp"}"""), names)
         assertEquals("aki", info.id)
         assertEquals("Aki", info.name)
         assertEquals(11, info.version)
         assertEquals("CC BY-SA", info.licence)
-        assertEquals(mapOf("face" to "aki_face.webp"), info.poses)
+        assertEquals(mapOf("face" to "aki_face.webp", "asleep" to "aki_asleep.webp"), info.poses)
         assertNull(info.notice)
     }
 
