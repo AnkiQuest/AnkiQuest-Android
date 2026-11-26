@@ -8,7 +8,6 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
-import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -330,7 +329,12 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
             deck: DeckId,
             verdict: AnkiquestOptimizeReminder.Verdict.Remind,
         ) = AnkiquestOptimizeReminderDialog().apply {
-            arguments = bundleOf(ARG_SINCE to verdict.since.name, ARG_WORDING to verdict.wording.name, ARG_DECK to deck)
+            arguments =
+                Bundle().apply {
+                    putString(ARG_SINCE, verdict.since.name)
+                    putString(ARG_WORDING, verdict.wording.name)
+                    putLong(ARG_DECK, deck)
+                }
         }
     }
 }
