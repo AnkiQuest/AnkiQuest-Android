@@ -46,6 +46,7 @@ class AnkiquestRwkvGuideTest : RobolectricTest(loadBackend = false) {
     @Test
     fun `the guide's sizes match the model lock list`() {
         val page = AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(targetContext, AnkiquestReleaseNotes.GUIDE))
+
         // Every size the guide names comes from the lock list: the zips the Download fetches,
         // and the weights.f32.bin a player can pick instead of them.
         fun mb(bytes: Long) = "%.1f MB".format(bytes / 1_000_000.0)
