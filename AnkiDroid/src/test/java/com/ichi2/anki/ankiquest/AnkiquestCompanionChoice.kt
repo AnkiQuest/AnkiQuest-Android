@@ -19,7 +19,7 @@ internal fun chooseCompanion(choice: Choice) {
     assertTrue(AnkiquestCompanion.remember(requireNotNull(AnkiquestHomeData.account()), choice.id))
 }
 
-/** Ankilope's core pose for each streak mood; the cow draws hers. On fire she studies until her on-fire art exists. */
+/** Ankilope's core pose for each streak mood. */
 internal val ankilopeMoodPoses =
     mapOf(
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
@@ -31,7 +31,7 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.THAWING to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.ankilope_hopeful,
-        AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
+        AnkiquestMood.Mood.FIRE to R.drawable.ankilope_streak,
     )
 
 /** Bluma's core pose for each streak mood, from her own art. */

@@ -18,8 +18,6 @@ import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks.Offer
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
-import kotlin.math.cos
-import kotlin.math.sin
 
 /** Account-scoped artwork cache. The server owns the choice; offline UI uses its last answer. */
 internal object AnkiquestCompanion {
@@ -39,7 +37,7 @@ internal object AnkiquestCompanion {
         AKI("aki", R.string.ankiquest_companion_aki),
         ANKILOPE("ankilope", R.string.ankiquest_companion_ankilope),
 
-        /** Bluma, earned at a milestone like Ankilope ([AnkiquestUnlocks]). */
+        /** Bluma, earned at a milestone like Ankilope ([AnkiquestUnlocks]); Art names her `cow`. */
         COW("cow", R.string.ankiquest_companion_cow),
 
         /** Anki-tan, earned by a streak ([AnkiquestUnlocks]); Shigeyuki's character, credited on the About screen. */
@@ -58,9 +56,6 @@ internal object AnkiquestCompanion {
     /** [choice]'s preview poses as Aki's, without two that look the same. */
     fun preview(choice: Choice): List<Int> = previewPoses.distinctBy { resource(it, choice) }
 
-    /** Degrees that turn Ankilope's tan fur purple for the interim cow. */
-    private const val COW_HUE_DEGREES = 250.0
-
     /** [ColorMatrix] is 4 rows of 5: red, green, blue, alpha and a constant. */
     private const val MATRIX_COLUMNS = 5
     private const val MATRIX_SIZE = 4 * MATRIX_COLUMNS
@@ -69,32 +64,6 @@ internal object AnkiquestCompanion {
     /** The silhouette's grey (0-255) and its opacity as a share of the art's. */
     private const val SILHOUETTE_GREY = 128f
     private const val SILHOUETTE_ALPHA = 110f / 255f
-
-    // The CSS hue-rotate() matrix: per output channel, weights for red, green and blue, plus cosine
-    // and sine terms of the angle.
-    private val hueLuminance = floatArrayOf(0.213f, 0.715f, 0.072f)
-    private val hueCos =
-        listOf(floatArrayOf(0.787f, -0.715f, -0.072f), floatArrayOf(-0.213f, 0.285f, -0.072f), floatArrayOf(-0.213f, -0.715f, 0.928f))
-    private val hueSin =
-        listOf(floatArrayOf(-0.213f, -0.715f, 0.928f), floatArrayOf(0.143f, 0.140f, -0.283f), floatArrayOf(-0.787f, 0.715f, 0.072f))
-
-    /**
-     * The cow is drawn as Ankilope with its hues rotated until it has art of its own (float3/ankiquest#88),
-     * with the matrix of CSS `hue-rotate(250deg)` so every client draws the same purple.
-     */
-    private val cowFilter: ColorFilter by lazy {
-        val radians = Math.toRadians(COW_HUE_DEGREES)
-        val cos = cos(radians).toFloat()
-        val sin = sin(radians).toFloat()
-        val matrix = FloatArray(MATRIX_SIZE)
-        for (row in 0 until 3) {
-            for (column in 0 until 3) {
-                matrix[row * MATRIX_COLUMNS + column] = hueLuminance[column] + cos * hueCos[row][column] + sin * hueSin[row][column]
-            }
-        }
-        matrix[ALPHA_INDEX] = 1f
-        ColorMatrixColorFilter(ColorMatrix(matrix))
-    }
 
     /**
      * A locked companion's art as a grey shadow of its shape, as the desktop draws it: grey at
@@ -212,14 +181,13 @@ internal object AnkiquestCompanion {
             AnkiquestPose.NEGLECTED to R.drawable.aki_neglected,
         )
 
-    /** Ankilope's art for each pose she has; the cow draws it recoloured. */
+    /** Ankilope's art for each pose she has. */
     private val ankilopePoses =
         mapOf(
             AnkiquestPose.FACE to R.drawable.ankilope_face,
             AnkiquestPose.ASLEEP to R.drawable.ankilope_asleep,
             AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
-            // Interim: Ankilope has no on-fire art yet, so she studies.
-            AnkiquestPose.STREAK to R.drawable.ankilope_study,
+            AnkiquestPose.STREAK to R.drawable.ankilope_streak,
             AnkiquestPose.SAD to R.drawable.ankilope_sad,
             AnkiquestPose.HOPEFUL to R.drawable.ankilope_hopeful,
             AnkiquestPose.FROZEN to R.drawable.ankilope_frozen,
@@ -228,10 +196,23 @@ internal object AnkiquestCompanion {
             AnkiquestPose.REVIEW to R.drawable.ankilope_study,
         )
 
+    /** Bluma's art for each pose she has: her core poses, exported as `bluma_*`. */
+    private val blumaPoses =
+        mapOf(
+            AnkiquestPose.FACE to R.drawable.bluma_face,
+            AnkiquestPose.ASLEEP to R.drawable.bluma_asleep,
+            AnkiquestPose.HAPPY to R.drawable.bluma_happy,
+            AnkiquestPose.STREAK to R.drawable.bluma_streak,
+            AnkiquestPose.SAD to R.drawable.bluma_sad,
+            AnkiquestPose.HOPEFUL to R.drawable.bluma_hopeful,
+            AnkiquestPose.FROZEN to R.drawable.bluma_frozen,
+            AnkiquestPose.NEGLECTED to R.drawable.bluma_neglected,
+        )
+
     /**
-     * Anki-tan's art for each pose she has: Shigeyuki's pack art and the generated masters, as
-     * AnkiQuest-Server `static/anki-tan/poses.json` maps them. Her other extensions fall back until
-     * they are drawn (AnkiQuest-Server#57).
+     * Anki-tan's art for each pose she has, as the pinned AnkiQuest-Art release exports it. Her face
+     * is a headshot and every other pose full body; welcome shows her hopeful master, as Art's
+     * manifest names it. Her other extensions fall back until they are drawn (AnkiQuest-Server#57).
      */
     private val ankiTanPoses =
         mapOf(
@@ -239,16 +220,11 @@ internal object AnkiquestCompanion {
             AnkiquestPose.ASLEEP to R.drawable.anki_tan_asleep,
             AnkiquestPose.HAPPY to R.drawable.anki_tan_happy,
             AnkiquestPose.STREAK to R.drawable.anki_tan_streak,
-            AnkiquestPose.STREAK_LEGEND to R.drawable.anki_tan_streak_legend,
-            AnkiquestPose.STREAK_MILESTONE to R.drawable.anki_tan_streak_milestone,
             AnkiquestPose.SAD to R.drawable.anki_tan_sad,
             AnkiquestPose.HOPEFUL to R.drawable.anki_tan_hopeful,
             AnkiquestPose.FROZEN to R.drawable.anki_tan_frozen,
             AnkiquestPose.NEGLECTED to R.drawable.anki_tan_neglected,
-            AnkiquestPose.WELCOME to R.drawable.anki_tan_welcome,
-            AnkiquestPose.REVIEW to R.drawable.anki_tan_review,
-            AnkiquestPose.HURT to R.drawable.anki_tan_hurt,
-            AnkiquestPose.DEAD to R.drawable.anki_tan_dead,
+            AnkiquestPose.WELCOME to R.drawable.anki_tan_hopeful,
         )
 
     /** The pose each of Aki's pictures shows, so that other companions show theirs. */
@@ -298,10 +274,28 @@ internal object AnkiquestCompanion {
             R.drawable.aki_challenge_lost to R.drawable.ankilope_challenge_lost,
         )
 
-    /** [choice]'s art by pose: the cow draws Ankilope's recoloured, no companion Aki's where asked. */
+    /**
+     * The pose each of Aki's scenes falls back to where a companion has no scene of its own, as
+     * AnkiQuest-Art's `poses.json` names it under `pictures` (place 1 and a won challenge through
+     * winner).
+     */
+    private val sceneFallbacks =
+        mapOf(
+            R.drawable.aki_nudge to AnkiquestPose.HOPEFUL,
+            R.drawable.aki_backlog to AnkiquestPose.SAD,
+            R.drawable.aki_place_1 to AnkiquestPose.WINNER,
+            R.drawable.aki_place_2 to AnkiquestPose.HAPPY,
+            R.drawable.aki_place_3 to AnkiquestPose.HAPPY,
+            R.drawable.aki_challenge to AnkiquestPose.HOPEFUL,
+            R.drawable.aki_challenge_won to AnkiquestPose.WINNER,
+            R.drawable.aki_challenge_lost to AnkiquestPose.SAD,
+        )
+
+    /** [choice]'s art by pose; no companion draws Aki's where asked. */
     private fun poses(choice: Choice): Map<AnkiquestPose, Int> =
         when (choice) {
-            Choice.ANKILOPE, Choice.COW -> ankilopePoses
+            Choice.ANKILOPE -> ankilopePoses
+            Choice.COW -> blumaPoses
             Choice.ANKI_TAN -> ankiTanPoses
             Choice.AKI, Choice.NONE -> akiPoses
         }
@@ -333,30 +327,27 @@ internal object AnkiquestCompanion {
             return art(pose, choice)
         }
 
-        // Scenes: Ankilope has her own; Anki-tan has none yet, so she shows her face.
-        if (choice == Choice.ANKI_TAN) {
-            return R.drawable.anki_tan_face
+        // Scenes: Ankilope has her own; the others show the pose the scene falls back to.
+        val scene = if (choice == Choice.ANKILOPE) ankilopeScenes[aki] else null
+        if (scene != null) {
+            return scene
         }
-        return ankilopeScenes[aki] ?: aki
+        val fallback = sceneFallbacks[aki]
+        if (fallback != null) {
+            return art(fallback, choice)
+        }
+
+        // Anything else is already the companion's own art, such as a mood's pose.
+        return aki
     }
 
-    /**
-     * [choice]'s version of [aki], decoded for [size] pixels, or null when it cannot be decoded.
-     * Every surface draws the companion through here, so the cow's colours apply everywhere,
-     * RemoteViews included.
-     */
+    /** [choice]'s version of [aki], decoded for [size] pixels, or null when it cannot be decoded. */
     fun bitmap(
         context: Context,
         @DrawableRes aki: Int,
         size: Int,
         choice: Choice = choice(),
-    ): Bitmap? {
-        val art = resource(aki, choice)
-        if (choice != Choice.COW) {
-            return AnkiquestArt.bitmap(context, art, size)
-        }
-        return AnkiquestArt.filtered(context, art, size, Choice.COW.id, cowFilter)
-    }
+    ): Bitmap? = AnkiquestArt.bitmap(context, resource(aki, choice), size)
 
     /** [choice]'s version of [aki] as a silhouette, for a locked companion; null when it cannot be decoded. */
     fun silhouette(
@@ -387,8 +378,8 @@ internal object AnkiquestCompanion {
             return
         }
 
-        // Undecodable art falls back to the drawable, recoloured by the view instead.
+        // Undecodable art falls back to the drawable.
+        view.colorFilter = null
         view.setImageResource(resource(aki, choice))
-        view.colorFilter = if (choice == Choice.COW) cowFilter else null
     }
 }

@@ -98,10 +98,3 @@ test("every workflow that runs the unit tests fetches server data first", () => 
         assert.ok(fetch < workflow.indexOf("./gradlew"), `${name} runs Gradle before fetching server data`);
     }
 });
-
-test("the art check runs a fixed exporter commit, never server master", () => {
-    const art = fs.readFileSync(path.join(root, ".github/workflows", "ankiquest_art_check.yml"), "utf8");
-    assert.match(art, /\n  EXPORTER: [0-9a-f]{40}\n/);
-    assert.match(art, /ref: \$\{\{ env\.EXPORTER \}\}/);
-    assert.doesNotMatch(art, /\bref: master\b|workflow_dispatch|server_ref/);
-});
