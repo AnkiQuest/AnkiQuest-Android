@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copies AnkiQuest-Server's API examples and shared fixtures into the unit test resources, from a
-// shallow, sparse clone of a server branch (master unless --ref names another) or from a server
-// checkout. Nothing is committed or pinned: the tests run against server master. Server files are
-// read as JSON data only; no server code is executed.
+// shallow, sparse clone of a server ref or from a server checkout. Nothing is committed. Server
+// files are read as JSON data only; no server code is executed.
+//
+// On master the tests run against server master. This is a release branch: its code is the
+// release's and only matches the server data of that time, so it reads the server commit that was
+// master when quest-24 was tagged, unless --ref names another.
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -10,7 +13,8 @@ const { execFileSync } = require("node:child_process");
 
 const RESOURCES = "AnkiDroid/src/test/resources";
 const SERVER = "https://github.com/AnkiQuest/AnkiQuest-Server.git";
-const BRANCH = "master";
+const RELEASE_SERVER = "73944077d4832ddd97664a0185750921612622b4";
+const BRANCH = RELEASE_SERVER;
 // Server folders and the resource folders they are copied to.
 const PAIRS = [
     ["docs/api/examples", "ankiquest-api"],
@@ -153,4 +157,4 @@ if (require.main === module) {
     }
 }
 
-module.exports = { copy, fetch, parse, serverRef };
+module.exports = { copy, fetch, parse, serverRef, RELEASE_SERVER };

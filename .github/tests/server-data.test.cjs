@@ -65,11 +65,12 @@ test("bad or empty server data changes nothing", t => {
 });
 
 test("refs and arguments are checked", () => {
-    assert.equal(data.serverRef(), "master");
+    assert.equal(data.serverRef(), data.RELEASE_SERVER);
+    assert.match(data.RELEASE_SERVER, /^[0-9a-f]{40}$/);
     assert.equal(data.serverRef("feature/coordinated-change"), "feature/coordinated-change");
     assert.throws(() => data.serverRef("--upload-pack=x"), /Invalid server ref/);
     assert.throws(() => data.serverRef("master\nref=other"), /Invalid server ref/);
-    assert.deepEqual(data.parse([]), { ref: "master", server: undefined });
+    assert.deepEqual(data.parse([]), { ref: data.RELEASE_SERVER, server: undefined });
     assert.deepEqual(data.parse(["--ref", "topic", "../server"]), { ref: "topic", server: "../server" });
     assert.throws(() => data.parse(["a", "b"]), /Use fetch/);
 });
