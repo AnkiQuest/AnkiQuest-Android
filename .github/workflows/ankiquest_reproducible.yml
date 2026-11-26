@@ -89,10 +89,17 @@ jobs:
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache \
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache --stacktrace \
             -Pankiquest -PcustomName="AnkiQuest"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-$BUILD.apk"
           cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-$BUILD.txt"
+
+      # Packaging failed now and then with no cause printed; free disk and memory rule those out.
+      - name: Disk and memory
+        if: failure()
+        run: |
+          df -h
+          free -m
 
       # The R8 mapping shows which classes and members R8 named or kept differently.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
