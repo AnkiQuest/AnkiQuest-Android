@@ -335,7 +335,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                     textSize = 18f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     gravity = Gravity.CENTER
-                    setTextColor(getColor(R.color.aq_home_primary))
+                    setTextColor(getColor(R.color.aq_home_accent))
                 },
             )
         }

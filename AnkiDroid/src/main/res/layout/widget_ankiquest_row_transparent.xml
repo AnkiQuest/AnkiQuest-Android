@@ -31,6 +31,7 @@
             android:layout_height="22dp"
             android:layout_gravity="center"
             android:scaleType="fitCenter"
+            android:importantForAccessibility="no"
             android:visibility="gone" />
     </FrameLayout>
 

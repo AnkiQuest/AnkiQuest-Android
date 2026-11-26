@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: AnkiQuest art cache
+description: >-
+  Puts the android-drawables.zip that ankiquest-art.json pins into
+  .ankiquest-art-cache/<SHA-256>, cached under that hash, and points the build
+  at it (ANKIQUEST_ART_CACHE). Run it before the first Gradle command.
+
+# The app build unpacks the companion drawables from that zip (buildSrc
+# AnkiquestArt.kt). Without this, every job would download it from GitHub
+# releases. The key is the pinned SHA-256, so an entry never changes, and the
+# download is checked against it before it is cached or used. Only pushes to
+# master save, as with the gradle-cache action; pull requests, the merge queue,
+# schedules and dispatches only read.
+
+runs:
+  using: composite
+  steps:
+    - name: Read the pinned art
+      id: pin
+      shell: bash
+      run: |
+        node -e "
+          const pin = require('./ankiquest-art.json');
+          const sha = pin.assets['android-drawables.zip'];
+          if (!/^art-[1-9][0-9]*$/.test(pin.tag) || !/^[0-9a-f]{64}$/.test(sha)) { process.exit(1); }
+          console.log('tag=' + pin.tag);
+          console.log('sha=' + sha);
+        " >> "$GITHUB_OUTPUT"
+
+    - name: Restore the art cache
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .ankiquest-art-cache
+        key: ankiquest-art-v1-${{ steps.pin.outputs.sha }}
+
+    - name: Download the pinned art
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        TAG: ${{ steps.pin.outputs.tag }}
+        SHA: ${{ steps.pin.outputs.sha }}
+      run: |
+        mkdir -p .ankiquest-art-cache
+        curl -fsSL --retry 3 -o .ankiquest-art-cache/download \
+          "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/$TAG/android-drawables.zip"
+        node -e "
+          const fs = require('fs');
+          const hash = require('crypto').createHash('sha256').update(fs.readFileSync('.ankiquest-art-cache/download')).digest('hex');
+          if (hash !== process.env.SHA) { console.error('android-drawables.zip does not have the pinned SHA-256'); process.exit(1); }
+        "
+        mv .ankiquest-art-cache/download ".ankiquest-art-cache/$SHA"
+
+    - name: Save the art cache
+      if: >-
+        steps.restore.outputs.cache-hit != 'true'
+        && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      continue-on-error: true
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .ankiquest-art-cache
+        key: ${{ steps.restore.outputs.cache-primary-key }}
+
+    # A fixed value, not input, so nothing a pull request controls reaches the
+    # environment file.
+    - name: Use the art cache
+      shell: bash
+      run: echo "ANKIQUEST_ART_CACHE=.ankiquest-art-cache" >> "$GITHUB_ENV" # zizmor: ignore[github-env]

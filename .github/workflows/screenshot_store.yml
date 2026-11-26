@@ -115,6 +115,9 @@ jobs:
           mode: restore
           group: screenshot
 
+      - name: AnkiQuest art cache
+        uses: ./.github/actions/ankiquest-art-cache
+
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache
 
