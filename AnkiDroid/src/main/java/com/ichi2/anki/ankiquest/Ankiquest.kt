@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The review banner's two looks (#207): bright amber when it matters, near-black otherwise, and the
  * ink each writes in: dark on the amber, white on the near-black.
- * Top-level, so Top-level, so the contrast test can pin them without the Ankiquest object.
+ * Top-level, so the contrast test can pin them without the Ankiquest object.
  */
 internal val bannerImportant = 0xF0B8860B.toInt()
 internal val bannerQuiet = 0xE0202830.toInt()
