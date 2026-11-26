@@ -63,8 +63,8 @@ internal object AnkiquestArt {
     }
 
     /**
-     * [bitmap] drawn through [filter], cached under [name] next to the plain bitmap. For art
-     * recoloured on the phone; RemoteViews cannot apply a filter, so the colours are drawn in.
+     * [bitmap] drawn through [filter], cached under [name] next to the plain bitmap, such as a
+     * locked companion's silhouette; RemoteViews cannot apply a filter, so it is drawn in.
      */
     fun filtered(
         context: Context,

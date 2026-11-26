@@ -10,10 +10,13 @@ node .github/ankiquest_server_data.cjs fetch
 ```
 
 copies them from a shallow, sparse clone of `master` and prints the server
-commit. Every workflow that runs the unit tests (`tests_unit.yml`,
+commit. `companion_poses.json` is not copied: the pose list is the pinned
+AnkiQuest-Art release's `poses.json`, which the same command downloads and
+checks against the SHA-256 `ankiquest-art.json` pins before writing it next
+to the server data. Every workflow that runs the unit tests (`tests_unit.yml`,
 `ankiquest_api_contract.yml`, the `screenshot_*.yml` workflows and
-`ankiquest_banner.yml`) runs it before Gradle. Server files are read as JSON
-data only; no server code runs.
+`ankiquest_banner.yml`) runs it before Gradle. Server and Art files are read
+as JSON data only; no server code runs.
 
 To test against a server change before it reaches `master`:
 

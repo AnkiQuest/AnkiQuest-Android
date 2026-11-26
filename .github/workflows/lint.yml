@@ -89,6 +89,9 @@ jobs:
           mode: restore
           group: lint
 
+      - name: AnkiQuest art cache
+        uses: ./.github/actions/ankiquest-art-cache
+
       # Reject versionCode decreases and increases over 100,000.
       - name: Validate versionCode
         env:
