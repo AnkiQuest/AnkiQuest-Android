@@ -14,6 +14,6 @@
     <!-- The same banner looks by night; only the surface they tint changes. -->
     <color name="aq_banner_important">#F0B8860B</color>
     <color name="aq_banner_quiet">#E0202830</color>
-    <color name="aq_banner_important_ink">#FF23272E</color>
+    <color name="aq_banner_important_ink">#FF181B20</color>
     <color name="aq_banner_quiet_ink">#FFFFFFFF</color>
 </resources>

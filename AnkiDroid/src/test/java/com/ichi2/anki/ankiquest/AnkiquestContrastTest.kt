@@ -3,18 +3,19 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
+import android.view.ContextThemeWrapper
 import androidx.core.graphics.ColorUtils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.common.android.R as CommonR
 import com.ichi2.testutils.EmptyApplication
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertTrue
+import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * Checks AnkiQuest's own colours against the surfaces the app draws them on, computed from the
@@ -29,50 +30,36 @@ class AnkiquestContrastTest : RobolectricTest(loadBackend = false) {
     @Config(qualifiers = "notnight")
     fun `the day colours stay readable`() {
         assertReadable()
-        // A deck row's daily status badge writes in its colour's own ink over the deck row.
-        assertDeckBadges()
+        assertThemedContrast()
     }
 
     @Test
     @Config(qualifiers = "night")
     fun `the night colours stay readable`() {
         assertReadable()
-        // At night the deck row is dark and the same inks are the badge colours' light ones.
-        assertDeckBadges()
+        assertThemedContrast()
     }
 
-    /** The deck rows draw on the theme's own background: the inks must read on the real row. */
-    private fun assertDeckBadges() {
-        val row = resolve(android.R.attr.colorBackground)
+    private fun assertThemedContrast() {
+        val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_AnkiDroid)
+        val colors = context.theme.obtainStyledAttributes(intArrayOf(android.R.attr.colorBackground))
+        val background = colors.getColor(0, 0).also { colors.recycle() }
+        // The deck badge inks draw directly on the deck-list background.
         for (foreground in DECK_BADGE_INKS) {
-            val name = targetContext.resources.getResourceEntryName(foreground)
-            assertContrast(name, targetContext.getColor(foreground), row, MIN_TEXT_CONTRAST)
+            val name = context.resources.getResourceEntryName(foreground)
+            assertContrast(name, context.getColor(foreground), background, MIN_TEXT_CONTRAST)
         }
-    }
 
-    @Test
-    fun `the review banner reads in both its looks`() {
-        // The banners are translucent, so each writes over the reviewer it tints: the ink is
-        // measured on the banner composited over the theme's background in this test's mode.
-        val reviewer = resolve(android.R.attr.colorBackground)
+        // Both translucent banners tint the reviewer's background.
         for ((ink, banner) in BANNER_PAIRS) {
-            val name = targetContext.resources.getResourceEntryName(ink)
+            val name = context.resources.getResourceEntryName(ink)
             assertContrast(
                 name,
-                targetContext.getColor(ink),
-                ColorUtils.compositeColors(targetContext.getColor(banner), reviewer),
+                context.getColor(ink),
+                ColorUtils.compositeColors(context.getColor(banner), background),
                 MIN_TEXT_CONTRAST,
             )
         }
-    }
-
-    /** `attr`'s colour in this test's day or night theme. */
-    private fun resolve(attr: Int): Int {
-        // The deck rows draw in the app's own theme, whose night variant is the dark row,
-        // not in the runner's default one.
-        targetContext.setTheme(CommonR.style.Theme_AnkiDroid)
-        val typed = targetContext.theme.obtainStyledAttributes(intArrayOf(attr))
-        return typed.getColor(0, 0).also { typed.recycle() }
     }
 
     private fun assertReadable() {
