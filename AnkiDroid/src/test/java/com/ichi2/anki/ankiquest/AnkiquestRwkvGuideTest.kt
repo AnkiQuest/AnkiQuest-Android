@@ -51,7 +51,7 @@ class AnkiquestRwkvGuideTest : RobolectricTest(loadBackend = false) {
         // and the weights.f32.bin a player can pick instead of them.
         fun mb(bytes: Long) = "%.1f MB".format(bytes / 1_000_000.0)
         for (size in RwkvSize.values()) {
-            val name = size.name.lowercase().replaceFirstChar { it.uppercaseChar }
+            val name = size.name.lowercase().replaceFirstChar { it.uppercaseChar() }
             val twoHead = RwkvLock.ENTRIES.single { it.size == size && it.head == RwkvHead.TWO_HEAD }
             val instant = RwkvLock.ENTRIES.single { it.size == size && it.head == RwkvHead.INSTANT }
             assertTrue("$name: two-head zip ${mb(twoHead.zipBytes)}, Instant-only zip ${mb(instant.zipBytes)}" in page, page)
