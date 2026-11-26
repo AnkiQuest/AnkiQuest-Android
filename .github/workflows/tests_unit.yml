@@ -229,15 +229,19 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         timeout-minutes: 10
         with:
-          # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
-          cache-provider: basic
-          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
-          # Builds on other branches will only read from master branch cache writes
-          # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+          # The gradle-cache action below caches the dependencies, one entry per job group
+          cache-disabled: true
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        if: needs.changes.outputs.code != 'false'
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: restore
+          group: unit
 
       - name: Robolectric SDK cache
-        # Linux only; macOS and Windows keep the SDK jars in their setup-gradle cache
+        # Linux only; macOS and Windows keep the SDK jars in their Gradle cache
         if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'
         uses: ./.github/actions/robolectric-sdk-cache
 
@@ -254,6 +258,15 @@ jobs:
       - name: Run Unit Tests
         if: needs.changes.outputs.code != 'false'
         run: ./gradlew :AnkiDroid:jacocoCiUnitTestReports --daemon
+
+      - name: Save Gradle cache
+        if: needs.changes.outputs.code != 'false'
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: save
+          group: unit
+          key: ${{ steps.gradle-cache.outputs.key }}
+          hit: ${{ steps.gradle-cache.outputs.hit }}
 
 
       # Only runs:
