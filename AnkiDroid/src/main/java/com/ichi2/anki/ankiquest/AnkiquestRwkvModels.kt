@@ -9,10 +9,25 @@ import java.io.InputStream
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
-/** A model size of JSchoreels' anki-rwkv family. Big is left out: its state needs far more memory than [RwkvMemory] allows for. */
-internal enum class RwkvSize {
-    SMALL,
-    TINY,
+/**
+ * A model size of JSchoreels' anki-rwkv family, with the [shape] of its card and note state, read
+ * from the release's `architecture.json` (both models of a size share it). [RwkvMemory] sizes the
+ * state from it.
+ */
+internal enum class RwkvSize(
+    val shape: RwkvShape,
+) {
+    /**
+     * `architecture: fork`, the fork's 2.76M-parameter model: d_model 128, heads of 32; card 3
+     * layers, note 2, every layer with a channel mixer.
+     */
+    BIG(RwkvShape(dModel = 128, headSize = 32, card = RwkvStream(layers = 3, mixers = 3), note = RwkvStream(layers = 2, mixers = 2))),
+
+    /** `architecture: w64`: d_model 64, heads of 16; card 2 layers, the second without a channel mixer; note 1. */
+    SMALL(RwkvShape(dModel = 64, headSize = 16, card = RwkvStream(layers = 2, mixers = 1), note = RwkvStream(layers = 1, mixers = 1))),
+
+    /** `architecture: w64-c1`: Small with one card layer. */
+    TINY(RwkvShape(dModel = 64, headSize = 16, card = RwkvStream(layers = 1, mixers = 1), note = RwkvStream(layers = 1, mixers = 1))),
 }
 
 /**
@@ -27,6 +42,9 @@ internal enum class RwkvHead {
 /**
  * One model file the app accepts: the `weights.f32.bin` ([bytes], [sha256]) inside release asset
  * [asset] of [RwkvLock.RELEASE] ([zipBytes], [zipSha256], as the release's `SHA256SUMS` lists it).
+ * [logLoss] is the release's own score for the head the model is for (the curve head of a two-head
+ * model, the instant head of an Instant-only one): review-weighted LogLoss on the 722 held-out users,
+ * show-time inputs, int8 weights and state, from the asset's `manifest.json`. Lower is better.
  */
 internal data class RwkvLockEntry(
     val id: String,
@@ -37,6 +55,7 @@ internal data class RwkvLockEntry(
     val sha256: String,
     val zipBytes: Long,
     val zipSha256: String,
+    val logLoss: Double,
 )
 
 /**
@@ -51,11 +70,34 @@ internal object RwkvLock {
     /** Where [RwkvDownload] fetches an entry's asset: the release itself; AnkiQuest hosts nothing. */
     const val DOWNLOAD_URL = "https://github.com/JSchoreels/anki-rwkv/releases/download/$RELEASE/"
 
+    private const val BIG_BYTES = 11_082_637L
     private const val SMALL_BYTES = 1_351_553L
     private const val TINY_BYTES = 1_270_749L
 
     val ENTRIES =
         listOf(
+            RwkvLockEntry(
+                "sm91s2",
+                RwkvSize.BIG,
+                RwkvHead.TWO_HEAD,
+                "rwkv-big-two-head.zip",
+                BIG_BYTES,
+                "b53a89729d518c2db970833b7159904368fe9e882298e0f715f4d302f7cf4ed5",
+                24_696_077L,
+                "89ef63c92ab696ca7870ba6784bbf77fbe9ee9fa82c0ab310fcbf0e4ec129b5a",
+                0.299415,
+            ),
+            RwkvLockEntry(
+                "sm99",
+                RwkvSize.BIG,
+                RwkvHead.INSTANT,
+                "rwkv-big-instant-only.zip",
+                BIG_BYTES,
+                "682ba1ff207c51af7de5e2abeb25593362aa706b292cbcc338a1591fad0d935c",
+                24_698_170L,
+                "bc9e11fd6f696577c536d3a008cd28db9f67d9b0c0ce00c5779bab3d3f449b90",
+                0.275894,
+            ),
             RwkvLockEntry(
                 "sm92",
                 RwkvSize.SMALL,
@@ -65,6 +107,7 @@ internal object RwkvLock {
                 "4fbc5f963b6ef18d23dbc0f11358fed8a9c7c97c271d6eda95df3b8ed6fbeb6e",
                 3_005_254L,
                 "4d46763f92ea05b9ce03942391f190f252e2326eaa96fe1410a9e8e83fa421ca",
+                0.300356,
             ),
             RwkvLockEntry(
                 "sm98",
@@ -75,6 +118,7 @@ internal object RwkvLock {
                 "a006dcc039d19142dc95d257d9c238fb93c7efa12b78e18ec6ae881ac9009a24",
                 4_227_917L,
                 "8c982ebe703e3d832a5cd8a8f9a5f23c59828bf3afd48988b7fc769030c6c3b4",
+                0.276191,
             ),
             RwkvLockEntry(
                 "sm106",
@@ -85,6 +129,7 @@ internal object RwkvLock {
                 "5b346308bbab6ff32241742544af762b714a16334f6a979423b40dfec8897ec3",
                 4_097_873L,
                 "53216b442b983e85d7c5d0715b5797383ab8db3e2f62710f2944058123392e3b",
+                0.300676,
             ),
             RwkvLockEntry(
                 "sm101",
@@ -95,6 +140,7 @@ internal object RwkvLock {
                 "2faacb5b913bcfbdc0e363532d533e3bcff6872c8358f1ef753ca87f9d2a60fd",
                 4_027_791L,
                 "a16d5aa98b7120583518e4e2619d0285a6f4966706c6f0cf74acefa6416d0af9",
+                0.27672,
             ),
         )
 }

@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
-import android.text.format.Formatter
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -35,7 +34,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AndroidRwkvRam
@@ -69,8 +67,12 @@ import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.ankiquest.RwkvImport
 import com.ichi2.anki.ankiquest.RwkvImportError
 import com.ichi2.anki.ankiquest.RwkvLock
+import com.ichi2.anki.ankiquest.RwkvLockEntry
+import com.ichi2.anki.ankiquest.RwkvOfferAdapter
+import com.ichi2.anki.ankiquest.RwkvOfferWords
+import com.ichi2.anki.ankiquest.RwkvOffers
+import com.ichi2.anki.ankiquest.RwkvPhase
 import com.ichi2.anki.ankiquest.RwkvRam
-import com.ichi2.anki.ankiquest.RwkvSize
 import com.ichi2.anki.ankiquest.RwkvState
 import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.common.time.TimeManager
@@ -662,15 +664,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             if (stored.isEmpty()) {
                 getString(R.string.ankiquest_rwkv_models_none)
             } else {
-                stored.joinToString { "${rwkvSize(it.size)} ${it.id.uppercase()}" }
+                val words = RwkvOfferWords(requireContext())
+                stored.joinToString { words.name(it) }
             }
     }
-
-    private fun rwkvSize(size: RwkvSize): String =
-        when (size) {
-            RwkvSize.SMALL -> TR.deckConfigRwkvModelSmall()
-            RwkvSize.TINY -> TR.deckConfigRwkvModelTiny()
-        }
 
     /** The weights are not ours to ship: the player downloads them and picks the files. */
     private fun showRwkvImport() {
@@ -684,34 +681,43 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             .show()
     }
 
-    /** The sizes with what each download fetches; picking one downloads it. */
+    /**
+     * Every model of the release, with its download size and the memory it needs for this
+     * collection. A model that does not fit is greyed out with the reason; picking one downloads it.
+     */
     private fun showRwkvDownload() {
-        val downloader = AnkiquestRwkv.downloader(requireContext())
-        val sizes = RwkvSize.entries
-        val items =
-            sizes
-                .map { size ->
-                    val bytes = Formatter.formatShortFileSize(requireContext(), downloader.bytes(size))
-                    getString(R.string.ankiquest_rwkv_download_size, rwkvSize(size), bytes)
-                }.toTypedArray()
-        AlertDialog
-            .Builder(requireContext())
-            .setTitle(R.string.ankiquest_rwkv_import_download)
-            .setItems(items) { _, which -> downloadRwkv(sizes[which]) }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        val context = requireContext().applicationContext
+        launchCatchingTask {
+            val list = AnkiquestRwkv.offers(context, AndroidRwkvRam(context))
+            if (!isAdded) {
+                return@launchCatchingTask
+            }
+            AlertDialog
+                .Builder(requireContext())
+                .setTitle(R.string.ankiquest_rwkv_import_download)
+                .setAdapter(RwkvOfferAdapter(requireContext(), list)) { _, which -> downloadRwkv(list.offers[which].entry) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
     }
 
-    /** Downloads [size]'s models, saying which file of how many is being fetched. */
+    /** Downloads [entry], and its two-head model if it needs one, saying which file is fetched or checked. */
     @Suppress("Deprecation") // ProgressDialog, as withProgressDialog shows it
-    private fun downloadRwkv(size: RwkvSize) {
+    private fun downloadRwkv(entry: RwkvLockEntry) {
         val activity = requireActivity()
         val context = activity.applicationContext
+        // Named here, on the main thread: the progress is reported from the download's thread.
+        val words = RwkvOfferWords(activity)
+        val names = RwkvOffers.runsWith(entry).associateWith { words.name(it) }
         launchCatchingTask {
             val results =
                 withProgressDialog(activity, onCancel = null) { dialog ->
-                    AnkiquestRwkv.download(context, size) { done, total ->
-                        val text = context.getString(R.string.ankiquest_rwkv_downloading, done + 1, total)
+                    AnkiquestRwkv.download(context, entry) { file, phase ->
+                        val text =
+                            when (phase) {
+                                RwkvPhase.DOWNLOADING -> context.getString(R.string.ankiquest_rwkv_downloading, names.getValue(file))
+                                RwkvPhase.VERIFYING -> context.getString(R.string.ankiquest_rwkv_verifying)
+                            }
                         activity.runOnUiThread { dialog.setMessage(text) }
                     }
                 }
@@ -750,14 +756,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val errors = results.filterIsInstance<RwkvImport.Rejected>().map { it.error }.toSet()
         // The most specific reason: an unknown file only when nothing else went wrong.
         val error = errors.firstOrNull { it != RwkvImportError.UNKNOWN_FILE } ?: RwkvImportError.UNKNOWN_FILE
-        return getString(
-            when (error) {
-                RwkvImportError.UNKNOWN_FILE -> R.string.ankiquest_rwkv_import_unknown
-                RwkvImportError.UNREADABLE -> R.string.ankiquest_rwkv_import_unreadable
-                RwkvImportError.NETWORK_FAILED -> R.string.ankiquest_rwkv_download_network
-                RwkvImportError.DOWNLOAD_MISMATCH -> R.string.ankiquest_rwkv_download_mismatch
-            },
-        )
+        return getString(AnkiquestRwkv.importError(error))
     }
 
     /**

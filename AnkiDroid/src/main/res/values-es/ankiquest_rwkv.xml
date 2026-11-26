@@ -9,12 +9,31 @@
     <string name="ankiquest_rwkv_ready">Activado: RWKV programa los grupos de opciones puestos en RWKV en las opciones del mazo.</string>
     <string name="ankiquest_rwkv_models_title">Archivos de modelo RWKV</string>
     <string name="ankiquest_rwkv_models_none">Ninguno importado.</string>
-    <string name="ankiquest_rwkv_import_message">AnkiQuest no incluye pesos RWKV: no tienen licencia para redistribuirse y son solo para uso personal y de investigación (WEIGHTS-NOTICE.md de la versión %1$s de JSchoreels/anki-rwkv). Descargar trae los modelos de un tamaño desde esa versión en GitHub. O descarga tú el zip de dos cabezas y, si quieres, el zip Instant-only del mismo tamaño, y elige los zips o sus archivos weights.f32.bin. Solo se guardan los archivos cuyo SHA-256 coincide con un modelo conocido.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest no incluye pesos RWKV: no tienen licencia para redistribuirse y son solo para uso personal y de investigación (WEIGHTS-NOTICE.md de la versión %1$s de JSchoreels/anki-rwkv). Descargar muestra cada modelo de esa versión en GitHub con la memoria que necesita para tu colección y descarga el que elijas. O descarga tú los zips y elígelos, o sus archivos weights.f32.bin. Solo se guardan los archivos cuyo SHA-256 coincide con un modelo conocido.</string>
     <string name="ankiquest_rwkv_import_choose">Elegir archivos</string>
     <string name="ankiquest_rwkv_import_download">Descargar</string>
-    <string name="ankiquest_rwkv_downloading">Descargando %1$d de %2$d…</string>
+    <string name="ankiquest_rwkv_downloading">Descargando %1$s…</string>
     <string name="ankiquest_rwkv_download_network">No descargado: no hay conexión con GitHub.</string>
     <string name="ankiquest_rwkv_download_mismatch">No descargado: el archivo no coincide con el modelo RWKV conocido.</string>
+    <string name="ankiquest_rwkv_two_head">de dos cabezas</string>
+    <string name="ankiquest_rwkv_instant_only">Instant-only</string>
+    <string name="ankiquest_rwkv_recommended">Recomendado</string>
+    <string name="ankiquest_rwkv_recommended_reason">El modelo más preciso que cabe en este teléfono: LogLoss %1$s en la evaluación de la versión; cuanto más bajo, mejor.</string>
+    <string name="ankiquest_rwkv_downloaded">Descargado. %1$s</string>
+    <string name="ankiquest_rwkv_verifying">Comprobando el archivo…</string>
+    <string name="ankiquest_rwkv_failed">%1$s Toca para volver a intentarlo.</string>
+    <plurals name="ankiquest_rwkv_needs">
+        <item quantity="one">Necesita unos %1$s para tu %2$s tarjeta.</item>
+        <item quantity="other">Necesita unos %1$s para tus %2$s tarjetas.</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_needs_beside">
+        <item quantity="one">Necesita unos %1$s para tu %2$s tarjeta, con el modelo de dos cabezas de su tamaño.</item>
+        <item quantity="other">Necesita unos %1$s para tus %2$s tarjetas, con el modelo de dos cabezas de su tamaño.</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_too_big">
+        <item quantity="one">Necesita unos %1$s para tu %2$s tarjeta; este teléfono permite %3$s.</item>
+        <item quantity="other">Necesita unos %1$s para tus %2$s tarjetas; este teléfono permite %3$s.</item>
+    </plurals>
     <string name="ankiquest_rwkv_imported">Importado: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">No importado: ningún archivo coincide con un modelo RWKV conocido.</string>
     <string name="ankiquest_rwkv_import_unreadable">No importado: no se pudo leer el archivo.</string>

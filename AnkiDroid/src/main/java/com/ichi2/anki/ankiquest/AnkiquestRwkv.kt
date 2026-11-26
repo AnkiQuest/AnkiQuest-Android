@@ -28,6 +28,7 @@ import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 
 /** The phone's total RAM, behind a seam so the checks can be tested without a device. */
 internal fun interface RwkvRam {
@@ -93,6 +94,9 @@ internal object AnkiquestRwkv {
     private val transitions = Mutex()
     private var watcher: Job? = null
     private val runningFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Downloads being checked or not kept, by lock entry id, for the Download list; this process only. */
+    private val attempts = ConcurrentHashMap<String, RwkvAttempt>()
 
     /** Emits when the backend's model state is installed: the deck list redraws its counts. */
     val running: SharedFlow<Unit> = runningFlow
@@ -161,19 +165,64 @@ internal object AnkiquestRwkv {
     }
 
     /**
-     * Downloads [size]'s models from the official release; the caller restores the state afterwards,
-     * as after an import. Each zip is checked against the lock before it is read.
+     * Downloads [entry] from the official release, after its size's two-head model if that is not
+     * stored: an Instant-only model never runs alone here. The caller restores the state afterwards,
+     * as after an import. Each zip is checked against the lock before it is read; [progress] hears
+     * which entry is in which phase. The entry's row in [offers] shows the check while it runs and the
+     * failure after one.
      */
     suspend fun download(
         context: Context,
-        size: RwkvSize,
-        progress: (done: Int, total: Int) -> Unit,
+        entry: RwkvLockEntry,
+        progress: (RwkvLockEntry, RwkvPhase) -> Unit,
     ): List<RwkvImport> =
         transitions.withLock {
-            withContext(ioDispatcher) { downloader(context).download(size, progress) }
+            withContext(ioDispatcher) {
+                val store = store(context)
+                val stored = store.stored()
+                val missing = RwkvOffers.runsWith(entry).filter { it == entry || it !in stored }
+                val results = mutableListOf<RwkvImport>()
+                for (next in missing) {
+                    val result = fetchOne(store, next, progress)
+                    results.add(result)
+
+                    // Without its two-head model, an Instant-only model is not worth fetching.
+                    if (result is RwkvImport.Rejected) {
+                        break
+                    }
+                }
+                results
+            }
         }
 
-    fun downloader(context: Context) = RwkvDownload(store(context), GithubPackFetch(AnkiquestHttp.client))
+    private fun fetchOne(
+        store: RwkvModelStore,
+        entry: RwkvLockEntry,
+        progress: (RwkvLockEntry, RwkvPhase) -> Unit,
+    ): RwkvImport {
+        val result =
+            RwkvDownload(store, GithubPackFetch(AnkiquestHttp.client)).download(entry) { phase ->
+                if (phase == RwkvPhase.VERIFYING) {
+                    attempts[entry.id] = RwkvAttempt.Verifying
+                }
+                progress(entry, phase)
+            }
+        when (result) {
+            is RwkvImport.Imported -> attempts.remove(entry.id)
+            is RwkvImport.Rejected -> attempts[entry.id] = RwkvAttempt.Failed(result.error)
+        }
+        return result
+    }
+
+    /** The Download list for this phone and collection. */
+    suspend fun offers(
+        context: Context,
+        ram: RwkvRam,
+    ): RwkvOfferList =
+        withContext(ioDispatcher) {
+            val device = RwkvDevice(ram.totalBytes(), collection())
+            RwkvOfferList(device, RwkvOffers.list(device, store(context).stored(), attempts.toMap()))
+        }
 
     /**
      * The deck options page saved presets: which models run depends on their schedulers, so a
@@ -220,9 +269,12 @@ internal object AnkiquestRwkv {
     ): RwkvChecks =
         RwkvChecks(
             totalRamBytes = ram.totalBytes(),
-            cards = CollectionManager.withCol { cardCount() },
+            collection = collection(),
             models = store(context).models(RwkvVerify.SIZE),
         )
+
+    /** Each card and each note keeps a model state. */
+    private suspend fun collection(): RwkvCollection = CollectionManager.withCol { RwkvCollection(cardCount(), noteCount()) }
 
     /**
      * The deck list was drawn with the standard counts while the backend replays the history on its
@@ -267,8 +319,18 @@ internal object AnkiquestRwkv {
     @StringRes
     private fun reason(blocker: RwkvBlocker): Int =
         when (blocker) {
-            RwkvBlocker.NOT_ENOUGH_MEMORY -> R.string.ankiquest_rwkv_not_enough_memory
             RwkvBlocker.NO_MODEL -> R.string.ankiquest_rwkv_no_model
+            RwkvBlocker.NOT_ENOUGH_MEMORY -> R.string.ankiquest_rwkv_not_enough_memory
             RwkvBlocker.BACKEND_FAILED -> R.string.ankiquest_rwkv_backend_failed
+        }
+
+    /** What a picked or downloaded file that was not kept says. */
+    @StringRes
+    fun importError(error: RwkvImportError): Int =
+        when (error) {
+            RwkvImportError.UNKNOWN_FILE -> R.string.ankiquest_rwkv_import_unknown
+            RwkvImportError.UNREADABLE -> R.string.ankiquest_rwkv_import_unreadable
+            RwkvImportError.NETWORK_FAILED -> R.string.ankiquest_rwkv_download_network
+            RwkvImportError.DOWNLOAD_MISMATCH -> R.string.ankiquest_rwkv_download_mismatch
         }
 }
