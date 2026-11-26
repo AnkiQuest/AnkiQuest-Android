@@ -142,8 +142,7 @@ internal object AnkiquestRwkv {
     suspend fun import(
         context: Context,
         inputs: List<() -> InputStream>,
-    ): List<RwkvImport> {
-        return transitions.withLock {
+    ): List<RwkvImport> = transitions.withLock {
             withContext(ioDispatcher) {
                 val store = store(context)
                 inputs.map { open ->
@@ -167,8 +166,7 @@ internal object AnkiquestRwkv {
         context: Context,
         size: RwkvSize,
         progress: (done: Int, total: Int) -> Unit,
-    ): List<RwkvImport> =
-        transitions.withLock {
+    ): List<RwkvImport> = transitions.withLock {
             withContext(ioDispatcher) { downloader(context).download(size, progress) }
         }
 
