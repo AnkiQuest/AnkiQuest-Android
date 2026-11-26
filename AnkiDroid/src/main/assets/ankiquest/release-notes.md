@@ -38,7 +38,7 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 
 **Streak widget.** Every size shows one flame, beside the number.
 
-**Fixes.** A review on a freeze-protected day counts toward today instead of reading "not studied yet". A failed certificate check is named as such instead of "waiting for a connection". The share sheet's Send works and the sheet is translated. Deck name patterns no longer crash. Moments about a companion this build cannot draw wait for an update that can.
+**Fixes.** A review on a freeze-protected day counts toward today instead of reading "not studied yet". A failed certificate check is named as such instead of "waiting for a connection". The share sheet's Send works and the sheet is translated. Deck name patterns no longer crash. Moments about a companion this build cannot draw wait for an update that can. Image occlusion notes keep every shape property after an empty value or a backslash. "Optimize all presets" asks to save only when the deck options changed.
 
 **Server.** This release needs a current AnkiQuest server. On an older one, the app says "Update your AnkiQuest server".
 
