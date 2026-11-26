@@ -148,7 +148,9 @@ jobs:
     # instead. A failed changes job leaves the output empty, so the tests still run.
     if: ${{ !cancelled() && needs.matrix_prep.result == 'success' }}
     # Windows takes about 71 minutes on tests (run 44883059552); 75 cut off
-    # the upload after they passed
+    # the upload after they passed.
+    # Keep this above the 'Run Unit Tests' timeout: a job timeout cancels the job, which can
+    # interrupt the Gradle cache upload and block later saves of that cache key
     timeout-minutes: 90
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -257,6 +259,10 @@ jobs:
         # update workflows/README.md when modifying this step
       - name: Run Unit Tests
         if: needs.changes.outputs.code != 'false'
+        # A step timeout fails the job rather than cancelling it, so the Gradle cache is still saved.
+        # Leave at least 10m of the job timeout for setup (≤5m) and the cache upload (≤4m).
+        # Upstream uses 65 of 90; Windows needs about 71 here
+        timeout-minutes: 80
         run: ./gradlew :AnkiDroid:jacocoCiUnitTestReports --daemon
 
       - name: Save Gradle cache
