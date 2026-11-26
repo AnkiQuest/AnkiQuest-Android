@@ -17,7 +17,10 @@ internal object AnkiquestReleaseNotes {
     private val LINK = Regex("""\[([^\]]+)]\(([^)\s]+)\)""")
     private val BOLD = Regex("""\*\*(.+?)\*\*""")
 
-    fun read(context: Context, asset: String = ASSET): String =
+    fun read(
+        context: Context,
+        asset: String = ASSET,
+    ): String =
         context.assets
             .open(asset)
             .bufferedReader()
