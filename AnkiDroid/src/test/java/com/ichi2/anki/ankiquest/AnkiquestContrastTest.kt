@@ -26,11 +26,27 @@ import kotlin.test.assertTrue
 class AnkiquestContrastTest : RobolectricTest(loadBackend = false) {
     @Test
     @Config(qualifiers = "notnight")
-    fun `the day colours stay readable`() = assertReadable()
+    fun `the day colours stay readable`() {
+        assertReadable()
+        // A deck row's daily status badge writes in its colour's own ink over the deck row,
+        // which is light by day: the later-time amber, the done-today green and the muted ready.
+        assertDeckBadges(android.R.color.white)
+    }
 
     @Test
     @Config(qualifiers = "night")
-    fun `the night colours stay readable`() = assertReadable()
+    fun `the night colours stay readable`() {
+        assertReadable()
+        // At night the deck row is dark and the same inks are the badge colours' light ones,
+        // as the palette's night inks are.
+        assertDeckBadges(android.R.color.black)
+    }
+
+    private fun assertDeckBadges(background: Int) {
+        for (foreground in DECK_BADGE_INKS) {
+            assert(targetContext, foreground, background, MIN_TEXT_CONTRAST)
+        }
+    }
 
     private fun assertReadable() {
         val context: Context = targetContext
@@ -81,6 +97,15 @@ class AnkiquestContrastTest : RobolectricTest(loadBackend = false) {
                 R.color.aq_rwkv_due to R.color.aq_home_surface,
                 R.color.aq_rwkv_near to R.color.aq_home_surface,
                 R.color.aq_rwkv_safe to R.color.aq_home_surface,
+            )
+
+        // The deck rows' daily status texts (AnkiquestDailyDeckState.color), the badge colour's
+        // own ink: the later-time amber, the done-today green and the muted ready count.
+        private val DECK_BADGE_INKS =
+            listOf(
+                R.color.aq_deck_amber,
+                R.color.aq_deck_green,
+                R.color.aq_home_muted,
             )
     }
 }
