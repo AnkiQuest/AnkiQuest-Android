@@ -45,6 +45,7 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
 import com.ichi2.anki.ankiquest.AnkiquestBoards
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
