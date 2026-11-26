@@ -42,11 +42,21 @@ class AnkiquestLayoutAccessibilityTest : RobolectricTest(loadBackend = false) {
         for ((layout, image) in images()) {
             // A button the launcher wires by its id counts too, even in a widget.
             val button = image is ImageButton || image.id == R.id.ankiquest_widget_refresh
-            if (!button) continue
-            for (name in listOf("wide", "tall")) {
-                val size = if (name == "wide") image.layoutParams.width else image.layoutParams.height
-                assertTrue(size <= 0 || size >= minimum, "$layout is not ${MIN_TOUCH_TARGET_DP}dp $name: $size px")
+            if (!button) {
+                continue
             }
+            // wrap_content and match_parent are decided by what the view measures to, so the
+            // inflated size is what counts, with minWidth and minHeight as the floor a layout
+            // may set instead.
+            image.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+            assertTrue(
+                maxOf(image.measuredWidth, image.minimumWidth) >= minimum,
+                "$layout is not ${MIN_TOUCH_TARGET_DP}dp wide: ${image.measuredWidth} px",
+            )
+            assertTrue(
+                maxOf(image.measuredHeight, image.minimumHeight) >= minimum,
+                "$layout is not ${MIN_TOUCH_TARGET_DP}dp tall: ${image.measuredHeight} px",
+            )
         }
     }
 

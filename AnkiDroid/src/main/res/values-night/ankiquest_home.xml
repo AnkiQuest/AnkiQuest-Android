@@ -11,4 +11,9 @@
     <color name="aq_home_tint">#283F59</color>
     <color name="aq_home_avatar_text">@color/aq_home_text</color>
     <color name="aq_home_outline">#3B4C58</color>
+    <!-- The same banner looks by night; only the surface they tint changes. -->
+    <color name="aq_banner_important">#F0B8860B</color>
+    <color name="aq_banner_quiet">#E0202830</color>
+    <color name="aq_banner_important_ink">#FF23272E</color>
+    <color name="aq_banner_quiet_ink">#FFFFFFFF</color>
 </resources>
