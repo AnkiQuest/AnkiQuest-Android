@@ -56,3 +56,35 @@ examples: a server change to those values changes the pictures, and the
 screenshot baseline is stored again.
 
 Run the workflow helper tests with `node --test .github/tests/*.test.cjs`.
+
+## Shared rules
+
+Rules both clients compute move into AnkiQuest-Server's `crates/rules`, one
+at a time (AnkiQuest/AnkiQuest-Server#83, `docs/shared-rules.md` there).
+The app calls them through UniFFI's Kotlin bindings and JNA. Nothing is
+committed or pinned: every build takes the newest `rules-<N>` release of
+AnkiQuest-Server (buildSrc `AnkiquestRules.kt`):
+
+- `ankiquest_rules.kt`, the bindings, into generated Kotlin sources
+  (package `org.ankiquest.rules`).
+- `libankiquest_rules-android-<abi>.so` for arm64-v8a, armeabi-v7a, x86
+  and x86_64, into generated `jniLibs`.
+- `ankiquest/rules-release.json` in the assets: the tag and the SHA-256 of
+  each of those, so an APK names the release it was built from.
+- For the unit tests, the desktop library of the machine they run on
+  (Linux x86_64 and aarch64, Windows x86_64, macOS arm64 and x86_64),
+  which the test JVM loads through `jna.library.path`.
+
+Each asset is checked against the release's `SHA256SUMS` and cached by
+SHA-256 in `~/.gradle/caches/ankiquest-rules` (or `ANKIQUEST_RULES_CACHE`).
+The newest tag comes from the repository's git refs, which have no API rate
+limit; offline, a build uses the newest release it saw before.
+
+```sh
+ANKIQUEST_RULES_TAG=rules-3 ./gradlew ...   # rebuild with a given release
+ANKIQUEST_RULES_DIR=<dir> ./gradlew ...     # assets and SHA256SUMS in a folder
+```
+
+`-PankiquestRulesTag`, `-PankiquestRulesDir` and `-PankiquestRulesCache`
+do the same. `com.ichi2.anki.ankiquest.AnkiquestSharedRules` is the only
+code that imports the bindings; the rest of the app uses its own types.

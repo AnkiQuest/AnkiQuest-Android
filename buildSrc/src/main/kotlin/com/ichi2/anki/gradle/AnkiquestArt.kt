@@ -74,23 +74,41 @@ object AnkiquestArt {
     fun fetch(
         asset: Asset,
         cache: File,
-        download: (URI) -> ByteArray = { url -> url.toURL().openStream().use { it.readBytes() } },
+        download: (URI) -> ByteArray = ::get,
+    ): File =
+        cached(asset.url, asset.sha256, cache, download) { actual ->
+            "${asset.name} of ${asset.tag} has SHA-256 $actual; $PIN says ${asset.sha256}"
+        }
+
+    /**
+     * The bytes with SHA-256 [sha256], from [cache] (one file per asset, named by its hash) or from
+     * [url] through [download]. Bytes with another hash fail the build with [mismatch] of their hash
+     * and are never cached. AnkiQuest-Server's rules releases use it too ([AnkiquestRules]).
+     */
+    fun cached(
+        url: URI,
+        sha256: String,
+        cache: File,
+        download: (URI) -> ByteArray = ::get,
+        mismatch: (String) -> String,
     ): File {
-        // A cached copy counts only with the pinned hash, so a damaged file is fetched again.
-        val cached = cache.resolve(asset.sha256)
-        if (cached.isFile && sha256(cached.readBytes()) == asset.sha256) {
+        // A cached copy counts only with the expected hash, so a damaged file is fetched again.
+        val cached = cache.resolve(sha256)
+        if (cached.isFile && sha256(cached.readBytes()) == sha256) {
             return cached
         }
 
-        val bytes = download(asset.url)
+        val bytes = download(url)
         val actual = sha256(bytes)
-        if (actual != asset.sha256) {
-            throw GradleException("${asset.name} of ${asset.tag} has SHA-256 $actual; $PIN says ${asset.sha256}")
+        if (actual != sha256) {
+            throw GradleException(mismatch(actual))
         }
         cache.mkdirs()
         cached.writeBytes(bytes)
         return cached
     }
+
+    fun get(url: URI): ByteArray = url.toURL().openStream().use { it.readBytes() }
 
     /**
      * Unpacks the drawables of [zip] into [res]`/drawable-nodpi` and answers their names. An entry

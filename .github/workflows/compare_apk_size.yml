@@ -79,7 +79,10 @@ jobs:
       - name: Checkout Baseline for PR
         # we want to checkout the base for this PR on main, not just main - as main moves over time
         # and we want to know the isolated affect of this PR regardless of when the workflow executes
-        run: git checkout `git merge-base origin/main HEAD`
+        # AnkiQuest: the base is the default branch, master here.
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: git checkout "$(git merge-base "origin/$DEFAULT_BRANCH" HEAD)"
 
       - name: Assemble Baseline APK
         # This makes sure we fetch gradle network resources with a retry

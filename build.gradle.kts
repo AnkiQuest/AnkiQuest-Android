@@ -94,6 +94,10 @@ subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     configure<KtlintExtension> {
         version.set(ktlintVersion)
+        // Generated sources (the shared rules' UniFFI bindings, say) are not ours to format.
+        filter {
+            exclude { it.file.invariantSeparatorsPath.contains("/build/generated/") }
+        }
     }
 
     tasks.withType<Test>().configureEach {
