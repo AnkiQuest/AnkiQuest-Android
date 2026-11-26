@@ -24,6 +24,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -143,14 +144,19 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         for (row in keys) {
             val setting = Setting.entries.single { it.key == row.getString("key") }
             assertEquals(row.getString("android"), setting.pref, row.toString())
-            assertEquals(row.get("default"), setting.default, row.toString())
-            assertTrue(setting.usable(row.get("default")), row.toString())
+            assertEquals(setting.decode(row.get("default")), setting.default, row.toString())
+            assertTrue(setting.usable(setting.decode(row.get("default"))), row.toString())
             when (row.getString("type")) {
                 "bool" -> assertFalse(setting.usable(1), row.toString())
                 "int" -> {
                     assertTrue(setting.usable(row.getInt("min")) && setting.usable(row.getInt("max")), row.toString())
                     assertFalse(setting.usable(row.getInt("min") - 1) || setting.usable(row.getInt("max") + 1), row.toString())
                     assertFalse(setting.usable(true), row.toString())
+                }
+                "countdowns" -> {
+                    assertEquals(AnkiquestCountdowns.FEATURE, setting.feature, row.toString())
+                    assertFalse(setting.usable(true), row.toString())
+                    assertFalse(setting.usable(setting.decode(JSONArray("[1]"))), row.toString())
                 }
                 else -> error("unknown type in $row")
             }
@@ -179,14 +185,18 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         check(cases.isNotEmpty())
         for (case in cases) {
             val setting = Setting.entries.single { it.key == case.getString("key") }
-            val local = case.getJSONObject("local").let { Local(it.get("value"), it.getLong("changed_at")) }
-            val remote = case.optJSONObject("remote")?.let { Entry(it.get("value"), it.getLong("updated_at")) }
+            val local = case.getJSONObject("local").let { Local(setting.decode(it.get("value")), it.getLong("changed_at")) }
+            val remote = case.optJSONObject("remote")?.let { Entry(setting.decode(it.get("value")), it.getLong("updated_at")) }
             val result = AnkiquestSettingsSync.merge(setting, local, remote)
             val expected = case.getJSONObject("expected")
-            assertEquals(expected.get("value"), result.value, case.getString("name"))
+            assertEquals(setting.decode(expected.get("value")), result.value, case.getString("name"))
             assertEquals(expected.getLong("changed_at"), result.changedAt, case.getString("name"))
             val push = expected.optJSONObject("push")
-            assertEquals(push?.let { Entry(it.get("value"), it.getLong("updated_at")) }, result.push, case.getString("name"))
+            assertEquals(
+                push?.let { Entry(setting.decode(it.get("value")), it.getLong("updated_at")) },
+                result.push,
+                case.getString("name"),
+            )
         }
     }
 
@@ -432,7 +442,293 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
         assertEquals(entry(false, NOW).toString(), push.getJSONObject("streak_cue").toString())
     }
 
+    @Test
+    fun `countdowns sync only with a server that keeps them`() =
+        runBlocking {
+            AnkiquestCountdowns.write(prefs(), SPANISH)
+            assertTrue(AnkiquestSettingsSync.note(Setting.COUNTDOWNS))
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            assertTrue(sent.none { it.has("countdowns") }, "an older server would refuse a long list")
+
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestCapabilities.refresh(account())
+            AnkiquestSettingsSync.sync(targetContext, Trigger.CHANGE)
+            val push = assertNotNull(sent.lastOrNull { it.has("countdowns") }, "sent once the server keeps them")
+            assertEquals(SPANISH.toJson().toString(), push.getJSONObject("countdowns").getJSONArray("value").toString())
+            assertEquals(NOW, push.getJSONObject("countdowns").getLong("updated_at"))
+        }
+
+    @Test
+    fun `a newer countdown list from another device replaces the one here`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            stored.put("countdowns", entry(SPANISH.toJson(), NOW - 1_000))
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+            assertTrue(sent.none { it.has("countdowns") })
+        }
+
+    private fun signIn(user: String) {
+        prefs().edit(commit = true) {
+            putString(Ankiquest.PREF_USER, user)
+            putString(Ankiquest.PREF_TOKEN, "$user-token")
+        }
+        AnkiquestSettingsSync.switchOwner(prefs())
+    }
+
+    private fun signOut() {
+        prefs().edit(commit = true) {
+            remove(Ankiquest.PREF_USER)
+            remove(Ankiquest.PREF_TOKEN)
+        }
+        AnkiquestSettingsSync.switchOwner(prefs())
+    }
+
+    /** Saves [list] here as the player would, with the time of the change. */
+    private fun save(list: AnkiquestCountdowns.Countdowns) {
+        AnkiquestCountdowns.write(prefs(), list)
+        AnkiquestSettingsSync.note(Setting.COUNTDOWNS)
+    }
+
+    private fun signedOut() = AnkiquestSettingsSync.signedOut(Setting.COUNTDOWNS, prefs())
+
+    /** Signed out with [DRIVING], then signed in to a server that keeps [SPANISH]. */
+    private fun signInWithSignedOutList() {
+        features = """["settings_sync","countdowns"]"""
+        stored.put("countdowns", entry(SPANISH.toJson(), NOW - 1_000))
+        AnkiquestSettingsSync.switchOwner(prefs())
+        signOut()
+        save(DRIVING)
+        signIn("cerro")
+    }
+
+    @Test
+    fun `each account keeps its own countdowns`() {
+        AnkiquestSettingsSync.switchOwner(prefs())
+        save(SPANISH)
+
+        signIn("second")
+        assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+        assertEquals(0L, records().getJSONObject("countdowns").getLong("at"), "a sync sends nothing of the first account's")
+
+        signIn("cerro")
+        assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+        assertEquals(NOW, records().getJSONObject("countdowns").getLong("at"))
+    }
+
+    @Test
+    fun `private countdowns are not uploaded to the next account`() =
+        runBlocking {
+            // Aldana's regression from the review of #419: the sync must not wait for the
+            // preference listener to put the previous player's list away.
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestSettingsSync.switchOwner(prefs())
+            save(SPANISH)
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            sent.clear()
+
+            // The next account already has an older, empty list on the server.
+            stored.put("countdowns", entry(JSONArray(), NOW - 10_000))
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "another-player")
+                putString(Ankiquest.PREF_TOKEN, "another-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertTrue(sent.none { it.has("countdowns") }, "the previous player's event must not be sent with another token")
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+
+            // Signing back in with a refreshed token restores this account's list.
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "cerro")
+                putString(Ankiquest.PREF_TOKEN, "refreshed-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+        }
+
+    @Test
+    fun `signing in does not publish the signed-out list`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            AnkiquestSettingsSync.switchOwner(prefs())
+            signOut()
+            save(DRIVING)
+
+            prefs().edit(commit = true) {
+                putString(Ankiquest.PREF_USER, "cerro")
+                putString(Ankiquest.PREF_TOKEN, "new-token")
+            }
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertTrue(sent.none { it.has("countdowns") }, "signing in does not publish the signed-out list")
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+        }
+
+    @Test
+    fun `a new token for the same account keeps its countdowns`() {
+        AnkiquestSettingsSync.switchOwner(prefs())
+        save(SPANISH)
+
+        prefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        AnkiquestSettingsSync.switchOwner(prefs())
+
+        assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+    }
+
+    @Test
+    fun `countdowns made while signed out stay on this phone`() {
+        AnkiquestSettingsSync.switchOwner(prefs())
+        save(SPANISH)
+        signOut()
+        assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+        save(DRIVING)
+
+        signIn("first-login")
+        assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+        assertEquals(DRIVING, signedOut())
+
+        signOut()
+        assertEquals(DRIVING, AnkiquestCountdowns.read(prefs()))
+    }
+
+    @Test
+    fun `signing in offers them once the account's settings have synced`() =
+        runBlocking {
+            signInWithSignedOutList()
+            assertEquals(AnkiquestSettingsSync.Offer.AFTER_SYNC, AnkiquestSettingsSync.offer)
+            assertNull(AnkiquestCountdownImport.pending(prefs()), "the account's list is not known yet")
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            val pending = assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+            assertEquals("cerro", pending.user)
+            assertEquals(1, pending.count)
+            assertNull(AnkiquestCountdownImport.pending(prefs()), "asked once")
+
+            AnkiquestCountdownImport.accept(prefs(), pending)
+            assertEquals(AnkiquestCountdowns.Countdowns(SPANISH.events + DRIVING.events), AnkiquestCountdowns.read(prefs()))
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, signedOut())
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.CHANGE)
+            val push = assertNotNull(sent.lastOrNull { it.has("countdowns") })
+            assertEquals(
+                AnkiquestCountdowns.Countdowns(SPANISH.events + DRIVING.events).toJson().toString(),
+                push.getJSONObject("countdowns").getJSONArray("value").toString(),
+            )
+        }
+
+    @Test
+    fun `declining keeps them on this phone, shown while signed out`() =
+        runBlocking {
+            signInWithSignedOutList()
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+
+            assertEquals(SPANISH, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+            signOut()
+            assertEquals(DRIVING, AnkiquestCountdowns.read(prefs()))
+        }
+
+    @Test
+    fun `a list changed while the question is open is left alone and asked about again`() =
+        runBlocking {
+            signInWithSignedOutList()
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            val pending = assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+
+            val both = AnkiquestCountdowns.Countdowns(SPANISH.events + DRIVING.events)
+            save(both)
+            assertFalse(AnkiquestCountdownImport.accept(prefs(), pending))
+
+            assertEquals(both, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+            assertEquals(AnkiquestSettingsSync.Offer.AFTER_SYNC, AnkiquestSettingsSync.offer)
+        }
+
+    @Test
+    fun `another account signed in while the question is open is not changed`() =
+        runBlocking {
+            signInWithSignedOutList()
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+            val pending = assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+
+            signIn("second")
+            assertFalse(AnkiquestCountdownImport.accept(prefs(), pending))
+
+            assertEquals(AnkiquestCountdowns.Countdowns.EMPTY, AnkiquestCountdowns.read(prefs()))
+            assertEquals(DRIVING, signedOut())
+        }
+
+    @Test
+    fun `no offer before the account's countdowns have synced`() =
+        runBlocking {
+            signInWithSignedOutList()
+            features = """["settings_sync"]"""
+            AnkiquestCapabilities.forgetMemory()
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertNull(AnkiquestCountdownImport.pending(prefs()))
+            assertEquals(AnkiquestSettingsSync.Offer.AFTER_SYNC, AnkiquestSettingsSync.offer)
+        }
+
+    @Test
+    fun `a failed sync offers nothing yet`() =
+        runBlocking {
+            signInWithSignedOutList()
+            server.close()
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertNull(AnkiquestCountdownImport.pending(prefs()))
+            assertEquals(AnkiquestSettingsSync.Offer.AFTER_SYNC, AnkiquestSettingsSync.offer)
+        }
+
+    @Test
+    fun `nothing to add offers nothing`() =
+        runBlocking {
+            features = """["settings_sync","countdowns"]"""
+            stored.put("countdowns", entry(DRIVING.toJson(), NOW - 1_000))
+            AnkiquestSettingsSync.switchOwner(prefs())
+            signOut()
+            save(DRIVING)
+            signIn("cerro")
+
+            AnkiquestSettingsSync.sync(targetContext, Trigger.START)
+
+            assertNull(AnkiquestCountdownImport.pending(prefs()))
+            assertEquals(AnkiquestSettingsSync.Offer.NONE, AnkiquestSettingsSync.offer)
+        }
+
+    @Test
+    fun `with the switch off the offer comes at once`() {
+        AnkiquestSettingsSync.switchOwner(prefs())
+        signOut()
+        save(DRIVING)
+        switchOff()
+
+        signIn("cerro")
+
+        val pending = assertNotNull(AnkiquestCountdownImport.pending(prefs()))
+        AnkiquestCountdownImport.accept(prefs(), pending)
+        assertEquals(DRIVING, AnkiquestCountdowns.read(prefs()))
+        assertTrue(requests.isEmpty())
+    }
+
     private companion object {
+        val DRIVING =
+            AnkiquestCountdowns.Countdowns(
+                listOf(AnkiquestCountdowns.Countdown("Driving test", java.time.LocalDate.of(2027, 1, 10), null)),
+            )
+        val SPANISH =
+            AnkiquestCountdowns.Countdowns(
+                listOf(AnkiquestCountdowns.Countdown("Spanish exam", java.time.LocalDate.of(2026, 11, 25), "Spanish::A1")),
+            )
         const val NOW = 1_793_183_400_000L
         const val WAIT_MS = 5_000L
         const val FIXTURE = "ankiquest/synced_settings.json"

@@ -22,7 +22,6 @@
     <string name="aq_feed_view_invitation">Voir l’invitation</string>
     <string name="aq_feed_open_goal">Ouvrir l’objectif</string>
     <string name="aq_feed_all_invitations">Voir toutes les invitations</string>
-    <string name="aq_feed_legacy">Ce serveur affiche les 7 derniers jours. Mets le serveur à jour pour enregistrer l’état de lecture et garder un historique plus long.</string>
     <string name="aq_feed_yesterday">Hier</string>
     <string name="aq_feed_time_unread">%1$s · Non lu</string>
     <string name="aq_feed_card">Carte : %1$s</string>
@@ -33,6 +32,9 @@
     <string name="aq_feed_reply_to">Répondre à %1$s</string>
     <string name="aq_feed_send">Envoyer</string>
     <string name="aq_feed_reply_done">Ta réponse a été envoyée.</string>
+    <string name="aq_feed_invite_declined">Invitation refusée.</string>
+    <string name="aq_feed_invite_joined">Tu as rejoint le groupe.</string>
+    <string name="aq_feed_invite_failed">Impossible de répondre à l’invitation.</string>
     <string name="aq_feed_reply_failed">Ta réponse n’a pas été envoyée.</string>
     <string name="aq_feed_reply_sent">Réponse envoyée</string>
     <string name="aq_feed_read_failed">L’état de lecture n’a pas été enregistré.</string>

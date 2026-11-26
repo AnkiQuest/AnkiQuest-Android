@@ -121,13 +121,14 @@
     <string name="ankiquest_update_downloading">Descargando… %1$d%%</string>
     <string name="ankiquest_update_failed">No se pudo descargar la actualización. Se ofrecerá de nuevo más tarde.</string>
     <string name="ankiquest_moved_title">AnkiQuest se ha trasladado a una nueva aplicación</string>
-    <string name="ankiquest_moved_message">Sincroniza y luego instala la nueva aplicación desde la página de la versión. Tus datos vuelven cuando inicies sesión y sincronices allí.</string>
+    <string name="ankiquest_moved_message">Instala el nuevo AnkiQuest desde la página de la versión. Si las dos aplicaciones usan la misma carpeta de AnkiDroid, fuerza la detención de esta aplicación en los ajustes de Android antes de abrir la colección en la nueva. Si usan carpetas distintas, sincroniza con AnkiWeb o exporta aquí la colección e impórtala en la nueva aplicación.</string>
     <string name="ankiquest_moved_open">Abrir la página de la versión</string>
     <string name="ankiquest_nudge_alerts_title">Avisos de toques</string>
     <string name="ankiquest_deck_collapse">Contraer submazos</string>
     <string name="ankiquest_deck_expand">Expandir submazos</string>
     <string name="ankiquest_deck_apply_subdecks">Aplicar a los submazos</string>
     <string name="ankiquest_streak_studied">Estudió hoy</string>
+    <string name="ankiquest_streak_unverified">Estudiado hoy · tiempo desconocido</string>
     <string name="ankiquest_streak_pending">Aún no ha estudiado</string>
     <string name="ankiquest_streak_protected">Racha protegida · Aún no ha estudiado</string>
     <string name="ankiquest_streak_unknown">Actualiza para ver si ha estudiado hoy</string>
@@ -140,6 +141,7 @@
         <item quantity="one">Se envió %d repaso.</item>
         <item quantity="other">Se enviaron %d repasos.</item>
     </plurals>
+    <string name="aq_server_outdated">Actualiza tu servidor de AnkiQuest</string>
     <string name="ankiquest_widget_settings_title">Widget de clasificación</string>
     <string name="ankiquest_widget_settings_open">%1$s, ajustes del widget</string>
     <string name="ankiquest_widget_settings_save">Guardar widget</string>

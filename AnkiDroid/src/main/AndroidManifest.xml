@@ -423,6 +423,11 @@
             android:label="@string/ankiquest_changelog"
             android:exported="false"
             />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestCountdownsActivity"
+            android:label="@string/ankiquest_countdowns"
+            android:exported="false"
+            />
 
         <activity-alias
             android:name="com.ichi2.anki.AnkiCardContextMenuAction"

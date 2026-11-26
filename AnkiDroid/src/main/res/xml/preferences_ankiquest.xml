@@ -110,18 +110,26 @@
             android:key="@string/ankiquest_open_today_key"
             android:summary="@string/ankiquest_open_today_summary"
             android:title="@string/ankiquest_open_today_title" />
+        <Preference
+            android:key="@string/ankiquest_countdowns_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_countdowns_manage"
+            android:summary="@string/ankiquest_countdowns_private" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="@string/ankiquest_sync_settings_key"
             android:summary="@string/ankiquest_sync_settings_summary"
             android:title="@string/ankiquest_sync_settings_title" />
-        <!-- Keep this groundwork hidden until RWKV can schedule cards (#433). -->
         <SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="@string/ankiquest_rwkv_key"
             android:summary="@string/ankiquest_rwkv_off"
-            android:title="@string/ankiquest_rwkv_title"
-            app:isPreferenceVisible="false" />
+            android:title="@string/ankiquest_rwkv_title" />
+        <Preference
+            android:key="@string/ankiquest_rwkv_models_key"
+            android:persistent="false"
+            android:summary="@string/ankiquest_rwkv_models_none"
+            android:title="@string/ankiquest_rwkv_models_title" />
         <ListPreference
             android:defaultValue="stable"
             android:entries="@array/ankiquest_update_channel_entries"

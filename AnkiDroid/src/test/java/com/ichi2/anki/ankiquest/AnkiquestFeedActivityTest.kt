@@ -300,6 +300,30 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a group invitation is joined or declined from the feed`() {
+        val invited = AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.MESSAGES))
+        val club = AnkiquestSocial.Group(1, "Spanish club", owner = false, invite = null, members = emptyList())
+        val joined = AnkiquestSocial.Overview(emptyList(), emptyList(), emptyList(), emptyList(), listOf(club), public = true)
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns invited
+        coEvery { AnkiquestSocial.change(identity, any()) } returns joined
+
+        // Joining answers the invitation and marks it read.
+        val feed = launch()
+        assertTrue(feed.hasText("Want to do the verbs together?"), "a friend's message is listed")
+        feed.click(feed.getString(R.string.aq_friends_join))
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.AcceptInvite(1)) }
+        assertTrue(feed.hasText(feed.getString(R.string.aq_friends_joined, "Spanish club")))
+        assertFalse(feed.hasText(feed.getString(R.string.aq_friends_join)), "an answered invitation offers nothing more")
+
+        // Declining sends its own answer.
+        coEvery { AnkiquestSocial.change(identity, any()) } returns joined.copy(groups = emptyList())
+        val again = launch()
+        again.click(again.getString(R.string.aq_challenges_decline))
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.DeclineInvite(1)) }
+        assertTrue(again.hasText(again.getString(R.string.aq_feed_invite_declined)))
+    }
+
+    @Test
     fun `sent messages are a tab of their own`() {
         coEvery { AnkiquestFeed.sent(identity, any()) } returns
             AnkiquestFeed.SentPage(listOf(AnkiquestFeed.Sent("cerro", page.items[3].copy(body = "Well done!", readAt = null))), null)
@@ -309,17 +333,6 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         assertTrue(feed.hasText("Well done!"))
         assertTrue(feed.hasTextContaining(feed.getString(R.string.aq_feed_not_seen)))
         assertFalse(feed.hasText("🎉 Cerro shared a win"))
-    }
-
-    @Test
-    fun `an older server's list has no filters or read state`() {
-        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
-            AnkiquestFeed.parseLegacy(org.json.JSONArray(AnkiquestFeedTest.LEGACY))
-        val feed = launch()
-        assertTrue(feed.hasText(feed.getString(R.string.aq_feed_legacy)))
-        assertFalse(feed.hasText(feed.getString(R.string.aq_feed_messages)))
-        assertFalse(feed.hasText(feed.getString(R.string.aq_feed_mark_read)))
-        assertTrue(feed.hasText("Daily goal reached!"))
     }
 
     @Test

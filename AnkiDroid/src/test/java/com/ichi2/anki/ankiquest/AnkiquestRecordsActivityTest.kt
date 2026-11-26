@@ -56,7 +56,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         for (kind in AnkiquestRecords.Kind.entries) {
             assertTrue(records.hasText(records.getString(AnkiquestMeSections.recordLabel(kind))), kind.name)
         }
-        assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "Hill")), "the player's own name says so")
+        assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "hill")), "the player's own name says so")
         assertTrue(records.hasText("Cerro"))
         assertTrue(records.hasText("101 XP"))
         assertTrue(records.hasText("−70"), "how far behind the record a chaser is")
@@ -140,7 +140,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         val records = launch()
         records.click("Spanish club")
         assertFalse(records.hasText(records.getString(R.string.aq_home_auth)))
-        assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "Hill")))
+        assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "hill")))
         coVerify { AnkiquestRecords.records(identity, null) }
     }
 
