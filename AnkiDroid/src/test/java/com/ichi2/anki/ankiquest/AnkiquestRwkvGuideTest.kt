@@ -26,7 +26,7 @@ class AnkiquestRwkvGuideTest : RobolectricTest(loadBackend = false) {
 
         // Getting the weights: download or choose files, with the sizes.
         assertTrue("Download" in page, page)
-        assertTrue("Choose files" in page, page)
+        assertTrue("choose files yourself" in page, page)
         assertTrue("Small" in page, page)
         assertTrue("Tiny" in page, page)
         // No weights of ours ship; the weights guide of the Anki fork is linked.

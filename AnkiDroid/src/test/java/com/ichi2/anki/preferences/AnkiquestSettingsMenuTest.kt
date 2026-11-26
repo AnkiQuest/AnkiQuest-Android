@@ -75,6 +75,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                         R.string.ankiquest_sync_settings_key,
                         R.string.ankiquest_rwkv_key,
                         R.string.ankiquest_rwkv_models_key,
+                        R.string.ankiquest_rwkv_guide_key,
                         R.string.ankiquest_update_channel_key,
                         R.string.ankiquest_check_updates_key,
                         R.string.ankiquest_debug_info_key,
