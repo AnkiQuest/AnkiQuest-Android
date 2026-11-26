@@ -186,8 +186,8 @@ jobs:
           fi
           if ! gh release view quest-24 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets \
             | jq -e '(.isDraft == false) and (.isPrerelease == false) and
-                ([.assets[].name] | contains(["AnkiQuest.apk", "AnkiDroid-Quest.apk"]))' > /dev/null; then
-            echo "::error::Publish the final migration release as quest-24 with both legacy download names first"
+                any(.assets[]; .name == "AnkiQuest.apk")' > /dev/null; then
+            echo "::error::Publish the final old-package release as quest-24 with AnkiQuest.apk first"
             exit 1
           fi
 
