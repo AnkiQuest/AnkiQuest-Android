@@ -64,7 +64,8 @@ class AnkiquestRwkvTest {
             store.import(twoHead.inputStream())
             val engine = FakeEngine()
             assertEquals(RwkvState.Ready, RwkvState.Ready.start(store, engine))
-            assertEquals(lock[0], engine.prepared.single().twoHead.entry)
+            val prepared = engine.prepared.single()
+            assertEquals(lock[0], prepared.twoHead.entry)
         }
 
     @Test
