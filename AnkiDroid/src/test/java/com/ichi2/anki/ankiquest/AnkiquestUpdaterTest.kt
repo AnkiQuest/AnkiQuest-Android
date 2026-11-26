@@ -3,7 +3,10 @@
 package com.ichi2.anki.ankiquest
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
@@ -12,6 +15,8 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.dialogs.utils.message
+import com.ichi2.anki.dialogs.utils.title
 import com.ichi2.anki.setIntroductionSlidesShown
 import io.mockk.every
 import io.mockk.mockk
@@ -292,5 +297,64 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         val (apk, _) = downloads()
         AnkiquestUpdater.cleanStale(targetContext, installedCode = 100)
         assertFalse(apk.exists())
+    }
+
+    @Test
+    fun `only an apk of this package is installed`() {
+        val own = targetContext.packageName
+        assertEquals(AnkiquestUpdater.Download.OWN, AnkiquestUpdater.classify(own, own))
+        assertEquals(AnkiquestUpdater.Download.MOVED, AnkiquestUpdater.classify(own, "$own.other"))
+        assertEquals(AnkiquestUpdater.Download.UNREADABLE, AnkiquestUpdater.classify(own, null))
+    }
+
+    @Test
+    fun `an apk of another package shows the move instead of installing`() {
+        val shown = download(packageName = "dev.hilll.anki.other")
+        assertEquals(targetContext.getString(R.string.ankiquest_moved_title), shown.title)
+    }
+
+    @Test
+    fun `an unreadable apk is reported as a failed download`() {
+        val shown = download(packageName = null)
+        assertEquals(targetContext.getString(R.string.ankiquest_update_failed), shown.message)
+    }
+
+    /**
+     * Downloads a release whose APK reads as [packageName] and returns the dialog shown afterwards.
+     * The download is deleted, so it is not handed to the installer.
+     */
+    private fun download(packageName: String?): AlertDialog {
+        val controller = Robolectric.buildActivity(Activity::class.java)
+        controller.get().setTheme(androidx.appcompat.R.style.Theme_AppCompat)
+        val host = controller.setup().get()
+        saveControllerForCleanup(controller)
+        val body = "apk".toByteArray()
+        val server =
+            AnkiquestTestServer { request ->
+                if (request.path != "/apk") {
+                    return@AnkiquestTestServer null
+                }
+                TestResponse(bytes = body)
+            }
+        mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
+        try {
+            every { AnkiquestUpdater["archiveInfo"](any<Context>(), any<File>()) } returns
+                packageName?.let { name -> PackageInfo().apply { this.packageName = name } }
+            val release = AnkiquestUpdater.Release(41, "Test release", "${server.url}/apk", 3)
+            ReflectionHelpers.callInstanceMethod<Unit>(
+                AnkiquestUpdater,
+                "download",
+                ClassParameter.from(Activity::class.java, host),
+                ClassParameter.from(AnkiquestUpdater.Release::class.java, release),
+            )
+            val progress = assertNotNull(ShadowDialog.getLatestDialog())
+            advanceRobolectricLooperUntil { !progress.isShowing }
+            advanceRobolectricLooperUntil { ShadowDialog.getLatestDialog() !== progress }
+            assertFalse(File(File(targetContext.cacheDir, "ankiquest"), "AnkiQuest.apk").exists())
+            return ShadowDialog.getLatestDialog() as AlertDialog
+        } finally {
+            server.close()
+            unmockkObject(AnkiquestUpdater)
+        }
     }
 }

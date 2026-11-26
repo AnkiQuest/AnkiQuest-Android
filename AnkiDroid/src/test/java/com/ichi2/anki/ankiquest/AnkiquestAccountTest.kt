@@ -14,6 +14,7 @@ import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestAccountTest : RobolectricTest() {
@@ -30,6 +31,8 @@ class AnkiquestAccountTest : RobolectricTest() {
                 val body = JSONObject(request.body)
                 val (status, answer) =
                     when {
+                        request.path == "/api/social/refused" -> 500 to JSONObject().put("error", "no")
+                        request.path.startsWith("/api/social/") -> 200 to JSONObject().put("public", body.getBoolean("public"))
                         request.path == "/api/accounts/tokens" && body.getString("user") == "two" -> secondFactor(body)
                         request.path == "/api/accounts/tokens" && body.getString("password") == "right password" ->
                             200 to JSONObject().put("user", body.getString("user")).put("token", "device-token")
@@ -65,7 +68,8 @@ class AnkiquestAccountTest : RobolectricTest() {
         display: String = "",
         create: Boolean = false,
         code: String = "",
-    ) = AnkiquestAccount.Credentials("$url/", user, password, display, create, code)
+        profile: AnkiquestAccount.Profile = AnkiquestAccount.Profile.PRIVATE,
+    ) = AnkiquestAccount.Credentials("$url/", user, password, display, create, code, profile)
 
     @Test
     fun `signing in trades the password for a device token`() =
@@ -83,9 +87,40 @@ class AnkiquestAccountTest : RobolectricTest() {
         runBlocking {
             val signed = AnkiquestAccount.submit(credentials(user = "bo", display = "Bo", create = true), device = "AnkiDroid")
             assertEquals("first-token", signed.token)
-            val (path, body) = received.single()
+            val (path, body) = received.first()
             assertEquals("/api/accounts", path)
             assertEquals("Bo", body.getString("display"))
+        }
+
+    @Test
+    fun `a new account stores the public profile answer after signing up`() =
+        runBlocking {
+            AnkiquestAccount.submit(credentials(user = "bo", create = true))
+            AnkiquestAccount.submit(credentials(user = "cy", create = true, profile = AnkiquestAccount.Profile.PUBLIC))
+            assertEquals(
+                listOf("/api/accounts", "/api/social/bo", "/api/accounts", "/api/social/cy"),
+                received.map { it.first },
+            )
+            assertFalse(received[0].second.has("public"), "older servers refuse unknown sign-up fields")
+            assertEquals("visibility", received[1].second.getString("action"))
+            assertFalse(received[1].second.getBoolean("public"), "private unless the box is ticked")
+            assertTrue(received[3].second.getBoolean("public"))
+            assertEquals("Bearer first-token", server.requests[1].headers.getFirst("Authorization"))
+        }
+
+    @Test
+    fun `signing in leaves the profile alone`() =
+        runBlocking {
+            AnkiquestAccount.submit(credentials(profile = AnkiquestAccount.Profile.PUBLIC))
+            assertEquals(listOf("/api/accounts/tokens"), received.map { it.first })
+        }
+
+    @Test
+    fun `a profile answer the server refuses still signs in`() =
+        runBlocking {
+            val signed = AnkiquestAccount.submit(credentials(user = "refused", create = true))
+            assertEquals("first-token", signed.token)
+            assertEquals(listOf("/api/accounts", "/api/social/refused"), received.map { it.first })
         }
 
     /** The refusal of a sign-in for the two-factor account that sends [code]. */

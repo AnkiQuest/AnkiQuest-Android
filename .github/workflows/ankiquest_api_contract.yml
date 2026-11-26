@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       server_ref:
-        description: "Optional server branch, tag or commit for an ad-hoc check; blank uses the committed pin"
+        description: "Optional server branch, tag or commit for an ad-hoc check; blank uses master"
         required: false
         type: string
 
@@ -31,66 +31,20 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
-  # The exact pin is checked as data in an isolated job, without a Gradle cache.
-  # Only an explicit manual server_ref sends replacement data to the contract job.
-  server:
-    name: Server examples
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Read the immutable server pin or manual override
-        id: server-ref
-        env:
-          SERVER_REF: ${{ inputs.server_ref }}
-        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: AnkiQuest/AnkiQuest-Server
-          ref: ${{ steps.server-ref.outputs.ref }}
-          path: server
-          persist-credentials: false
-          sparse-checkout: |
-            docs/api/examples
-            tests/fixtures
-
-      - name: Verify the committed snapshot against its exact server commit
-        if: inputs.server_ref == ''
-        run: node .github/ankiquest_server_snapshot.cjs verify server
-
-      - name: Keep manually requested server examples
-        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: server-api-examples
-          path: server/docs/api/examples/*.json
-          if-no-files-found: error
-          retention-days: 1
-
   contract:
     name: API contract
-    needs: server
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Download manually requested server examples
-        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: server-api-examples
-          path: ${{ runner.temp }}/server-api-examples
+          persist-credentials: false
 
-      - name: Use manually requested examples, preserving the ownership catalog
-        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
-        shell: bash
-        run: |
-          node .github/ankiquest_server_snapshot.cjs examples "$RUNNER_TEMP/server-api-examples"
+      # The examples come from server master, or the manually requested ref (docs/ankiquest-server-data.md).
+      - name: Fetch the server's API examples and shared fixtures
+        env:
+          SERVER_REF: ${{ inputs.server_ref || 'master' }}
+        run: node .github/ankiquest_server_data.cjs fetch --ref "$SERVER_REF"
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

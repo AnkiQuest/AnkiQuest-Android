@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_countdowns">Comptes à rebours</string>
+    <string name="ankiquest_countdowns_changed">Tes comptes à rebours ont changé. Vérifie la liste et réessaie.</string>
+    <string name="ankiquest_countdowns_empty">Ajoute un examen ou un événement pour compter les jours qui restent.</string>
+    <string name="ankiquest_countdown_add">Ajouter un compte à rebours</string>
+    <string name="ankiquest_countdown_edit">Modifier le compte à rebours</string>
+    <string name="ankiquest_countdowns_manage">Modifier les comptes à rebours</string>
+    <string name="ankiquest_countdown_name">Nom</string>
+    <string name="ankiquest_countdown_date">Date</string>
+    <string name="ankiquest_countdown_deck">Paquet (facultatif)</string>
+    <string name="ankiquest_countdown_no_deck">Aucun paquet</string>
+    <string name="ankiquest_countdown_save">Enregistrer</string>
+    <string name="ankiquest_countdown_delete">Supprimer</string>
+    <string name="ankiquest_countdown_name_missing">Saisis un nom.</string>
+    <string name="ankiquest_countdowns_full">Tu as déjà le nombre maximal de comptes à rebours. Supprimes-en un pour en ajouter un autre.</string>
+    <string name="ankiquest_countdowns_private">Tes comptes à rebours ne sont visibles que par toi.</string>
+    <string name="ankiquest_countdown_tomorrow">%1$s demain</string>
+    <string name="ankiquest_countdown_past">%1$s : terminé</string>
+    <string name="ankiquest_countdown_done">Plus rien à faire dans %1$s d’ici là</string>
+    <plurals name="ankiquest_countdown_upcoming">
+        <item quantity="one">%1$s dans %2$d jour</item>
+        <item quantity="other">%1$s dans %2$d jours</item>
+    </plurals>
+    <plurals name="ankiquest_countdown_pace">
+        <item quantity="one">~%1$d carte par jour pour finir %2$s d’ici là</item>
+        <item quantity="other">~%1$d cartes par jour pour finir %2$s d’ici là</item>
+    </plurals>
+    <string name="ankiquest_countdowns_import_one">Ajouter à %1$s le compte à rebours créé sans connexion ?</string>
+    <string name="ankiquest_countdowns_import_other">Ajouter les %1$d comptes à rebours créés sans connexion à %2$s ?</string>
+    <string name="ankiquest_countdowns_import_add">Ajouter au compte</string>
+    <string name="ankiquest_countdowns_import_keep">Garder sur cet appareil</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d compte à rebours ne tenait plus et reste sur cet appareil.</item>
+        <item quantity="other">%1$d comptes à rebours ne tenaient plus et restent sur cet appareil.</item>
+    </plurals>
+</resources>

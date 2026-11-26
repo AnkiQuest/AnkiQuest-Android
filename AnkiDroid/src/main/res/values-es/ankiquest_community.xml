@@ -77,13 +77,7 @@
         <item quantity="other">%1$s días para aprenderla</item>
     </plurals>
     <string name="aq_conquest_tell">Contárselo a mis amigos</string>
-    <string name="aq_conquest_telling">Avisando a tus amigos…</string>
     <string name="aq_conquest_told">Amigos avisados</string>
-    <plurals name="aq_conquest_told_count">
-        <item quantity="one">%1$d amigo lo verá en su actividad.</item>
-        <item quantity="many">%1$d amigos lo verán en su actividad.</item>
-        <item quantity="other">%1$d amigos lo verán en su actividad.</item>
-    </plurals>
     <string name="aq_conquest_label_add">Mostrar qué tarjeta era</string>
     <string name="aq_conquest_label_explanation">Lo verá cualquiera que pueda abrir esta tarjeta, y también los amigos a los que se lo cuentes. Puedes retirarlo más tarde.</string>
     <string name="aq_conquest_label_save">Mostrarlo en la tarjeta</string>
@@ -116,6 +110,8 @@
         <item quantity="many">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d veces. 🏆</item>
         <item quantity="other">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d veces. 🏆</item>
     </plurals>
-    <string name="aq_server_outdated">Esto necesita un servidor de AnkiQuest más reciente. Pide a quien gestiona el tuyo que lo actualice.</string>
     <string name="aq_conquest_share_deck">De mi mazo «%1$s».</string>
+    <string name="aq_conquest_deck">De tu mazo %1$s</string>
+    <string name="aq_conquest_popup_card">«%1$s»</string>
+    <string name="aq_conquest_popup_open">Ver la tarjeta</string>
 </resources>

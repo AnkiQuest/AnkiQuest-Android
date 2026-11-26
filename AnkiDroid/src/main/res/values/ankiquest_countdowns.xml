@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- English wording: tests/fixtures/countdowns.json in AnkiQuest-Server. -->
+<resources>
+    <string name="ankiquest_countdowns_key" translatable="false">ankiquestEditCountdowns</string>
+    <string name="ankiquest_countdowns">Countdowns</string>
+    <string name="ankiquest_countdowns_empty">Add an exam or event to count down to it.</string>
+    <string name="ankiquest_countdown_add">Add countdown</string>
+    <string name="ankiquest_countdown_edit">Edit countdown</string>
+    <string name="ankiquest_countdowns_manage" maxLength="41">Edit countdowns</string>
+    <string name="ankiquest_countdown_name">Name</string>
+    <string name="ankiquest_countdown_date">Date</string>
+    <string name="ankiquest_countdown_deck">Deck (optional)</string>
+    <string name="ankiquest_countdown_no_deck">No deck</string>
+    <string name="ankiquest_countdown_save">Save</string>
+    <string name="ankiquest_countdown_delete">Delete</string>
+    <string name="ankiquest_countdown_name_missing">Enter a name.</string>
+    <string name="ankiquest_countdowns_full">You have the most countdowns you can keep. Delete one to add another.</string>
+    <string name="ankiquest_countdowns_private">Only you see your countdowns.</string>
+    <string name="ankiquest_countdowns_changed">Your countdowns changed. Review the list and try again.</string>
+    <string name="ankiquest_countdown_tomorrow">%1$s tomorrow</string>
+    <string name="ankiquest_countdown_past">%1$s is over</string>
+    <string name="ankiquest_countdown_done">Nothing left in %1$s before then</string>
+    <plurals name="ankiquest_countdown_upcoming">
+        <item quantity="one">%1$s in %2$d day</item>
+        <item quantity="other">%1$s in %2$d days</item>
+    </plurals>
+    <plurals name="ankiquest_countdown_pace">
+        <item quantity="one">~%1$d card a day to finish %2$s by then</item>
+        <item quantity="other">~%1$d cards a day to finish %2$s by then</item>
+    </plurals>
+    <string name="ankiquest_countdowns_import_one">Add the countdown you made while signed out to %1$s?</string>
+    <string name="ankiquest_countdowns_import_other">Add the %1$d countdowns you made while signed out to %2$s?</string>
+    <string name="ankiquest_countdowns_import_add">Add to account</string>
+    <string name="ankiquest_countdowns_import_keep">Keep on this device</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d countdown did not fit and stays on this device.</item>
+        <item quantity="other">%1$d countdowns did not fit and stay on this device.</item>
+    </plurals>
+</resources>
