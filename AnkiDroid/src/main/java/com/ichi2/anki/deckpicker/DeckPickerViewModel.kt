@@ -28,6 +28,7 @@ import com.ichi2.anki.common.destinations.NoteEditorDestination
 import com.ichi2.anki.common.utils.ext.schedulerVersion
 import com.ichi2.anki.configureRenderingMode
 import com.ichi2.anki.isLoggedIn
+import com.ichi2.anki.launchCatching
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.libanki.CardId
 import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
@@ -316,7 +317,7 @@ class DeckPickerViewModel :
     fun deleteEmptyCards(
         report: EmptyCardsReport,
         preserveNotes: Boolean,
-    ) = viewModelScope.launch {
+    ) = launchCatching {
         progressManager.withProgress(message = DeckPickerProgress.DELETING_EMPTY_CARDS) {
             // https://github.com/ankitects/anki/blob/39e293b27d36318e00131fd10144755eec8d1922/qt/aqt/emptycards.py#L98-L109
             val toDelete = mutableListOf<CardId>()
@@ -362,15 +363,24 @@ class DeckPickerViewModel :
     /**
      * Marks [deckId] as the currently selected deck and updates the selection in the deck list.
      */
-    fun selectDeck(deckId: DeckId) =
-        viewModelScope.launch {
-            // TODO: should we always reset the Card Browser default deck here?
-            withCol {
-                decks.select(deckId)
-                focusedDeck = deckId
-            }
-            flowOfRefreshDeckList.emit(Unit)
+    fun selectDeck(deckId: DeckId) = launchCatching { markDeckSelected(deckId) }
+
+    val flowOfCreatedDeckSelected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    fun selectCreatedDeck(deckId: DeckId) =
+        launchCatching {
+            markDeckSelected(deckId)
+            flowOfCreatedDeckSelected.emit(Unit)
         }
+
+    private suspend fun markDeckSelected(deckId: DeckId) {
+        // TODO: should we always reset the Card Browser default deck here?
+        withCol {
+            decks.select(deckId)
+            focusedDeck = deckId
+        }
+        flowOfRefreshDeckList.emit(Unit)
+    }
 
     fun browseCards(deckId: DeckId) =
         launchCatchingIO {
@@ -399,8 +409,8 @@ class DeckPickerViewModel :
     val flowOfShowRightClickContextMenu = MutableSharedFlow<RightClickMenuRequest>(extraBufferCapacity = 1)
 
     fun requestContextMenu(deckId: DeckId) =
-        viewModelScope.launch {
-            selectDeck(deckId).join()
+        launchCatching {
+            markDeckSelected(deckId)
             flowOfShowContextMenu.emit(deckId)
         }
 
@@ -408,8 +418,8 @@ class DeckPickerViewModel :
         deckId: DeckId,
         x: Float,
         y: Float,
-    ) = viewModelScope.launch {
-        selectDeck(deckId).join()
+    ) = launchCatching {
+        markDeckSelected(deckId)
         flowOfShowRightClickContextMenu.emit(RightClickMenuRequest(deckId, x, y))
     }
 
