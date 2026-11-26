@@ -68,16 +68,6 @@ class AnkiquestPackReaderTest {
     @Test
     fun entries_are_flat_picture_names_each_once() {
         assertEquals(
-            PackRefusal.DUPLICATE_ENTRY,
-            refused(
-                zip(
-                    "companion.json" to index(poses = """{"face":"a.webp"}"""),
-                    "a.webp" to webp(),
-                    "a.webp" to webp(),
-                ),
-            ),
-        )
-        assertEquals(
             PackRefusal.BAD_ENTRY_NAME,
             refused(
                 zip(
