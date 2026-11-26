@@ -8,8 +8,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
+import android.text.format.Formatter
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -33,6 +35,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AndroidRwkvRam
@@ -63,21 +66,30 @@ import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
+import com.ichi2.anki.ankiquest.RwkvImport
+import com.ichi2.anki.ankiquest.RwkvImportError
+import com.ichi2.anki.ankiquest.RwkvLock
 import com.ichi2.anki.ankiquest.RwkvRam
+import com.ichi2.anki.ankiquest.RwkvSize
 import com.ichi2.anki.ankiquest.RwkvState
 import com.ichi2.anki.ankiquest.RwkvSwitch
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.ioDispatcher
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.withProgressDialog
 import com.ichi2.utils.Permissions.openAppSettingsScreen
+import com.ichi2.utils.openInputStreamSafe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.IOException
 import java.util.Date
 import java.util.TimeZone
 
@@ -105,6 +117,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             if (granted) AnkiquestPoll.refreshNow(requireContext())
             if (isAdded) showHealth()
         }
+
+    private val rwkvModelPicker =
+        registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> importRwkv(uris) }
 
     // Deliberately memory-only: a restored picker result is discarded after process recreation.
     private var pictureAccount: AnkiquestAvatars.Account? = null
@@ -591,34 +606,39 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     /**
-     * Turning the RWKV switch on runs the checks first: it stays on only if they pass, otherwise
-     * it stays off and says why (#433; hill's decision in #442). [AnkiquestRwkv] saves the switch,
-     * so the listener never lets the preference change itself.
+     * Turning the RWKV switch on runs the checks first: it stays on only if they pass and the
+     * backend takes the models, otherwise it stays off and says why (#433, #442). [AnkiquestRwkv]
+     * saves the switch, so the listener never lets the preference change itself.
      */
     private fun bindRwkv() {
         requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_rwkv_key).setOnPreferenceChangeListener { _, enabled ->
             if (enabled == true) {
-                runRwkv({ AnkiquestRwkv.enable(it) }) { state ->
+                runRwkv({ context, ram -> AnkiquestRwkv.enable(context, ram) }) { state ->
                     if (state is RwkvState.Refused) {
                         showSnackbar(AnkiquestRwkv.summary(state))
                     }
                 }
             } else {
-                showRwkv(AnkiquestRwkv.disable())
+                runRwkv({ context, _ -> AnkiquestRwkv.disable(context) }) { }
             }
             false
         }
-        runRwkv({ AnkiquestRwkv.restore(it) }) { }
+        requirePreference<Preference>(R.string.ankiquest_rwkv_models_key).setOnPreferenceClickListener {
+            showRwkvImport()
+            true
+        }
+        runRwkv({ context, ram -> AnkiquestRwkv.restore(context, ram) }) { }
     }
 
     /** Runs a transition that reads the phone and collection, then shows its state. */
     private fun runRwkv(
-        transition: suspend (RwkvRam) -> RwkvState,
+        transition: suspend (Context, RwkvRam) -> RwkvState,
         after: (RwkvState) -> Unit,
     ) {
-        val ram = AndroidRwkvRam(requireContext().applicationContext)
+        val context = requireContext().applicationContext
+        val ram = AndroidRwkvRam(context)
         launchCatchingTask {
-            val state = transition(ram)
+            val state = transition(context, ram)
             if (!isAdded) {
                 return@launchCatchingTask
             }
@@ -631,6 +651,113 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val rwkv = findPreference<SwitchPreferenceCompat>(getString(R.string.ankiquest_rwkv_key)) ?: return
         rwkv.isChecked = state.switch == RwkvSwitch.ON
         rwkv.setSummary(AnkiquestRwkv.summary(state))
+        showRwkvModels()
+    }
+
+    /** The imported models, as the lock file names them. */
+    private fun showRwkvModels() {
+        val models = findPreference<Preference>(getString(R.string.ankiquest_rwkv_models_key)) ?: return
+        val stored = AnkiquestRwkv.store(requireContext()).stored()
+        models.summary =
+            if (stored.isEmpty()) {
+                getString(R.string.ankiquest_rwkv_models_none)
+            } else {
+                stored.joinToString { "${rwkvSize(it.size)} ${it.id.uppercase()}" }
+            }
+    }
+
+    private fun rwkvSize(size: RwkvSize): String =
+        when (size) {
+            RwkvSize.SMALL -> TR.deckConfigRwkvModelSmall()
+            RwkvSize.TINY -> TR.deckConfigRwkvModelTiny()
+        }
+
+    /** The weights are not ours to ship: the player downloads them and picks the files. */
+    private fun showRwkvImport() {
+        AlertDialog
+            .Builder(requireContext())
+            .setTitle(R.string.ankiquest_rwkv_models_title)
+            .setMessage(getString(R.string.ankiquest_rwkv_import_message, RwkvLock.RELEASE))
+            .setPositiveButton(R.string.ankiquest_rwkv_import_download) { _, _ -> showRwkvDownload() }
+            .setNeutralButton(R.string.ankiquest_rwkv_import_choose) { _, _ -> rwkvModelPicker.launch(arrayOf(ANY_FILE)) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** The sizes with what each download fetches; picking one downloads it. */
+    private fun showRwkvDownload() {
+        val downloader = AnkiquestRwkv.downloader(requireContext())
+        val sizes = RwkvSize.entries
+        val items =
+            sizes
+                .map { size ->
+                    val bytes = Formatter.formatShortFileSize(requireContext(), downloader.bytes(size))
+                    getString(R.string.ankiquest_rwkv_download_size, rwkvSize(size), bytes)
+                }.toTypedArray()
+        AlertDialog
+            .Builder(requireContext())
+            .setTitle(R.string.ankiquest_rwkv_import_download)
+            .setItems(items) { _, which -> downloadRwkv(sizes[which]) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Downloads [size]'s models, saying which file of how many is being fetched. */
+    @Suppress("Deprecation") // ProgressDialog, as withProgressDialog shows it
+    private fun downloadRwkv(size: RwkvSize) {
+        val activity = requireActivity()
+        val context = activity.applicationContext
+        launchCatchingTask {
+            val results =
+                withProgressDialog(activity, onCancel = null) { dialog ->
+                    AnkiquestRwkv.download(context, size) { done, total ->
+                        val text = context.getString(R.string.ankiquest_rwkv_downloading, done + 1, total)
+                        activity.runOnUiThread { dialog.setMessage(text) }
+                    }
+                }
+            if (!isAdded) {
+                return@launchCatchingTask
+            }
+            showSnackbar(rwkvImportText(results))
+            runRwkv({ appContext, ram -> AnkiquestRwkv.restore(appContext, ram) }) { }
+        }
+    }
+
+    private fun importRwkv(uris: List<Uri>) {
+        if (uris.isEmpty()) {
+            return
+        }
+        val context = requireContext().applicationContext
+        launchCatchingTask {
+            val results =
+                withContext(ioDispatcher) {
+                    val inputs = uris.map { uri -> { context.contentResolver.openInputStreamSafe(uri) ?: throw IOException(NO_STREAM) } }
+                    AnkiquestRwkv.import(context, inputs)
+                }
+            if (!isAdded) {
+                return@launchCatchingTask
+            }
+            showSnackbar(rwkvImportText(results))
+            runRwkv({ appContext, ram -> AnkiquestRwkv.restore(appContext, ram) }) { }
+        }
+    }
+
+    private fun rwkvImportText(results: List<RwkvImport>): String {
+        val imported = results.filterIsInstance<RwkvImport.Imported>().flatMap { it.entries }
+        if (imported.isNotEmpty()) {
+            return getString(R.string.ankiquest_rwkv_imported, imported.joinToString { it.id.uppercase() })
+        }
+        val errors = results.filterIsInstance<RwkvImport.Rejected>().map { it.error }.toSet()
+        // The most specific reason: an unknown file only when nothing else went wrong.
+        val error = errors.firstOrNull { it != RwkvImportError.UNKNOWN_FILE } ?: RwkvImportError.UNKNOWN_FILE
+        return getString(
+            when (error) {
+                RwkvImportError.UNKNOWN_FILE -> R.string.ankiquest_rwkv_import_unknown
+                RwkvImportError.UNREADABLE -> R.string.ankiquest_rwkv_import_unreadable
+                RwkvImportError.NETWORK_FAILED -> R.string.ankiquest_rwkv_download_network
+                RwkvImportError.DOWNLOAD_MISMATCH -> R.string.ankiquest_rwkv_download_mismatch
+            },
+        )
     }
 
     /**
@@ -1098,6 +1225,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
 
     companion object {
         private const val EXTRA_SIGN_IN = "ankiquest.sign_in"
+
+        /** Any file: a release zip or a `.bin`; the lock file decides what is kept. */
+        private const val ANY_FILE = "*/*"
+        private const val NO_STREAM = "the provider returned no stream"
 
         /** This screen with the sign-in dialog open. */
         fun signInIntent(context: Context): Intent =

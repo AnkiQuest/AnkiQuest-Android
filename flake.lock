@@ -7,14 +7,15 @@
         "nixpkgs": [
           "nixpkgs"
         ],
+        "nixpkgs-x86_64-darwin": "nixpkgs-x86_64-darwin",
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1795183738,
-        "narHash": "sha256-hHrOH4O0gmXFwCCkLjgCo+Amu1b96j5PO86VtDc7kmk=",
+        "lastModified": 1795635037,
+        "narHash": "sha256-L9TsktWoMXoa8BH6dvENJSlMbKX7gregX0idNeg1jXA=",
         "owner": "AnkiQuest",
         "repo": "AnkiQuest-Dev",
-        "rev": "dc3b0eb41def26ac5ee5340b6cb0d3869acdc6fb",
+        "rev": "def791bea947df80e5f9da6120a1ae77d12dfcfe",
         "type": "github"
       },
       "original": {
@@ -98,6 +99,19 @@
         "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
+      }
+    },
+    "nixpkgs-x86_64-darwin": {
+      "locked": {
+        "lastModified": 1795137884,
+        "narHash": "sha256-xVwloUjz7paCDnvN5dkrasmAGV+O6uyRUPFHxv2w3VA=",
+        "rev": "ab5c18fdedfc8f9bbc9d773f10a540790e2787a7",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/26.05/nixos-26.05.14894.ab5c18fdedfc/nixexprs.tar.xz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://channels.nixos.org/nixos-26.05/nixexprs.tar.xz"
       }
     },
     "root": {

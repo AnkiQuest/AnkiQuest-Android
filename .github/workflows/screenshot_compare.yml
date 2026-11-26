@@ -119,9 +119,16 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
-          cache-provider: basic
           gradle-version: wrapper
+          # The gradle-cache action below caches the dependencies, one entry per job group
+          cache-disabled: true
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: restore
+          group: screenshot  # written by the store job
 
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache
@@ -140,37 +147,6 @@ jobs:
         id: compare-screenshot-test
         run: |
           ./gradlew compareScreenshots -Pscreenshot -Ptheme=light,dark --stacktrace
-
-      # Temporary diagnosis for #364: does a diff in one class change the
-      # streak widget screenshots, and do the comparison labels matter?
-      - name: Diag diff then streak
-        if: ${{ always() }}
-        run: |
-          mkdir -p /tmp/diag/baseline
-          find AnkiDroid/build/outputs/roborazzi -name '*.png' ! -name '*_actual.png' ! -name '*_compare.png' -exec cp --parents {} /tmp/diag/baseline/ \;
-          run() {
-            label=$1; shift
-            rm -rf AnkiDroid/build/outputs/roborazzi AnkiDroid/build/intermediates/roborazzi /tmp/diag364-probe.txt
-            cp -r /tmp/diag/baseline/AnkiDroid/build/outputs/roborazzi AnkiDroid/build/outputs/
-            if [ "$CORRUPT" = yes ]; then
-              for png in AnkiDroid/build/outputs/roborazzi/AnkiquestDeckUndoScreenshotTest/*.png; do
-                cp "$(ls AnkiDroid/build/outputs/roborazzi/AnkiquestStreakScreenshotTest/*.png | head -1)" "$png"
-              done
-            fi
-            ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.compare=true -PtestMaxParallelForks=1 --rerun-tasks -q \
-              --tests '*AnkiquestDeckUndoScreenshotTest' --tests '*AnkiquestStreakScreenshotTest' > /tmp/diag/gradle.log 2>&1 || tail -15 /tmp/diag/gradle.log
-            echo "== $label corrupt=$CORRUPT nolabel=$(test -e /tmp/diag364-nolabel && echo yes || echo no)"
-            for xml in AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml; do
-              sed -n 's/.*<testsuite name="\([^"]*\)".*timestamp="\([^"]*\)".*/\2 \1/p' "$xml"
-            done | sort
-            cat /tmp/diag364-probe.txt
-            find AnkiDroid/build/outputs/roborazzi -name '*_compare.png' | sort
-          }
-          ls AnkiDroid/build/outputs/roborazzi/AnkiquestStreakScreenshotTest/ AnkiDroid/build/outputs/roborazzi/AnkiquestDeckUndoScreenshotTest/ || true
-          CORRUPT=no run control
-          CORRUPT=yes run labels
-          touch /tmp/diag364-nolabel
-          CORRUPT=yes run nolabels
 
       - name: Stage screenshot diffs
         if: ${{ always() }}
