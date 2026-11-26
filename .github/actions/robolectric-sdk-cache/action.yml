@@ -2,14 +2,14 @@ name: Robolectric SDK cache
 description: >-
   Makes the Robolectric android-all jars available as a read-only Gradle dependency
   cache (GRADLE_RO_DEP_CACHE), cached on its own key: the SDK list and the Gradle version.
-  Linux only. Run it after setup-gradle and before the first Gradle command.
+  Linux only. Run it after the gradle-cache restore and before the first Gradle command.
 
-# Why: setup-gradle's basic cache key is a hash of every Gradle file, so any version bump
-# leaves the next runs without a cache, and each Robolectric job then downloaded the
+# Why: the Gradle cache key is a hash of every Gradle file, so any version bump
+# gives the next runs a new entry, and each Robolectric job then downloaded the
 # ~2 GB of SDK jars from Maven Central at the same time. That is what got HTTP 429s.
 # The SDK list rarely changes, so keeping the jars apart from the rest of the cache
 # means they come from Maven Central about once per Robolectric upgrade.
-# PR runs only read this cache; runs on master save it, like the setup-gradle cache.
+# PR runs only read this cache; runs on master save it, like the gradle-cache action.
 
 runs:
   using: composite
@@ -29,7 +29,7 @@ runs:
         home="$RUNNER_TEMP/robolectric-gradle-home"
         cache="$HOME/.robolectric-ro-cache"
         mkdir -p "$home"
-        # Reuse the Gradle distribution setup-gradle restored, if there is one
+        # Reuse the Gradle distribution the gradle-cache action restored, if there is one
         if [ -d "$HOME/.gradle/wrapper" ]; then cp -r "$HOME/.gradle/wrapper" "$home/"; fi
         for attempt in 1 2 3; do
           if ./gradlew --project-dir .github/actions/robolectric-sdk-cache/sdks \
@@ -55,6 +55,8 @@ runs:
         path: ~/.robolectric-ro-cache
         key: ${{ steps.restore.outputs.cache-primary-key }}
 
+    # A fixed path, not input, so nothing a pull request controls reaches
+    # the environment file.
     - name: Use the Robolectric SDK cache
       shell: bash
-      run: echo "GRADLE_RO_DEP_CACHE=$HOME/.robolectric-ro-cache" >> "$GITHUB_ENV"
+      run: echo "GRADLE_RO_DEP_CACHE=$HOME/.robolectric-ro-cache" >> "$GITHUB_ENV" # zizmor: ignore[github-env]

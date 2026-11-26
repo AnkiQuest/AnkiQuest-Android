@@ -7,9 +7,9 @@ import android.view.View.MeasureSpec
 import androidx.core.view.drawToBitmap
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.provideRoborazziContext
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.common.utils.dp
+import com.ichi2.anki.screenshotOptions
 import org.junit.Test
 import org.robolectric.annotation.Config
 
@@ -24,7 +24,6 @@ class AnkiDroidWidgetSmallScreenshotTest : ScreenshotTest() {
     @OptIn(ExperimentalRoborazziApi::class)
     fun initial() {
         val classDir = "build/outputs/roborazzi/${javaClass.simpleName}"
-        val options = provideRoborazziContext().options
         withSmallWidget {
             val size = 100.dp.toPx(root.context)
             val measureSpec = MeasureSpec.makeMeasureSpec(size, MeasureSpec.EXACTLY)
@@ -32,7 +31,7 @@ class AnkiDroidWidgetSmallScreenshotTest : ScreenshotTest() {
             root.layout(0, 0, size, size)
             root.drawToBitmap().captureRoboImage(
                 filePath = "$classDir/${fileNamePrefix}initial_api${Build.VERSION.SDK_INT}.png",
-                roborazziOptions = options.copy(compareOptions = options.compareOptions.copy(outputDirectoryPath = "$classDir/diffs")),
+                roborazziOptions = screenshotOptions("$classDir/diffs"),
             )
         }
     }

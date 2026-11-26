@@ -1,0 +1,46 @@
+# Visible strings that keep saying AnkiDroid. Every other upstream string that names AnkiDroid
+# says AnkiQuest: the ankiquestBranding task in AnkiDroid/build.gradle.kts generates the
+# overrides from common/android's strings and translations at build time, and
+# AnkiquestBrandingTest fails on any string that says AnkiDroid and is not listed here.
+# One resource name per line; text after # is the reason.
+
+# The app name: release builds set it with -PcustomName.
+app_name
+
+# Names of upstream's APIs, which keep their names.
+api_version_developer_contact   # "unsupported AnkiDroid features": the JS API
+valid_js_api_version            # "AnkiDroid JS API"
+update_js_api_version           # "AnkiDroid JS API"
+enable_api_title                # "AnkiDroid API"
+thirdparty_apps_summary         # "the AnkiDroid API"
+
+# Links to upstream's manual, FAQ, privacy policy and support pages, which still apply.
+help_item_ankidroid_manual
+help_item_ankidroid_faq
+help_item_ankidroid_privacy_policy
+help_title_support_ankidroid
+export_email_text               # links AnkiDroid's manual as the app that sent it
+
+# Upstream's contributors, donations and usage analytics.
+about_contributors_description
+about_contributors_description_no_donate
+donate_description
+analytics_dialog_title
+analytics_summ
+
+# Another app on the same collection, usually AnkiDroid itself.
+database_locked_summary_new
+
+# Legal notices.
+license_description
+other_licenses
+
+# AnkiQuest's own strings about AnkiDroid.
+ankiquest_about_based_on
+ankiquest_about_credits
+ankiquest_about_license
+ankiquest_ankidroid_changelog
+ankiquest_moved_message        # "the shared AnkiDroid folder": the collection folder's name
+
+# Not text: a link.
+link_facebook

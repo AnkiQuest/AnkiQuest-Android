@@ -33,6 +33,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCalendarActivity
 import com.ichi2.anki.ankiquest.AnkiquestChallengesActivity
 import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.ankiquest.AnkiquestConquestActivity
+import com.ichi2.anki.ankiquest.AnkiquestCountdownsActivity
 import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
 import com.ichi2.anki.ankiquest.AnkiquestFriendsActivity
 import com.ichi2.anki.ankiquest.AnkiquestGalleryActivity
@@ -158,6 +159,7 @@ object ActivityList {
             get(AnkiquestCalendarActivity::class.java),
             get(AnkiquestConquestActivity::class.java) { AnkiquestConquestActivity.intent(it, "hill", 1_793_097_000_000L) },
             get(AnkiquestChangelogActivity::class.java),
+            get(AnkiquestCountdownsActivity::class.java),
         )
 
     private fun intentForCardTemplateBrowserAppearanceEditor(): Intent {

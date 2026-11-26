@@ -53,4 +53,5 @@
     <string name="ankiquest_delete_button">Supprimer définitivement</string>
     <string name="ankiquest_delete_type_username">Saisis %s pour confirmer.</string>
     <string name="ankiquest_delete_done">Ton compte a été supprimé et cet appareil est déconnecté.</string>
+    <string name="ankiquest_password_prompt_body">Tu te connectes uniquement avec un jeton. Définis un mot de passe pour pouvoir te connecter sur un nouvel appareil ou si le jeton ne fonctionne plus.</string>
 </resources>

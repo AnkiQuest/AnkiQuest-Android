@@ -50,6 +50,7 @@
     <string name="ankiquest_sign_in_display">Nome visível (opcional)</string>
     <string name="ankiquest_sign_in_create">Criar uma conta nova</string>
     <string name="ankiquest_sign_in_hint">Os nomes de utilizador usam minúsculas, números, - e _. As palavras-passe precisam de pelo menos 10 caracteres.</string>
+    <string name="ankiquest_sign_in_public_hint">Qualquer pessoa pode abrir o teu perfil e apareces na classificação global.</string>
     <string name="ankiquest_sign_in_submit">Iniciar sessão</string>
     <string name="ankiquest_sign_in_submit_create">Criar conta</string>
     <string name="ankiquest_sign_in_missing">Preenche o servidor, o nome de utilizador e a palavra-passe.</string>
@@ -106,6 +107,9 @@
     <string name="ankiquest_update_later">@string/button_backup_later</string>
     <string name="ankiquest_update_downloading">A transferir… %1$d%%</string>
     <string name="ankiquest_update_failed">Não foi possível transferir a atualização. Será oferecida novamente mais tarde.</string>
+    <string name="ankiquest_moved_title">O AnkiQuest mudou para uma nova aplicação</string>
+    <string name="ankiquest_moved_message">Instale o novo AnkiQuest a partir da página da versão. Se as duas aplicações usarem a mesma pasta do AnkiDroid, force a paragem desta aplicação nas definições do Android antes de abrir a coleção na nova. Se usarem pastas diferentes, sincronize com o AnkiWeb ou exporte a coleção aqui e importe-a na nova aplicação.</string>
+    <string name="ankiquest_moved_open">Abrir a página da versão</string>
     <string name="ankiquest_avatar_crop_hint">Arrasta a imagem para a mover. Usa dois dedos ou o controlo para ampliar.</string>
     <string name="ankiquest_avatar_zoom">Ampliação</string>
     <string name="ankiquest_avatar_reset">@string/reset</string>
@@ -124,6 +128,7 @@
         <item>Vou estudar mais tarde</item>
     </string-array>
     <string name="ankiquest_streak_studied">Estudou hoje</string>
+    <string name="ankiquest_streak_unverified">Estudado hoje · tempo desconhecido</string>
     <string name="ankiquest_streak_pending">Ainda não estudou</string>
     <string name="ankiquest_streak_protected">Sequência protegida · Ainda não estudou</string>
     <string name="ankiquest_streak_unknown">Atualiza para ver o estado do estudo de hoje</string>
@@ -136,4 +141,19 @@
         <item quantity="one">%d revisão enviada.</item>
         <item quantity="other">%d revisões enviadas.</item>
     </plurals>
+    <string name="aq_server_outdated">Atualiza o teu servidor AnkiQuest</string>
+    <string name="ankiquest_widget_settings_title">Widget de classificação</string>
+    <string name="ankiquest_widget_settings_open">%1$s, definições do widget</string>
+    <string name="ankiquest_widget_settings_save">Guardar o widget</string>
+    <string name="ankiquest_widget_settings_scale">Tamanho do texto</string>
+    <string name="ankiquest_widget_settings_timeframe">Período</string>
+    <string name="ankiquest_widget_settings_groups_failed">Não foi possível carregar os teus grupos</string>
+    <string name="ankiquest_widget_settings_groups_loading">A carregar os teus grupos…</string>
+    <string name="ankiquest_widget_scale_auto">Automático (cabe no widget)</string>
+    <string name="ankiquest_widget_scale_extra_large">Muito grande</string>
+    <string name="ankiquest_widget_scale_large">Grande</string>
+    <string name="ankiquest_widget_scale_medium">Médio</string>
+    <string name="ankiquest_widget_scale_small">Pequeno</string>
+    <string name="ankiquest_widget_global_unavailable">Este servidor ainda não tem classificação global</string>
+    <string name="ankiquest_widget_who_global">Global</string>
 </resources>

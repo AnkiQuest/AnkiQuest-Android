@@ -3,6 +3,18 @@
 <!-- AnkiQuest branding, merged over the main manifest only by the quest build (-PcustomSuffix=quest). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        Moving from com.ichi2.anki.quest to the new package (AnkiquestMove). The old app declares the
+        signature permission and exposes the provider. The new app only requests the permission.
+    -->
+    <permission
+        android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
+    <queries>
+        <package android:name="com.ichi2.anki.quest" />
+        <package android:name="org.ankiquest.ankidroid" />
+    </queries>
 
     <!-- AnkiquestUpdater installs downloaded releases -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -25,6 +37,12 @@
             android:exported="false"
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay" />
+        <!-- Serves the settings to the new app in com.ichi2.anki.quest only; see AnkiquestMoveProvider. -->
+        <provider
+            android:name="com.ichi2.anki.ankiquest.AnkiquestMoveProvider"
+            android:authorities="${applicationId}.ankiquestmove"
+            android:exported="true"
+            android:permission="com.ichi2.anki.quest.permission.ANKIQUEST_MOVE" />
         <activity-alias
             android:name="com.ichi2.anki.ankiquest.AnkiquestIconDefault"
             android:enabled="true"
@@ -136,6 +154,47 @@
             android:exported="true"
             android:icon="@mipmap/anki_tan_launcher_sleepy"
             android:roundIcon="@mipmap/anki_tan_launcher_sleepy"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Ankilope's and Bluma's (cow) faces, for every mood. -->
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconAnkilopeDefault"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ankilope_launcher"
+            android:roundIcon="@mipmap/ankilope_launcher"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconBlumaDefault"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/cow_launcher"
+            android:roundIcon="@mipmap/cow_launcher"
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- No companion: AnkiDroid's own icon. -->
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconPlain"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
             android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

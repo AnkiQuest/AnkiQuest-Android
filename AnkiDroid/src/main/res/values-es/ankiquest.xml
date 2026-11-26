@@ -62,6 +62,7 @@
     <string name="ankiquest_sign_in_display">Nombre visible (opcional)</string>
     <string name="ankiquest_sign_in_create">Crear una cuenta nueva</string>
     <string name="ankiquest_sign_in_hint">Los nombres de usuario usan minúsculas, números, - y _. Las contraseñas necesitan al menos 10 caracteres.</string>
+    <string name="ankiquest_sign_in_public_hint">Cualquiera puede abrir tu perfil y apareces en la clasificación global.</string>
     <string name="ankiquest_sign_in_submit">Iniciar sesión</string>
     <string name="ankiquest_sign_in_submit_create">Crear cuenta</string>
     <string name="ankiquest_sign_in_missing">Rellena el servidor, el nombre de usuario y la contraseña.</string>
@@ -118,11 +119,15 @@
     <string name="ankiquest_update_later">Más tarde</string>
     <string name="ankiquest_update_downloading">Descargando… %1$d%%</string>
     <string name="ankiquest_update_failed">No se pudo descargar la actualización. Se ofrecerá de nuevo más tarde.</string>
+    <string name="ankiquest_moved_title">AnkiQuest se ha trasladado a una nueva aplicación</string>
+    <string name="ankiquest_moved_message">Instala el nuevo AnkiQuest desde la página de la versión. Si las dos aplicaciones usan la misma carpeta de AnkiDroid, fuerza la detención de esta aplicación en los ajustes de Android antes de abrir la colección en la nueva. Si usan carpetas distintas, sincroniza con AnkiWeb o exporta aquí la colección e impórtala en la nueva aplicación.</string>
+    <string name="ankiquest_moved_open">Abrir la página de la versión</string>
     <string name="ankiquest_nudge_alerts_title">Avisos de toques</string>
     <string name="ankiquest_deck_collapse">Contraer submazos</string>
     <string name="ankiquest_deck_expand">Expandir submazos</string>
     <string name="ankiquest_deck_apply_subdecks">Aplicar a los submazos</string>
     <string name="ankiquest_streak_studied">Estudió hoy</string>
+    <string name="ankiquest_streak_unverified">Estudiado hoy · tiempo desconocido</string>
     <string name="ankiquest_streak_pending">Aún no ha estudiado</string>
     <string name="ankiquest_streak_protected">Racha protegida · Aún no ha estudiado</string>
     <string name="ankiquest_streak_unknown">Actualiza para ver si ha estudiado hoy</string>
@@ -135,4 +140,19 @@
         <item quantity="one">Se envió %d repaso.</item>
         <item quantity="other">Se enviaron %d repasos.</item>
     </plurals>
+    <string name="aq_server_outdated">Actualiza tu servidor de AnkiQuest</string>
+    <string name="ankiquest_widget_settings_title">Widget de clasificación</string>
+    <string name="ankiquest_widget_settings_open">%1$s, ajustes del widget</string>
+    <string name="ankiquest_widget_settings_save">Guardar widget</string>
+    <string name="ankiquest_widget_settings_scale">Tamaño del texto</string>
+    <string name="ankiquest_widget_settings_timeframe">Periodo</string>
+    <string name="ankiquest_widget_settings_groups_failed">No se han podido cargar tus grupos</string>
+    <string name="ankiquest_widget_settings_groups_loading">Cargando tus grupos…</string>
+    <string name="ankiquest_widget_scale_auto">Automático (cabe en el widget)</string>
+    <string name="ankiquest_widget_scale_extra_large">Muy grande</string>
+    <string name="ankiquest_widget_scale_large">Grande</string>
+    <string name="ankiquest_widget_scale_medium">Mediano</string>
+    <string name="ankiquest_widget_scale_small">Pequeño</string>
+    <string name="ankiquest_widget_global_unavailable">Este servidor aún no tiene clasificación global</string>
+    <string name="ankiquest_widget_who_global">Global</string>
 </resources>

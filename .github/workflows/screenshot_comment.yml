@@ -19,7 +19,10 @@
 name: "ankiquest Screenshots: Comment"
 
 on:
-  workflow_run:
+  # Needs the base repository's token to comment on pull requests from
+  # forks. The pull request's artifacts are read as data, never run, and
+  # its number is checked to be a number.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows:
       - "ankiquest Screenshots: Compare"
     types:
@@ -51,8 +54,14 @@ jobs:
       - id: get-pull-request-number
         name: Get pull request number
         shell: bash
+        # NR comes from the pull request's run: accept a number only.
         run: |
-          echo "pull_request_number=$(cat NR)" >> "$GITHUB_OUTPUT"
+          number=$(cat NR)
+          if ! [[ "$number" =~ ^[0-9]+$ ]]; then
+            echo "::error::NR is not a pull request number"
+            exit 1
+          fi
+          echo "pull_request_number=$number" >> "$GITHUB_OUTPUT"
       - name: Download screenshot diff artifact
         uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         with:
@@ -102,7 +111,7 @@ jobs:
           # Resolve the artifact ID so we can deep-link to its download page.
           artifact_id=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" \
             --jq '.artifacts[] | select(.name=="screenshot-diff") | .id')
-          artifact_url="${{ github.server_url }}/$REPO/actions/runs/$RUN_ID/artifacts/$artifact_id"
+          artifact_url="$GITHUB_SERVER_URL/$REPO/actions/runs/$RUN_ID/artifacts/$artifact_id"
 
           # delimiter for multi-line output to GITHUB_OUTPUT
           delimiter="$(openssl rand -hex 8)"

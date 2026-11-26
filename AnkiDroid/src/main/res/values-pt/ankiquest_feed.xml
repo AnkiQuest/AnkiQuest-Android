@@ -22,7 +22,6 @@
     <string name="aq_feed_view_invitation">Ver convite</string>
     <string name="aq_feed_open_goal">Abrir meta</string>
     <string name="aq_feed_all_invitations">Ver todos os convites</string>
-    <string name="aq_feed_legacy">Este servidor mostra os últimos 7 dias. Atualize o servidor para salvar o status de leitura e ter um histórico maior.</string>
     <string name="aq_feed_yesterday">Ontem</string>
     <string name="aq_feed_time_unread">%1$s · Não lida</string>
     <string name="aq_feed_card">Cartão: %1$s</string>
@@ -33,6 +32,9 @@
     <string name="aq_feed_reply_to">Responder a %1$s</string>
     <string name="aq_feed_send">Enviar</string>
     <string name="aq_feed_reply_done">Sua resposta foi enviada.</string>
+    <string name="aq_feed_invite_declined">Convite recusado.</string>
+    <string name="aq_feed_invite_joined">Entraste no grupo.</string>
+    <string name="aq_feed_invite_failed">Não foi possível responder ao convite.</string>
     <string name="aq_feed_reply_failed">Sua resposta não foi enviada.</string>
     <string name="aq_feed_reply_sent">Resposta enviada</string>
     <string name="aq_feed_read_failed">O status de leitura não foi salvo.</string>

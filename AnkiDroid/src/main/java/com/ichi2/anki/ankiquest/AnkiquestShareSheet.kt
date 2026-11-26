@@ -43,7 +43,7 @@ import timber.log.Timber
 import java.net.HttpURLConnection.HTTP_CONFLICT
 
 /**
- * The one share sheet every Share button opens on servers with [AnkiquestSharing.FEATURE_MOMENTS]:
+ * The one share sheet every Share button opens:
  * the moment's picture and words, AnkiQuest friends and groups to send it to with a note, and
  * "More apps…" for Android's share sheet ([elsewhere]). Sending closes the sheet and offers Undo
  * while the server allows it. A streak card the server has not confirmed yet opens it as

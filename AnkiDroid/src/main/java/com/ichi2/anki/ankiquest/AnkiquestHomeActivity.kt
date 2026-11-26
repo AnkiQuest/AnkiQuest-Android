@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
@@ -29,6 +30,7 @@ import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
@@ -76,9 +78,20 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             importedCopyFile = null
             refresh()
         }
+    private var passwordPrompt: PasswordPrompt = PasswordPrompt.Hidden
+    private var passwordJob: Job? = null
     private var generation = 0
     private var focus: String? = null
     private var questsHeading: View? = null
+
+    /** The card asking a player who signs in only with a token to set a password. */
+    private sealed interface PasswordPrompt {
+        data object Hidden : PasswordPrompt
+
+        data class Offered(
+            val account: HomeAccount,
+        ) : PasswordPrompt
+    }
 
     private sealed interface CopyInbox {
         data object Loading : CopyInbox
@@ -163,6 +176,27 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (!::content.isInitialized) return
         AnkiquestMoments.clearQuiet(AnkiDroidApp.sharedPrefs())
         refresh()
+        offerCountdowns()
+    }
+
+    /** After sign-in, asks once whether to add the countdowns made while signed out to the account. */
+    private fun offerCountdowns() {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val pending = AnkiquestCountdownImport.pending(prefs) ?: return
+        AlertDialog
+            .Builder(this)
+            .setTitle(R.string.ankiquest_countdowns)
+            .setMessage(AnkiquestCountdownTexts.importQuestion(this, pending.count, pending.user))
+            .setPositiveButton(R.string.ankiquest_countdowns_import_add) { _, _ ->
+                if (!AnkiquestCountdownImport.accept(prefs, pending)) {
+                    return@setPositiveButton
+                }
+                if (pending.imported.left.isNotEmpty()) {
+                    showThemedToast(this, AnkiquestCountdownTexts.left(this, pending.imported.left.size), shortLength = false)
+                }
+                refresh()
+            }.setNegativeButton(R.string.ankiquest_countdowns_import_keep, null)
+            .show()
     }
 
     private fun refresh() {
@@ -179,6 +213,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             copyInbox = CopyInbox.Loading
             copyStatus = null
             copyState = CopyState.Ready
+            passwordPrompt = PasswordPrompt.Hidden
         }
         val turn = ++generation
         lifecycleScope.launch {
@@ -199,6 +234,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         networkJob?.cancel()
         avatarJob?.cancel()
         copyJob?.cancel()
+        passwordJob?.cancel()
         if (current == null) {
             loading = false
             render()
@@ -208,6 +244,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         render()
         refreshAvatar(current, turn)
         refreshCopies(current, turn)
+        refreshPasswordPrompt(current, turn)
         networkJob =
             lifecycleScope.launch {
                 val failure =
@@ -283,6 +320,39 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     }
                 if (isCurrent(turn, current.scope)) {
                     copyInbox = result
+                    render()
+                }
+            }
+    }
+
+    /** Asks the server how the player signs in, unless Not now still hides the card. */
+    private fun refreshPasswordPrompt(
+        current: HomeAccount,
+        turn: Int,
+    ) {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val snoozedAt = AnkiquestPasswordPrompt.snoozedAt(prefs, current)
+        val now = TimeManager.time.intTimeMS()
+        if (current.token.isEmpty() || (snoozedAt != null && now - snoozedAt < AnkiquestPasswordPrompt.SNOOZE_MS)) {
+            passwordPrompt = PasswordPrompt.Hidden
+            return
+        }
+        passwordJob =
+            lifecycleScope.launch {
+                val offered =
+                    try {
+                        val methods = AnkiquestAccountSettings.methods(current)
+                        // Not now may have been chosen while the server was answering.
+                        AnkiquestPasswordPrompt.offered(methods, AnkiquestPasswordPrompt.snoozedAt(prefs, current), now)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        Timber.w(error, "AnkiQuest sign-in methods could not be loaded")
+                        false
+                    }
+                val next = if (offered) PasswordPrompt.Offered(current) else PasswordPrompt.Hidden
+                if (isCurrent(turn, current.scope) && next != passwordPrompt) {
+                    passwordPrompt = next
                     render()
                 }
             }
@@ -375,6 +445,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
+        renderPasswordPrompt()
         val signed = account?.takeIf { it.token.isNotEmpty() }
         val suggested =
             AnkiquestDailyGoal.ServerGoal
@@ -385,6 +456,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             renderGoalSetup(signed, suggested)
         }
         local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile), suggested) }
+        local?.countdown?.let { renderCountdown(it) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -427,6 +499,29 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
     }
 
+    /** Below the next study step, so it never stands between the player and their cards. */
+    private fun renderPasswordPrompt() {
+        val offered = passwordPrompt as? PasswordPrompt.Offered ?: return
+        val panel = views.card(content, tinted = true)
+        views.text(panel, getString(R.string.ankiquest_password_set_title), heading = true)
+        views.text(panel, getString(R.string.ankiquest_password_prompt_body))
+        button(panel, R.string.ankiquest_password_set_title, primary = true) {
+            AnkiquestPasswordPrompt.ask(this, offered.account) { hidePasswordPrompt(offered) }
+        }
+        button(panel, R.string.ankiquest_deck_share_not_now) {
+            AnkiquestPasswordPrompt.snooze(AnkiDroidApp.sharedPrefs(), offered.account, TimeManager.time.intTimeMS())
+            hidePasswordPrompt(offered)
+        }
+    }
+
+    /** Hides the card after Not now or a saved password; an answer still on its way is dropped. */
+    private fun hidePasswordPrompt(offered: PasswordPrompt.Offered) {
+        if (passwordPrompt != offered) return
+        passwordJob?.cancel()
+        passwordPrompt = PasswordPrompt.Hidden
+        render()
+    }
+
     private fun renderGoal(
         status: AnkiquestDailyGoal.Status,
         suggested: AnkiquestDailyGoal.Choice?,
@@ -454,6 +549,15 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(panel, R.string.aq_goal_change) { AnkiquestGoalDialog.edit(this, signed) { refresh() } }
             }
         }
+    }
+
+    /** The nearest countdown and, with a deck, the cards a day to finish it by then. */
+    private fun renderCountdown(countdown: HomeCountdown) {
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.ankiquest_countdowns), small = true)
+        views.text(panel, AnkiquestCountdownTexts.headline(this, countdown.event, countdown.days), heading = true)
+        AnkiquestCountdownTexts.pace(this, countdown.pace, countdown.event.deck)?.let { views.text(panel, it, small = true) }
+        button(panel, R.string.ankiquest_countdowns_manage) { startActivity(AnkiquestCountdownsActivity.intent(this)) }
     }
 
     private suspend fun restoreOldGoal(
