@@ -106,8 +106,8 @@ jobs:
           echo "fatal_warnings=false" >> local.properties
           quest=(--no-build-cache -Pankiquest -PcustomName="AnkiQuest"
             -PupstreamCommit="$UPSTREAM_SHA")
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestUpdates=github "${quest[@]}"
-          ./gradlew :AnkiDroid:bundlePlayRelease -PankiquestUpdates=none "${quest[@]}"
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace -PankiquestUpdates=github "${quest[@]}"
+          ./gradlew :AnkiDroid:bundlePlayRelease --stacktrace -PankiquestUpdates=none "${quest[@]}"
           out="$GITHUB_WORKSPACE/out"
           mkdir -p "$out"
           cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk "$out/AnkiQuest.apk"
@@ -117,6 +117,13 @@ jobs:
           cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab "$out/AnkiQuest.aab"
           cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$out/mapping-full.txt"
           cp AnkiDroid/build/outputs/mapping/playRelease/mapping.txt "$out/mapping-play.txt"
+
+      # Packaging failed now and then with no cause printed; free disk and memory rule those out.
+      - name: Disk and memory
+        if: failure()
+        run: |
+          df -h
+          free -m
 
       # The R8 mappings show which classes and members R8 named or kept differently.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -106,13 +106,20 @@ jobs:
           echo "fatal_warnings=false" >> local.properties
           quest=(-Pankiquest -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE"
             -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM_SHA")
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true -PankiquestUpdates=github "${quest[@]}"
-          ./gradlew :AnkiDroid:bundlePlayRelease -PankiquestUpdates=none "${quest[@]}"
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace -PankiquestUpdates=github "${quest[@]}"
+          ./gradlew :AnkiDroid:bundlePlayRelease --stacktrace -PankiquestUpdates=none "${quest[@]}"
           cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk AnkiQuest.apk
           for abi in $ABIS; do
             cp "AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-$abi-release.apk" "AnkiQuest-$abi.apk"
           done
           cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab AnkiQuest.aab
+
+      # Packaging failed now and then with no cause printed; free disk and memory rule those out.
+      - name: Disk and memory
+        if: failure()
+        run: |
+          df -h
+          free -m
 
       # The AnkiQuest key alone signs only org.ankiquest.ankidroid. The old package needs the
       # rotation lineage from the public test key, which this workflow no longer applies, so an
