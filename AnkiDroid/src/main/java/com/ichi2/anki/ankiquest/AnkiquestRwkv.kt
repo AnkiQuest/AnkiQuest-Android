@@ -129,14 +129,14 @@ internal object AnkiquestRwkv {
     suspend fun disable(
         context: Context,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ): RwkvState = transition(context, prefs) { RwkvState.Off.disable(engine.unload()) }
+    ): RwkvState = transition(context, prefs) { RwkvState.Off.disable() }
 
     /** The state for the saved switch, as when the app starts or the settings open; a saved "on" that is now blocked is refused. */
     suspend fun restore(
         context: Context,
         ram: RwkvRam,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ): RwkvState = transition(context, prefs) { RwkvState.restore(switch(prefs), checks(context, ram), engine.load) }
+    ): RwkvState = transition(context, prefs) { RwkvState.restore(switch(prefs), checks(context, ram)) }
 
     /** Imports picked files; the caller restores the state afterwards, which hands the backend the new models if the scheduler is on. */
     suspend fun import(
@@ -175,10 +175,22 @@ internal object AnkiquestRwkv {
 
     fun downloader(context: Context) = RwkvDownload(store(context), GithubPackFetch(AnkiquestHttp.client))
 
-    /** A preset's mode changed: which models run depends on the presets, so the engine is handed them again. */
-    suspend fun presetsChanged(context: Context) {
-        if (switch() == RwkvSwitch.ON) {
-            restore(context, AndroidRwkvRam(context))
+    /**
+     * The deck options page saved presets: which models run depends on their schedulers, so a
+     * running engine is handed them again. Runs on its own, so the page closes at once.
+     */
+    fun presetsChanged(context: Context) {
+        if (switch() != RwkvSwitch.ON) {
+            return
+        }
+        scope.launch {
+            try {
+                restore(context, AndroidRwkvRam(context))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "RWKV: could not hand over the presets")
+            }
         }
     }
 
@@ -191,8 +203,13 @@ internal object AnkiquestRwkv {
             // The checks and the start read and hash the model files.
             val state = withContext(ioDispatcher) { next().start(store(context), engine) }
             prefs.edit { putBoolean(PREF_ENABLED, state.switch == RwkvSwitch.ON) }
+
+            // Only a ready scheduler keeps a model: off and refused hand scheduling back at once.
             if (state == RwkvState.Ready) {
                 watch()
+            } else {
+                watcher?.cancel()
+                engine.unload()
             }
             state
         }
@@ -244,7 +261,6 @@ internal object AnkiquestRwkv {
         when (state) {
             RwkvState.Off -> R.string.ankiquest_rwkv_off
             RwkvState.Ready -> R.string.ankiquest_rwkv_ready
-            RwkvState.Stopping -> R.string.ankiquest_rwkv_stopping
             is RwkvState.Refused -> reason(state.reason)
         }
 

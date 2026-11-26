@@ -2,12 +2,11 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_rwkv_title">Planificador RWKV (experimental)</string>
-    <string name="ankiquest_rwkv_off">Deja que un modelo RWKV programe los grupos de opciones que pongas en RWKV. Necesita archivos de modelo importados y memoria suficiente.</string>
+    <string name="ankiquest_rwkv_off">Deja que un modelo RWKV programe los grupos de opciones puestos en RWKV-Instant o RWKV-Curve en las opciones del mazo. Necesita archivos de modelo importados y memoria suficiente.</string>
     <string name="ankiquest_rwkv_not_enough_memory">No disponible: este teléfono tiene muy poca memoria para tu colección. La programación no cambia.</string>
     <string name="ankiquest_rwkv_no_model">No disponible: importa primero un modelo RWKV de dos cabezas. La programación no cambia.</string>
     <string name="ankiquest_rwkv_backend_failed">No disponible: el motor RWKV no pudo cargar los archivos de modelo. La programación no cambia.</string>
-    <string name="ankiquest_rwkv_ready">Activado: RWKV programa los grupos de opciones puestos en RWKV.</string>
-    <string name="ankiquest_rwkv_stopping">Desactivado. RWKV sigue programando hasta que AnkiQuest se reinicie.</string>
+    <string name="ankiquest_rwkv_ready">Activado: RWKV programa los grupos de opciones puestos en RWKV en las opciones del mazo.</string>
     <string name="ankiquest_rwkv_models_title">Archivos de modelo RWKV</string>
     <string name="ankiquest_rwkv_models_none">Ninguno importado.</string>
     <string name="ankiquest_rwkv_import_message">AnkiQuest no incluye pesos RWKV: no tienen licencia para redistribuirse y son solo para uso personal y de investigación (WEIGHTS-NOTICE.md de la versión %1$s de JSchoreels/anki-rwkv). Descargar trae los modelos de un tamaño desde esa versión en GitHub. O descarga tú el zip de dos cabezas y, si quieres, el zip Instant-only del mismo tamaño, y elige los zips o sus archivos weights.f32.bin. Solo se guardan los archivos cuyo SHA-256 coincide con un modelo conocido.</string>
@@ -19,8 +18,6 @@
     <string name="ankiquest_rwkv_imported">Importado: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">No importado: ningún archivo coincide con un modelo RWKV conocido.</string>
     <string name="ankiquest_rwkv_import_unreadable">No importado: no se pudo leer el archivo.</string>
-    <string name="ankiquest_rwkv_presets_title">Grupos de opciones RWKV</string>
-    <string name="ankiquest_rwkv_presets_summary">Elige qué grupos de opciones programa RWKV. Se guarda en el grupo y se sincroniza.</string>
 
     <string name="ankiquest_rwkv_forecast_title">Previsión RWKV</string>
     <string name="ankiquest_rwkv_forecast_note">si dejas de repasar ahora</string>

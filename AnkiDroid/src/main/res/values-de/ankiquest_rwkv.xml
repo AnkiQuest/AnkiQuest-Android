@@ -2,12 +2,11 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_rwkv_title">RWKV-Planer (experimentell)</string>
-    <string name="ankiquest_rwkv_off">Lässt ein RWKV-Modell die Optionsgruppen planen, die du auf RWKV stellst. Braucht importierte Modelldateien und genug Arbeitsspeicher.</string>
+    <string name="ankiquest_rwkv_off">Lässt ein RWKV-Modell die Optionsgruppen planen, die in den Stapeloptionen auf RWKV-Instant oder RWKV-Curve stehen. Braucht importierte Modelldateien und genug Arbeitsspeicher.</string>
     <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für deine Sammlung. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Importiere zuerst ein RWKV-Two-Head-Modell. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_backend_failed">Nicht verfügbar: Die RWKV-Engine konnte die Modelldateien nicht laden. Die Planung bleibt unverändert.</string>
-    <string name="ankiquest_rwkv_ready">An: RWKV plant die Optionsgruppen, die auf RWKV stehen.</string>
-    <string name="ankiquest_rwkv_stopping">Aus. RWKV plant weiter, bis AnkiQuest neu startet.</string>
+    <string name="ankiquest_rwkv_ready">An: RWKV plant die Optionsgruppen, die in den Stapeloptionen auf RWKV stehen.</string>
     <string name="ankiquest_rwkv_models_title">RWKV-Modelldateien</string>
     <string name="ankiquest_rwkv_models_none">Keine importiert.</string>
     <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe und sind nur für persönliche und Forschungszwecke (WEIGHTS-NOTICE.md des Release %1$s von JSchoreels/anki-rwkv). Herunterladen holt die Modelle einer Größe aus diesem Release auf GitHub. Oder lade selbst das Two-Head-Zip herunter, wenn du willst auch das Instant-only-Zip derselben Größe, und wähle die Zips oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
@@ -19,8 +18,6 @@
     <string name="ankiquest_rwkv_imported">Importiert: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Nicht importiert: Keine Datei passt zu einem bekannten RWKV-Modell.</string>
     <string name="ankiquest_rwkv_import_unreadable">Nicht importiert: Die Datei konnte nicht gelesen werden.</string>
-    <string name="ankiquest_rwkv_presets_title">RWKV-Optionsgruppen</string>
-    <string name="ankiquest_rwkv_presets_summary">Wähle, welche Optionsgruppen RWKV plant. Wird in der Optionsgruppe gespeichert und synchronisiert.</string>
 
     <string name="ankiquest_rwkv_forecast_title">RWKV-Prognose</string>
     <string name="ankiquest_rwkv_forecast_note">wenn du jetzt aufhörst zu wiederholen</string>

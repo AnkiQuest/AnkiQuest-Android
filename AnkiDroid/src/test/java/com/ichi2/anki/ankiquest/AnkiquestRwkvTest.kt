@@ -36,7 +36,6 @@ class AnkiquestRwkvTest {
         private val refuse: Boolean = false,
     ) : RwkvEngine {
         val prepared = mutableListOf<RwkvModels>()
-        override val load = RwkvLoad.NOT_LOADED
 
         override suspend fun prepare(models: RwkvModels): Long {
             if (refuse) {
@@ -48,12 +47,12 @@ class AnkiquestRwkvTest {
 
         override suspend fun progress(): RwkvProgress = RwkvProgress.Unavailable
 
-        override suspend fun unload(): RwkvLoad = RwkvLoad.NOT_LOADED
+        override suspend fun unload() = Unit
     }
 
     @Test
     fun `every state has its own summary`() {
-        val states = listOf(RwkvState.Off, RwkvState.Ready, RwkvState.Stopping) + RwkvBlocker.entries.map { RwkvState.Refused(it) }
+        val states = listOf(RwkvState.Off, RwkvState.Ready) + RwkvBlocker.entries.map { RwkvState.Refused(it) }
         val summaries = states.map(AnkiquestRwkv::summary)
         assertEquals(states.size, summaries.toSet().size)
         assertEquals(R.string.ankiquest_rwkv_backend_failed, AnkiquestRwkv.summary(RwkvState.Refused(RwkvBlocker.BACKEND_FAILED)))
@@ -90,7 +89,7 @@ class AnkiquestRwkvTest {
         runTest {
             store.import(twoHead.inputStream())
             val engine = FakeEngine()
-            for (state in listOf(RwkvState.Off, RwkvState.Stopping, RwkvState.Refused(RwkvBlocker.NO_MODEL))) {
+            for (state in listOf(RwkvState.Off, RwkvState.Refused(RwkvBlocker.NO_MODEL))) {
                 assertEquals(state, state.start(store, engine))
             }
             assertEquals(emptyList(), engine.prepared)

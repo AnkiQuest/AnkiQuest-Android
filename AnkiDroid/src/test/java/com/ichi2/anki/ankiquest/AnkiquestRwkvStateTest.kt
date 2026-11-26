@@ -40,7 +40,7 @@ class AnkiquestRwkvStateTest {
 
     @Test
     fun `every state but ready shows the switch off`() {
-        for (state in listOf(RwkvState.Off, RwkvState.Stopping) + RwkvBlocker.entries.map(::refused)) {
+        for (state in listOf(RwkvState.Off) + RwkvBlocker.entries.map(::refused)) {
             assertEquals(RwkvSwitch.OFF, state.switch, "$state")
         }
     }
@@ -52,54 +52,35 @@ class AnkiquestRwkvStateTest {
     }
 
     @Test
-    fun `enabling while stopping is ready again`() {
-        assertEquals(RwkvState.Ready, RwkvState.Stopping.enable(checks()))
-    }
-
-    @Test
-    fun `disabling without a loaded model is off from every state`() {
-        for (state in listOf(RwkvState.Off, RwkvState.Ready, RwkvState.Stopping, refused(RwkvBlocker.NO_MODEL))) {
-            assertEquals(RwkvState.Off, state.disable(RwkvLoad.NOT_LOADED))
+    fun `disabling is off from every state`() {
+        for (state in listOf(RwkvState.Off, RwkvState.Ready, refused(RwkvBlocker.NO_MODEL))) {
+            assertEquals(RwkvState.Off, state.disable())
         }
-    }
-
-    @Test
-    fun `disabling with a loaded model stops at the next restart`() {
-        // The backend has no call to drop a model, so it keeps scheduling until the process ends.
-        assertEquals(RwkvState.Stopping, RwkvState.Ready.disable(RwkvLoad.LOADED))
-        assertEquals(RwkvSwitch.OFF, RwkvState.Stopping.switch)
     }
 
     @Test
     fun `a backend failure refuses a ready scheduler and leaves the off states alone`() {
         assertEquals(refused(RwkvBlocker.BACKEND_FAILED), RwkvState.Ready.fail())
         assertEquals(RwkvState.Off, RwkvState.Off.fail())
-        assertEquals(RwkvState.Stopping, RwkvState.Stopping.fail())
         assertEquals(refused(RwkvBlocker.NO_MODEL), refused(RwkvBlocker.NO_MODEL).fail())
     }
 
     @Test
     fun `restoring follows the saved switch`() {
-        assertEquals(RwkvState.Off, RwkvState.restore(RwkvSwitch.OFF, checks(), RwkvLoad.NOT_LOADED))
-        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks(), RwkvLoad.NOT_LOADED))
-        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks(), RwkvLoad.LOADED))
-    }
-
-    @Test
-    fun `restoring a saved off with a loaded model is stopping`() {
-        assertEquals(RwkvState.Stopping, RwkvState.restore(RwkvSwitch.OFF, checks(), RwkvLoad.LOADED))
+        assertEquals(RwkvState.Off, RwkvState.restore(RwkvSwitch.OFF, checks()))
+        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks()))
     }
 
     @Test
     fun `restoring a saved on that is now blocked is refused and off`() {
-        val state = RwkvState.restore(RwkvSwitch.ON, checks(models = null), RwkvLoad.NOT_LOADED)
+        val state = RwkvState.restore(RwkvSwitch.ON, checks(models = null))
         assertEquals(refused(RwkvBlocker.NO_MODEL), state)
         assertEquals(RwkvSwitch.OFF, state.switch)
     }
 
     @Test
     fun `restoring a ready state refuses it when the collection outgrows memory`() {
-        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.restore(RwkvSwitch.ON, checks(cards = 100_000), RwkvLoad.LOADED))
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.restore(RwkvSwitch.ON, checks(cards = 100_000)))
     }
 
     @Test

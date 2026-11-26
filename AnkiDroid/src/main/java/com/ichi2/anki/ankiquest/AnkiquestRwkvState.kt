@@ -24,19 +24,9 @@ internal enum class RwkvSwitch {
 }
 
 /**
- * Whether this process handed the backend a model. The backend keeps a model it was given until the
- * process ends: it has no call to drop one.
- */
-internal enum class RwkvLoad {
-    LOADED,
-    NOT_LOADED,
-}
-
-/**
  * The RWKV scheduler on this phone. In [Ready] the backend orders the review queues of presets set
  * to RWKV-Instant and gives RWKV-Curve presets their intervals; [Off] and [Refused] leave Anki's own
- * scheduler (FSRS or SM-2) in charge. [Stopping] is off, but a model loaded earlier in this process
- * keeps scheduling until the app restarts.
+ * scheduler (FSRS or SM-2) in charge: the engine drops its model in every state but [Ready].
  *
  * A blocked scheduler is refused rather than left on (#442): turning it on while a check fails
  * keeps the switch off and reports why.
@@ -45,7 +35,7 @@ internal sealed interface RwkvState {
     /** The switch this state shows and saves. */
     val switch: RwkvSwitch
 
-    /** The player has not turned it on, or turned it off, and no model is loaded. */
+    /** The player has not turned it on, or turned it off. */
     data object Off : RwkvState {
         override val switch = RwkvSwitch.OFF
     }
@@ -62,26 +52,17 @@ internal sealed interface RwkvState {
         override val switch = RwkvSwitch.ON
     }
 
-    /** Off, but the model loaded in this process schedules until the app restarts. */
-    data object Stopping : RwkvState {
-        override val switch = RwkvSwitch.OFF
-    }
-
     /** The player turns it on: [Ready] if every check passes, otherwise [Refused] with the first failure. */
     fun enable(checks: RwkvChecks): RwkvState = checks.verdict()
 
     /** The player turns it off. */
-    fun disable(load: RwkvLoad): RwkvState =
-        when (load) {
-            RwkvLoad.LOADED -> Stopping
-            RwkvLoad.NOT_LOADED -> Off
-        }
+    fun disable(): RwkvState = Off
 
     /** The backend refused the models: a [Ready] scheduler is refused; the off states stay. */
     fun fail(): RwkvState =
         when (this) {
             Ready -> Refused(RwkvBlocker.BACKEND_FAILED)
-            Off, Stopping, is Refused -> this
+            Off, is Refused -> this
         }
 
     companion object {
@@ -89,11 +70,10 @@ internal sealed interface RwkvState {
         fun restore(
             switch: RwkvSwitch,
             checks: RwkvChecks,
-            load: RwkvLoad,
         ): RwkvState =
             when (switch) {
                 RwkvSwitch.ON -> Off.enable(checks)
-                RwkvSwitch.OFF -> Off.disable(load)
+                RwkvSwitch.OFF -> Off
             }
     }
 }

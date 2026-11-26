@@ -59,7 +59,6 @@ import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
-import com.ichi2.anki.ankiquest.AnkiquestRwkvPresets
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
@@ -70,8 +69,6 @@ import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.ankiquest.RwkvImport
 import com.ichi2.anki.ankiquest.RwkvImportError
 import com.ichi2.anki.ankiquest.RwkvLock
-import com.ichi2.anki.ankiquest.RwkvPreset
-import com.ichi2.anki.ankiquest.RwkvPresetMode
 import com.ichi2.anki.ankiquest.RwkvRam
 import com.ichi2.anki.ankiquest.RwkvSize
 import com.ichi2.anki.ankiquest.RwkvState
@@ -629,10 +626,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             showRwkvImport()
             true
         }
-        requirePreference<Preference>(R.string.ankiquest_rwkv_presets_key).setOnPreferenceClickListener {
-            launchCatchingTask { showRwkvPresets() }
-            true
-        }
         runRwkv({ context, ram -> AnkiquestRwkv.restore(context, ram) }) { }
     }
 
@@ -764,56 +757,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 RwkvImportError.DOWNLOAD_MISMATCH -> R.string.ankiquest_rwkv_download_mismatch
             },
         )
-    }
-
-    /** Each preset with its RWKV mode; picking one opens its two switches, worded as the desktop fork's Deck Options. */
-    private suspend fun showRwkvPresets() {
-        val presets = AnkiquestRwkvPresets.all()
-        if (!isAdded) {
-            return
-        }
-        val items =
-            presets
-                .map { preset ->
-                    val labels = rwkvModeLabels(preset.mode)
-                    if (labels.isEmpty()) {
-                        preset.name
-                    } else {
-                        getString(R.string.ankiquest_rwkv_preset_item, preset.name, labels.joinToString())
-                    }
-                }.toTypedArray()
-        AlertDialog
-            .Builder(requireContext())
-            .setTitle(R.string.ankiquest_rwkv_presets_title)
-            .setItems(items) { _, which -> showRwkvPreset(presets[which]) }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun rwkvModeLabels(mode: RwkvPresetMode): List<String> =
-        listOfNotNull(
-            TR.deckConfigRwkvModelInstantLabel().takeIf { mode.instant },
-            TR.deckConfigRwkvModelCurveLabel().takeIf { mode.curve },
-        )
-
-    private fun showRwkvPreset(preset: RwkvPreset) {
-        val checked = booleanArrayOf(preset.mode.instant, preset.mode.curve)
-        AlertDialog
-            .Builder(requireContext())
-            .setTitle(preset.name)
-            .setMultiChoiceItems(
-                arrayOf(TR.deckConfigRwkvReviewInstantOrder(), TR.deckConfigRwkvReviewEnabled()),
-                checked,
-            ) { _, which, isChecked -> checked[which] = isChecked }
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                val mode = RwkvPresetMode.of(curve = checked[RWKV_CURVE], instant = checked[RWKV_INSTANT])
-                val context = requireContext().applicationContext
-                launchCatchingTask {
-                    AnkiquestRwkvPresets.save(preset.id, mode)
-                    AnkiquestRwkv.presetsChanged(context)
-                }
-            }.setNegativeButton(android.R.string.cancel, null)
-            .show()
     }
 
     /**
@@ -1285,10 +1228,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         /** Any file: a release zip or a `.bin`; the lock file decides what is kept. */
         private const val ANY_FILE = "*/*"
         private const val NO_STREAM = "the provider returned no stream"
-
-        /** The RWKV preset dialog's rows: Instant first, as the desktop fork lists them. */
-        private const val RWKV_INSTANT = 0
-        private const val RWKV_CURVE = 1
 
         /** This screen with the sign-in dialog open. */
         fun signInIntent(context: Context): Intent =

@@ -2,12 +2,11 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
     <string name="ankiquest_rwkv_title">Planificateur RWKV (expérimental)</string>
-    <string name="ankiquest_rwkv_off">Laisse un modèle RWKV planifier les préréglages que tu mets sur RWKV. Nécessite des fichiers de modèle importés et assez de mémoire.</string>
+    <string name="ankiquest_rwkv_off">Laisse un modèle RWKV planifier les préréglages mis sur RWKV-Instant ou RWKV-Curve dans les options du paquet. Nécessite des fichiers de modèle importés et assez de mémoire.</string>
     <string name="ankiquest_rwkv_not_enough_memory">Indisponible : ce téléphone n’a pas assez de mémoire pour ta collection. La planification ne change pas.</string>
     <string name="ankiquest_rwkv_no_model">Indisponible : importe d’abord un modèle RWKV à deux têtes. La planification ne change pas.</string>
     <string name="ankiquest_rwkv_backend_failed">Indisponible : le moteur RWKV n’a pas pu charger les fichiers de modèle. La planification ne change pas.</string>
-    <string name="ankiquest_rwkv_ready">Activé : RWKV planifie les préréglages mis sur RWKV.</string>
-    <string name="ankiquest_rwkv_stopping">Désactivé. RWKV continue de planifier jusqu’au redémarrage d’AnkiQuest.</string>
+    <string name="ankiquest_rwkv_ready">Activé : RWKV planifie les préréglages mis sur RWKV dans les options du paquet.</string>
     <string name="ankiquest_rwkv_models_title">Fichiers de modèle RWKV</string>
     <string name="ankiquest_rwkv_models_none">Aucun importé.</string>
     <string name="ankiquest_rwkv_import_message">AnkiQuest ne fournit aucun poids RWKV : ils n’ont pas de licence de redistribution et sont réservés à un usage personnel et de recherche (WEIGHTS-NOTICE.md de la version %1$s de JSchoreels/anki-rwkv). Télécharger récupère les modèles d’une taille depuis cette version sur GitHub. Sinon, télécharge toi-même le zip à deux têtes et, si tu veux, le zip Instant-only de la même taille, puis choisis les zips ou leurs fichiers weights.f32.bin. Seuls les fichiers dont le SHA-256 correspond à un modèle connu sont gardés.</string>
@@ -19,8 +18,6 @@
     <string name="ankiquest_rwkv_imported">Importé : %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Non importé : aucun fichier ne correspond à un modèle RWKV connu.</string>
     <string name="ankiquest_rwkv_import_unreadable">Non importé : le fichier n’a pas pu être lu.</string>
-    <string name="ankiquest_rwkv_presets_title">Préréglages RWKV</string>
-    <string name="ankiquest_rwkv_presets_summary">Choisis les préréglages que RWKV planifie. Enregistré dans le préréglage et synchronisé.</string>
 
     <string name="ankiquest_rwkv_forecast_title">Prévision RWKV</string>
     <string name="ankiquest_rwkv_forecast_note">si tu arrêtes de réviser maintenant</string>
