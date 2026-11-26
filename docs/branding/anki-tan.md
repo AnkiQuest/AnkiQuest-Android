@@ -24,9 +24,9 @@ Companion `anki_tan` gets her own launcher icons (`AnkiquestIcon.Icon`).
 | sleepy | `anki_tan_icon_sleepy` | `emoji/Ankitan_35_sleeping.png` |
 | monochrome (themed icon) | `anki_tan_icon_mono` | line art of `emoji/Ankitan_00_smile.png` |
 
-The drawables in `AnkiDroid/src/main/res/drawable-nodpi/` are the exported
-copies of the AnkiQuest-Art release pinned in `ankiquest-art.json`; the
-`ankiquest art check` workflow fails on any other bytes.
+The drawables are not committed: the build unpacks them from the
+`android-drawables.zip` of the AnkiQuest-Art release pinned in
+`ankiquest-art.json`, after checking its SHA-256.
 The adaptive icons in `AnkiDroid/src/quest/res/` inset her app icon by 10%
 so its frame stays outside the launcher's mask, and the faces by 18%, inside
 the 72dp safe zone, as Aki's are.

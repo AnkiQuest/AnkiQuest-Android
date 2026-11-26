@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Checks that every companion picture committed under AnkiDroid's drawables is, byte for byte, the
-// exported copy the pinned AnkiQuest-Art release publishes in android-drawables.zip. A picture the
-// release does not have, or one with other bytes, fails: the app shows only Art's exported copies.
-// The zip is checked against the SHA-256 in ankiquest-art.json before it is read.
+// The app commits no companion picture: the build unpacks them from the android-drawables.zip of the
+// AnkiQuest-Art release ankiquest-art.json pins (buildSrc AnkiquestArt.kt). This checks that the
+// pinned zip has the pinned SHA-256 and only flat drawable entries, that no companion picture is
+// committed under AnkiDroid/src, and that every companion drawable the app names is in the release
+// (or is one of the app's own XML drawables, such as the launcher foregrounds).
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -12,20 +13,24 @@ const { execFileSync } = require("node:child_process");
 const PIN = "ankiquest-art.json";
 const ASSET = "android-drawables.zip";
 const RELEASES = "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download";
-const DRAWABLES = "drawable-nodpi";
-const APP_DRAWABLES = path.join("AnkiDroid/src/main/res", DRAWABLES);
+const SOURCES = "AnkiDroid/src";
 
 // Companion pictures by name: one prefix per companion as the Art exporter names them (Bluma's poses
 // are bluma_*, her launcher icons cow_*), and the duo picture.
-const COMPANION = /^(aki|ankilope|anki_tan|bluma|cow|duo)_[a-z0-9_]+\.webp$/;
+const PREFIX = "(?:aki|ankilope|anki_tan|bluma|cow|duo)_[a-z0-9_]+";
+const COMPANION = new RegExp(`^${PREFIX}\\.(?:webp|png|jpe?g)$`);
 
-// The zip holds the drawables and the Anki-tan licence, nothing else.
-const ZIP_ENTRY = /^(drawable-nodpi\/|drawable-nodpi\/[a-z0-9_]+\.webp|LICENSE-[A-Za-z-]+\.md)$/;
+// A companion drawable named in code or resources.
+const REFERENCE = new RegExp(`(?:R\\.drawable\\.|@drawable/)(${PREFIX})`, "g");
+
+// The zip holds flat drawables and licences, nothing else.
+const DRAWABLE = /^drawable-nodpi\/([a-z][a-z0-9_]*)\.webp$/;
+const OTHER = /^(drawable-nodpi\/|LICENSE-[A-Za-z-]+\.md)$/;
 
 /** The pinned tag and the zip's SHA-256 from `root`'s ankiquest-art.json. */
 function pin(root) {
     const json = JSON.parse(fs.readFileSync(path.join(root, PIN), "utf8"));
-    if (!/^art-[0-9]+$/.test(json.tag || "")) {
+    if (!/^art-[1-9][0-9]*$/.test(json.tag || "")) {
         throw new Error(`${PIN} names no art-<N> tag`);
     }
     const sha = (json.assets || {})[ASSET];
@@ -39,22 +44,55 @@ function sha256(bytes) {
     return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
-/** Unpacks `zip` into a new folder after checking its hash and entry names; answers the drawables folder. */
-function unpack(zip, sha) {
-    const bytes = fs.readFileSync(zip);
-    if (sha256(bytes) !== sha) {
+/** The drawable names in `zip`, after checking its hash and entry names. */
+function released(zip, sha) {
+    if (sha256(fs.readFileSync(zip)) !== sha) {
         throw new Error(`${ASSET} does not have the pinned SHA-256`);
     }
-
-    // Only flat, known entries: nothing outside the folder, no other files.
     const entries = execFileSync("unzip", ["-Z1", zip], { encoding: "utf8" }).split("\n").filter(Boolean);
-    const unsafe = entries.filter((entry) => !ZIP_ENTRY.test(entry));
-    if (unsafe.length) {
-        throw new Error(`Unexpected entries in ${ASSET}: ${unsafe.join(", ")}`);
+    const unexpected = entries.filter((entry) => !DRAWABLE.test(entry) && !OTHER.test(entry));
+    if (unexpected.length) {
+        throw new Error(`Unexpected entries in ${ASSET}: ${unexpected.join(", ")}`);
     }
-    const target = fs.mkdtempSync(path.join(os.tmpdir(), "ankiquest-art-"));
-    execFileSync("unzip", ["-q", zip, "-d", target]);
-    return path.join(target, DRAWABLES);
+    const names = entries.map((entry) => DRAWABLE.exec(entry)?.[1]).filter(Boolean);
+    if (!names.length) {
+        throw new Error(`${ASSET} has no drawables`);
+    }
+    return new Set(names);
+}
+
+/** Every file under `folder`, relative to it, sorted. */
+function files(folder) {
+    if (!fs.existsSync(folder)) {
+        return [];
+    }
+    return fs
+        .readdirSync(folder, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => path.relative(folder, path.join(entry.parentPath, entry.name)).split(path.sep).join("/"))
+        .sort();
+}
+
+/** The committed companion pictures under `root`'s AnkiDroid/src, relative to it. */
+function committed(root) {
+    return files(path.join(root, SOURCES)).filter((file) => COMPANION.test(path.posix.basename(file)));
+}
+
+/**
+ * The companion drawables `root`'s code and resources name that are neither in `names` (the
+ * release's) nor committed as the app's own XML drawables.
+ */
+function missing(root, names) {
+    const sources = path.join(root, SOURCES);
+    const all = files(sources);
+    const own = new Set(all.filter((file) => /\/res\/drawable[^/]*\/[^/]+\.xml$/.test(file)).map((file) => path.posix.basename(file, ".xml")));
+    const used = new Set();
+    for (const file of all.filter((name) => /\.(kt|java|xml)$/.test(name))) {
+        for (const match of fs.readFileSync(path.join(sources, file), "utf8").matchAll(REFERENCE)) {
+            used.add(match[1]);
+        }
+    }
+    return [...used].filter((name) => !names.has(name) && !own.has(name)).sort();
 }
 
 /** Downloads the pinned zip into a temporary file and answers its path. */
@@ -68,38 +106,15 @@ async function download(tag) {
     return file;
 }
 
-/**
- * The problems of `root`'s committed companion pictures against the exported copies in `released`:
- * one line per picture the release lacks or whose bytes differ.
- */
-function compare(root, released) {
-    const problems = [];
-    const folder = path.join(root, APP_DRAWABLES);
-    for (const name of fs.readdirSync(folder).sort()) {
-        if (!COMPANION.test(name)) {
-            continue;
-        }
-        const exported = path.join(released, name);
-        if (!fs.existsSync(exported)) {
-            problems.push(`${name}: not in the pinned release`);
-            continue;
-        }
-        if (!fs.readFileSync(exported).equals(fs.readFileSync(path.join(folder, name)))) {
-            problems.push(`${name}: differs from the pinned release`);
-        }
-    }
-    return problems;
-}
-
 /** Checks `root` against `zip`, or against the pinned release downloaded when no zip is given. */
 async function check(root, zip) {
     const { tag, sha } = pin(root);
-    const released = unpack(zip || (await download(tag)), sha);
-    try {
-        return { tag, problems: compare(root, released) };
-    } finally {
-        fs.rmSync(path.dirname(released), { recursive: true, force: true });
-    }
+    const names = released(zip || (await download(tag)), sha);
+    const problems = [
+        ...committed(root).map((file) => `${file}: committed; the build takes it from the pinned release`),
+        ...missing(root, names).map((name) => `${name}: used by the app, not in the pinned release`),
+    ];
+    return { tag, count: names.size, problems };
 }
 
 if (require.main === module) {
@@ -109,13 +124,13 @@ if (require.main === module) {
         process.exitCode = 1;
     } else {
         check(process.cwd(), zip)
-            .then(({ tag, problems }) => {
+            .then(({ tag, count, problems }) => {
                 if (problems.length) {
-                    console.error(`Companion pictures that are not ${tag}'s exported copies:\n${problems.join("\n")}`);
+                    console.error(`Companion art that does not come from ${tag}:\n${problems.join("\n")}`);
                     process.exitCode = 1;
                     return;
                 }
-                console.log(`Every companion picture is ${tag}'s exported copy`);
+                console.log(`No companion picture is committed; ${tag} has the ${count} drawables the build unpacks`);
             })
             .catch((error) => {
                 console.error(error.message);
@@ -124,4 +139,4 @@ if (require.main === module) {
     }
 }
 
-module.exports = { check, compare, pin, unpack, COMPANION };
+module.exports = { check, committed, missing, pin, released, COMPANION };
