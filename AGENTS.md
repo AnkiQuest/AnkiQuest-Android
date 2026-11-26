@@ -209,7 +209,9 @@ AnkiQuest-Android is AnkiDroid with AnkiQuest added.
 
 ## Upstream guidance
 
-From [ankidroid/Anki-Android](https://github.com/ankidroid/Anki-Android)'s AGENTS.md, kept here so the fork still follows the originating project's own rules where AnkiQuest's do not override them; this job refreshes the wording when upstream changes it.
+[ankidroid/Anki-Android](https://github.com/ankidroid/Anki-Android)'s own instructions, kept verbatim. The rules above override them; where they don't, they apply to upstream's code. AnkiQuest-Sync copies them from the upstream commit `master` last merged; don't edit them here.
+
+<!-- ankidroid/Anki-Android: AGENTS.md -->
 
 - Follow the repository's [AI policy](AI_POLICY.md).
 - Keep changes focused on the requested task. Avoid unrelated refactors, formatting, and settings changes.
