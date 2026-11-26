@@ -36,7 +36,7 @@ test("only org.ankiquest.ankidroid APKs reach the single-key signing", () => {
     assert.match(body, /if \[ "\$package" != "\$PACKAGE" \]; then[\s\S]*?exit 1/);
 });
 
-test("publishing the new package waits for the final old-package release", () => {
+test("publishing the new package waits for the final legacy APK release", () => {
     const bridge = apkWorkflow.indexOf("      - name: Check the migration release");
     const release = apkWorkflow.indexOf("      - name: Publish release");
     assert.ok(bridge >= 0 && bridge < release, "the bridge check must run before either publication step");
@@ -44,8 +44,8 @@ test("publishing the new package waits for the final old-package release", () =>
     // Pull requests squash-merge, so the guard reads the tag's tree, never commit ancestry.
     assert.doesNotMatch(guard, /merge-base/);
     assert.match(guard, /gh release view quest-24/);
-    assert.match(guard, /AnkiQuest\.apk/);
-    assert.doesNotMatch(apkWorkflow, /AnkiDroid-Quest\.apk/);
+    assert.match(guard, /AnkiDroid-Quest\.apk/);
+    assert.doesNotMatch(apkWorkflow.slice(release), /AnkiDroid-Quest\.apk/);
 });
 
 // Source files of a quest-24 tag, as the guard sees them. Only the final old-package release has
@@ -91,15 +91,15 @@ test("the publication guard accepts only the complete stable bridge", (t) => {
     const shell = `gh() { printf '%s\\n' "$BRIDGE_JSON"; }
 ${guard}`;
     const without = (name) => Object.fromEntries(Object.entries(FINAL_SOURCE).filter(([file]) => !file.endsWith(name)));
-    const stable = { isDraft: false, isPrerelease: false, assets: [{name: "AnkiQuest.apk"}, {name: "nightly.json"}] };
+    const stable = { isDraft: false, isPrerelease: false, assets: [{name: "AnkiQuest.apk"}, {name: "AnkiDroid-Quest.apk"}] };
     const cases = [
-        { name: "complete final release", info: stable, files: FINAL_SOURCE, expected: 0 },
+        { name: "complete legacy release", info: stable, files: FINAL_SOURCE, expected: 0 },
         { name: "earlier export-only source", info: stable, files: EXPORT_ONLY_SOURCE, expected: 1 },
         { name: "missing export provider", info: stable, files: without("AnkiquestMoveProvider.kt"), expected: 1 },
         { name: "missing updater notice", info: stable, files: {...FINAL_SOURCE, [`${BRIDGE}/AnkiquestUpdater.kt`]: EXPORT_ONLY_SOURCE[`${BRIDGE}/AnkiquestUpdater.kt`]}, expected: 1 },
         { name: "missing signer check", info: stable, files: {...FINAL_SOURCE, [`${BRIDGE}/AnkiquestMove.kt`]: EXPORT_ONLY_SOURCE[`${BRIDGE}/AnkiquestMove.kt`]}, expected: 1 },
         { name: "tag built from the new package", info: stable, files: {...FINAL_SOURCE, "AnkiDroid/build.gradle.kts": 'applicationId = "org.ankiquest.ankidroid"\n'}, expected: 1 },
-        { name: "missing AnkiQuest.apk", info: {...stable, assets: [{name: "AnkiDroid-Quest.apk"}]}, files: FINAL_SOURCE, expected: 1 },
+        { name: "missing legacy name", info: {...stable, assets: stable.assets.slice(0, 1)}, files: FINAL_SOURCE, expected: 1 },
         { name: "draft", info: {...stable, isDraft: true}, files: FINAL_SOURCE, expected: 1 },
         { name: "prerelease", info: {...stable, isPrerelease: true}, files: FINAL_SOURCE, expected: 1 },
     ];
