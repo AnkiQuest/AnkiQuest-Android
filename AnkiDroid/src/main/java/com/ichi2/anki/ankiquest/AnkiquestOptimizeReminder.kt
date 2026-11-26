@@ -221,8 +221,9 @@ internal object AnkiquestOptimizeReminder {
      */
     fun parse(raw: Any?): State? {
         val json = raw as? JSONObject ?: return null
+        val kind = json.opt(KIND) as? String ?: return null
         val fields = json.keys().asSequence().toSet() - KIND
-        return when (json.opt(KIND)) {
+        return when (kind) {
             "on" -> State.On.takeIf { fields.isEmpty() }
             "off" -> State.Off.takeIf { fields.isEmpty() }
             "snoozed" -> day(json, UNTIL_DAY, 0)?.takeIf { fields == setOf(UNTIL_DAY) }?.let { State.Snoozed(it) }
