@@ -42,4 +42,19 @@ class AnkiquestRwkvGuideTest : RobolectricTest(loadBackend = false) {
         assertTrue("RWKV forecast" in page, page)
         assertTrue("recall" in page, page)
     }
+
+    @Test
+    fun `the guide's sizes match the model lock list`() {
+        val page = AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(targetContext, AnkiquestReleaseNotes.GUIDE))
+        // Every size the guide names comes from the lock list: the zips the Download fetches,
+        // and the weights.f32.bin a player can pick instead of them.
+        fun mb(bytes: Long) = "%.1f MB".format(bytes / 1_000_000.0)
+        for (size in RwkvSize.values()) {
+            val name = size.name.lowercase().replaceFirstChar { it.uppercase }
+            val twoHead = RwkvLock.ENTRIES.single { it.size == size && it.head == RwkvHead.TWO_HEAD }
+            val instant = RwkvLock.ENTRIES.single { it.size == size && it.head == RwkvHead.INSTANT }
+            assertTrue("$name: two-head zip ${mb(twoHead.zipBytes)}, Instant-only zip ${mb(instant.zipBytes)}" in page, page)
+            assertTrue("${mb(twoHead.bytes)}" in page, page)
+        }
+    }
 }
