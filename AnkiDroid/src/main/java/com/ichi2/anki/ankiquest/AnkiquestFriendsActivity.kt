@@ -567,7 +567,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                 setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
                 addView(field)
             }
-        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
+        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_accent)) }
         val dialog =
             MaterialAlertDialogBuilder(this)
                 .setTitle(title)
