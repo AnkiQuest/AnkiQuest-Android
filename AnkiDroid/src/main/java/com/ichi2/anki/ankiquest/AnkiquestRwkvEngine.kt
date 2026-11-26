@@ -2,72 +2,78 @@
 
 package com.ichi2.anki.ankiquest
 
+import com.ichi2.anki.CollectionManager.withCol
+
 /**
- * The seam a future RWKV engine plugs into (#433). The engine needs a forked Anki backend
- * (kuma3-anki-core's `RwkvPrepareOffline` and scoring RPCs); until one exists the app uses
- * [NoRwkvEngine]. No Android types, so the scheduler logic stays testable on the JVM.
+ * The RWKV engine: the backend's offline RWKV layer (AnkiQuest-Anki `rslib/src/scheduler/rwkv/offline.rs`,
+ * kuma3's). Once [prepare] has handed it the models, the backend replays the review history on its
+ * own thread and from then on scores review cards itself whenever a review queue or the deck counts
+ * are built, and answers the stats panel's forecast. A seam so the transitions are testable without
+ * a backend.
  */
 internal interface RwkvEngine {
-    /** Whether this build contains the engine. */
-    enum class Availability {
-        PRESENT,
-        ABSENT,
+    /** Hands the backend [models]; cheap when nothing changed. Returns the reviews being replayed. Throws when the backend refuses them. */
+    suspend fun prepare(models: RwkvModels): Long
+
+    /** The backend's progress, which also installs a finished replay. */
+    suspend fun progress(): RwkvProgress
+
+    /** Drops the loaded model at once; the presets' fallback schedulers take over. Does nothing without one. */
+    suspend fun unload()
+}
+
+/** Where the backend's model state is. */
+internal sealed interface RwkvProgress {
+    /** Not prepared, or the build stopped (its total stays 0). */
+    data object Unavailable : RwkvProgress
+
+    /** The review history is being replayed: [done] of [total] reviews. Until then the standard order applies. */
+    data class Replaying(
+        val done: Long,
+        val total: Long,
+    ) : RwkvProgress
+
+    /** The model state is installed: Instant presets are ordered by predicted recall. */
+    data object Running : RwkvProgress
+}
+
+/** The engine in the pinned backend, called as kuma3's `RwkvOffline.kt` calls it. */
+internal object BackendRwkvEngine : RwkvEngine {
+    /** Every model of the family uses the leak-free input rule that `"sm72"` selects. */
+    private const val LEAK_FREE_KIND = "sm72"
+
+    /** The backend's default state precision: int8, as the fork's desktop default and kuma3's. */
+    private const val DEFAULT_PRECISION = ""
+
+    private const val NO_INSTANT_MODEL = ""
+
+    override suspend fun prepare(models: RwkvModels): Long {
+        val replayed =
+            withCol {
+                backend.rwkvPrepareOffline(
+                    modelPath = models.twoHead.file.absolutePath,
+                    statePrecision = DEFAULT_PRECISION,
+                    modelKind = LEAK_FREE_KIND,
+                    instantModelPath = models.instant?.file?.absolutePath ?: NO_INSTANT_MODEL,
+                    singleModel = false,
+                )
+            }
+        return replayed
     }
 
-    val availability: Availability
+    override suspend fun progress(): RwkvProgress {
+        val status = withCol { backend.rwkvOfflineInstantPassStep(restart = false, statusOnly = true) }
+        if (status.available) {
+            return RwkvProgress.Running
+        }
+        if (status.replayTotal == 0L) {
+            return RwkvProgress.Unavailable
+        }
+        return RwkvProgress.Replaying(status.replayDone, status.replayTotal)
+    }
 
-    /** The ABIs the engine has native libraries for, as in `Build.SUPPORTED_ABIS`. */
-    val abis: Set<String>
-
-    /**
-     * Replays [reviews], oldest first, into fresh model state for [model]. Needed on first use,
-     * after a model change and after a sync brings reviews from other clients.
-     */
-    suspend fun rebuild(
-        model: RwkvModel,
-        reviews: Sequence<RwkvReview>,
-    )
-
-    /** Predicted retrievability now, from 0 to 1, for each of [cardIds] that has model state. */
-    suspend fun score(cardIds: List<Long>): Map<Long, Double>
-}
-
-/** One revlog row as the engine replays it. */
-internal data class RwkvReview(
-    val id: Long,
-    val cardId: Long,
-    val noteId: Long,
-    val ease: Int,
-    val type: Int,
-    val takenMs: Long,
-)
-
-/** A model file the player chose. The app cannot bundle weights: they have no redistributable licence. */
-internal data class RwkvModel(
-    val path: String,
-)
-
-/** Where the chosen model file comes from. A file picker replaces [NoRwkvModel] later. */
-internal fun interface RwkvModelSource {
-    fun chosen(): RwkvModel?
-}
-
-/** No model file can be chosen yet. */
-internal object NoRwkvModel : RwkvModelSource {
-    override fun chosen(): RwkvModel? = null
-}
-
-/** The engine in this build: none. [RwkvChecks] stops at [RwkvBlocker.NO_ENGINE], so nothing calls it. */
-internal object NoRwkvEngine : RwkvEngine {
-    private const val ABSENT = "This build has no RWKV engine"
-
-    override val availability = RwkvEngine.Availability.ABSENT
-    override val abis = emptySet<String>()
-
-    override suspend fun rebuild(
-        model: RwkvModel,
-        reviews: Sequence<RwkvReview>,
-    ): Unit = throw UnsupportedOperationException(ABSENT)
-
-    override suspend fun score(cardIds: List<Long>): Map<Long, Double> = throw UnsupportedOperationException(ABSENT)
+    /** `RwkvUnloadOffline`: the backend forgets the model, its state and its scores; the state file stays for the next start. */
+    override suspend fun unload() {
+        withCol { backend.rwkvUnloadOffline() }
+    }
 }

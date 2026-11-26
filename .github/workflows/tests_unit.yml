@@ -148,7 +148,9 @@ jobs:
     # instead. A failed changes job leaves the output empty, so the tests still run.
     if: ${{ !cancelled() && needs.matrix_prep.result == 'success' }}
     # Windows takes about 71 minutes on tests (run 44883059552); 75 cut off
-    # the upload after they passed
+    # the upload after they passed.
+    # Keep this above the 'Run Unit Tests' timeout: a job timeout cancels the job, which can
+    # interrupt the Gradle cache upload and block later saves of that cache key
     timeout-minutes: 90
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -197,6 +199,13 @@ jobs:
           persist-credentials: false
           fetch-depth: 50
 
+      # AnkiQuest: the tests read AnkiQuest-Server master's API examples and shared fixtures
+      # (docs/ankiquest-server-data.md).
+      - name: Fetch AnkiQuest-Server data
+        if: needs.changes.outputs.code != 'false'
+        shell: bash
+        run: node .github/ankiquest_server_data.cjs fetch
+
       - name: Set up Codecov
         id: codecov
         # Flake runs repeat the same tests. Only the first iteration uploads coverage.
@@ -222,15 +231,19 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         timeout-minutes: 10
         with:
-          # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
-          cache-provider: basic
-          # Only write to the cache for builds on the 'master' branches, stops branches evicting master cache
-          # Builds on other branches will only read from master branch cache writes
-          # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+          # The gradle-cache action below caches the dependencies, one entry per job group
+          cache-disabled: true
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        if: needs.changes.outputs.code != 'false'
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: restore
+          group: unit
 
       - name: Robolectric SDK cache
-        # Linux only; macOS and Windows keep the SDK jars in their setup-gradle cache
+        # Linux only; macOS and Windows keep the SDK jars in their Gradle cache
         if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'
         uses: ./.github/actions/robolectric-sdk-cache
 
@@ -246,7 +259,20 @@ jobs:
         # update workflows/README.md when modifying this step
       - name: Run Unit Tests
         if: needs.changes.outputs.code != 'false'
+        # A step timeout fails the job rather than cancelling it, so the Gradle cache is still saved.
+        # Leave at least 10m of the job timeout for setup (≤5m) and the cache upload (≤4m).
+        # Upstream uses 65 of 90; Windows needs about 71 here
+        timeout-minutes: 80
         run: ./gradlew :AnkiDroid:jacocoCiUnitTestReports --daemon
+
+      - name: Save Gradle cache
+        if: needs.changes.outputs.code != 'false'
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: save
+          group: unit
+          key: ${{ steps.gradle-cache.outputs.key }}
+          hit: ${{ steps.gradle-cache.outputs.hit }}
 
 
       # Only runs:

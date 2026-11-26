@@ -64,6 +64,15 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 
 </div>
 
+### Moving from com.ichi2.anki.quest
+
+AnkiQuest is moving from the package `com.ichi2.anki.quest` to `org.ankiquest.ankidroid`, a separate app that cannot update the old one. To move:
+
+1. Update the old app to [its final release, quest-24](https://github.com/AnkiQuest/AnkiQuest-Android/releases/tag/quest-24).
+2. Install the new app alongside it. On Android 9 and later, two official builds offer "Move your settings and login from the old AnkiQuest?" on first launch. Move copies the app settings and AnkiQuest and AnkiWeb sign-ins.
+3. With an AnkiWeb login, sync your collection in the new app. Without one, use **Export collection** (with scheduling and media) in the old app, then import the file in the new app. Android 7 and 8 and builds signed outside the official releases use this collection transfer and a fresh sign-in.
+4. Uninstall the old app once your cards are in the new one.
+
 ### Verify the APK
 
 Signing certificate fingerprints of the AnkiQuest release key (`CN=AnkiQuest, O=float3`):
@@ -114,7 +123,7 @@ Thanks to our 1400 translators, for allowing us to be available, partially or to
 ## License
 
 * [GPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/COPYING) for AnkiDroid, including the AnkiDroid files this fork modifies
-* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/test/resources/ankiquest/`, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
+* [AGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/AGPL-3.0-or-later.txt), version 3 or (at your option) any later version, for the AnkiQuest code: every file marked `SPDX-License-Identifier: AGPL-3.0-or-later`, plus `docs/branding/`, `docs/review-heatmap.md`, the `aki_*.png` artwork, `AnkiDroid/src/main/assets/ankiquest/release-notes.md` and `tools/ankiquest-signing-lineage.bin`. As GPLv3 section 13 allows, the app combines both, and the AGPL's network-interaction terms apply to the combined work
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
 * [CC BY-SA 4.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/LICENSES/CC-BY-SA-4.0.txt) for the Anki-tan artwork (`anki_tan_*.webp`), by Shigeyuki
 * [LGPL-3.0 License](https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/COPYING.LESSER) for the AnkiDroid API

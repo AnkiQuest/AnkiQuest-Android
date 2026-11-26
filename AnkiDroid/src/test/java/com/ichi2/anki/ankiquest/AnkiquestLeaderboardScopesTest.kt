@@ -49,7 +49,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
-        coEvery { AnkiquestGlobalHides.load(any()) } returns null
+        coEvery { AnkiquestGlobalHides.load(any()) } returns emptyList()
     }
 
     @After
@@ -64,7 +64,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         click(screen, R.string.ankiquest_widget_who_global)
         val words = labels(screen)
         assertTrue("Ana" in words)
-        assertFalse(screen.getString(R.string.aq_board_today_reviews, "0") in words)
+        assertFalse(screen.getString(R.string.ankiquest_today, "0") in words)
         assertFalse(words.any { it.contains("Refresh to see") })
     }
 

@@ -25,6 +25,9 @@ internal const val DAY_MS = 86_400_000L
  * calls a day secured unless the server said so or that sum provably reaches the minimum, and then
  * [Verdict.awaitingUpload] says the server has not confirmed it yet.
  *
+ * Observed answers (AnkiQuest Lite reads AnkiDroid without the review log) have no review time. A
+ * day they keep counting short of the minimum is unverified: it counts, but its time is not known.
+ *
  * The rule is pinned by `day_verdicts.json`, which the server writes from its own calculation.
  */
 internal object AnkiquestDay {
@@ -32,15 +35,21 @@ internal object AnkiquestDay {
     private const val PREF_LOCAL_DAY = "ankiquestLocalToday"
     private const val MINUTE_MS = 60_000L
 
+    /** The server's `streak_state` words. */
+    private const val STUDIED = "studied"
+    private const val UNVERIFIED = "unverified"
+    private const val PROTECTED = "protected"
+    private const val PENDING = "pending"
+
     /** Revlog rows the upload sends: answers, not manual rescheduling. */
     const val UPLOADED_REVIEWS = "ease > 0 and type < 4"
 
-    enum class State { STUDIED, PROTECTED, SHORT, PENDING, UNKNOWN }
+    enum class State { STUDIED, UNVERIFIED, PROTECTED, SHORT, PENDING, UNKNOWN }
 
     /** What the server last said about today. */
     data class Server(
         val streak: Int,
-        /** studied, protected or pending, as the server says it. */
+        /** studied, unverified, protected or pending, as the server says it. */
         val streakState: String,
         val dayEndsAt: Long,
         /** The newest review the server has; later ones are not uploaded yet. */
@@ -51,7 +60,12 @@ internal object AnkiquestDay {
         /** Exact review time today; from servers that only send minutes, those minutes. */
         val timeMs: Long,
         val streakMinutes: Int,
+        /** Of [reviews], the observed answers, whose time is not known. */
+        val observed: Int = 0,
     ) {
+        /** The server already counted today, on exact time or on observed answers. */
+        val counted: Boolean get() = streakState == STUDIED || streakState == UNVERIFIED
+
         fun json(): JSONObject =
             JSONObject()
                 .put("streak", streak)
@@ -63,6 +77,7 @@ internal object AnkiquestDay {
                     JSONObject()
                         .put("starts_at", startsAt ?: JSONObject.NULL)
                         .put("reviews", reviews)
+                        .put("observed", observed)
                         .put("time_ms", timeMs)
                         .put("streak_minutes", streakMinutes),
                 )
@@ -83,6 +98,7 @@ internal object AnkiquestDay {
                     reviews = today?.optInt("reviews") ?: 0,
                     timeMs = if (today?.has("time_ms") == true) today.optLong("time_ms") else (today?.optLong("minutes") ?: 0L) * MINUTE_MS,
                     streakMinutes = today?.optInt("streak_minutes") ?: 0,
+                    observed = today?.optInt("observed") ?: 0,
                 )
             }
 
@@ -109,16 +125,22 @@ internal object AnkiquestDay {
         }
     }
 
-    /** A review in the collection: its revlog id, the millisecond it was answered, and its time. */
+    /**
+     * A review not uploaded yet: its revlog id, the millisecond it was answered, and its time. An
+     * observed answer has no time ([timeMs] null) and is never in the server's review log.
+     */
     data class Review(
         val id: Long,
-        val timeMs: Long,
+        val timeMs: Long?,
     )
 
     data class Verdict(
         /** Today counts toward the streak: the server said so, or the unsent reviews provably make it. */
         val met: Boolean,
-        /** studied, protected or pending; null when an unsent review from an earlier day leaves it open. */
+        /**
+         * studied (exact time reaches the minimum), unverified (observed answers keep the day counting
+         * short of it), protected or pending; null when an unsent review from an earlier day leaves it open.
+         */
         val streakState: String?,
         /** The streak with today; null when an unsent review from an earlier day may change it. */
         val streak: Int?,
@@ -129,6 +151,8 @@ internal object AnkiquestDay {
         val unsent: Int,
         /** The server itself said today counts. */
         val confirmed: Boolean,
+        /** Of [reviews], the observed answers, whose time is not known. */
+        val observed: Int = 0,
     ) {
         val minutes: Int get() = (timeMs.coerceAtLeast(0) / MINUTE_MS).toInt()
 
@@ -136,16 +160,18 @@ internal object AnkiquestDay {
         val awaitingUpload: Boolean get() = met && !confirmed
 
         /**
-         * The words every screen uses: studied, protected, short (reviews under the minimum), pending or
-         * unknown. Reviews today outrank a protected streak, whose words say nothing was studied yet.
+         * The words every screen uses: studied, unverified (counted, time not known), protected, short
+         * (reviews under the minimum), pending or unknown. Reviews today outrank a protected streak,
+         * whose words say nothing was studied yet.
          */
         val label: State
             get() =
                 when {
-                    met -> State.STUDIED
+                    streakState == STUDIED -> State.STUDIED
+                    streakState == UNVERIFIED -> State.UNVERIFIED
                     streakState == null -> State.UNKNOWN
                     reviews > 0 -> State.SHORT
-                    streakState == "protected" -> State.PROTECTED
+                    streakState == PROTECTED -> State.PROTECTED
                     else -> State.PENDING
                 }
     }
@@ -173,18 +199,19 @@ internal object AnkiquestDay {
         server: Server?,
         now: Long,
     ): Server? {
-        if (server == null || now < server.dayEndsAt || server.streakState != "studied") {
+        if (server == null || now < server.dayEndsAt || !server.counted) {
             return server
         }
         if (now >= server.dayEndsAt + DAY_MS) {
             return server
         }
         return server.copy(
-            streakState = "pending",
+            streakState = PENDING,
             dayEndsAt = server.dayEndsAt + DAY_MS,
             startsAt = server.dayEndsAt,
             reviews = 0,
             timeMs = 0,
+            observed = 0,
         )
     }
 
@@ -192,6 +219,8 @@ internal object AnkiquestDay {
         val count: Int = 0,
         val timeMs: Long = 0,
         val earlier: Boolean = false,
+        /** Of [count], the observed answers. */
+        val observed: Int = 0,
     )
 
     private fun evidence(
@@ -199,9 +228,17 @@ internal object AnkiquestDay {
         reviews: List<Review>,
     ): Evidence {
         val starts = server.startsAt ?: return Evidence()
-        val unsent = reviews.filter { it.id > server.lastReviewId }
+
+        // Reviews up to the server's newest are ones it has; observed answers are never in the
+        // review log, so each one is unsent. Of these, the ones in today count.
+        val unsent = reviews.filter { it.timeMs == null || it.id > server.lastReviewId }
         val counted = unsent.filter { it.id in starts until server.dayEndsAt }
-        return Evidence(counted.size, counted.sumOf { it.timeMs }, unsent.any { it.id < starts })
+        return Evidence(
+            count = counted.size,
+            timeMs = counted.sumOf { it.timeMs ?: 0L },
+            earlier = unsent.any { it.id < starts },
+            observed = counted.count { it.timeMs == null },
+        )
     }
 
     private fun verdict(
@@ -210,22 +247,28 @@ internal object AnkiquestDay {
     ): Verdict {
         val count = server.reviews + local.count
         val time = server.timeMs + local.timeMs
-        val confirmed = server.streakState == "studied"
-        val met = confirmed || (count > 0 && time >= server.streakMinutes * MINUTE_MS)
+        val observed = server.observed + local.observed
+
+        // Exact time meets the minimum; observed answers keep the day counting without it. A day
+        // the server already counted adds nothing to the streak.
+        val exact = server.streakState == STUDIED || (count > 0 && time >= server.streakMinutes * MINUTE_MS)
+        val met = exact || server.streakState == UNVERIFIED || observed > 0
         return Verdict(
             met = met,
             streakState =
                 when {
-                    met -> "studied"
+                    exact -> STUDIED
+                    met -> UNVERIFIED
                     local.earlier -> null
                     else -> server.streakState
                 },
-            streak = if (local.earlier) null else server.streak + if (met && !confirmed) 1 else 0,
+            streak = if (local.earlier) null else server.streak + if (met && !server.counted) 1 else 0,
             reviews = count,
             timeMs = time,
             streakMinutes = server.streakMinutes,
             unsent = local.count,
-            confirmed = confirmed,
+            confirmed = server.counted,
+            observed = observed,
         )
     }
 
@@ -264,6 +307,7 @@ internal object AnkiquestDay {
                 .put("last", server.lastReviewId)
                 .put("count", local.count)
                 .put("time", local.timeMs)
+                .put("observed", local.observed)
                 .put("earlier", local.earlier)
                 .toString()
         if (prefs.getString(key, null) != value) {
@@ -294,7 +338,7 @@ internal object AnkiquestDay {
         ) {
             return null
         }
-        return Evidence(saved.optInt("count"), saved.optLong("time"), saved.optBoolean("earlier"))
+        return Evidence(saved.optInt("count"), saved.optLong("time"), saved.optBoolean("earlier"), saved.optInt("observed"))
     }
 
     internal fun own(now: Long): Verdict? = judgeOwn(last(), now)
@@ -338,6 +382,7 @@ internal object AnkiquestDay {
     ): String =
         when (state) {
             State.STUDIED -> context.getString(R.string.ankiquest_streak_studied)
+            State.UNVERIFIED -> context.getString(R.string.ankiquest_streak_unverified)
             State.PROTECTED -> context.getString(R.string.ankiquest_streak_protected)
             State.SHORT -> context.getString(R.string.ankiquest_streak_short, minOf(minutes, streakMinutes), streakMinutes)
             State.PENDING -> context.getString(R.string.ankiquest_streak_pending)

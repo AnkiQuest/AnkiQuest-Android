@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import org.json.JSONObject
 import kotlin.test.assertTrue
 
 /** Signs in a test account, alice, and makes [choice] her companion. */
@@ -22,11 +23,41 @@ internal fun chooseCompanion(choice: Choice) {
 internal val ankilopeMoodPoses =
     mapOf(
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
-        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_sleeping,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.ankilope_sad,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.ankilope_frozen,
+        AnkiquestMood.Mood.THAWING to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
+        AnkiquestMood.Mood.ALMOST to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
+    )
+
+/** The shared pose's Aki drawable; her missing frozen extensions use the core frozen pose. */
+internal fun akiMoodArt(expected: JSONObject): String {
+    val pose = expected.getString("pose")
+    val shown =
+        when (pose) {
+            "frozen_2", "frozen_3" -> "frozen"
+            else -> pose
+        }
+    return "aki_$shown"
+}
+
+/**
+ * Anki-tan's pose for each streak mood but fire, which burns by streak: her streak pose, and her
+ * crown from 100 days. Frozen 2 and 3 have no art of their own yet (AnkiQuest-Server#57).
+ */
+internal val ankiTanMoodPoses =
+    mapOf(
+        AnkiquestMood.Mood.UNKNOWN to R.drawable.anki_tan_face,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.anki_tan_asleep,
+        AnkiquestMood.Mood.SAD to R.drawable.anki_tan_sad,
+        AnkiquestMood.Mood.FROZEN_1 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.FROZEN_2 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.FROZEN_3 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.THAWING to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.HOPEFUL to R.drawable.anki_tan_hopeful,
+        AnkiquestMood.Mood.ALMOST to R.drawable.anki_tan_hopeful,
     )

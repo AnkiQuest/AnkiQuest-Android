@@ -28,6 +28,11 @@ function harness(batches = [[run(42)]], artifacts = {}, legacy = []) {
     payload: { pull_request: { base: { sha: 'base-sha', ref: 'master' } } },
   };
   const github = { rest: { repos: {
+    // GitHub builds refs/pull/N/merge with the base it merged into as the first parent.
+    async getCommit({ ref }) {
+      assert.equal(ref, 'merge-sha');
+      return { data: { parents: [{ sha: 'base-sha' }, { sha: 'head-sha' }] } };
+    },
     async compareCommitsWithBasehead(query) {
       compares.push(query);
       return { data: { merge_base_commit: { sha: 'base-sha' } } };
@@ -114,6 +119,15 @@ test('the pushed commit is used when there is no pull request', async () => {
   assert.equal(fixture.queries[0].head_sha, 'push-sha');
 });
 
+test('a PR waits for the base its merge commit was built on, not a stale event base', async () => {
+  // The event's base.sha can lag the base branch; the checked-out merge commit cannot.
+  const fixture = harness([[run(7)]]);
+  fixture.context.payload.pull_request.base.sha = 'stale-sha';
+  assert.equal(await waitForBaseline(fixture), 7);
+  assert.ok(fixture.queries.every(query => query.head_sha === 'base-sha'));
+  assert.equal(fixture.outputs.base, 'base-sha');
+});
+
 test('a merge group waits for the master commit the queue built it on', async () => {
   // A group's parent can be the group queued ahead of it, which has no baseline.
   const fixture = harness([[]], {}, [run(42)]);
@@ -134,6 +148,12 @@ test('the baseline commit is an output for the error message', async () => {
   const fixture = harness();
   await waitForBaseline(fixture);
   assert.equal(fixture.outputs.base, 'base-sha');
+});
+
+test('the unavailable baseline message names the commit that was waited for', () => {
+  const explain = step('Explain unavailable baseline');
+  assert.match(explain, /BASE_SHA: \$\{\{ steps\.source\.outputs\.base \|\| github\.sha \}\}/);
+  assert.doesNotMatch(explain, /pull_request\.base\.sha/);
 });
 
 test('stacked PRs wait for their exact base commit instead of falling back to master', async () => {

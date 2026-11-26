@@ -36,8 +36,8 @@ internal fun interface RwkvRecallSource {
  * The backend's `RwkvOfflineForecast` with an empty search, which the backend turns into its
  * review-card filter ("is:review -is:learn -is:suspended -is:buried"), so learning, suspended and
  * buried cards stay out, as the add-on's forecast does. Its `available` stays false until
- * `RwkvPrepareOffline` has loaded a model, which this app does not do yet (#433), so until then
- * there is nothing to show.
+ * [BackendRwkvEngine] has handed the backend a model and the replay is done, so until then there
+ * is nothing to show.
  */
 internal object BackendRwkvRecall : RwkvRecallSource {
     private const val EVERY_REVIEW_CARD = ""

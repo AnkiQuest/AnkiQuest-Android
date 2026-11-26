@@ -114,7 +114,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(expected, AnkiquestGlobalHides.change(account, "ana", AnkiquestGlobalHides.Action.HIDE))
             assertTrue(
                 requests.containsAll(
-                    listOf("GET /api/capabilities", "GET /api/leaderboard/hidden/hill", "POST /api/leaderboard/hidden/hill"),
+                    listOf("GET /api/leaderboard/hidden/hill", "POST /api/leaderboard/hidden/hill"),
                 ),
             )
         }
@@ -123,7 +123,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `activity pages keep global counts and invitation actions`() =
         runBlocking {
             val first = AnkiquestFeed.page(account)
-            assertFalse(first.legacy)
             assertEquals(7, first.unread)
             assertEquals(1, first.actionCount)
             assertEquals(17L, first.latestId)
@@ -170,7 +169,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `every example is either read by the app or known to be unused`() {
+    fun `the catalog names only server examples, and unlisted ones count as not yet read`() {
         val directory = File(assertNotNull(javaClass.classLoader?.getResource(EXAMPLES)).toURI())
         val examples =
             assertNotNull(directory.list())
@@ -186,11 +185,10 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 (0 until names.length()).map { names.getString(it) }
             }
         assertEquals(owned.size, owned.toSet().size, "an example must belong to exactly one group")
-        assertEquals(
-            owned.toSet(),
-            examples,
-            "a new or removed example needs a reviewed entry in names.json",
-        )
+
+        // The examples come from server master: one the server dropped must leave names.json, while a
+        // new one the catalog doesn't list yet counts as not_yet until the app reads it.
+        assertEquals(emptySet<String>(), owned.toSet() - examples, "names.json lists examples the server no longer has")
         val consumed = catalog.getJSONArray("consumed")
         assertTrue((0 until consumed.length()).map { consumed.getString(it) }.containsAll(ROUTES.values))
     }
@@ -231,7 +229,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
             assertEquals(
-                targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L) + "\n\n" +
+                targetContext.getString(R.string.ankiquest_check_ok, "hill", 2, 101L, 5L) + "\n\n" +
                     targetContext.getString(R.string.ankiquest_check_no_token),
                 Ankiquest.runFromSettings(targetContext, uploadAll = false),
             )
@@ -241,7 +239,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `an upload answers the profile after reading which decks are shared`() =
         runBlocking {
             val message = Ankiquest.runFromSettings(targetContext, uploadAll = true)
-            assertTrue(message.endsWith(targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L)), message)
+            assertTrue(message.endsWith(targetContext.getString(R.string.ankiquest_check_ok, "hill", 2, 101L, 5L)), message)
             assertTrue("GET /api/decks/hill" in requests)
             assertTrue("POST /api/reviews/hill" in requests)
             assertNull(Ankiquest.feedback(JSONObject(example("upload")).optJSONObject("feedback"), showFeedback = true))
@@ -265,13 +263,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `telling friends about a finished deck reads how many were told`() =
-        runBlocking {
-            assertEquals(1, AnkiquestSharing.shareFinishedDeck(account, 1L, "Spanish", listOf("cerro")))
-            assertTrue(requests.contains("POST /api/decks/hill/share"))
-        }
-
-    @Test
     fun `the leaderboard orders the widget rows`() =
         runBlocking {
             val board = Ankiquest.leaderboard().rows
@@ -287,7 +278,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         runBlocking {
             val week = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK).standings
             assertEquals(listOf("hill", "cerro"), week.map { it.user })
-            assertEquals(listOf("Hill", "Cerro"), week.map { it.display })
+            assertEquals(listOf("hill", "Cerro"), week.map { it.display })
             assertEquals(listOf(101L, 31L), week.map { it.xp })
             assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.STUDIED), week.map { it.state })
             assertEquals(listOf(5L, 3L), week.map { it.todayReviews })
@@ -321,7 +312,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             // The player is listed: their full row, then a stranger's summary without today's counts.
             val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY, AnkiquestBoards.Source.Global).standings
             assertEquals(listOf("hill", "ana"), day.map { it.user })
-            assertEquals(listOf("Hill", "Ana"), day.map { it.display })
+            assertEquals(listOf("hill", "Ana"), day.map { it.display })
             assertEquals(listOf(1, 2), day.map { it.rank })
             assertEquals(listOf(107L, 20L), day.map { it.xp })
             assertEquals(listOf(true, null), day.map { it.shown })
@@ -406,7 +397,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `sharing a win, cheering one and the stored settings are read`() =
         runBlocking {
-            assertEquals(2, Ankiquest.shareWinWithFriends(1, account.scope))
             val link = Ankiquest.shareWinLink(1, account.scope)
             assertTrue(link.url.contains("/w/"), link.url)
             assertTrue(link.image.endsWith(".png"), link.image)
@@ -757,7 +747,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
-    fun `a conquered card shows its numbers, its label and the owner's choices, and tells friends`() =
+    fun `a conquered card shows its numbers, its label and the owner's choices`() =
         runBlocking {
             val at = 1_793_097_000_000L
             val card = AnkiquestCommunity.conquest(account, "hill", at)
@@ -770,8 +760,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(false, card.told)
             assertEquals(0, card.friends)
             assertEquals(6L, card.win)
-            assertEquals(0, AnkiquestCommunity.tell(account, at))
-            assertTrue(requests.containsAll(listOf("GET /api/conquests/hill/$at", "POST /api/conquests/hill/$at/tell")))
+            assertTrue(requests.contains("GET /api/conquests/hill/$at"))
             assertFalse(card.undoable(EXAMPLE_NOW), "nothing to take back before telling")
         }
 
@@ -914,7 +903,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/settings/hill" -> if (method == "GET") "settings" else "settings_save"
             path == "/api/unlocks/hill" && method == "GET" -> "unlocks"
             path == "/api/unlocks/hill" && method == "POST" -> "unlocks_save"
-            parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"
             parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
@@ -929,7 +917,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/community" -> "community"
             parts.size == 3 && parts[0] == "community" && parts[1] == "reminders" -> if (method == "POST") "reminders_save" else "reminders"
             parts.size == 3 && parts[0] == "conquests" && method == "GET" -> "conquest"
-            parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "POST" -> "conquest_tell"
             parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "DELETE" -> "conquest_untell"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
@@ -972,7 +959,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "reviews" to "upload",
                 "rank" to "rank",
                 "notifications" to "notifications",
-                "share" to "share_to_friends",
                 "react" to "react",
                 "goal" to "goal",
                 "sharing" to "sharing",
