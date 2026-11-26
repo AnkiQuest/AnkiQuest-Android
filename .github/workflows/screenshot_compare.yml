@@ -148,37 +148,6 @@ jobs:
         run: |
           ./gradlew compareScreenshots -Pscreenshot -Ptheme=light,dark --stacktrace
 
-      # Temporary diagnosis for #364: does a diff in one class change the
-      # streak widget screenshots, and do the comparison labels matter?
-      - name: Diag diff then streak
-        if: ${{ always() }}
-        run: |
-          mkdir -p /tmp/diag/baseline
-          find AnkiDroid/build/outputs/roborazzi -name '*.png' ! -name '*_actual.png' ! -name '*_compare.png' -exec cp --parents {} /tmp/diag/baseline/ \;
-          run() {
-            label=$1; shift
-            rm -rf AnkiDroid/build/outputs/roborazzi AnkiDroid/build/intermediates/roborazzi /tmp/diag364-probe.txt
-            cp -r /tmp/diag/baseline/AnkiDroid/build/outputs/roborazzi AnkiDroid/build/outputs/
-            if [ "$CORRUPT" = yes ]; then
-              for png in AnkiDroid/build/outputs/roborazzi/AnkiquestDeckUndoScreenshotTest/*.png; do
-                cp "$(ls AnkiDroid/build/outputs/roborazzi/AnkiquestStreakScreenshotTest/*.png | head -1)" "$png"
-              done
-            fi
-            ./gradlew :AnkiDroid:testPlayDebugUnitTest -Pscreenshot -Proborazzi.test.compare=true -PtestMaxParallelForks=1 --rerun-tasks -q \
-              --tests '*AnkiquestDeckUndoScreenshotTest' --tests '*AnkiquestStreakScreenshotTest' > /tmp/diag/gradle.log 2>&1 || tail -15 /tmp/diag/gradle.log
-            echo "== $label corrupt=$CORRUPT nolabel=$(test -e /tmp/diag364-nolabel && echo yes || echo no)"
-            for xml in AnkiDroid/build/test-results/testPlayDebugUnitTest/*.xml; do
-              sed -n 's/.*<testsuite name="\([^"]*\)".*timestamp="\([^"]*\)".*/\2 \1/p' "$xml"
-            done | sort
-            cat /tmp/diag364-probe.txt
-            find AnkiDroid/build/outputs/roborazzi -name '*_compare.png' | sort
-          }
-          ls AnkiDroid/build/outputs/roborazzi/AnkiquestStreakScreenshotTest/ AnkiDroid/build/outputs/roborazzi/AnkiquestDeckUndoScreenshotTest/ || true
-          CORRUPT=no run control
-          CORRUPT=yes run labels
-          touch /tmp/diag364-nolabel
-          CORRUPT=yes run nolabels
-
       - name: Stage screenshot diffs
         if: ${{ always() }}
         env:
