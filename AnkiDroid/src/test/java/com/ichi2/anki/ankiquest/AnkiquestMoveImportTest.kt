@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestMove.OldApp
 import com.ichi2.anki.ankiquest.AnkiquestMove.Role
@@ -13,6 +14,7 @@ import com.ichi2.anki.ankiquest.AnkiquestMoveImport.Next
 import com.ichi2.anki.ankiquest.AnkiquestMoveImport.Reason
 import com.ichi2.anki.ankiquest.AnkiquestMoveImport.Result
 import com.ichi2.anki.ankiquest.AnkiquestMoveImport.State
+import com.ichi2.anki.common.storage.AnkiDroidFolder
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,6 +77,24 @@ class AnkiquestMoveImportTest : RobolectricTest() {
     fun `without an AnkiWeb login the collection follows by export`() {
         val prefs = target("without-ankiweb")
         assertEquals(Result.Imported(Next.EXPORT), read(prefs, payload(mapOf(Ankiquest.PREF_TOKEN to "synthetic-token"))))
+    }
+
+    @Test
+    fun `the receipt asks to close the old app only when the shared folder is the default`() {
+        val expected =
+            mapOf(
+                (Next.SYNC to AnkiDroidFolder.PUBLIC) to R.string.ankiquest_move_done_sync,
+                (Next.EXPORT to AnkiDroidFolder.PUBLIC) to R.string.ankiquest_move_done_export,
+                (Next.SYNC to AnkiDroidFolder.APP_PRIVATE) to R.string.ankiquest_move_done_private_sync,
+                (Next.EXPORT to AnkiDroidFolder.APP_PRIVATE) to R.string.ankiquest_move_done_private_export,
+            )
+        for ((key, text) in expected) {
+            assertEquals(text, AnkiquestMoveImport.receipt(key.first, key.second), key.toString())
+        }
+
+        // Only the shared-folder receipts mention force-stopping the old app.
+        val closing = expected.values.filter { targetContext.getString(it).contains("force-stop") }
+        assertEquals(listOf(R.string.ankiquest_move_done_sync, R.string.ankiquest_move_done_export), closing)
     }
 
     @Test

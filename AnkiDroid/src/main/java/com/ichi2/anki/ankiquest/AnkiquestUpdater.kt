@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
+import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
@@ -41,9 +42,25 @@ import java.util.concurrent.TimeUnit
  * Releases are tagged `quest-<n>` and CI bakes `<n>` into [BuildConfig.ANKIQUEST_RELEASE].
  * Every push to the branch also replaces the `nightly` pre-release, whose builds carry the
  * last release number plus [BuildConfig.ANKIQUEST_NIGHTLY] commits. Local builds carry 0 and never check.
+ *
+ * Only builds made with `-PankiquestUpdates=github` update themselves; see [Source].
  */
 object AnkiquestUpdater {
     enum class Channel { STABLE, NIGHTLY }
+
+    /**
+     * Where this build gets its updates, fixed at build time by `-PankiquestUpdates`.
+     * Store builds (F-Droid, IzzyOnDroid, Play) and local builds are [NONE]: the store updates them.
+     */
+    enum class Source(
+        val property: String,
+    ) {
+        /** Checks the GitHub releases, downloads and installs them. */
+        GITHUB("github"),
+
+        /** No checks, no update settings, no install permission. */
+        NONE("none"),
+    }
 
     private const val LATEST_URL = "https://api.github.com/repos/AnkiQuest/AnkiQuest-Android/releases/latest"
     private const val NIGHTLY_URL = "https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/nightly/"
@@ -52,6 +69,15 @@ object AnkiquestUpdater {
     const val PREF_CHANNEL = "ankiquestUpdateChannel"
     private const val PREF_CHECKED_AT = "ankiquestUpdateCheckedAt"
     private const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
+
+    /** Runs on every device; released self-updaters download this name. */
+    private const val UNIVERSAL_APK = "AnkiQuest.apk"
+
+    /** An ABI APK adds its ABI's number times this to the universal version code (build.gradle.kts). */
+    private const val ABI_CODE_STEP = 100_000_000L
+
+    /** The ABI digit of each ABI build's version code, as AnkiDroid/build.gradle.kts sets it. */
+    private val ABI_DIGITS = mapOf("armeabi-v7a" to 1L, "x86" to 2L, "arm64-v8a" to 3L, "x86_64" to 4L)
 
     /** What a downloaded APK is to this app, by its package name. */
     internal enum class Download { OWN, MOVED, UNREADABLE }
@@ -123,6 +149,8 @@ object AnkiquestUpdater {
     /** Makes the next deck list visit check again, e.g. after switching channel. */
     fun checkSoon() = AnkiDroidApp.sharedPrefs().edit { remove(PREF_CHECKED_AT) }
 
+    fun source(): Source = Source.entries.firstOrNull { it.property == BuildConfig.ANKIQUEST_UPDATES } ?: Source.NONE
+
     fun channel(): Channel = if (AnkiDroidApp.sharedPrefs().getString(PREF_CHANNEL, null) == "nightly") Channel.NIGHTLY else Channel.STABLE
 
     /** A stable release is newer by its number, a nightly by the version code Android compares on install. */
@@ -130,10 +158,49 @@ object AnkiquestUpdater {
         release: Release,
         installedRelease: Int = BuildConfig.ANKIQUEST_RELEASE,
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
-    ): Boolean = if (release.nightly) release.versionCode > installedCode else release.number > installedRelease
+    ): Boolean =
+        if (release.nightly) {
+            baseCode(release.versionCode) > baseCode(installedCode)
+        } else {
+            release.number > installedRelease
+        }
+
+    /** The version code without the ABI digit, so universal and ABI APKs of one build compare equal. */
+    private fun baseCode(code: Long): Long = code % ABI_CODE_STEP
+
+    /**
+     * The APK to download from [names]: the one built for the first of [abis] (the device's
+     * ABIs, most preferred first) that has one, else the universal one. An ABI install never
+     * gets an APK with a lower ABI digit, the universal one included: Android would refuse it
+     * as a downgrade.
+     */
+    internal fun pickApk(
+        names: Collection<String>,
+        abis: List<String> = Build.SUPPORTED_ABIS.toList(),
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
+    ): String? {
+        // An installed ABI build carries its ABI digit; a universal install has digit 0.
+        val installedDigit = installedCode / ABI_CODE_STEP
+        val abi =
+            abis.firstOrNull {
+                "AnkiQuest-$it.apk" in names && (ABI_DIGITS[it] ?: 0) >= installedDigit
+            }
+        if (abi != null) {
+            return "AnkiQuest-$abi.apk"
+        }
+
+        // Only a universal install can take the universal APK.
+        if (installedDigit > 0) {
+            return null
+        }
+        return UNIVERSAL_APK.takeIf { it in names }
+    }
 
     fun maybeCheck(activity: Activity) {
         if (activity !is DeckPicker) return
+        if (source() == Source.NONE) {
+            return
+        }
         cleanOnce(activity)
         checkOnResume(activity, BuildConfig.ANKIQUEST_RELEASE)
     }
@@ -190,6 +257,9 @@ object AnkiquestUpdater {
      * @return a message to show when nothing is offered, or null when the update dialog is shown
      */
     suspend fun checkNow(activity: Activity): String? {
+        if (source() == Source.NONE) {
+            return activity.getString(R.string.ankiquest_updates_off)
+        }
         val check = UpdateState.Checking()
         val active = beginCheck(check)
         if (active is UpdateState.Downloading) {
@@ -260,15 +330,28 @@ object AnkiquestUpdater {
         return parseNightly(json)
     }
 
-    internal fun parseNightly(json: JSONObject): Release? {
+    internal fun parseNightly(
+        json: JSONObject,
+        abis: List<String> = Build.SUPPORTED_ABIS.toList(),
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
+    ): Release? {
         val number = json.optInt("release")
         val versionCode = json.optLong("version_code")
         if (number <= 0 || versionCode <= 0) return null
+
+        // Nightlies before the ABI APKs list no assets and carry only the universal APK.
+        val sizes =
+            json
+                .optJSONArray("assets")
+                ?.objects()
+                ?.associate { it.getString("name") to it.optLong("size") }
+                ?: mapOf(UNIVERSAL_APK to json.optLong("size"))
+        val apk = pickApk(sizes.keys, abis, installedCode) ?: return null
         return Release(
             number = number,
             name = "Nightly $TAG_PREFIX$number+${json.optInt("nightly")} (${json.optString("commit").take(7)})",
-            apkUrl = NIGHTLY_URL + "AnkiQuest.apk",
-            apkSize = json.optLong("size"),
+            apkUrl = NIGHTLY_URL + apk,
+            apkSize = sizes.getValue(apk),
             versionCode = versionCode,
             nightly = true,
         )
@@ -286,15 +369,18 @@ object AnkiquestUpdater {
                 if (!response.isSuccessful) return null
                 JSONObject(response.body.string())
             }
+        return parseLatest(json)
+    }
+
+    internal fun parseLatest(
+        json: JSONObject,
+        abis: List<String> = Build.SUPPORTED_ABIS.toList(),
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
+    ): Release? {
         val tag = json.getString("tag_name")
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
-        val assets = json.getJSONArray("assets")
-        val apk =
-            assets
-                .objects()
-                .filter { it.getString("name").endsWith(".apk") }
-                .let { apks -> apks.firstOrNull { it.getString("name") == "AnkiQuest.apk" } ?: apks.firstOrNull() }
-                ?: return null
+        val assets = json.getJSONArray("assets").objects().associateBy { it.getString("name") }
+        val apk = pickApk(assets.keys, abis, installedCode)?.let(assets::getValue) ?: return null
         return Release(
             number = number,
             name = json.optString("name").ifEmpty { tag },
@@ -529,7 +615,7 @@ object AnkiquestUpdater {
                 return
             }
             val downloaded = versionOf(file)
-            if (downloaded == null || downloaded <= installedCode) {
+            if (downloaded == null || baseCode(downloaded) <= baseCode(installedCode)) {
                 file.delete()
             }
         }

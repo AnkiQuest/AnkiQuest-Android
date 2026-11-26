@@ -24,7 +24,7 @@ import timber.log.Timber
 /**
  * Player preferences kept the same on every device through `/api/settings/{user}`, on servers that
  * list [FEATURE]. The keys and the merge cases are `tests/fixtures/synced_settings.json` in
- * float3/ankiquest, shared with the desktop add-on. Each synced preference remembers when it last
+ * AnkiQuest-Server, shared with the desktop add-on. Each synced preference remembers when it last
  * changed on this phone, and the newer side wins, key by key.
  */
 internal object AnkiquestSettingsSync {

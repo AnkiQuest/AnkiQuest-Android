@@ -5,8 +5,10 @@
     <string name="ankiquest_move_message">Einstellungen und Anmeldung aus dem alten AnkiQuest übernehmen?</string>
     <string name="ankiquest_move_accept">Übernehmen</string>
     <string name="ankiquest_move_decline">Nein</string>
-    <string name="ankiquest_move_done_sync">Einstellungen und Anmeldung übernommen. Deine Sammlung kommt mit der ersten Synchronisierung von AnkiWeb, die jetzt startet.</string>
-    <string name="ankiquest_move_done_export">Einstellungen und Anmeldung übernommen. Deine Sammlung ist noch im alten AnkiQuest: Nutze dort „Sammlung exportieren“ und importiere die Datei hier.</string>
+    <string name="ankiquest_move_done_sync">Einstellungen und Anmeldung übernommen. Wenn beide Apps denselben AnkiDroid-Ordner nutzen, beende das alte AnkiQuest vor dem Fortfahren über „Stopp erzwingen“ in den Android-Einstellungen. Die Synchronisierung mit AnkiWeb beginnt, sobald die Sammlung geöffnet ist.</string>
+    <string name="ankiquest_move_done_export">Einstellungen und Anmeldung übernommen. Wenn beide Apps denselben AnkiDroid-Ordner nutzen, beende das alte AnkiQuest vor dem Fortfahren über „Stopp erzwingen“ in den Android-Einstellungen. Bei getrennten Ordnern exportiere die Sammlung aus der alten App und importiere sie hier.</string>
+    <string name="ankiquest_move_done_private_sync">Einstellungen und Anmeldung übernommen. Deine Sammlung kommt mit der ersten Synchronisierung von AnkiWeb, die jetzt startet.</string>
+    <string name="ankiquest_move_done_private_export">Einstellungen und Anmeldung übernommen. Deine Sammlung ist noch im alten AnkiQuest: Nutze dort „Sammlung exportieren“ und importiere die Datei hier.</string>
     <string name="ankiquest_move_failed">Das alte AnkiQuest hat seine Einstellungen nicht übergeben. Richte diese App wie gewohnt ein.</string>
     <string name="ankiquest_move_loading">Deine Einstellungen und Anmeldung werden übertragen…</string>
 </resources>

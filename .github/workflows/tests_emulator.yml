@@ -368,7 +368,7 @@ jobs:
         if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/**/TEST-*.xml') != ''
         run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected adb-log.txt --title "Emulator test failures" --suite ":AnkiDroid:connectedPlayReleaseAndroidTest"
 
-      # Only the quest build (-PcustomSuffix=quest) has the launcher aliases, so the run above skips
+      # Only the AnkiQuest build (-Pankiquest) has the launcher aliases, so the run above skips
       # AnkiquestIconAliasTest. Debug, so R8 cannot remove what only the test calls.
       - name: Run Quest Launcher Icon Test
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -390,7 +390,7 @@ jobs:
           # cannot replace it (INSTALL_FAILED_UPDATE_INCOMPATIBLE), so remove it first.
           script: |
             ./gradlew :AnkiDroid:uninstallAll --daemon
-            bash .github/with_emulator_log.sh adb-log.txt ./gradlew :AnkiDroid:connectedPlayDebugAndroidTest -PcustomSuffix=quest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.ankiquest.AnkiquestIconAliasTest -Pandroid.testInstrumentationRunnerArguments.ankiquestQuestBuild=true --daemon
+            bash .github/with_emulator_log.sh adb-log.txt ./gradlew :AnkiDroid:connectedPlayDebugAndroidTest -Pankiquest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.ankiquest.AnkiquestIconAliasTest -Pandroid.testInstrumentationRunnerArguments.ankiquestQuestBuild=true --daemon
 
       - name: Report Quest Launcher Icon Test Results
         if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/debug/**/TEST-*.xml') != ''

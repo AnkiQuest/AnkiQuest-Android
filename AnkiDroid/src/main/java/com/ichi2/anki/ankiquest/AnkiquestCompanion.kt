@@ -79,7 +79,7 @@ internal object AnkiquestCompanion {
         listOf(floatArrayOf(-0.213f, -0.715f, 0.928f), floatArrayOf(0.143f, 0.140f, -0.283f), floatArrayOf(-0.787f, 0.715f, 0.072f))
 
     /**
-     * The cow is drawn as Ankilope with its hues rotated until it has art of its own (float3/ankiquest#88),
+     * The cow is drawn as Ankilope with its hues rotated until it has art of its own (AnkiQuest/AnkiQuest-Desktop#88),
      * with the matrix of CSS `hue-rotate(250deg)` so every client draws the same purple.
      */
     private val cowFilter: ColorFilter by lazy {
