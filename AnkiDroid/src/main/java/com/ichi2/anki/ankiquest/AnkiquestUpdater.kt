@@ -174,15 +174,33 @@ object AnkiquestUpdater {
         }
     }
 
-    /** The installed release, e.g. `quest-3` or `quest-3 nightly 2 (1a2b3c4)`, or null for a local build. */
+    /** The installed release, e.g. `quest-3`, `quest-3.1` or `quest-3 nightly 2 (1a2b3c4)`, or null for a local build. */
     fun installed(): String? =
-        BuildConfig.ANKIQUEST_RELEASE.takeIf { it > 0 }?.let {
-            if (BuildConfig.ANKIQUEST_NIGHTLY > 0) {
-                "$TAG_PREFIX$it nightly ${BuildConfig.ANKIQUEST_NIGHTLY} (${BuildConfig.GIT_COMMIT_HASH.take(7)})"
-            } else {
-                "$TAG_PREFIX$it"
-            }
+        label(
+            release = BuildConfig.ANKIQUEST_RELEASE,
+            point = BuildConfig.ANKIQUEST_POINT,
+            nightly = BuildConfig.ANKIQUEST_NIGHTLY,
+            commit = BuildConfig.GIT_COMMIT_HASH,
+        )
+
+    /** The name of release [release], point release [point] or nightly [nightly] after it; null for a local build. */
+    internal fun label(
+        release: Int,
+        point: Int,
+        nightly: Int,
+        commit: String,
+    ): String? {
+        if (release <= 0) {
+            return null
         }
+        if (point > 0) {
+            return "$TAG_PREFIX$release.$point"
+        }
+        if (nightly > 0) {
+            return "$TAG_PREFIX$release nightly $nightly (${commit.take(7)})"
+        }
+        return "$TAG_PREFIX$release"
+    }
 
     /**
      * Checks for a newer release right away and offers it.

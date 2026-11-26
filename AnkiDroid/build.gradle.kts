@@ -153,6 +153,7 @@ android {
         buildConfigField("Boolean", "SHOW_DONATE_LINKS", "true")
         buildConfigField("int", "ANKIQUEST_RELEASE", (project.findProperty("ankiquestRelease") ?: "0").toString())
         buildConfigField("int", "ANKIQUEST_NIGHTLY", (project.findProperty("ankiquestNightly") ?: "0").toString())
+        buildConfigField("int", "ANKIQUEST_POINT", (project.findProperty("ankiquestPoint") ?: "0").toString())
         resValue("string", "app_name", "AnkiDroid")
 
         // The version number is of the form:
@@ -186,7 +187,8 @@ android {
         // Quest tags have their own monotonic upgrade sequence, independent of
         // the upstream beta version. Keep the eight-digit ABI-split budget.
         // quest-<n> is 5nnnn000; nightly builds after it add their commit count,
-        // so both channels install over each other in order.
+        // so both channels install over each other in order. Point release
+        // quest-<n>.<p> (p 1 to 9, from a release branch) is 5nnnn900 + p.
         // Assigned through `this.`, so upstream's validateVersionCode still sees one versionCode literal.
         if ((project.findProperty("customSuffix") ?: "").toString().replaceFirst(Regex("^\\.*"), "") == "quest") {
             val questRelease = (project.findProperty("ankiquestRelease") ?: "0").toString()
@@ -197,8 +199,13 @@ android {
             if (!questNightly.matches(Regex("[0-9]{1,3}"))) {
                 throw GradleException("ankiquestNightly must be a commit count from 0 to 999")
             }
+            val questPoint = (project.findProperty("ankiquestPoint") ?: "0").toString()
+            if (!questPoint.matches(Regex("[0-9]")) || (questPoint != "0" && questNightly.toInt() > 0)) {
+                throw GradleException("ankiquestPoint must be a point release from 0 to 9, without ankiquestNightly")
+            }
             if (questRelease.toInt() > 0) {
-                this.versionCode = 50000000 + questRelease.toInt() * 1000 + questNightly.toInt()
+                val offset = if (questPoint == "0") questNightly.toInt() else 900 + questPoint.toInt()
+                this.versionCode = 50000000 + questRelease.toInt() * 1000 + offset
             }
         }
 

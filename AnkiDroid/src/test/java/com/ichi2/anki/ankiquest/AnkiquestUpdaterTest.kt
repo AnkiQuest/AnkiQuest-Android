@@ -248,6 +248,25 @@ class AnkiquestUpdaterTest : RobolectricTest() {
     }
 
     @Test
+    fun `a point release offers the next release and no nightly or release before it`() {
+        val pointCode = 50_024_901L
+        val next = AnkiquestUpdater.Release(number = 25, name = "AnkiQuest 25", apkUrl = "", apkSize = 0)
+        val same = next.copy(number = 24, name = "AnkiQuest 24")
+        val nightly = AnkiquestUpdater.parseNightly(JSONObject(nightlyJson.toString()).put("release", 24).put("version_code", 50_024_005))!!
+        assertTrue(AnkiquestUpdater.isNewer(next, installedRelease = 24, installedCode = pointCode))
+        assertFalse(AnkiquestUpdater.isNewer(same, installedRelease = 24, installedCode = pointCode))
+        assertFalse(AnkiquestUpdater.isNewer(nightly, installedRelease = 24, installedCode = pointCode))
+    }
+
+    @Test
+    fun `the installed build names its release, point release or nightly`() {
+        assertEquals("quest-24", AnkiquestUpdater.label(release = 24, point = 0, nightly = 0, commit = "1a2b3c4d"))
+        assertEquals("quest-24.1", AnkiquestUpdater.label(release = 24, point = 1, nightly = 0, commit = "1a2b3c4d"))
+        assertEquals("quest-24 nightly 3 (1a2b3c4)", AnkiquestUpdater.label(release = 24, point = 0, nightly = 3, commit = "1a2b3c4d"))
+        assertNull(AnkiquestUpdater.label(release = 0, point = 0, nightly = 0, commit = "1a2b3c4d"))
+    }
+
+    @Test
     fun `the nightly channel offers a stable release newer than the nightly`() {
         val nightly = AnkiquestUpdater.parseNightly(nightlyJson)!!
         val stable = AnkiquestUpdater.Release(number = 18, name = "AnkiQuest 18", apkUrl = "", apkSize = 0)

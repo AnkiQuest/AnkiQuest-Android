@@ -64,12 +64,24 @@ jobs:
 
       - name: Release number
         id: release
+        # quest-<n> is release n, versionCode 5nnnn000; nightlies after it add their commit count.
+        # quest-<n>.<p> is point release p (1 to 9) of n, built from a release branch: 5nnnn900 + p,
+        # above n's nightlies and below n+1.
         run: |
           nightly=0
+          point=0
           if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then
-            number="${GITHUB_REF#refs/tags/quest-}"
-            [[ "$number" =~ ^[0-9]+$ ]] || { echo "::error::tag must be quest-<number>"; exit 1; }
-          elif tag=$(git describe --tags --match 'quest-[0-9]*' --abbrev=0 HEAD 2>/dev/null); then
+            version="${GITHUB_REF#refs/tags/quest-}"
+            if [[ "$version" =~ ^([0-9]+)$ ]]; then
+              number="${BASH_REMATCH[1]}"
+            elif [[ "$version" =~ ^([0-9]+)\.([1-9])$ ]]; then
+              number="${BASH_REMATCH[1]}"
+              point="${BASH_REMATCH[2]}"
+            else
+              echo "::error::tag must be quest-<number> or quest-<number>.<1-9>"
+              exit 1
+            fi
+          elif tag=$(git describe --tags --match 'quest-[0-9]*' --exclude 'quest-*.*' --abbrev=0 HEAD 2>/dev/null); then
             number="${tag#quest-}"
             nightly=$(git rev-list --count --first-parent "$tag..HEAD")
             if [ "$nightly" -gt 999 ]; then
@@ -79,8 +91,20 @@ jobs:
           else
             number=0
           fi
-          echo "number=$number" >> "$GITHUB_OUTPUT"
-          echo "nightly=$nightly" >> "$GITHUB_OUTPUT"
+          if [ "$point" -gt 0 ]; then
+            version="$number.$point"
+            code=$((50000000 + number * 1000 + 900 + point))
+          else
+            version="$number"
+            code=$((50000000 + number * 1000 + nightly))
+          fi
+          {
+            echo "number=$number"
+            echo "point=$point"
+            echo "nightly=$nightly"
+            echo "version=$version"
+            echo "code=$code"
+          } >> "$GITHUB_OUTPUT"
 
       # The newest upstream AnkiDroid commit merged into this build, for the debug info.
       # Upstream merges keep upstream history, so the merge base with upstream main is that commit.
@@ -95,6 +119,7 @@ jobs:
         env:
           RELEASE: ${{ steps.release.outputs.number }}
           NIGHTLY: ${{ steps.release.outputs.nightly }}
+          POINT: ${{ steps.release.outputs.point }}
           UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           echo "fatal_warnings=false" >> local.properties
@@ -102,6 +127,7 @@ jobs:
             -PcustomSuffix=quest -PcustomName="AnkiQuest" \
             -PankiquestRelease="$RELEASE" \
             -PankiquestNightly="$NIGHTLY" \
+            -PankiquestPoint="$POINT" \
             -PupstreamCommit="$UPSTREAM_SHA"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
@@ -141,13 +167,15 @@ jobs:
         id: version
         env:
           RELEASE: ${{ steps.release.outputs.number }}
+          VERSION: ${{ steps.release.outputs.version }}
           NIGHTLY: ${{ steps.release.outputs.nightly }}
+          EXPECTED: ${{ steps.release.outputs.code }}
         run: |
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
           version_code=$("$aapt2" dump badging AnkiQuest.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
-          echo "versionCode $version_code (quest-$RELEASE + $NIGHTLY)"
-          if [ "$RELEASE" -gt 0 ] && [ "$version_code" -ne $((50000000 + RELEASE * 1000 + NIGHTLY)) ]; then
-            echo "::error::versionCode $version_code does not match quest-$RELEASE + $NIGHTLY"
+          echo "versionCode $version_code (quest-$VERSION + $NIGHTLY)"
+          if [ "$RELEASE" -gt 0 ] && [ "$version_code" -ne "$EXPECTED" ]; then
+            echo "::error::versionCode $version_code does not match quest-$VERSION + $NIGHTLY ($EXPECTED)"
             exit 1
           fi
           echo "code=$version_code" >> "$GITHUB_OUTPUT"
@@ -162,12 +190,19 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/quest-')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE: ${{ steps.release.outputs.number }}
+          VERSION: ${{ steps.release.outputs.version }}
+          POINT: ${{ steps.release.outputs.point }}
         run: |
           # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
+          # Updaters up to quest-24 read releases/latest and take its tag as quest-<n>; a point
+          # release there would hide every update from them, so it is never the latest.
+          latest=()
+          if [ "$POINT" -gt 0 ]; then
+            latest=(--latest=false)
+          fi
           gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
-            --title "AnkiQuest $RELEASE" \
+            --title "AnkiQuest $VERSION" "${latest[@]}" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
       - name: Nightly manifest
