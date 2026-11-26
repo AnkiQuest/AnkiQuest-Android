@@ -30,9 +30,11 @@ import timber.log.Timber
  * Reminds the player to run Anki's Optimize All Presets once the collection's FSRS parameters are
  * 30 days and 1,000 reviews old.
  *
- * AnkiQuest-Server's `tests/fixtures/optimize_reminder.json` pins the rule for this and the
- * desktop add-on (`addon/optimize_reminder.py`). Everything is read from the collection; the
- * reminder's state stays on this device and never reaches the server.
+ * The rule is AnkiQuest-Server's `crates/rules` (`optimize_verdict`, `optimize_next`), tested
+ * against `tests/fixtures/optimize_reminder.json`. This is a copy tested against the same cases, as
+ * the desktop add-on's `addon/optimize_reminder.py` is; it goes once the app uses the crate's
+ * bindings. The inputs come from the collection. The state is the synced setting
+ * `optimize_reminder`, one for all the player's devices ([AnkiquestSettingsSync]).
  */
 internal object AnkiquestOptimizeReminder {
     const val DAYS = 30
@@ -41,10 +43,17 @@ internal object AnkiquestOptimizeReminder {
 
     // The collection config key Optimize All Presets sets to the day it ran; 0 or missing is never.
     private const val LAST_OPTIMIZE_KEY = "lastFsrsOptimize"
-    private const val PREF_STATE = "ankiquestOptimizeReminder"
+
+    /** The preference that holds the state; [AnkiquestSettingsSync] syncs it as `optimize_reminder`. */
+    const val PREF_STATE = "ankiquestOptimizeReminder"
     private const val TAG = "AnkiquestOptimizeReminder"
     private const val DAY_SECONDS = 86_400L
     private const val SECOND_MS = 1_000L
+
+    // The stored state's fields.
+    private const val KIND = "kind"
+    private const val UNTIL_DAY = "until_day"
+    private const val OPTIMIZED_DAY = "optimized_day"
 
     // Answers only: manual (type 4) and rescheduled (type 5) entries are not reviews.
     private const val ANSWERS_SQL = "select count() from revlog where id >= ? and ease > 0 and type < 4"
@@ -54,7 +63,7 @@ internal object AnkiquestOptimizeReminder {
     /** Whether the collection uses FSRS; without it every preset is SM-2. */
     enum class Fsrs { ON, OFF }
 
-    /** The reminder on this device: on, off by the settings switch, snoozed or dismissed. */
+    /** The reminder on every device: on, off by the settings switch, snoozed or dismissed. */
     sealed interface State {
         data object On : State
 
@@ -192,30 +201,61 @@ internal object AnkiquestOptimizeReminder {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) = prefs.edit { putString(PREF_STATE, encode(state).toString()) }
 
-    /** The stored form the fixture's states use; an unknown or missing one is on. */
+    /** The stored state; one that is missing or not exactly a state is on. */
     fun decode(stored: String?): State {
         if (stored == null) {
             return State.On
         }
-        return try {
-            val json = JSONObject(stored)
-            when (json.optString("kind")) {
-                "off" -> State.Off
-                "snoozed" -> State.Snoozed(json.getInt("until_day"))
-                "dismissed" -> State.Dismissed(if (json.isNull("optimized_day")) null else json.getInt("optimized_day"))
-                else -> State.On
+        val json =
+            try {
+                JSONObject(stored)
+            } catch (_: JSONException) {
+                return State.On
             }
-        } catch (e: JSONException) {
-            State.On
+        return parse(json) ?: State.On
+    }
+
+    /**
+     * [raw] as a state when it is one exactly as [encode] writes it, with days a collection has:
+     * the form the server accepts for the synced setting. Null otherwise.
+     */
+    fun parse(raw: Any?): State? {
+        val json = raw as? JSONObject ?: return null
+        val fields = json.keys().asSequence().toSet() - KIND
+        return when (json.opt(KIND)) {
+            "on" -> State.On.takeIf { fields.isEmpty() }
+            "off" -> State.Off.takeIf { fields.isEmpty() }
+            "snoozed" -> day(json, UNTIL_DAY, 0)?.takeIf { fields == setOf(UNTIL_DAY) }?.let { State.Snoozed(it) }
+            "dismissed" -> {
+                if (fields != setOf(OPTIMIZED_DAY)) {
+                    return null
+                }
+                if (json.isNull(OPTIMIZED_DAY)) {
+                    return State.Dismissed(null)
+                }
+                day(json, OPTIMIZED_DAY, 1)?.let { State.Dismissed(it) }
+            }
+            else -> null
         }
+    }
+
+    /** A whole-number day from [first], as an [Int]; null for any other value. */
+    private fun day(
+        json: JSONObject,
+        key: String,
+        first: Int,
+    ): Int? {
+        val value = json.opt(key)
+        val day = (value as? Int)?.toLong() ?: (value as? Long) ?: return null
+        return day.takeIf { it in first..Int.MAX_VALUE }?.toInt()
     }
 
     fun encode(state: State): JSONObject =
         when (state) {
-            State.On -> JSONObject().put("kind", "on")
-            State.Off -> JSONObject().put("kind", "off")
-            is State.Snoozed -> JSONObject().put("kind", "snoozed").put("until_day", state.untilDay)
-            is State.Dismissed -> JSONObject().put("kind", "dismissed").put("optimized_day", state.optimizedDay ?: JSONObject.NULL)
+            State.On -> JSONObject().put(KIND, "on")
+            State.Off -> JSONObject().put(KIND, "off")
+            is State.Snoozed -> JSONObject().put(KIND, "snoozed").put(UNTIL_DAY, state.untilDay)
+            is State.Dismissed -> JSONObject().put(KIND, "dismissed").put(OPTIMIZED_DAY, state.optimizedDay ?: JSONObject.NULL)
         }
 
     /** Applies [event] to the stored state, with the collection's day and last optimization. */

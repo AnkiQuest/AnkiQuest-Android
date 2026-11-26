@@ -158,6 +158,11 @@ class AnkiquestSettingsSyncTest : RobolectricTest() {
                     assertFalse(setting.usable(true), row.toString())
                     assertFalse(setting.usable(setting.decode(JSONArray("[1]"))), row.toString())
                 }
+                "optimize_reminder" -> {
+                    assertEquals(null, setting.feature, row.toString())
+                    assertFalse(setting.usable(true), row.toString())
+                    assertFalse(setting.usable(setting.decode(JSONObject("""{"kind":"later"}"""))), row.toString())
+                }
                 else -> error("unknown type in $row")
             }
         }

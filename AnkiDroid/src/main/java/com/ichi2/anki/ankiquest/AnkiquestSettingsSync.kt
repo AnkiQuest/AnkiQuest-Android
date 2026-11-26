@@ -64,6 +64,9 @@ internal object AnkiquestSettingsSync {
 
         /** A countdown list kept as JSON text; synced as a JSON array. */
         COUNTDOWNS,
+
+        /** The optimize reminder's state kept as JSON text; synced as a JSON object. */
+        OPTIMIZE_REMINDER,
     }
 
     /** The synced keys this app has, with the preferences that hold them. */
@@ -96,6 +99,12 @@ internal object AnkiquestSettingsSync {
             Storage.COUNTDOWNS,
             feature = AnkiquestCountdowns.FEATURE,
         ),
+        OPTIMIZE_REMINDER(
+            "optimize_reminder",
+            AnkiquestOptimizeReminder.PREF_STATE,
+            AnkiquestOptimizeReminder.State.On,
+            Storage.OPTIMIZE_REMINDER,
+        ),
         ;
 
         /** Whether this app can use [value] for this setting. */
@@ -104,12 +113,14 @@ internal object AnkiquestSettingsSync {
                 Storage.BOOLEAN -> value is Boolean
                 Storage.NUMBER_TEXT -> value is Int && range?.contains(value) != false
                 Storage.COUNTDOWNS -> value is AnkiquestCountdowns.Countdowns
+                Storage.OPTIMIZE_REMINDER -> value is AnkiquestOptimizeReminder.State
             }
 
         /** [raw] from JSON as this app keeps it; a value it cannot use stays as it is, so [usable] refuses it. */
         fun decode(raw: Any): Any =
             when (storage) {
                 Storage.COUNTDOWNS -> AnkiquestCountdowns.parse(raw) ?: raw
+                Storage.OPTIMIZE_REMINDER -> AnkiquestOptimizeReminder.parse(raw) ?: raw
                 Storage.BOOLEAN, Storage.NUMBER_TEXT -> raw
             }
 
@@ -117,6 +128,7 @@ internal object AnkiquestSettingsSync {
         fun encode(value: Any): Any =
             when (storage) {
                 Storage.COUNTDOWNS -> (value as AnkiquestCountdowns.Countdowns).toJson()
+                Storage.OPTIMIZE_REMINDER -> AnkiquestOptimizeReminder.encode(value as AnkiquestOptimizeReminder.State)
                 Storage.BOOLEAN, Storage.NUMBER_TEXT -> value
             }
 
@@ -128,6 +140,7 @@ internal object AnkiquestSettingsSync {
                         Storage.BOOLEAN -> prefs.getBoolean(pref, default as Boolean)
                         Storage.NUMBER_TEXT -> prefs.getString(pref, null)?.toIntOrNull() ?: default
                         Storage.COUNTDOWNS -> AnkiquestCountdowns.read(prefs)
+                        Storage.OPTIMIZE_REMINDER -> AnkiquestOptimizeReminder.state(prefs)
                     }
                 } catch (_: ClassCastException) {
                     default
@@ -142,7 +155,7 @@ internal object AnkiquestSettingsSync {
             when (storage) {
                 Storage.BOOLEAN -> editor.putBoolean(pref, value as Boolean)
                 Storage.NUMBER_TEXT -> editor.putString(pref, value.toString())
-                Storage.COUNTDOWNS -> editor.putString(pref, encode(value).toString())
+                Storage.COUNTDOWNS, Storage.OPTIMIZE_REMINDER -> editor.putString(pref, encode(value).toString())
             }
         }
     }

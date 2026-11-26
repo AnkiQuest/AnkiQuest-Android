@@ -130,7 +130,7 @@
             android:persistent="false"
             android:summary="@string/ankiquest_rwkv_models_none"
             android:title="@string/ankiquest_rwkv_models_title" />
-        <!-- AnkiquestOptimizeReminder keeps the switch in its state, so it is not stored here. -->
+        <!-- AnkiquestOptimizeReminder keeps the switch in its synced state, so it is not stored here. -->
         <SwitchPreferenceCompat
             android:key="@string/ankiquest_optimize_reminder_key"
             android:persistent="false"

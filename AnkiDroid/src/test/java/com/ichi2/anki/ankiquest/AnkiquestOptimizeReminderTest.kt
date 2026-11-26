@@ -27,11 +27,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
  * Checks [AnkiquestOptimizeReminder] against `tests/fixtures/optimize_reminder.json` from
- * AnkiQuest-Server, which the desktop add-on also follows.
+ * AnkiQuest-Server, which the desktop add-on also follows, and its state against the
+ * `optimize_reminder` row of `tests/fixtures/synced_settings.json`.
  */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestOptimizeReminderTest : RobolectricTest() {
@@ -40,11 +42,13 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
             checkNotNull(javaClass.classLoader?.getResource("ankiquest/optimize_reminder.json")) { "missing optimize reminder" }.readText(),
         )
 
-    private fun cases(section: String): List<JSONObject> {
-        val array = fixture.getJSONArray(section)
-        assertTrue(array.length() > 0, section)
-        return (0 until array.length()).map { array.getJSONObject(it) }
-    }
+    private val settings =
+        JSONObject(
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest/synced_settings.json")) { "missing synced settings" }.readText(),
+        )
+
+    private fun cases(section: String): List<JSONObject> =
+        fixture.getJSONArray(section).objects().also { assertTrue(it.isNotEmpty(), section) }
 
     private fun JSONObject.day(key: String): Int? = if (isNull(key)) null else getInt(key)
 
@@ -192,15 +196,74 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
     }
 
     @Test
-    fun `the state is kept on this device`() {
+    fun `the state is kept in its preference`() {
         val prefs = targetContext.getSharedPreferences("optimize-reminder-test", 0)
         assertEquals(State.On, AnkiquestOptimizeReminder.state(prefs))
         for (state in listOf(State.Off, State.Snoozed(437), State.Dismissed(null), State.Dismissed(400), State.On)) {
             AnkiquestOptimizeReminder.remember(state, prefs)
             assertEquals(state, AnkiquestOptimizeReminder.state(prefs))
         }
-        assertEquals(State.On, AnkiquestOptimizeReminder.decode("not json"))
-        assertEquals(State.On, AnkiquestOptimizeReminder.decode("""{"kind": "snoozed"}"""))
+        val broken =
+            listOf(
+                "not json",
+                """{"kind": "snoozed"}""",
+                """{"kind": "dismissed"}""",
+                """{"kind": "snoozed", "until_day": "x"}""",
+                """{"kind": "off", "until_day": 3}""",
+                """{"kind": "dismissed", "optimized_day": 0}""",
+            )
+        for (stored in broken) {
+            assertEquals(State.On, AnkiquestOptimizeReminder.decode(stored), stored)
+        }
+    }
+
+    @Test
+    fun `the state is the synced setting`() {
+        val row = settings.getJSONArray("keys").objects().single { it.getString("key") == "optimize_reminder" }
+        val setting = AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER
+        assertEquals(row.getString("android"), AnkiquestOptimizeReminder.PREF_STATE)
+        assertEquals(setting.pref, AnkiquestOptimizeReminder.PREF_STATE)
+        assertEquals(State.On, setting.decode(row.get("default")))
+
+        // Every state the cases name is one the setting stores, and reads back the same.
+        val states = cases("cases").map { it.getJSONObject("state") } + cases("transitions").map { it.getJSONObject("expected") }
+        for (stored in states) {
+            val state = setting.decode(stored)
+            assertTrue(setting.usable(state), stored.toString())
+            assertEquals(stored.toMap(), (setting.encode(state) as JSONObject).toMap())
+        }
+    }
+
+    @Test
+    fun `only what the server stores is usable`() {
+        val setting = AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER
+        val merges = settings.getJSONArray("server_merge").objects().filter { it.getJSONObject("incoming").has("optimize_reminder") }
+        assertTrue(merges.isNotEmpty())
+        for (case in merges) {
+            val value = case.getJSONObject("incoming").getJSONObject("optimize_reminder").get("value")
+            assertEquals(!case.optBoolean("refused"), setting.usable(setting.decode(value)), case.getString("name"))
+        }
+        for (raw in listOf("""{"kind": "snoozed", "until_day": true}""", """{"kind": "snoozed", "until_day": 2147483648}""")) {
+            assertEquals(null, AnkiquestOptimizeReminder.parse(JSONObject(raw)), raw)
+        }
+    }
+
+    @Test
+    fun `the API example's state is read as it was saved`() {
+        val answer =
+            JSONObject(
+                checkNotNull(javaClass.classLoader?.getResource("ankiquest-api/settings_optimize_reminder.json")) { "missing example" }
+                    .readText(),
+            )
+        val entry = AnkiquestSettingsSync.entries(answer).getValue("optimize_reminder")
+        assertEquals(State.Snoozed(437), AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER.decode(entry.value))
+    }
+
+    @Test
+    fun `a snooze is a change to sync`() {
+        AnkiquestOptimizeReminder.remember(State.Snoozed(437))
+        assertTrue(AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER))
+        assertFalse(AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER), "already noted")
     }
 
     @Test
