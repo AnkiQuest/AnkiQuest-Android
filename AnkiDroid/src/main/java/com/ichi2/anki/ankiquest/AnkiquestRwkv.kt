@@ -143,9 +143,9 @@ internal object AnkiquestRwkv {
         context: Context,
         inputs: List<() -> InputStream>,
     ): List<RwkvImport> {
-        val store = store(context)
         return transitions.withLock {
             withContext(ioDispatcher) {
+                val store = store(context)
                 inputs.map { open ->
                     try {
                         open().use { store.import(it) }
