@@ -1,6 +1,6 @@
 [versions]
 compileSdk = "37"
-compileSdkMinor = "0"
+compileSdkMinor = "1"
 
 # Changing minSdk means newer AnkiDroid versions will not support older devices.
 # However the Play Store will keep old AnkiDroid versions available for older
@@ -78,7 +78,7 @@ androidxWebkit = "1.16.0"
 # https://developer.android.com/jetpack/androidx/releases/work
 androidxWork = "2.12.0"
 # https://github.com/AnkiQuest/AnkiQuest-Android-Backend/
-ankiBackend = '0.1.77-anki26.09.4-ankiquest.4' # Also update expectedPolicy in PageWebViewClientAssetTest
+ankiBackend = '0.1.77-anki26.09.4-ankiquest.8' # Also update expectedPolicy in PageWebViewClientAssetTest
 autoService = "1.1.1"
 autoServiceAnnotations = "1.1.1"
 # https://github.com/skydoves/ColorPickerView/releases
@@ -196,9 +196,9 @@ commons-collections4 = { module = "org.apache.commons:commons-collections4", ver
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs-nio" }
 drakeet-drawer = { module = "com.drakeet.drawer:drawer", version.ref = "drawer" }
-ankiBackend-backend = { module = "org.ankiquest:anki-backend-android", version.ref = "ankiBackend" }
-ankiBackend-core = { module = "org.ankiquest:anki-backend-core", version.ref = "ankiBackend" }
-ankiBackend-testing = { module = "org.ankiquest:anki-android-backend-testing", version.ref = "ankiBackend" }
+ankiBackend-backend = { module = "org.ankiquest:ankiquest-backend-android", version.ref = "ankiBackend" }
+ankiBackend-core = { module = "org.ankiquest:ankiquest-backend-core", version.ref = "ankiBackend" }
+ankiBackend-testing = { module = "org.ankiquest:ankiquest-android-backend-testing", version.ref = "ankiBackend" }
 java-semver = { module = "com.github.zafarkhaja:java-semver", version.ref = "javaSemver" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }

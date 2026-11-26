@@ -109,7 +109,7 @@
     <string name="ankiquest_update_downloading">Téléchargement… %1$d%%</string>
     <string name="ankiquest_update_failed">La mise à jour n’a pas pu être téléchargée. Elle sera proposée à nouveau plus tard.</string>
     <string name="ankiquest_moved_title">AnkiQuest est passé à une nouvelle application</string>
-    <string name="ankiquest_moved_message">Synchronisez, puis installez la nouvelle application depuis la page de publication. Vos données reviennent après connexion et synchronisation dans celle-ci.</string>
+    <string name="ankiquest_moved_message">Installez le nouvel AnkiQuest depuis la page de publication. Si les deux applications utilisent le même dossier AnkiDroid, forcez l’arrêt de cette application dans les paramètres Android avant d’ouvrir la collection dans la nouvelle. Si elles utilisent des dossiers distincts, synchronisez avec AnkiWeb ou exportez la collection ici et importez-la dans la nouvelle application.</string>
     <string name="ankiquest_moved_open">Ouvrir la page de publication</string>
     <string name="ankiquest_avatar_crop_hint">Fais glisser l’image pour la déplacer. Pince ou utilise le curseur pour zoomer.</string>
     <string name="ankiquest_avatar_zoom">Zoom</string>
@@ -129,6 +129,7 @@
         <item>J’étudierai plus tard</item>
     </string-array>
     <string name="ankiquest_streak_studied">A étudié aujourd’hui</string>
+    <string name="ankiquest_streak_unverified">Étudié aujourd’hui · durée inconnue</string>
     <string name="ankiquest_streak_pending">Pas encore étudié</string>
     <string name="ankiquest_streak_protected">Série protégée · Pas encore étudié</string>
     <string name="ankiquest_streak_unknown">Actualise pour voir l’état des études aujourd’hui</string>
@@ -141,6 +142,7 @@
         <item quantity="one">%d révision envoyée.</item>
         <item quantity="other">%d révisions envoyées.</item>
     </plurals>
+    <string name="aq_server_outdated">Mets à jour ton serveur AnkiQuest</string>
     <string name="ankiquest_widget_settings_title">Widget de classement</string>
     <string name="ankiquest_widget_settings_open">%1$s, réglages du widget</string>
     <string name="ankiquest_widget_settings_save">Enregistrer le widget</string>

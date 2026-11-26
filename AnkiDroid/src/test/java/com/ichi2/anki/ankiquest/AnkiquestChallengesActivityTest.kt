@@ -161,7 +161,7 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
         assertFalse(goals.hasText("Fifty reviews each"), "only the one goal")
         assertTrue(
             goals.hasText(
-                goals.getString(R.string.aq_challenges_member, goals.getString(R.string.aq_challenges_you, "Hill"), goals.days(1)),
+                goals.getString(R.string.aq_challenges_member, goals.getString(R.string.aq_challenges_you, "hill"), goals.days(1)),
             ),
         )
         assertTrue(goals.hasText(goals.getString(R.string.aq_challenges_member, "Cerro", goals.days(1))))

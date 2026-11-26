@@ -138,7 +138,7 @@
     <string name="ankiquest_update_downloading">Downloading… %1$d%%</string>
     <string name="ankiquest_update_failed">The update could not be downloaded. It will be offered again later.</string>
     <string name="ankiquest_moved_title">AnkiQuest moved to a new app</string>
-    <string name="ankiquest_moved_message">Sync, then install the new app from the release page. Your data comes back after you sign in and sync there.</string>
+    <string name="ankiquest_moved_message">Install the new AnkiQuest from the release page. If both apps use the shared AnkiDroid folder, force-stop this app in Android settings before opening the collection in the new app. If the apps use separate folders, sync with AnkiWeb or export your collection here and import it there.</string>
     <string name="ankiquest_moved_open">Open release page</string>
     <!-- Translations for the separately submitted crop and contextual-reply PRs. -->
     <string name="ankiquest_avatar_crop_hint" tools:ignore="UnusedResources">Drag to move your picture. Pinch or use the slider to zoom.</string>
@@ -159,6 +159,7 @@
         <item>I will study later</item>
     </string-array>
     <string name="ankiquest_streak_studied">Studied today</string>
+    <string name="ankiquest_streak_unverified">Studied today · time not known</string>
     <string name="ankiquest_streak_pending">Not studied yet</string>
     <string name="ankiquest_streak_protected">Streak protected · Not studied yet</string>
     <string name="ankiquest_streak_unknown">Refresh to see today\'s study status</string>
@@ -172,4 +173,5 @@
         <item quantity="one">Sent %d review.</item>
         <item quantity="other">Sent %d reviews.</item>
     </plurals>
+    <string name="aq_server_outdated">Update your AnkiQuest server</string>
 </resources>

@@ -35,7 +35,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.shadows.ShadowDialog
 import kotlin.test.assertNotNull
-import kotlin.time.Duration.Companion.minutes
 
 @RunWith(AndroidJUnit4::class)
 class ForegroundMediaNetworkTest : RobolectricTest() {
@@ -75,6 +74,16 @@ class ForegroundMediaNetworkTest : RobolectricTest() {
                 override fun fullUploadOrDownload(input: FullUploadOrDownloadRequest) {
                     fullSyncRequest = input
                 }
+
+                // A full download backs up first. The backup path includes Robolectric's temp
+                // folder, named after the test, which exceeds MAX_PATH on Windows, so the backup
+                // fails and the download never reaches the media handoff. These tests are not
+                // about backups: report the collection as unchanged, which skips the backup.
+                override fun createBackup(
+                    backupFolder: String,
+                    force: Boolean,
+                    waitForCompletion: Boolean,
+                ): Boolean = false
             }
         }
     }
@@ -218,12 +227,10 @@ class ForegroundMediaNetworkTest : RobolectricTest() {
             conflictDialog().getButton(DialogInterface.BUTTON_POSITIVE).performClick()
             advanceRobolectricLooperUntil { Prefs.lastSyncTime != 0L }
         }
-        // The conflict path enqueues the media worker after lastSyncTime is set; the gap
-        // between the two causes the work lookup to fail on slow runners.
-        advanceRobolectricLooperUntil(timeout = 2.minutes, lazyMessage = { "the media worker was not enqueued" }) {
-            manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().any { !it.state.isFinished }
-        }
-        return manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().single { !it.state.isFinished }
+        // The sync enqueues the media worker before it sets lastSyncTime, so a missing worker
+        // means the sync failed: its exception is in the test log.
+        val pending = manager.getWorkInfosForUniqueWork(UniqueWorkNames.SYNC_MEDIA).get().filter { !it.state.isFinished }
+        return checkNotNull(pending.singleOrNull()) { "expected one pending media worker, got $pending; did the sync fail?" }
     }
 
     private fun DeckPicker.conflictDialog(): AlertDialog {

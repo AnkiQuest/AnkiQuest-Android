@@ -41,6 +41,9 @@ internal object AnkiquestCompanion {
 
         /** Bluma, earned at a milestone like Ankilope ([AnkiquestUnlocks]). */
         COW("cow", R.string.ankiquest_companion_cow),
+
+        /** Anki-tan, earned by a streak ([AnkiquestUnlocks]); Shigeyuki's character, credited on the About screen. */
+        ANKI_TAN("anki_tan", R.string.ankiquest_companion_anki_tan),
         NONE("none", R.string.ankiquest_companion_none),
         ;
 
@@ -50,7 +53,7 @@ internal object AnkiquestCompanion {
     }
 
     /** The poses a preview card shows, as Aki's: face, fire and sad. */
-    private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_at_risk)
+    private val previewPoses = listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_sad)
 
     /** [choice]'s preview poses as Aki's, without two that look the same. */
     fun preview(choice: Choice): List<Int> = previewPoses.distinctBy { resource(it, choice) }
@@ -192,26 +195,20 @@ internal object AnkiquestCompanion {
         }
     }
 
-    /**
-     * Aki's art for each pose. The streak moods keep the pictures they had before her core art
-     * (#294); showing that art is separate work.
-     */
+    /** Aki's art for each pose she has. She has no frozen 2 or 3 art: those show her frozen pose. */
     private val akiPoses =
         mapOf(
             AnkiquestPose.FACE to R.drawable.aki_face,
-            AnkiquestPose.ASLEEP to R.drawable.aki_sleeping,
+            AnkiquestPose.ASLEEP to R.drawable.aki_asleep,
             AnkiquestPose.HAPPY to R.drawable.aki_celebrate,
             AnkiquestPose.STREAK to R.drawable.aki_streak,
             AnkiquestPose.STREAK_HOT to R.drawable.aki_streak_hot,
             AnkiquestPose.STREAK_BLAZING to R.drawable.aki_streak_blazing,
             AnkiquestPose.STREAK_LEGEND to R.drawable.aki_streak_legend,
             AnkiquestPose.STREAK_MILESTONE to R.drawable.aki_streak_milestone,
-            // Interim: at_risk is the most worried, welcome smiles with a card, freeze_used has snow.
-            AnkiquestPose.SAD to R.drawable.aki_at_risk,
-            AnkiquestPose.HOPEFUL to R.drawable.aki_welcome,
-            AnkiquestPose.FROZEN to R.drawable.aki_freeze_used,
-            AnkiquestPose.FROZEN_2 to R.drawable.aki_freeze,
-            AnkiquestPose.FROZEN_3 to R.drawable.aki_freeze_used,
+            AnkiquestPose.SAD to R.drawable.aki_sad,
+            AnkiquestPose.HOPEFUL to R.drawable.aki_hopeful,
+            AnkiquestPose.FROZEN to R.drawable.aki_frozen,
             AnkiquestPose.NEGLECTED to R.drawable.aki_neglected,
         )
 
@@ -219,7 +216,7 @@ internal object AnkiquestCompanion {
     private val ankilopePoses =
         mapOf(
             AnkiquestPose.FACE to R.drawable.ankilope_face,
-            AnkiquestPose.ASLEEP to R.drawable.ankilope_sleeping,
+            AnkiquestPose.ASLEEP to R.drawable.ankilope_asleep,
             AnkiquestPose.HAPPY to R.drawable.ankilope_celebrate,
             // Interim: Ankilope has no on-fire art yet, so she studies.
             AnkiquestPose.STREAK to R.drawable.ankilope_study,
@@ -231,6 +228,29 @@ internal object AnkiquestCompanion {
             AnkiquestPose.REVIEW to R.drawable.ankilope_study,
         )
 
+    /**
+     * Anki-tan's art for each pose she has: Shigeyuki's pack art and the generated masters, as
+     * AnkiQuest-Server `static/anki-tan/poses.json` maps them. Her other extensions fall back until
+     * they are drawn (AnkiQuest-Server#57).
+     */
+    private val ankiTanPoses =
+        mapOf(
+            AnkiquestPose.FACE to R.drawable.anki_tan_face,
+            AnkiquestPose.ASLEEP to R.drawable.anki_tan_asleep,
+            AnkiquestPose.HAPPY to R.drawable.anki_tan_happy,
+            AnkiquestPose.STREAK to R.drawable.anki_tan_streak,
+            AnkiquestPose.STREAK_LEGEND to R.drawable.anki_tan_streak_legend,
+            AnkiquestPose.STREAK_MILESTONE to R.drawable.anki_tan_streak_milestone,
+            AnkiquestPose.SAD to R.drawable.anki_tan_sad,
+            AnkiquestPose.HOPEFUL to R.drawable.anki_tan_hopeful,
+            AnkiquestPose.FROZEN to R.drawable.anki_tan_frozen,
+            AnkiquestPose.NEGLECTED to R.drawable.anki_tan_neglected,
+            AnkiquestPose.WELCOME to R.drawable.anki_tan_welcome,
+            AnkiquestPose.REVIEW to R.drawable.anki_tan_review,
+            AnkiquestPose.HURT to R.drawable.anki_tan_hurt,
+            AnkiquestPose.DEAD to R.drawable.anki_tan_dead,
+        )
+
     /** The pose each of Aki's pictures shows, so that other companions show theirs. */
     private val akiPictures =
         mapOf(
@@ -239,7 +259,7 @@ internal object AnkiquestCompanion {
             R.drawable.aki_icon_worried to AnkiquestPose.FACE,
             R.drawable.aki_icon_frozen to AnkiquestPose.FACE,
             R.drawable.aki_icon_sleepy to AnkiquestPose.FACE,
-            R.drawable.aki_sleeping to AnkiquestPose.ASLEEP,
+            R.drawable.aki_asleep to AnkiquestPose.ASLEEP,
             R.drawable.aki_celebrate to AnkiquestPose.HAPPY,
             R.drawable.aki_achievement to AnkiquestPose.HAPPY,
             R.drawable.aki_goal to AnkiquestPose.HAPPY,
@@ -278,8 +298,13 @@ internal object AnkiquestCompanion {
             R.drawable.aki_challenge_lost to R.drawable.ankilope_challenge_lost,
         )
 
-    /** Whether [choice] is drawn with Ankilope's art: Ankilope, and the cow recoloured. */
-    private fun ankilopeArt(choice: Choice) = choice == Choice.ANKILOPE || choice == Choice.COW
+    /** [choice]'s art by pose: the cow draws Ankilope's recoloured, no companion Aki's where asked. */
+    private fun poses(choice: Choice): Map<AnkiquestPose, Int> =
+        when (choice) {
+            Choice.ANKILOPE, Choice.COW -> ankilopePoses
+            Choice.ANKI_TAN -> ankiTanPoses
+            Choice.AKI, Choice.NONE -> akiPoses
+        }
 
     /** [choice]'s art for [pose], or for its nearest fallback ([AnkiquestPose.chain]) where it has none. */
     @DrawableRes
@@ -287,7 +312,7 @@ internal object AnkiquestCompanion {
         pose: AnkiquestPose,
         choice: Choice = choice(),
     ): Int {
-        val poses = if (ankilopeArt(choice)) ankilopePoses else akiPoses
+        val poses = poses(choice)
         return pose.chain().firstNotNullOf { poses[it] }
     }
 
@@ -300,12 +325,17 @@ internal object AnkiquestCompanion {
         @DrawableRes aki: Int,
         choice: Choice = choice(),
     ): Int {
-        if (!ankilopeArt(choice)) {
+        if (choice == Choice.AKI || choice == Choice.NONE) {
             return aki
         }
         val pose = akiPictures[aki]
         if (pose != null) {
             return art(pose, choice)
+        }
+
+        // Scenes: Ankilope has her own; Anki-tan has none yet, so she shows her face.
+        if (choice == Choice.ANKI_TAN) {
+            return R.drawable.anki_tan_face
         }
         return ankilopeScenes[aki] ?: aki
     }

@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Gradle cache
+description: >-
+  Restores or saves the Gradle dependency cache (downloaded modules and the
+  wrapper distribution) of one cache group. Run `mode: restore` right after
+  setup-gradle (with `cache-disabled: true`) and before the first Gradle
+  command; in the one job that writes the group, run `mode: save` as the last
+  step with the restore step's `key` and `hit` outputs.
+
+# Why not setup-gradle's basic cache: its key is a hash of the Gradle files
+# alone, so every job shares one entry and the first job to save it on master
+# decides what is in it; the other jobs then download what it lacks (the
+# Lint Kotlin job fetched jacoco, the API contract job the Robolectric native
+# runtime) on every run. It also has no fallback key, so a pull request that
+# changes any Gradle file restores nothing. With ~60 runs queued, those
+# downloads hit Maven Central's rate limit (HTTP 429).
+#
+# Here each group has its own entry, written by one job, and pull requests
+# fall back to the group's newest master entry when their Gradle files differ.
+# Master restores exact matches only, so each new entry starts clean instead
+# of carrying every older version along.
+#
+# Only pushes to master write; pull requests, the merge queue, schedules and
+# dispatches only read, so nothing a pull request runs ends up in a cache
+# that master restores.
+
+inputs:
+  mode:
+    description: "`restore` or `save`."
+    required: true
+  group:
+    description: >-
+      The cache group. The job that saves it and the jobs that only restore it
+      use the same name.
+    required: true
+  key:
+    description: "`save` only: the restore step's `key` output."
+    required: false
+    default: ""
+  hit:
+    description: "`save` only: the restore step's `hit` output."
+    required: false
+    default: ""
+
+outputs:
+  key:
+    description: The cache key for this group and these Gradle files.
+    value: ${{ steps.restore.outputs.cache-primary-key }}
+  hit:
+    description: "`true` when an entry with exactly this key was restored."
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    # setup-gradle picks the Gradle user home (D:\a\.gradle on Windows) and
+    # exports it; the paths below depend on it.
+    - name: Check the Gradle user home
+      if: env.GRADLE_USER_HOME == ''
+      shell: bash
+      run: |
+        echo "::error::Run gradle/actions/setup-gradle before the gradle-cache action"
+        exit 1
+
+    # The paths must be the same in both steps: they are part of the cache version.
+    - name: Restore the Gradle cache
+      id: restore
+      if: inputs.mode == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ env.GRADLE_USER_HOME }}/caches/modules-2
+          ${{ env.GRADLE_USER_HOME }}/wrapper/dists
+          !${{ env.GRADLE_USER_HOME }}/caches/modules-2/*.lock
+          !${{ env.GRADLE_USER_HOME }}/caches/modules-2/gc.properties
+        key: gradle-v1-${{ runner.os }}-${{ inputs.group }}-${{ hashFiles('**/*.gradle.kts', '**/*.gradle', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: ${{ github.ref != 'refs/heads/master' && format('gradle-v1-{0}-{1}-', runner.os, inputs.group) || '' }}
+
+    - name: Save the Gradle cache
+      if: >-
+        inputs.mode == 'save' && inputs.key != '' && inputs.hit != 'true'
+        && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      continue-on-error: true
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ env.GRADLE_USER_HOME }}/caches/modules-2
+          ${{ env.GRADLE_USER_HOME }}/wrapper/dists
+          !${{ env.GRADLE_USER_HOME }}/caches/modules-2/*.lock
+          !${{ env.GRADLE_USER_HOME }}/caches/modules-2/gc.properties
+        key: ${{ inputs.key }}

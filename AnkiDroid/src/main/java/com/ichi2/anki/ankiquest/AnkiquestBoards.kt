@@ -318,7 +318,7 @@ internal object AnkiquestBoards {
         return parseWins(AnkiquestApi.json(account, AnkiquestApi.request(url, account.token, account.language).build()))
     }
 
-    /** The rows of a `/api/leaderboard` answer for [period], best first; older servers that ignore `period` are sorted by its XP. */
+    /** The rows of a `/api/leaderboard` answer for [period], best first. */
     fun parseLeaderboard(
         board: JSONArray,
         period: Period,
@@ -329,7 +329,7 @@ internal object AnkiquestBoards {
                 val user = row.text("user").ifEmpty { return@mapNotNull null }
                 val xp =
                     row.optJSONObject("periods")?.takeIf { it.has(period.query) }?.optLong(period.query)
-                        ?: row.optLong("xp", row.optLong("week_xp"))
+                        ?: row.optLong("xp")
                 Standing(
                     user = user,
                     display = row.text("display").trim().ifEmpty { user },

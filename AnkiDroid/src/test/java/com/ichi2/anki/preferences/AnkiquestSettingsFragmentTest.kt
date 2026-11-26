@@ -66,6 +66,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
+private const val IDLE_TRIES = 250
+private const val IDLE_STEP_MS = 20L
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestSettingsFragmentTest : RobolectricTest() {
@@ -369,30 +371,35 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     }
 
     @Test
-    fun `RWKV switch is off by default and refuses to turn on without an engine`() {
+    fun `RWKV switch is off by default and refuses to turn on without a model`() {
         val rwkv = open().switch(R.string.ankiquest_rwkv_key)
-        assertFalse(rwkv.isVisible, "An unavailable scheduler must stay out of settings")
+        idle()
+        assertTrue(rwkv.isVisible)
         assertFalse(rwkv.isChecked)
         assertEquals(targetContext.getString(R.string.ankiquest_rwkv_off), rwkv.summary.toString())
 
-        // This build has no engine: the switch stays off and says why.
+        // No model is imported: the switch stays off and says why.
         rwkv.performClick()
-        idle()
+        idleUntil { rwkv.summary.toString() == targetContext.getString(R.string.ankiquest_rwkv_no_model) }
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_model), rwkv.summary.toString())
     }
 
     @Test
     fun `a saved RWKV switch that is now blocked opens off`() {
         AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestRwkv.PREF_ENABLED, true) }
 
-        val rwkv = open().switch(R.string.ankiquest_rwkv_key)
-        idle()
-        assertFalse(rwkv.isVisible, "A saved switch must not expose an unavailable scheduler")
+        val fragment = open()
+        val rwkv = fragment.switch(R.string.ankiquest_rwkv_key)
+        idleUntil { !rwkv.isChecked }
         assertFalse(rwkv.isChecked)
         assertEquals(RwkvSwitch.OFF, AnkiquestRwkv.switch())
-        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_engine), rwkv.summary.toString())
+        assertEquals(targetContext.getString(R.string.ankiquest_rwkv_no_model), rwkv.summary.toString())
+        assertEquals(
+            targetContext.getString(R.string.ankiquest_rwkv_models_none),
+            fragment.preference<Preference>(R.string.ankiquest_rwkv_models_key).summary.toString(),
+        )
     }
 
     @Test
@@ -768,6 +775,18 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     }
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
+
+    /** Idles the main looper until [condition] holds: the RWKV checks read the collection and the files off the main thread. */
+    private fun idleUntil(condition: () -> Boolean) {
+        repeat(IDLE_TRIES) {
+            idle()
+            if (condition()) {
+                return
+            }
+            Thread.sleep(IDLE_STEP_MS)
+        }
+        idle()
+    }
 
     private fun <T : Preference> AnkiquestSettingsFragment.preference(key: Int): T = findPreference(targetContext.getString(key))!!
 

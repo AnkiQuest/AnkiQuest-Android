@@ -36,7 +36,7 @@ class AnkiquestCompanionScreenshotTest : ScreenshotTest() {
             putString(Ankiquest.PREF_TOKEN, "screenshot-token")
         }
         mockkObject(AnkiquestHomeData, AnkiquestCapabilities)
-        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestUnlocks.FEATURE, "companion_milestones")
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf("companion_unlocks", "companion_milestones")
         coEvery { AnkiquestHomeData.unlocks(any()) } answers {
             JSONObject(checkNotNull(javaClass.classLoader?.getResource("ankiquest-api/unlocks.json")).readText())
         }

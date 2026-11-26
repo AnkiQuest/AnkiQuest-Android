@@ -23,6 +23,7 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.ProgressContext
 import com.ichi2.anki.R
 import com.ichi2.anki.SingleFragmentActivity
+import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.launchCatchingTask
@@ -479,6 +480,8 @@ suspend fun FragmentActivity.updateDeckConfigsRaw(input: ByteArray): ByteArray {
             }
         }
     undoableOp { OpChanges.parseFrom(output) }
+    // AnkiQuest: which RWKV models run depends on the presets' schedulers.
+    AnkiquestRwkv.presetsChanged(applicationContext)
     withContext(Dispatchers.Main) {
         if (UpdateDeckConfigsRequest.parseFrom(input).mode == UpdateDeckConfigsMode.UPDATE_DECK_CONFIGS_MODE_COMPUTE_ALL_PARAMS) {
             // Anki 26.05 relies on us to request a reload; 26.09 also requests one from JavaScript.

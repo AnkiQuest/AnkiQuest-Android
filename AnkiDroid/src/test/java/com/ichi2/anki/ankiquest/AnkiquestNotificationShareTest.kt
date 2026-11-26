@@ -5,9 +5,11 @@ package com.ichi2.anki.ankiquest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Intent
+import android.view.View
 import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -26,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
@@ -52,11 +55,11 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
         }
         shadowOf(targetContext as Application).grantPermissions(POST_NOTIFICATIONS_PERMISSION)
         mockkObject(AnkiquestApi, AnkiquestShare)
-        every { AnkiquestShare.textChooser(any(), any(), any(), any(), any()) } answers {
-            art.set(arg(4))
+        every { AnkiquestShare.textChooser(any(), any(), any(), any()) } answers {
+            art.set(arg(3))
             Intent(Intent.ACTION_CHOOSER)
         }
-        every { AnkiquestShare.linkChooser(any(), any(), any(), any()) } answers {
+        every { AnkiquestShare.linkChooser(any(), any(), any()) } answers {
             linked.set(arg(1))
             Intent(Intent.ACTION_CHOOSER)
         }
@@ -75,9 +78,12 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
         }
     }
 
+    /** Opens the share screen for [intent] and takes "More apps…" on AnkiQuest's share sheet. */
     private fun share(intent: Intent) {
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent).setup()
         saveControllerForCleanup(controller)
+        advanceRobolectricLooperUntil { (ShadowDialog.getLatestDialog() as? BottomSheetDialog)?.isShowing == true }
+        ShadowDialog.getLatestDialog()!!.findViewById<View>(R.id.aq_share_more)!!.performClick()
         advanceRobolectricLooperUntil { shadowOf(controller.get()).peekNextStartedActivity() != null }
     }
 

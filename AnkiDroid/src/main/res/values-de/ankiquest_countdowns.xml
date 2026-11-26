@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="ankiquest_countdowns">Countdowns</string>
+    <string name="ankiquest_countdowns_changed">Deine Countdowns haben sich geändert. Prüfe die Liste und versuche es erneut.</string>
+    <string name="ankiquest_countdowns_empty">Füge eine Prüfung oder ein Ereignis hinzu, um die Tage bis dahin zu zählen.</string>
+    <string name="ankiquest_countdown_add">Countdown hinzufügen</string>
+    <string name="ankiquest_countdown_edit">Countdown bearbeiten</string>
+    <string name="ankiquest_countdowns_manage">Countdowns bearbeiten</string>
+    <string name="ankiquest_countdown_name">Name</string>
+    <string name="ankiquest_countdown_date">Datum</string>
+    <string name="ankiquest_countdown_deck">Stapel (optional)</string>
+    <string name="ankiquest_countdown_no_deck">Kein Stapel</string>
+    <string name="ankiquest_countdown_save">Speichern</string>
+    <string name="ankiquest_countdown_delete">Löschen</string>
+    <string name="ankiquest_countdown_name_missing">Gib einen Namen ein.</string>
+    <string name="ankiquest_countdowns_full">Du hast schon die meisten Countdowns, die du haben kannst. Lösche einen, um einen neuen hinzuzufügen.</string>
+    <string name="ankiquest_countdowns_private">Nur du siehst deine Countdowns.</string>
+    <string name="ankiquest_countdown_tomorrow">%1$s morgen</string>
+    <string name="ankiquest_countdown_past">%1$s ist vorbei</string>
+    <string name="ankiquest_countdown_done">In %1$s ist bis dahin nichts mehr offen</string>
+    <plurals name="ankiquest_countdown_upcoming">
+        <item quantity="one">%1$s in %2$d Tag</item>
+        <item quantity="other">%1$s in %2$d Tagen</item>
+    </plurals>
+    <plurals name="ankiquest_countdown_pace">
+        <item quantity="one">~%1$d Karte am Tag, um %2$s bis dahin abzuschließen</item>
+        <item quantity="other">~%1$d Karten am Tag, um %2$s bis dahin abzuschließen</item>
+    </plurals>
+    <string name="ankiquest_countdowns_import_one">Den Countdown, den du ohne Anmeldung erstellt hast, zu %1$s hinzufügen?</string>
+    <string name="ankiquest_countdowns_import_other">Die %1$d Countdowns, die du ohne Anmeldung erstellt hast, zu %2$s hinzufügen?</string>
+    <string name="ankiquest_countdowns_import_add">Zum Konto hinzufügen</string>
+    <string name="ankiquest_countdowns_import_keep">Auf diesem Gerät behalten</string>
+    <plurals name="ankiquest_countdowns_left">
+        <item quantity="one">%1$d Countdown passte nicht mehr hinein und bleibt auf diesem Gerät.</item>
+        <item quantity="other">%1$d Countdowns passten nicht mehr hinein und bleiben auf diesem Gerät.</item>
+    </plurals>
+</resources>
