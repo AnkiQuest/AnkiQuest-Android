@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest art check
 
-# Every companion picture committed under AnkiDroid's drawables must be, byte for byte, the
-# exported copy in the pinned AnkiQuest-Art release (ankiquest-art.json): the check downloads that
-# release's android-drawables.zip, verifies its pinned SHA-256 and compares each picture. A picture
-# the release lacks or one with other bytes fails, so hand-made or stale copies cannot ship.
+# No companion picture is committed: the build unpacks them from the android-drawables.zip of the
+# AnkiQuest-Art release ankiquest-art.json pins. This checks that zip's SHA-256 and entries, that no
+# companion picture is committed under AnkiDroid/src, and that every companion drawable the app
+# names is in the release.
 on:
   pull_request:
   # The merge queue runs it on its merge commit too.
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   art:
-    name: App art is the pinned Art release's
+    name: App art comes from the pinned Art release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,6 +32,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Compare the app's companion pictures with the pinned release
+      - name: Check the app's companion art against the pinned release
         shell: bash
         run: node .github/ankiquest_art_check.cjs check

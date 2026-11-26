@@ -2,6 +2,7 @@
 @file:Suppress("DEPRECATION")
 
 import com.android.build.api.variant.FilterConfiguration.FilterType
+import com.ichi2.anki.gradle.AnkiquestArtTask
 import com.ichi2.anki.gradle.AnkiquestBrandingTask
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
@@ -448,6 +449,26 @@ val ankiquestBranding =
     }
 androidComponents.onVariants { variant ->
     variant.sources.res?.addGeneratedSourceDirectory(ankiquestBranding, AnkiquestBrandingTask::output)
+}
+
+// AnkiQuest: no companion picture is committed. Every build unpacks the drawables of the
+// AnkiQuest-Art release that ankiquest-art.json pins (android-drawables.zip, SHA-256-checked) into
+// generated resources. Downloads are cached by SHA-256 in the Gradle user home, or in
+// -PankiquestArtCache=<dir> / ANKIQUEST_ART_CACHE, which CI and the F-Droid recipe fill beforehand.
+val ankiquestArtCache =
+    providers
+        .gradleProperty("ankiquestArtCache")
+        .orElse(providers.environmentVariable("ANKIQUEST_ART_CACHE"))
+        .map { rootProject.file(it) }
+        .getOrElse(File(gradle.gradleUserHomeDir, "caches/ankiquest-art"))
+androidComponents.onVariants { variant ->
+    // One task per variant: AGP gives each generated source directory its own output folder.
+    val art =
+        tasks.register<AnkiquestArtTask>("ankiquestArt${variant.name.replaceFirstChar { it.uppercase() }}") {
+            pin.set(rootProject.layout.projectDirectory.file("ankiquest-art.json"))
+            cacheDir.set(ankiquestArtCache)
+        }
+    variant.sources.res?.addGeneratedSourceDirectory(art, AnkiquestArtTask::resDir)
 }
 
 androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
