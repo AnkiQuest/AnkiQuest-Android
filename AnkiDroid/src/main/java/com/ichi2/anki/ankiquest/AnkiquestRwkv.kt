@@ -144,9 +144,8 @@ internal object AnkiquestRwkv {
         inputs: List<() -> InputStream>,
     ): List<RwkvImport> {
         val store = store(context)
-        val results =
-            transitions.withLock {
-                // The caller runs this on the IO dispatcher: each file is copied and hashed.
+        return transitions.withLock {
+            withContext(ioDispatcher) {
                 inputs.map { open ->
                     try {
                         open().use { store.import(it) }
@@ -157,7 +156,7 @@ internal object AnkiquestRwkv {
                     }
                 }
             }
-        return results
+        }
     }
 
     /**
