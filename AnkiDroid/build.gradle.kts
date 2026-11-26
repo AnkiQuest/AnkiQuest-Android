@@ -490,8 +490,14 @@ val ankiquestRulesCache =
         .map { rootProject.file(it) }
         .getOrElse(File(gradle.gradleUserHomeDir, "caches/ankiquest-rules"))
 
+// A local value, so the mapping holds no reference to this script (configuration cache).
+val ankiquestRulesDir =
+    rootProject.layout.projectDirectory.let { root ->
+        ankiquestSetting("ankiquestRulesDir", "ANKIQUEST_RULES_DIR").map { root.dir(it) }
+    }
+
 fun AnkiquestRulesSource.rulesFrom() {
-    localDir.set(ankiquestSetting("ankiquestRulesDir", "ANKIQUEST_RULES_DIR").map { rootProject.layout.projectDirectory.dir(it) })
+    localDir.set(ankiquestRulesDir)
     tag.set(ankiquestSetting("ankiquestRulesTag", "ANKIQUEST_RULES_TAG"))
     cacheDir.set(ankiquestRulesCache)
 }
