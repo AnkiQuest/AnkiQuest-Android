@@ -5,10 +5,10 @@ package com.ichi2.anki.ankiquest
 import android.content.Context
 import android.content.res.Configuration
 import android.text.format.Formatter
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.RobolectricTest
 import androidx.core.content.edit
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.RobolectricTest
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
