@@ -34,10 +34,13 @@ import kotlin.test.assertTrue
 /**
  * Checks [AnkiquestOptimizeReminder] against `tests/fixtures/optimize_reminder.json` from
  * AnkiQuest-Server, which the desktop add-on also follows, and its state against the
- * `optimize_reminder` row of `tests/fixtures/synced_settings.json`.
+ * `optimize_reminder` row of `tests/fixtures/synced_settings.json`. The rule's cases run through
+ * [AnkiquestSharedRules], so they test the shared rules library itself.
  */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestOptimizeReminderTest : RobolectricTest() {
+    private val dayMs = 86_400_000L
+
     private val fixture =
         JSONObject(
             checkNotNull(javaClass.classLoader?.getResource("ankiquest/optimize_reminder.json")) { "missing optimize reminder" }.readText(),
@@ -56,16 +59,6 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
     private fun JSONObject.ms(key: String): Long? = if (isNull(key)) null else getLong(key)
 
     private fun state(json: JSONObject): State = AnkiquestOptimizeReminder.decode(json.toString())
-
-    @Test
-    fun `the limits are the shared ones`() {
-        val limits = fixture.getJSONObject("limits")
-        assertEquals(
-            listOf(limits.getInt("days"), limits.getInt("reviews"), limits.getInt("snooze_days")),
-            listOf(AnkiquestOptimizeReminder.DAYS, AnkiquestOptimizeReminder.REVIEWS, AnkiquestOptimizeReminder.SNOOZE_DAYS),
-        )
-        assertEquals(86_400_000L, AnkiquestOptimizeReminder.DAY_MS)
-    }
 
     @Test
     fun `every optimization time`() {
@@ -333,7 +326,7 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
         advanceRobolectricLooperUntil { AnkiquestOptimizeReminder.state() != State.On }
         val snoozed = AnkiquestOptimizeReminder.state() as State.Snoozed
-        val week = AnkiquestOptimizeReminder.SNOOZE_DAYS * AnkiquestOptimizeReminder.DAY_MS
+        val week = fixture.getJSONObject("limits").getInt("snooze_days") * dayMs
         assertTrue(snoozed.untilMs in pressed + week..TimeManager.time.intTimeMS() + week, snoozed.toString())
 
         dialog = show()
