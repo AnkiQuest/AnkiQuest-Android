@@ -51,7 +51,7 @@ class AnkiquestLayoutAccessibilityTest : RobolectricTest(loadBackend = false) {
     }
 
     /** Every image in every layout AnkiQuest defines, with the layout's resource entry name. */
-    private fun images(): Sequence<Pair<String, ImageView>> {
+    private fun images(): List<Pair<String, ImageView>> {
         val context = targetContext
         val inflater = LayoutInflater.from(context)
         return R.layout::class.java.fields
@@ -64,15 +64,15 @@ class AnkiquestLayoutAccessibilityTest : RobolectricTest(loadBackend = false) {
             }
     }
 
-    private fun views(view: View): Sequence<View> =
-        sequence {
-            yield(view)
-            (view as? ViewGroup)?.let { group ->
-                for (index in 0 until group.childCount) {
-                    yieldAll(views(group.getChildAt(index)))
-                }
+    private fun views(view: View): List<View> {
+        val found = mutableListOf(view)
+        (view as? ViewGroup)?.let { group ->
+            for (index in 0 until group.childCount) {
+                found.addAll(views(group.getChildAt(index)))
             }
         }
+        return found
+    }
 
     private companion object {
         const val MIN_TOUCH_TARGET_DP = 48
