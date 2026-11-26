@@ -163,10 +163,8 @@ class AnkiquestPackFormatTest {
         assertEquals(PackRefusal.UNKNOWN_POSE, refused(info(poses = """{"face":"aki_face.webp","leech_kun":"aki.png"}""")))
         assertEquals(
             PackRefusal.MISSING_CORE_POSE,
-            refused(
-                info(poses = """{"face":"aki_face.webp","winner":"aki_win.webp"}"""),
-                "a pack without every core pose",
-            ),
+            refused(info(poses = """{"face":"aki_face.webp","winner":"aki_win.webp"}""")),
+            "a pack without every core pose",
         )
         assertEquals(
             mapOf("face" to "aki_face.webp", "asleep" to "aki_asleep.webp", "winner" to "aki_win.webp"),
