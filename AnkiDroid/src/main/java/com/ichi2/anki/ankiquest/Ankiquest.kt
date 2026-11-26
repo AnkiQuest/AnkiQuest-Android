@@ -57,11 +57,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 /**
  * The review banner's two looks (#207): bright amber when it matters, near-black otherwise, and the
- * ink they write in. Top-level, so the contrast test can pin them without the Ankiquest object.
+ * ink each writes in: dark on the amber, white on the near-black.
+ * Top-level, so Top-level, so the contrast test can pin them without the Ankiquest object.
  */
 internal val bannerImportant = 0xF0B8860B.toInt()
 internal val bannerQuiet = 0xE0202830.toInt()
-internal val bannerInk = Color.WHITE
+internal val bannerImportantInk = 0xFF23272E.toInt()
+internal val bannerQuietInk = Color.WHITE
 
 object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallbacks {
     const val PREF_URL = "ankiquestUrl"
@@ -1299,7 +1301,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             return
         }
         banner.message = message
-        banner.setTextColor(bannerInk)
+        banner.setTextColor(if (important) bannerImportantInk else bannerQuietInk)
         banner.background =
             GradientDrawable().apply {
                 cornerRadius = 20 * density
