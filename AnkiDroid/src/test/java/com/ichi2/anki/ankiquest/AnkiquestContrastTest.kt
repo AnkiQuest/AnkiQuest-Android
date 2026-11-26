@@ -53,7 +53,7 @@ class AnkiquestContrastTest : RobolectricTest(loadBackend = false) {
     fun `the review banner reads in both its looks`() {
         // The important look is bright amber and needs dark ink on it; the quiet one is near-black
         // and keeps white. Both are top-level, so pinning them needs no AnkiQuest object.
-        for ((foreground, background) in listOf(bannerInk to bannerImportant, Color.WHITE to bannerQuiet)) {
+        for ((foreground, background) in listOf(bannerImportantInk to bannerImportant, bannerQuietInk to bannerQuiet)) {
             val opaque = -0x1000000 or background
             val contrast = ColorUtils.calculateContrast(foreground, opaque)
             assertTrue(contrast >= MIN_TEXT_CONTRAST, "$foreground on $background is $contrast:1")
