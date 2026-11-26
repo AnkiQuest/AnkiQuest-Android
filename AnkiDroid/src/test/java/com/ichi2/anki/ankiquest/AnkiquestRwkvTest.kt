@@ -27,6 +27,7 @@ class AnkiquestRwkvTest {
                 sha256 = sha256(twoHead),
                 zipBytes = 0,
                 zipSha256 = "",
+                logLoss = 0.300356,
             ),
         )
     private val store by lazy { RwkvModelStore(File(folder.root, "rwkv"), lock) }

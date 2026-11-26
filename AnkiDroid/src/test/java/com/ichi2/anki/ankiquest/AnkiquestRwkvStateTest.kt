@@ -10,14 +10,24 @@ import kotlin.test.assertTrue
 
 class AnkiquestRwkvStateTest {
     private val gib = 1024L * 1024L * 1024L
-    private val entry = RwkvLock.ENTRIES.first { it.head == RwkvHead.TWO_HEAD }
-    private val models = RwkvModels(RwkvModelFile(entry, File("/models/${entry.sha256}.bin")), instant = null)
+
+    /** A collection as kuma3 14's: 22,000 cards; notes as many, so the estimate errs high. */
+    private val kuma3 = RwkvCollection(cards = 22_000, notes = 22_000)
+
+    private fun model(
+        size: RwkvSize,
+        head: RwkvHead,
+    ): RwkvLockEntry = RwkvLock.ENTRIES.single { it.size == size && it.head == head }
+
+    private fun file(entry: RwkvLockEntry) = RwkvModelFile(entry, File("/models/${entry.sha256}.bin"))
+
+    private val small = RwkvModels(file(model(RwkvSize.SMALL, RwkvHead.TWO_HEAD)), instant = null)
 
     private fun checks(
         ram: Long = 8 * gib,
         cards: Int = 22_000,
-        models: RwkvModels? = this.models,
-    ) = RwkvChecks(ram, cards, models)
+        models: RwkvModels? = small,
+    ) = RwkvChecks(ram, RwkvCollection(cards, cards), models)
 
     private fun refused(reason: RwkvBlocker) = RwkvState.Refused(reason)
 
@@ -29,8 +39,23 @@ class AnkiquestRwkvStateTest {
     }
 
     @Test
-    fun `enabling with too little memory is refused before the model is looked at`() {
-        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = 1_900_000_000L, models = null)))
+    fun `enabling without a model is refused before the memory is looked at`() {
+        // The memory depends on the model's size: without one there is nothing to size.
+        assertEquals(refused(RwkvBlocker.NO_MODEL), RwkvState.Off.enable(checks(ram = 0, models = null)))
+    }
+
+    @Test
+    fun `enabling with too little memory for the imported model is refused`() {
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = 512_000_000L)))
+    }
+
+    @Test
+    fun `the memory check counts the Instant model beside the two-head model`() {
+        val big = file(model(RwkvSize.BIG, RwkvHead.TWO_HEAD))
+        val pair = RwkvModels(big, file(model(RwkvSize.BIG, RwkvHead.INSTANT)))
+        val ram = RwkvMemory.needed(listOf(big.entry), kuma3) * RwkvMemory.RAM_SHARE
+        assertEquals(RwkvState.Ready, RwkvState.Off.enable(checks(ram = ram, models = RwkvModels(big, instant = null))))
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(checks(ram = ram, models = pair)))
     }
 
     @Test
@@ -80,32 +105,67 @@ class AnkiquestRwkvStateTest {
 
     @Test
     fun `restoring a ready state refuses it when the collection outgrows memory`() {
-        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.restore(RwkvSwitch.ON, checks(cards = 100_000)))
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.restore(RwkvSwitch.ON, checks(cards = 1_000_000)))
     }
 
     @Test
-    fun `memory estimate scales kuma3's measurement`() {
-        // kuma3 14: 505 MB for 22,000 cards.
-        assertEquals(24_070L, RwkvMemory.BYTES_PER_CARD)
-        assertTrue(RwkvMemory.needed(22_000) >= RwkvMemory.MEASURED_BYTES)
-        assertEquals(0L, RwkvMemory.needed(0))
-        assertEquals(0L, RwkvMemory.needed(-1))
+    fun `the state per card and note follows the release's int8 sizes`() {
+        // INTEGRATION.md section 8.4: Small card 2,987 B and note 1,567 B; the fork's (Big) 15,415 B and 10,283 B.
+        assertEquals(2_987L, RwkvSize.SMALL.shape.cardBytes)
+        assertEquals(1_567L, RwkvSize.SMALL.shape.noteBytes)
+        assertEquals(15_415L, RwkvSize.BIG.shape.cardBytes)
+        assertEquals(10_283L, RwkvSize.BIG.shape.noteBytes)
+
+        // Tiny is Small with one card layer.
+        assertEquals(1_567L, RwkvSize.TINY.shape.cardBytes)
+        assertEquals(1_567L, RwkvSize.TINY.shape.noteBytes)
+    }
+
+    @Test
+    fun `memory estimates per size match the release's RAM table`() {
+        // INTEGRATION.md section 11.1: 13,973 cards and 13,198 notes; Big at int8 state 491 MB estimated
+        // (506 MB measured), Small at int8 state 192 MB.
+        val collection = RwkvCollection(cards = 13_973, notes = 13_198)
+        fun mb(entry: RwkvLockEntry) = RwkvMemory.needed(listOf(entry), collection) / 1_000_000
+        assertEquals(491L, mb(model(RwkvSize.BIG, RwkvHead.TWO_HEAD)))
+        assertEquals(192L, mb(model(RwkvSize.SMALL, RwkvHead.TWO_HEAD)))
+        assertEquals(172L, mb(model(RwkvSize.TINY, RwkvHead.TWO_HEAD)))
+    }
+
+    @Test
+    fun `kuma3's phone figure is the big model's`() {
+        // kuma3 14: 505 MB for 22,000 cards at int8 state on a Pixel 8a, from the fork's big model.
+        val big = RwkvMemory.needed(listOf(model(RwkvSize.BIG, RwkvHead.TWO_HEAD)), RwkvCollection(22_000, notes = 0))
+        assertTrue(big in 470_000_000L..505_000_000L, "$big")
+    }
+
+    @Test
+    fun `memory estimates count each model once and never go below the fixed part`() {
+        val twoHead = model(RwkvSize.SMALL, RwkvHead.TWO_HEAD)
+        val instant = model(RwkvSize.SMALL, RwkvHead.INSTANT)
+        val one = RwkvMemory.needed(listOf(twoHead), kuma3)
+        val both = RwkvMemory.needed(listOf(twoHead, instant), kuma3)
+        assertEquals(one - RwkvMemory.FIXED_BYTES, both - one)
+
+        val empty = RwkvCollection(cards = -1, notes = 0)
+        assertEquals(RwkvMemory.FIXED_BYTES + twoHead.bytes, RwkvMemory.needed(listOf(twoHead), empty))
     }
 
     @Test
     fun `memory check allows a quarter of RAM`() {
         assertEquals(4L, RwkvMemory.RAM_SHARE)
+        assertEquals(1_000_000_000L, RwkvMemory.allowed(4_000_000_000L))
+        val small = listOf(model(RwkvSize.SMALL, RwkvHead.TWO_HEAD))
+        val big = listOf(model(RwkvSize.BIG, RwkvHead.TWO_HEAD))
 
-        // A 4 GB phone reports a little under 4 GiB and fits kuma3's collection.
-        assertTrue(RwkvMemory.fits(3_800_000_000L, 22_000))
-
-        // A 2 GB phone does not, but fits a smaller one.
-        assertFalse(RwkvMemory.fits(1_900_000_000L, 22_000))
-        assertTrue(RwkvMemory.fits(1_900_000_000L, 10_000))
+        // A 2 GB phone fits Small for kuma3's collection, not Big; a 4 GB one fits Big.
+        assertTrue(RwkvMemory.fits(1_900_000_000L, small, kuma3))
+        assertFalse(RwkvMemory.fits(1_900_000_000L, big, kuma3))
+        assertTrue(RwkvMemory.fits(3_800_000_000L, big, kuma3))
 
         // The boundary is inclusive.
-        val needed = RwkvMemory.needed(1_000) * RwkvMemory.RAM_SHARE
-        assertTrue(RwkvMemory.fits(needed, 1_000))
-        assertFalse(RwkvMemory.fits(needed - 1, 1_000))
+        val needed = RwkvMemory.needed(small, kuma3)
+        assertTrue(RwkvMemory.fits(needed * RwkvMemory.RAM_SHARE, small, kuma3))
+        assertFalse(RwkvMemory.fits(needed * RwkvMemory.RAM_SHARE - 1, small, kuma3))
     }
 }
