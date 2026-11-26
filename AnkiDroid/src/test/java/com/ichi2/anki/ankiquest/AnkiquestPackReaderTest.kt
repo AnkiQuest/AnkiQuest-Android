@@ -135,10 +135,14 @@ class AnkiquestPackReaderTest {
     /** The pack's index file, as bytes for the zip. */
     private fun index(poses: String): ByteArray = info(poses).encodeToByteArray()
 
-    private fun info(poses: String): String = """{"format":1,"id":"aki","name":"Aki","version":11,"licence":"CC BY-SA","credit":"AnkiQuest","notice":null,"poses":$poses}"""
+    private fun info(poses: String): String =
+        """{"format":1,"id":"aki","name":"Aki","version":11,"licence":"CC BY-SA","credit":"AnkiQuest","notice":null,"poses":$poses}"""
 
     /** A PNG header of [width]x[height], which is all the reader checks. */
-    private fun png(width: Int = 64, height: Int = 64): ByteArray {
+    private fun png(
+        width: Int = 64,
+        height: Int = 64,
+    ): ByteArray {
         val bytes = ByteArray(30)
         val signature = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte(), 0x0d, 0x0a, 0x1a, 0x0a)
         signature.copyInto(bytes, 0)
