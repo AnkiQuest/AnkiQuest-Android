@@ -163,15 +163,16 @@ class AnkiquestPackFormatTest {
         assertEquals(PackRefusal.UNKNOWN_POSE, refused(info(poses = """{"face":"aki_face.webp","leech_kun":"aki.png"}""")))
         assertEquals(
             PackRefusal.MISSING_CORE_POSE,
-            refused(info(poses = """{"face":"aki_face.webp","winner":"aki_win.webp"}""")),
+            refused(
+                info(poses = """{"face":"aki_face.webp","winner":"aki_win.webp"}"""),
+            ),
             "a pack without every core pose",
         )
+        val extended = info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp","winner":"aki_win.webp"}""")
+        val parsed = PackInfo.parse(extended, names)
         assertEquals(
             mapOf("face" to "aki_face.webp", "asleep" to "aki_asleep.webp", "winner" to "aki_win.webp"),
-            PackInfo.parse(
-                info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp","winner":"aki_win.webp"}"""),
-                names,
-            ).poses,
+            parsed.poses,
             "a known extension is a picture the pack may have",
         )
     }
