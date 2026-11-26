@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
+import android.graphics.Color
 import androidx.core.graphics.ColorUtils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
@@ -45,6 +46,17 @@ class AnkiquestContrastTest : RobolectricTest(loadBackend = false) {
     private fun assertDeckBadges(background: Int) {
         for (foreground in DECK_BADGE_INKS) {
             assert(targetContext, foreground, background, MIN_TEXT_CONTRAST)
+        }
+    }
+
+    @Test
+    fun `the review banner reads in both its looks`() {
+        // The important look is bright amber and needs dark ink on it; the quiet one is near-black
+        // and keeps white. Both are top-level, so pinning them needs no AnkiQuest object.
+        for ((foreground, background) in listOf(bannerInk to bannerImportant, Color.WHITE to bannerQuiet)) {
+            val opaque = -0x1000000 or background
+            val contrast = ColorUtils.calculateContrast(foreground, opaque)
+            assertTrue(contrast >= MIN_TEXT_CONTRAST, "$foreground on $background is $contrast:1")
         }
     }
 

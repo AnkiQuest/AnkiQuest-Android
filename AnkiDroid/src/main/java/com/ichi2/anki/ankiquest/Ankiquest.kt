@@ -55,6 +55,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * With a token, new review log rows are uploaded to the server. Without one, they are only
  * sent to its preview endpoint, which stores nothing, when the server permits public access.
  */
+/**
+ * The review banner's two looks (#207): bright amber when it matters, near-black otherwise, and the
+ * ink they write in. Top-level, so the contrast test can pin them without the Ankiquest object.
+ */
+internal val bannerImportant = 0xF0B8860B.toInt()
+internal val bannerQuiet = 0xE0202830.toInt()
+internal val bannerInk = Color.WHITE
+
 object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallbacks {
     const val PREF_URL = "ankiquestUrl"
     const val PREF_USER = "ankiquestUser"
@@ -1291,10 +1299,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             return
         }
         banner.message = message
+        banner.setTextColor(bannerInk)
         banner.background =
             GradientDrawable().apply {
                 cornerRadius = 20 * density
-                setColor(if (important) 0xF0B8860B.toInt() else 0xE0202830.toInt())
+                setColor(if (important) bannerImportant else bannerQuiet)
             }
         banner.text = text
         banner.animate().cancel()
