@@ -158,8 +158,15 @@ async function pinnedPoses(root, download = downloadBytes) {
         throw new Error(`${ART_POSES}: SHA-256 ${actual}, but ${PIN} pins ${expected}`);
     }
     JSON.parse(bytes.toString("utf8"));
-    const target = path.join(root, RESOURCES, ART_DIR, ART_POSES);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
+    writableResources(root);
+    const art = path.join(root, RESOURCES, ART_DIR);
+    const target = path.join(art, ART_POSES);
+    for (const entry of [art, target]) {
+        if (fs.lstatSync(entry, { throwIfNoEntry: false })?.isSymbolicLink()) {
+            throw new Error("Art resource paths cannot be symlinks");
+        }
+    }
+    fs.mkdirSync(art, { recursive: true });
     fs.writeFileSync(target, bytes);
     return tag;
 }

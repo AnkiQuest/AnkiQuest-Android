@@ -99,6 +99,26 @@ test("a transient download failure is retried once", async t => {
     assert.equal(fs.readFileSync(path.join(res, "ankiquest-art/poses.json"), "utf8"), poses);
 });
 
+test("the pose list writer refuses symlinks at its new resource path", { skip: process.platform === "win32" }, async t => {
+    const { app, res } = fixture(t);
+    const poses = '{"core": ["face"]}\n';
+    const sha = crypto.createHash("sha256").update(poses).digest("hex");
+    fs.writeFileSync(path.join(app, "ankiquest-art.json"), JSON.stringify({ tag: "art-11", assets: { "poses.json": sha } }));
+
+    const art = path.join(res, "ankiquest-art");
+    const fixtureFolder = fs.mkdtempSync(path.join(app, "test-art-"));
+    const unchanged = path.join(fixtureFolder, "poses.json");
+    fs.writeFileSync(unchanged, "{}\n");
+
+    fs.symlinkSync(fixtureFolder, art, "dir");
+    await assert.rejects(() => data.pinnedPoses(app, async () => poses), /cannot be symlinks/);
+    fs.unlinkSync(art);
+    fs.mkdirSync(art);
+    fs.symlinkSync(unchanged, path.join(art, "poses.json"));
+    await assert.rejects(() => data.pinnedPoses(app, async () => poses), /cannot be symlinks/);
+    assert.equal(fs.readFileSync(unchanged, "utf8"), "{}\n");
+});
+
 test("a wrong pin fails the download at once", async t => {
     const { app, res } = fixture(t);
     const sha = crypto.createHash("sha256").update("x").digest("hex");
