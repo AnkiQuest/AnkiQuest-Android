@@ -1,16 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest art check
 
-# Runs the server's art exporter against the app's drawables, at EXPORTER below: AnkiQuest-Server
-# master no longer has the Android exporter (the masters moved to AnkiQuest-Art), so the check stays
-# on the last server commit this app's drawables were exported with. This pins exporter code, not
-# server data. It goes once the drawables come from the pinned AnkiQuest-Art release. It
-# builds and runs the server's code, so it only runs for pull requests, merge queue groups and
-# pushes, never on a schedule or by hand: a manual server ref would run arbitrary code with the
-# Rust cache shared with master.
+# Every companion picture committed under AnkiDroid's drawables must be, byte for byte, the
+# exported copy in the pinned AnkiQuest-Art release (ankiquest-art.json): the check downloads that
+# release's android-drawables.zip, verifies its pinned SHA-256 and compares each picture. A picture
+# the release lacks or one with other bytes fails, so hand-made or stale copies cannot ship.
 on:
   pull_request:
-  # Required check: the merge queue waits for it on its merge commit.
+  # The merge queue runs it on its merge commit too.
   merge_group:
     types: [checks_requested]
   push:
@@ -18,10 +15,6 @@ on:
 
 permissions:
   contents: read
-
-env:
-  # The AnkiQuest-Server commit whose export-android-art wrote the app's drawables.
-  EXPORTER: 97e32a5610628b1c4eb8f3210c9307661bcc4470
 
 concurrency:
   # A newer push to a pull request cancels its older run. Every other run (master pushes,
@@ -31,33 +24,14 @@ concurrency:
 
 jobs:
   art:
-    name: App art matches the server's exporter
+    name: App art is the pinned Art release's
     runs-on: ubuntu-latest
-    # The byte check (AnkiQuest/AnkiQuest-Server#56) encodes every drawable.
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # The exporter at EXPORTER, which wrote the drawables.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: AnkiQuest/AnkiQuest-Server
-          ref: ${{ env.EXPORTER }}
-          path: server
-          persist-credentials: false
-
-      # The runner image ships rustup; install a minimal stable toolchain explicitly.
-      - name: Set up Rust
+      - name: Compare the app's companion pictures with the pinned release
         shell: bash
-        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
-
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          workspaces: server
-
-      # A server without the exporter fails here instead of skipping the check.
-      - name: Check the app's art against the server's exporter
-        shell: bash
-        run: (cd server && cargo run -q -p ankiquest-xtask -- export-android-art --check "$GITHUB_WORKSPACE")
+        run: node .github/ankiquest_art_check.cjs check

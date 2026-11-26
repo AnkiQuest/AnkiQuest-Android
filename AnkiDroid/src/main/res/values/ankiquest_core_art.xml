@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Preserve art the app does not show yet: the planned Anki-tan chibi, and aki_sleeping and
-     ankilope_sleeping, the earlier names of aki_asleep and ankilope_asleep (AnkiQuest-Server#32)
-     that the art check still lists. -->
+<!-- Preserve art the app does not show yet: the planned Anki-tan chibi. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/anki_tan_chibi_frozen,@drawable/aki_sleeping,@drawable/ankilope_sleeping" />
+    tools:keep="@drawable/anki_tan_chibi_frozen" />
