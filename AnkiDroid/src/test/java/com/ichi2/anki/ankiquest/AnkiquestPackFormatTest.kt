@@ -9,6 +9,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/** The lock list's SHA-256 shape: 64 hex characters. */
+private const val SHA = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
 /** Checks `packs.json` and `companion.json` parsing (AnkiquestPackFormat) against docs/packs.md. */
 class AnkiquestPackFormatTest {
     private val names = PoseNames(core = listOf("face", "asleep"), fallbacks = mapOf("winner" to "face", "streak_hot" to "winner"))
@@ -45,14 +48,26 @@ class AnkiquestPackFormatTest {
             builtIn.core,
         )
         assertEquals(
-            AnkiquestPose.entries.mapNotNull { pose -> pose.chain().drop(1).firstOrNull()?.let { pose.id to it.id } }.toMap(),
+            AnkiquestPose.entries
+                .mapNotNull { pose ->
+                    pose
+                        .chain()
+                        .drop(1)
+                        .firstOrNull()
+                        ?.let { pose.id to it.id }
+                }.toMap(),
             builtIn.fallbacks,
         )
     }
 
     @Test
     fun a_release_index_is_parsed_with_its_packs_in_order() {
-        val index = PackIndex.parse(index(companions = """[{"id":"aki","name":"Aki","version":11,"file":"pack-aki.zip","size":10,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}]"""))
+        val index =
+            PackIndex.parse(
+                index(
+                    companions = """[{"id":"aki","name":"Aki","version":11,"file":"pack-aki.zip","size":10,"sha256":"$SHA"}]""",
+                ),
+            )
         assertEquals("art-11", index.tag)
         assertEquals(11, index.version)
         assertEquals(names.core, index.names.core)
@@ -73,31 +88,53 @@ class AnkiquestPackFormatTest {
             refused(
                 index(
                     companions =
-                        """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},
-                            {"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}]""",
+                        """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"$SHA"},
+                            {"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"$SHA"}]""",
                 ),
             ),
             "an id listed twice",
         )
         assertEquals(
             PackRefusal.BAD_ID,
-            refused(index(companions = """[{"id":"Aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}]""")),
+            refused(
+                index(
+                    companions = """[{"id":"Aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"$SHA"}]""",
+                ),
+            ),
         )
         assertEquals(
             PackRefusal.BAD_INDEX,
-            refused(index(companions = """[{"id":"aki","name":"Aki","version":1,"file":"elsewhere/pack-aki.zip","size":10,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}]""")),
+            refused(
+                index(
+                    companions =
+                        """[{"id":"aki","name":"Aki","version":1,"file":"elsewhere/pack-aki.zip","size":10,"sha256":"$SHA"}]""",
+                ),
+            ),
         )
         assertEquals(
             PackRefusal.BAD_INDEX,
-            refused(index(companions = """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"short"}]""")),
+            refused(
+                index(
+                    companions = """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":10,"sha256":"short"}]""",
+                ),
+            ),
         )
         assertEquals(
             PackRefusal.BAD_INDEX,
-            refused(index(companions = """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":0,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}]""")),
+            refused(
+                index(
+                    companions = """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":0,"sha256":"$SHA"}]""",
+                ),
+            ),
         )
         assertEquals(
             PackRefusal.TOO_LARGE,
-            refused(index(companions = """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":${PackFormat.MAX_ARCHIVE + 1},"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}]""")),
+            refused(
+                index(
+                    companions =
+                        """[{"id":"aki","name":"Aki","version":1,"file":"pack-aki.zip","size":${PackFormat.MAX_ARCHIVE + 1},"sha256":"$SHA"}]""",
+                ),
+            ),
         )
         assertEquals(PackRefusal.BAD_INDEX, refused(index(fallbacks = """{"a":"b","b":"a"}""", companions = "[]")))
     }
@@ -124,7 +161,12 @@ class AnkiquestPackFormatTest {
         assertEquals(PackRefusal.BAD_INDEX, refused(info(name = "a".repeat(PackFormat.MAX_NAME + 1))))
         assertEquals(PackRefusal.TOO_LARGE, refused(info(notice = "a".repeat(PackFormat.MAX_NOTICE + 1))))
         assertEquals(PackRefusal.UNKNOWN_POSE, refused(info(poses = """{"face":"aki_face.webp","leech_kun":"aki.png"}""")))
-        assertEquals(PackRefusal.MISSING_CORE_POSE, refused(info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp","winner":"aki_win.webp"}""")))
+        assertEquals(
+            PackRefusal.MISSING_CORE_POSE,
+            refused(
+                info(poses = """{"face":"aki_face.webp","asleep":"aki_asleep.webp","winner":"aki_win.webp"}"""),
+            ),
+        )
     }
 
     private fun index(
@@ -134,8 +176,7 @@ class AnkiquestPackFormatTest {
         core: String = """["face","asleep"]""",
         fallbacks: String = """{"winner":"face","streak_hot":"winner"}""",
         companions: String = "[]",
-    ): String =
-        """{"format":$format,"tag":"$tag","version":$version,"core":$core,"fallbacks":$fallbacks,"companions":$companions}"""
+    ): String = """{"format":$format,"tag":"$tag","version":$version,"core":$core,"fallbacks":$fallbacks,"companions":$companions}"""
 
     private fun info(
         format: Int = 1,
@@ -145,6 +186,7 @@ class AnkiquestPackFormatTest {
         poses: String = """{"face":"aki_face.webp","asleep":"aki_asleep.webp"}""",
     ): String {
         val noticeField = if (notice == null) "null" else "\"$notice\""
-        return """{"format":$format,"id":"$id","name":"$name","version":11,"licence":"CC BY-SA","credit":"AnkiQuest","notice":$noticeField,"poses":$poses}"""
+        val fields = """{"format":$format,"id":"$id","name":"$name","version":11,"licence":"CC BY-SA","credit":"AnkiQuest","""
+        return """$fields"notice":$noticeField,"poses":$poses}"""
     }
 }

@@ -22,7 +22,12 @@ class AnkiquestCommunityTest {
         assertTrue(defaults.quiet)
 
         // Out-of-range answers are held to the documented range rather than refused.
-        val coerced = AnkiquestCommunity.Reminders.parse(JSONObject("""{"reminder_hour":99,"quiet_start":30,"quiet_end":-9,"daily_limit":0,"gentle_daily":true}"""))
+        val coerced =
+            AnkiquestCommunity.Reminders.parse(
+                JSONObject(
+                    """{"reminder_hour":99,"quiet_start":30,"quiet_end":-9,"daily_limit":0,"gentle_daily":true}""",
+                ),
+            )
         assertEquals(23, coerced.hour)
         assertEquals(23, coerced.quietStart)
         assertEquals(0, coerced.quietEnd)
