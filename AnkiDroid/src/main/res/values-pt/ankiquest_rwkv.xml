@@ -3,7 +3,7 @@
 <resources>
     <string name="ankiquest_rwkv_title">Agendador RWKV (experimental)</string>
     <string name="ankiquest_rwkv_off">Deixa um modelo RWKV agendar as predefinições postas em RWKV-Instant ou RWKV-Curve nas opções do baralho. Precisa de arquivos de modelo importados e memória suficiente.</string>
-    <string name="ankiquest_rwkv_not_enough_memory">Indisponível: este celular tem pouca memória para sua coleção. O agendamento não muda.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Indisponível: este celular tem pouca memória para este modelo e sua coleção. O agendamento não muda. Em Arquivos de modelo RWKV → Baixar, você pode permitir o modelo mesmo assim.</string>
     <string name="ankiquest_rwkv_no_model">Indisponível: importe primeiro um modelo RWKV de duas cabeças. O agendamento não muda.</string>
     <string name="ankiquest_rwkv_backend_failed">Indisponível: o motor RWKV não conseguiu carregar os arquivos de modelo. O agendamento não muda.</string>
     <string name="ankiquest_rwkv_ready">Ativado: o RWKV agenda as predefinições postas em RWKV nas opções do baralho.</string>
@@ -34,6 +34,8 @@
         <item quantity="one">Precisa de cerca de %1$s para a sua %2$s carta; este celular permite %3$s.</item>
         <item quantity="other">Precisa de cerca de %1$s para as suas %2$s cartas; este celular permite %3$s.</item>
     </plurals>
+    <string name="ankiquest_rwkv_override">Eu sei o que estou fazendo</string>
+    <string name="ankiquest_rwkv_overridden">%1$s Você permitiu mesmo assim: o RWKV pode não iniciar e, nesse caso, se desliga sozinho.</string>
     <string name="ankiquest_rwkv_imported">Importado: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Não importado: nenhum arquivo corresponde a um modelo RWKV conhecido.</string>
     <string name="ankiquest_rwkv_import_unreadable">Não importado: não foi possível ler o arquivo.</string>

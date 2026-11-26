@@ -3,7 +3,7 @@
 <resources>
     <string name="ankiquest_rwkv_title">RWKV-Planer (experimentell)</string>
     <string name="ankiquest_rwkv_off">Lässt ein RWKV-Modell die Optionsgruppen planen, die in den Stapeloptionen auf RWKV-Instant oder RWKV-Curve stehen. Braucht importierte Modelldateien und genug Arbeitsspeicher.</string>
-    <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für deine Sammlung. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für dieses Modell und deine Sammlung. Die Planung bleibt unverändert. Unter RWKV-Modelldateien → Herunterladen kannst du das Modell trotzdem erlauben.</string>
     <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Importiere zuerst ein RWKV-Two-Head-Modell. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_backend_failed">Nicht verfügbar: Die RWKV-Engine konnte die Modelldateien nicht laden. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_ready">An: RWKV plant die Optionsgruppen, die in den Stapeloptionen auf RWKV stehen.</string>
@@ -34,6 +34,8 @@
         <item quantity="one">Braucht etwa %1$s für deine %2$s Karte; dieses Handy erlaubt %3$s.</item>
         <item quantity="other">Braucht etwa %1$s für deine %2$s Karten; dieses Handy erlaubt %3$s.</item>
     </plurals>
+    <string name="ankiquest_rwkv_override">Ich weiß, was ich tue</string>
+    <string name="ankiquest_rwkv_overridden">%1$s Du hast es trotzdem erlaubt: RWKV startet vielleicht nicht und schaltet sich dann selbst aus.</string>
     <string name="ankiquest_rwkv_imported">Importiert: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Nicht importiert: Keine Datei passt zu einem bekannten RWKV-Modell.</string>
     <string name="ankiquest_rwkv_import_unreadable">Nicht importiert: Die Datei konnte nicht gelesen werden.</string>

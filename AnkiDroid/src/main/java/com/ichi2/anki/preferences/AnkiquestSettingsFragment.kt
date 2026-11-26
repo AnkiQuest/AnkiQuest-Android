@@ -630,6 +630,17 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             true
         }
         runRwkv({ context, ram -> AnkiquestRwkv.restore(context, ram) }) { }
+
+        // A model allowed past the memory limit may fail after it started: show why RWKV turned off.
+        lifecycleScope.launch {
+            AnkiquestRwkv.refused.collect { state ->
+                if (!isAdded) {
+                    return@collect
+                }
+                showRwkv(state)
+                showSnackbar(AnkiquestRwkv.summary(state))
+            }
+        }
     }
 
     /** Runs a transition that reads the phone and collection, then shows its state. */
@@ -692,10 +703,11 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             if (!isAdded) {
                 return@launchCatchingTask
             }
+            val adapter = RwkvOfferAdapter(requireContext(), list) { entry, override -> AnkiquestRwkv.override(entry, override) }
             AlertDialog
                 .Builder(requireContext())
                 .setTitle(R.string.ankiquest_rwkv_import_download)
-                .setAdapter(RwkvOfferAdapter(requireContext(), list)) { _, which -> downloadRwkv(list.offers[which].entry) }
+                .setAdapter(adapter) { _, which -> downloadRwkv(adapter.list.offers[which].entry) }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }

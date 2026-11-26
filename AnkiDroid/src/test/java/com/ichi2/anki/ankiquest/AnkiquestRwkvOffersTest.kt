@@ -31,7 +31,8 @@ class AnkiquestRwkvOffersTest {
         ram: Long,
         stored: List<RwkvLockEntry> = emptyList(),
         attempts: Map<String, RwkvAttempt> = emptyMap(),
-    ) = RwkvOffers.list(device(ram), stored, attempts)
+        overrides: Set<String> = emptySet(),
+    ) = RwkvOffers.list(device(ram), stored, attempts, overrides)
 
     private fun List<RwkvOffer>.of(entry: RwkvLockEntry) = single { it.entry == entry }
 
@@ -130,5 +131,54 @@ class AnkiquestRwkvOffersTest {
     fun `a stored model is downloaded even where it no longer fits`() {
         val offer = offers(ram = edge(bigTwoHead) - 1, stored = listOf(bigTwoHead)).of(bigTwoHead)
         assertEquals(RwkvOfferState.Downloaded, offer.state)
+    }
+
+    @Test
+    fun `an overridden model past the limit can be tapped, and says it is past the limit`() {
+        val ram = edge(bigTwoHead) - 1
+        val offer = offers(ram, overrides = setOf(bigTwoHead.id)).of(bigTwoHead)
+        assertEquals(RwkvOfferState.TooBigOverridden(offer.neededBytes, ram / RwkvMemory.RAM_SHARE), offer.state)
+        assertEquals(RwkvFit.TooBigOverridden(offer.neededBytes, ram / RwkvMemory.RAM_SHARE), offer.fit)
+        assertTrue(offer.tappable)
+    }
+
+    @Test
+    fun `an override on a model that fits changes nothing`() {
+        val offer = offers(edge(bigTwoHead), overrides = setOf(bigTwoHead.id)).of(bigTwoHead)
+        assertEquals(RwkvOfferState.Fits, offer.state)
+    }
+
+    @Test
+    fun `an override is per model`() {
+        val list = offers(edge(bigTwoHead) - 1, overrides = setOf(bigTwoHead.id))
+        assertTrue(list.of(bigInstant).state is RwkvOfferState.TooBig, "the Instant model needs its own override")
+    }
+
+    @Test
+    fun `an override never makes a model recommended`() {
+        val list = offers(edge(bigTwoHead) - 1, overrides = setOf(bigTwoHead.id))
+        assertEquals(listOf(smallTwoHead), list.filter { it.pick == RwkvPick.RECOMMENDED }.map { it.entry })
+    }
+
+    @Test
+    fun `a failed download of an overridden model can be tried again`() {
+        val failed = RwkvAttempt.Failed(RwkvImportError.NETWORK_FAILED)
+        val offer =
+            offers(edge(bigTwoHead) - 1, attempts = mapOf(bigTwoHead.id to failed), overrides = setOf(bigTwoHead.id)).of(bigTwoHead)
+        assertEquals(RwkvOfferState.Failed(RwkvImportError.NETWORK_FAILED), offer.state)
+        assertTrue(offer.tappable)
+    }
+
+    @Test
+    fun `ticking and unticking the override recomputes the list`() {
+        val list = RwkvOfferList(device(edge(bigTwoHead) - 1), stored = emptyList(), attempts = emptyMap(), overrides = emptySet())
+        assertTrue(list.offers.of(bigTwoHead).state is RwkvOfferState.TooBig)
+
+        val allowed = list.with(bigTwoHead, RwkvOverride.ALLOWED)
+        assertEquals(setOf(bigTwoHead.id), allowed.overrides)
+        assertTrue(allowed.offers.of(bigTwoHead).state is RwkvOfferState.TooBigOverridden)
+
+        val back = allowed.with(bigTwoHead, RwkvOverride.NOT_ALLOWED)
+        assertTrue(back.offers.of(bigTwoHead).state is RwkvOfferState.TooBig)
     }
 }

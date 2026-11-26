@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
+import android.widget.CheckBox
 import android.widget.TextView
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
@@ -72,20 +73,24 @@ internal class RwkvOfferWords(
             RwkvOfferState.Fits -> need
             RwkvOfferState.Downloaded -> context.getString(R.string.ankiquest_rwkv_downloaded, need)
             RwkvOfferState.Verifying -> context.getString(R.string.ankiquest_rwkv_verifying)
-            is RwkvOfferState.TooBig ->
-                context.resources.getQuantityString(
-                    R.plurals.ankiquest_rwkv_too_big,
-                    cards,
-                    bytes(state.neededBytes),
-                    count,
-                    bytes(state.allowedBytes),
-                )
+            is RwkvOfferState.TooBig -> tooBig(state.neededBytes, state.allowedBytes, cards, count)
+            is RwkvOfferState.TooBigOverridden -> {
+                val reason = tooBig(state.neededBytes, state.allowedBytes, cards, count)
+                context.getString(R.string.ankiquest_rwkv_overridden, reason)
+            }
             is RwkvOfferState.Failed -> {
                 val error = context.getString(AnkiquestRwkv.importError(state.error))
                 context.getString(R.string.ankiquest_rwkv_failed, error)
             }
         }
     }
+
+    private fun tooBig(
+        needed: Long,
+        allowed: Long,
+        cards: Int,
+        count: String,
+    ): String = context.resources.getQuantityString(R.plurals.ankiquest_rwkv_too_big, cards, bytes(needed), count, bytes(allowed))
 
     private fun size(size: RwkvSize): String =
         when (size) {
@@ -97,12 +102,20 @@ internal class RwkvOfferWords(
     private fun bytes(bytes: Long) = Formatter.formatShortFileSize(context, bytes)
 }
 
-/** The Download list's rows: two lines each; a row that cannot be picked is greyed out and ignores taps. */
+/**
+ * The Download list's rows: two lines each; a row that cannot be picked is greyed out and ignores
+ * taps. A model past the memory limit has an "I know what I'm doing" box: ticking it saves the
+ * override through [onOverride] and lets the row be picked.
+ */
 internal class RwkvOfferAdapter(
     private val context: Context,
-    private val list: RwkvOfferList,
+    list: RwkvOfferList,
+    private val onOverride: (RwkvLockEntry, RwkvOverride) -> Unit,
 ) : BaseAdapter() {
     private val words = RwkvOfferWords(context)
+
+    var list: RwkvOfferList = list
+        private set
 
     override fun getCount() = list.offers.size
 
@@ -119,16 +132,40 @@ internal class RwkvOfferAdapter(
         convertView: View?,
         parent: ViewGroup,
     ): View {
-        val view = convertView ?: LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, parent, false)
+        val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.ankiquest_rwkv_offer_row, parent, false)
         val offer = getItem(position)
         val text = words.text(offer, list.device.collection)
-        view.findViewById<TextView>(android.R.id.text1).text = text.title
-        view.findViewById<TextView>(android.R.id.text2).text = text.detail
+        val title = view.findViewById<TextView>(R.id.aq_rwkv_offer_title)
+        val detail = view.findViewById<TextView>(R.id.aq_rwkv_offer_detail)
+        title.text = text.title
+        detail.text = text.detail
 
         // Greyed out, as a disabled control: the reason stays readable in the second line.
-        view.isEnabled = offer.tappable
-        view.alpha = if (offer.tappable) ENABLED_ALPHA else DISABLED_ALPHA
+        val alpha = if (offer.tappable) ENABLED_ALPHA else DISABLED_ALPHA
+        title.alpha = alpha
+        detail.alpha = alpha
+        bindOverride(view.findViewById(R.id.aq_rwkv_offer_override), offer)
         return view
+    }
+
+    /** The override box shows on every model past the limit, ticked where the player allowed it. */
+    private fun bindOverride(
+        box: CheckBox,
+        offer: RwkvOffer,
+    ) {
+        box.setOnCheckedChangeListener(null)
+        box.visibility =
+            when (offer.fit) {
+                is RwkvFit.Fits -> View.GONE
+                is RwkvFit.TooBig, is RwkvFit.TooBigOverridden -> View.VISIBLE
+            }
+        box.isChecked = offer.fit is RwkvFit.TooBigOverridden
+        box.setOnCheckedChangeListener { _, checked ->
+            val override = if (checked) RwkvOverride.ALLOWED else RwkvOverride.NOT_ALLOWED
+            onOverride(offer.entry, override)
+            list = list.with(offer.entry, override)
+            notifyDataSetChanged()
+        }
     }
 
     private companion object {

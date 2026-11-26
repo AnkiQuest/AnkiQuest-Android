@@ -17,6 +17,21 @@ internal enum class RwkvBlocker {
     BACKEND_FAILED,
 }
 
+/** Whether the player allows a model past the memory limit: "I know what I'm doing" in the Download list. */
+internal enum class RwkvOverride {
+    ALLOWED,
+    NOT_ALLOWED,
+}
+
+/**
+ * How the last start ended, saved before the engine gets a model past the memory limit: a start
+ * that never finished means the app died loading it, so the next start does not try again.
+ */
+internal enum class RwkvLaunch {
+    CLEAN,
+    INTERRUPTED,
+}
+
 /** The player's RWKV switch in AnkiQuest's settings. Off by default. */
 internal enum class RwkvSwitch {
     ON,
@@ -66,13 +81,22 @@ internal sealed interface RwkvState {
         }
 
     companion object {
-        /** The state for the saved [switch], as when the app starts or the settings open. A saved "on" that is now blocked is refused. */
+        /**
+         * The state for the saved [switch], as when the app starts or the settings open. A saved
+         * "on" that is now blocked is refused, and so is one whose last start died loading a model
+         * past the memory limit ([launch]).
+         */
         fun restore(
             switch: RwkvSwitch,
             checks: RwkvChecks,
+            launch: RwkvLaunch = RwkvLaunch.CLEAN,
         ): RwkvState =
             when (switch) {
-                RwkvSwitch.ON -> Off.enable(checks)
+                RwkvSwitch.ON ->
+                    when (launch) {
+                        RwkvLaunch.CLEAN -> Off.enable(checks)
+                        RwkvLaunch.INTERRUPTED -> Refused(RwkvBlocker.BACKEND_FAILED)
+                    }
                 RwkvSwitch.OFF -> Off
             }
     }
@@ -89,7 +113,14 @@ internal data class RwkvChecks(
     val totalRamBytes: Long,
     val collection: RwkvCollection,
     val models: RwkvModels?,
+    val overrides: Set<String> = emptySet(),
 ) {
+    /** How the imported models fit this phone, or null without a two-head model. */
+    fun fit(): RwkvFit? {
+        val models = models ?: return null
+        return RwkvMemory.fit(totalRamBytes, listOfNotNull(models.twoHead.entry, models.instant?.entry), collection, overrides)
+    }
+
     /** [RwkvState.Ready], or [RwkvState.Refused] with the first check that fails. */
     fun verdict(): RwkvState {
         val reason = blocker() ?: return RwkvState.Ready
@@ -98,12 +129,11 @@ internal data class RwkvChecks(
 
     private fun blocker(): RwkvBlocker? {
         // The memory a model needs depends on its size, so the model is looked at first.
-        val models = models ?: return RwkvBlocker.NO_MODEL
-        val entries = listOfNotNull(models.twoHead.entry, models.instant?.entry)
-        if (!RwkvMemory.fits(totalRamBytes, entries, collection)) {
-            return RwkvBlocker.NOT_ENOUGH_MEMORY
+        // An override lets a model past the limit start; only a plain TooBig blocks.
+        return when (fit() ?: return RwkvBlocker.NO_MODEL) {
+            is RwkvFit.TooBig -> RwkvBlocker.NOT_ENOUGH_MEMORY
+            is RwkvFit.Fits, is RwkvFit.TooBigOverridden -> null
         }
-        return null
     }
 }
 
@@ -148,6 +178,27 @@ internal data class RwkvShape(
     }
 }
 
+/** How models fit the phone's memory limit: within it, past it, or past it with the player's override. */
+internal sealed interface RwkvFit {
+    val neededBytes: Long
+
+    data class Fits(
+        override val neededBytes: Long,
+    ) : RwkvFit
+
+    /** Past the limit: the phone allows [allowedBytes]. Cannot be downloaded or started. */
+    data class TooBig(
+        override val neededBytes: Long,
+        val allowedBytes: Long,
+    ) : RwkvFit
+
+    /** Past the limit, but the player allowed this model anyway: it can be downloaded and started. */
+    data class TooBigOverridden(
+        override val neededBytes: Long,
+        val allowedBytes: Long,
+    ) : RwkvFit
+}
+
 /**
  * The RAM the RWKV models need for a collection, as the release's INTEGRATION.md section 11.1
  * computes it: a fixed part, the weights, and a card and note state for each model. The formula
@@ -182,6 +233,28 @@ internal object RwkvMemory {
         models: List<RwkvLockEntry>,
         collection: RwkvCollection,
     ): Boolean = fits(totalRamBytes, needed(models, collection))
+
+    /**
+     * How [models], run side by side, fit. The override that counts is the last model's, the one
+     * the player picked: a two-head model alone, or an Instant-only model beside its two-head model.
+     */
+    fun fit(
+        totalRamBytes: Long,
+        models: List<RwkvLockEntry>,
+        collection: RwkvCollection,
+        overrides: Set<String>,
+    ): RwkvFit {
+        val needed = needed(models, collection)
+        if (fits(totalRamBytes, needed)) {
+            return RwkvFit.Fits(needed)
+        }
+        val allowed = allowed(totalRamBytes)
+        val picked = models.lastOrNull()
+        if (picked != null && picked.id in overrides) {
+            return RwkvFit.TooBigOverridden(needed, allowed)
+        }
+        return RwkvFit.TooBig(needed, allowed)
+    }
 
     /** Whether [neededBytes] is within [RAM_SHARE] of [totalRamBytes]; the boundary is inclusive. */
     fun fits(

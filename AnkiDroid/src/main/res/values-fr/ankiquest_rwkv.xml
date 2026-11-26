@@ -3,7 +3,7 @@
 <resources>
     <string name="ankiquest_rwkv_title">Planificateur RWKV (expérimental)</string>
     <string name="ankiquest_rwkv_off">Laisse un modèle RWKV planifier les préréglages mis sur RWKV-Instant ou RWKV-Curve dans les options du paquet. Nécessite des fichiers de modèle importés et assez de mémoire.</string>
-    <string name="ankiquest_rwkv_not_enough_memory">Indisponible : ce téléphone n’a pas assez de mémoire pour ta collection. La planification ne change pas.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Indisponible : ce téléphone n’a pas assez de mémoire pour ce modèle et ta collection. La planification ne change pas. Dans Fichiers de modèle RWKV → Télécharger, tu peux autoriser le modèle quand même.</string>
     <string name="ankiquest_rwkv_no_model">Indisponible : importe d’abord un modèle RWKV à deux têtes. La planification ne change pas.</string>
     <string name="ankiquest_rwkv_backend_failed">Indisponible : le moteur RWKV n’a pas pu charger les fichiers de modèle. La planification ne change pas.</string>
     <string name="ankiquest_rwkv_ready">Activé : RWKV planifie les préréglages mis sur RWKV dans les options du paquet.</string>
@@ -34,6 +34,8 @@
         <item quantity="one">Demande environ %1$s pour ta %2$s carte ; ce téléphone permet %3$s.</item>
         <item quantity="other">Demande environ %1$s pour tes %2$s cartes ; ce téléphone permet %3$s.</item>
     </plurals>
+    <string name="ankiquest_rwkv_override">Je sais ce que je fais</string>
+    <string name="ankiquest_rwkv_overridden">%1$s Tu l’as autorisé quand même : RWKV risque de ne pas démarrer, et se désactive alors tout seul.</string>
     <string name="ankiquest_rwkv_imported">Importé : %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Non importé : aucun fichier ne correspond à un modèle RWKV connu.</string>
     <string name="ankiquest_rwkv_import_unreadable">Non importé : le fichier n’a pas pu être lu.</string>

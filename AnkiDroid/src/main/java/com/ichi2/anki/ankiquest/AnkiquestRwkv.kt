@@ -68,6 +68,10 @@ internal suspend fun RwkvState.start(
     } catch (e: Exception) {
         Timber.w(e, "RWKV: the backend refused the models; using the standard scheduler")
         fail()
+    } catch (e: OutOfMemoryError) {
+        // A model past the memory limit, allowed by the player, may not load: off, not a crash.
+        Timber.w(e, "RWKV: out of memory loading the models; using the standard scheduler")
+        fail()
     }
 }
 
@@ -78,6 +82,12 @@ internal suspend fun RwkvState.start(
  */
 internal object AnkiquestRwkv {
     const val PREF_ENABLED = "ankiquestRwkv"
+
+    /** The lock entry ids the player allowed past the memory limit ("I know what I'm doing"). */
+    const val PREF_OVERRIDES = "ankiquestRwkvOverrides"
+
+    /** Set while the engine starts with a model past the memory limit; see [RwkvLaunch]. */
+    const val PREF_LOADING = "ankiquestRwkvLoading"
 
     /** App-private, not backed up: the files come back by importing them again. */
     private const val MODEL_DIR = "rwkv"
@@ -100,6 +110,32 @@ internal object AnkiquestRwkv {
 
     /** Emits when the backend's model state is installed: the deck list redraws its counts. */
     val running: SharedFlow<Unit> = runningFlow
+
+    private val refusedFlow = MutableSharedFlow<RwkvState>(extraBufferCapacity = 1)
+
+    /** Emits when a running engine failed after it started and RWKV turned itself off: the settings show why. */
+    val refused: SharedFlow<RwkvState> = refusedFlow
+
+    /** The models the player allowed past the memory limit. */
+    fun overrides(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Set<String> =
+        prefs.getStringSet(PREF_OVERRIDES, null).orEmpty().toSet()
+
+    /** Saves [entry]'s override; the next check, at a start or in the settings, follows it. */
+    fun override(
+        entry: RwkvLockEntry,
+        override: RwkvOverride,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) {
+        val ids =
+            when (override) {
+                RwkvOverride.ALLOWED -> overrides(prefs) + entry.id
+                RwkvOverride.NOT_ALLOWED -> overrides(prefs) - entry.id
+            }
+        prefs.edit { putStringSet(PREF_OVERRIDES, ids) }
+    }
+
+    private fun launch(prefs: SharedPreferences): RwkvLaunch =
+        if (prefs.getBoolean(PREF_LOADING, false)) RwkvLaunch.INTERRUPTED else RwkvLaunch.CLEAN
 
     fun switch(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): RwkvSwitch =
         if (prefs.getBoolean(PREF_ENABLED, false)) RwkvSwitch.ON else RwkvSwitch.OFF
@@ -127,20 +163,20 @@ internal object AnkiquestRwkv {
         context: Context,
         ram: RwkvRam,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ): RwkvState = transition(context, prefs) { RwkvState.Off.enable(checks(context, ram)) }
+    ): RwkvState = checked(context, ram, prefs) { RwkvState.Off.enable(it) }
 
     /** The player turns it off. */
     suspend fun disable(
         context: Context,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ): RwkvState = transition(context, prefs) { RwkvState.Off.disable() }
+    ): RwkvState = transitions.withLock { settle(prefs, RwkvState.Off.disable()) }
 
     /** The state for the saved switch, as when the app starts or the settings open; a saved "on" that is now blocked is refused. */
     suspend fun restore(
         context: Context,
         ram: RwkvRam,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ): RwkvState = transition(context, prefs) { RwkvState.restore(switch(prefs), checks(context, ram)) }
+    ): RwkvState = checked(context, ram, prefs) { RwkvState.restore(switch(prefs), it, launch(prefs)) }
 
     /** Imports picked files; the caller restores the state afterwards, which hands the backend the new models if the scheduler is on. */
     suspend fun import(
@@ -218,10 +254,11 @@ internal object AnkiquestRwkv {
     suspend fun offers(
         context: Context,
         ram: RwkvRam,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ): RwkvOfferList =
         withContext(ioDispatcher) {
             val device = RwkvDevice(ram.totalBytes(), collection())
-            RwkvOfferList(device, RwkvOffers.list(device, store(context).stored(), attempts.toMap()))
+            RwkvOfferList(device, store(context).stored(), attempts.toMap(), overrides(prefs))
         }
 
     /**
@@ -243,34 +280,61 @@ internal object AnkiquestRwkv {
         }
     }
 
-    private suspend fun transition(
+    /**
+     * Runs the checks, takes the [next] state from them and starts it. A start with a model past
+     * the memory limit is marked first, so a process that dies loading it is not started again.
+     */
+    private suspend fun checked(
         context: Context,
+        ram: RwkvRam,
         prefs: SharedPreferences,
-        next: suspend () -> RwkvState,
+        next: (RwkvChecks) -> RwkvState,
     ): RwkvState =
         transitions.withLock {
             // The checks and the start read and hash the model files.
-            val state = withContext(ioDispatcher) { next().start(store(context), engine) }
-            prefs.edit { putBoolean(PREF_ENABLED, state.switch == RwkvSwitch.ON) }
-
-            // Only a ready scheduler keeps a model: off and refused hand scheduling back at once.
-            if (state == RwkvState.Ready) {
-                watch()
-            } else {
-                watcher?.cancel()
-                engine.unload()
-            }
-            state
+            val state =
+                withContext(ioDispatcher) {
+                    val checks = checks(context, ram, prefs)
+                    val target = next(checks)
+                    val risky = target == RwkvState.Ready && checks.fit() is RwkvFit.TooBigOverridden
+                    prefs.edit(commit = true) { putBoolean(PREF_LOADING, risky) }
+                    target.start(store(context), engine)
+                }
+            settle(prefs, state)
         }
+
+    /** Saves the switch [state] shows; only a ready scheduler keeps a model: off and refused hand scheduling back at once. */
+    private suspend fun settle(
+        prefs: SharedPreferences,
+        state: RwkvState,
+    ): RwkvState {
+        prefs.edit { putBoolean(PREF_ENABLED, state.switch == RwkvSwitch.ON) }
+        if (state == RwkvState.Ready) {
+            watch(prefs)
+            return state
+        }
+        prefs.edit { putBoolean(PREF_LOADING, false) }
+        watcher?.cancel()
+        engine.unload()
+        return state
+    }
+
+    /** The engine failed after it started: RWKV turns itself off and the settings say why. */
+    private suspend fun failed(prefs: SharedPreferences) {
+        val state = transitions.withLock { settle(prefs, RwkvState.Ready.fail()) }
+        refusedFlow.tryEmit(state)
+    }
 
     private suspend fun checks(
         context: Context,
         ram: RwkvRam,
+        prefs: SharedPreferences,
     ): RwkvChecks =
         RwkvChecks(
             totalRamBytes = ram.totalBytes(),
             collection = collection(),
             models = store(context).models(RwkvVerify.SIZE),
+            overrides = overrides(prefs),
         )
 
     /** Each card and each note keeps a model state. */
@@ -281,30 +345,62 @@ internal object AnkiquestRwkv {
      * own thread: once that is done, [running] redraws it with RWKV's. The backend cannot call back,
      * so this polls, as kuma3 does.
      */
-    private fun watch() {
+    private fun watch(prefs: SharedPreferences) {
         watcher?.cancel()
         watcher =
             scope.launch {
-                var idle = 0
-                repeat(POLLS) {
-                    delay(POLL_MS)
-                    when (val progress = engine.progress()) {
-                        RwkvProgress.Running -> {
-                            Timber.i("RWKV: model state installed")
-                            runningFlow.tryEmit(Unit)
-                            return@launch
-                        }
-                        is RwkvProgress.Replaying -> idle = 0
-                        RwkvProgress.Unavailable -> {
-                            if (++idle >= IDLE_POLLS) {
-                                Timber.w("RWKV: no replay under way; stopped waiting")
-                                return@launch
-                            }
-                        }
+                when (awaitRunning()) {
+                    RwkvWatch.RUNNING -> {
+                        Timber.i("RWKV: model state installed")
+                        prefs.edit { putBoolean(PREF_LOADING, false) }
+                        runningFlow.tryEmit(Unit)
+                    }
+                    RwkvWatch.FAILED -> {
+                        // Its own coroutine: turning RWKV off cancels this watcher.
+                        Timber.w("RWKV: the engine stopped without a model state; turning RWKV off")
+                        scope.launch { failed(prefs) }
+                    }
+                    RwkvWatch.TIMED_OUT -> {
+                        // Still replaying, not dead: the next start may try again.
+                        Timber.w("RWKV: not ready after %d polls; stopped waiting", POLLS)
+                        prefs.edit { putBoolean(PREF_LOADING, false) }
                     }
                 }
-                Timber.w("RWKV: not ready after %d polls; stopped waiting", POLLS)
             }
+    }
+
+    /** How [awaitRunning] ended. */
+    private enum class RwkvWatch {
+        RUNNING,
+        FAILED,
+        TIMED_OUT,
+    }
+
+    /** Polls until the model state is installed; no replay for [IDLE_POLLS] polls, or an error from the backend, is a failure. */
+    private suspend fun awaitRunning(): RwkvWatch {
+        var idle = 0
+        repeat(POLLS) {
+            delay(POLL_MS)
+            val progress =
+                try {
+                    engine.progress()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "RWKV: the backend failed while replaying")
+                    return RwkvWatch.FAILED
+                }
+            when (progress) {
+                RwkvProgress.Running -> return RwkvWatch.RUNNING
+                is RwkvProgress.Replaying -> idle = 0
+                RwkvProgress.Unavailable -> {
+                    if (++idle >= IDLE_POLLS) {
+                        return RwkvWatch.FAILED
+                    }
+                }
+            }
+        }
+        return RwkvWatch.TIMED_OUT
     }
 
     /** The settings row's summary for [state]. */

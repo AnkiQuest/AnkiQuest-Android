@@ -27,7 +27,8 @@ class AnkiquestRwkvStateTest {
         ram: Long = 8 * gib,
         cards: Int = 22_000,
         models: RwkvModels? = small,
-    ) = RwkvChecks(ram, RwkvCollection(cards, cards), models)
+        overrides: Set<String> = emptySet(),
+    ) = RwkvChecks(ram, RwkvCollection(cards, cards), models, overrides)
 
     private fun refused(reason: RwkvBlocker) = RwkvState.Refused(reason)
 
@@ -168,5 +169,40 @@ class AnkiquestRwkvStateTest {
         val needed = RwkvMemory.needed(small, kuma3)
         assertTrue(RwkvMemory.fits(needed * RwkvMemory.RAM_SHARE, small, kuma3))
         assertFalse(RwkvMemory.fits(needed * RwkvMemory.RAM_SHARE - 1, small, kuma3))
+    }
+
+    @Test
+    fun `an overridden model past the limit starts`() {
+        val entry = small.twoHead.entry
+        val ram = 512_000_000L
+        val overridden = checks(ram = ram, overrides = setOf(entry.id))
+        assertTrue(overridden.fit() is RwkvFit.TooBigOverridden)
+        assertEquals(RwkvState.Ready, RwkvState.Off.enable(overridden))
+        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, overridden))
+    }
+
+    @Test
+    fun `the fit says each case`() {
+        assertTrue(checks().fit() is RwkvFit.Fits)
+        assertTrue(checks(ram = 512_000_000L).fit() is RwkvFit.TooBig)
+        assertTrue(checks(ram = 512_000_000L, overrides = setOf(small.twoHead.entry.id)).fit() is RwkvFit.TooBigOverridden)
+        assertEquals(null, checks(models = null).fit())
+    }
+
+    @Test
+    fun `a pair past the limit starts only with the Instant model's override`() {
+        val pair = RwkvModels(file(model(RwkvSize.BIG, RwkvHead.TWO_HEAD)), file(model(RwkvSize.BIG, RwkvHead.INSTANT)))
+        val twoHeadOnly = checks(ram = 4 * gib, models = pair, overrides = setOf(pair.twoHead.entry.id))
+        assertEquals(refused(RwkvBlocker.NOT_ENOUGH_MEMORY), RwkvState.Off.enable(twoHeadOnly))
+
+        val instant = checks(ram = 4 * gib, models = pair, overrides = setOf(pair.instant!!.entry.id))
+        assertEquals(RwkvState.Ready, RwkvState.Off.enable(instant))
+    }
+
+    @Test
+    fun `a saved on whose last start died loading is refused as a backend failure`() {
+        assertEquals(refused(RwkvBlocker.BACKEND_FAILED), RwkvState.restore(RwkvSwitch.ON, checks(), RwkvLaunch.INTERRUPTED))
+        assertEquals(RwkvState.Off, RwkvState.restore(RwkvSwitch.OFF, checks(), RwkvLaunch.INTERRUPTED))
+        assertEquals(RwkvState.Ready, RwkvState.restore(RwkvSwitch.ON, checks(), RwkvLaunch.CLEAN))
     }
 }

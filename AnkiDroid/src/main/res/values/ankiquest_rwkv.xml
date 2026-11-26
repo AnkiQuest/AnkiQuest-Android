@@ -5,7 +5,7 @@
     <string name="ankiquest_rwkv_title" maxLength="41">RWKV scheduler (experimental)</string>
     <string name="ankiquest_rwkv_models_key" translatable="false">ankiquestRwkvModels</string>
     <string name="ankiquest_rwkv_off">Lets an RWKV model schedule the presets set to RWKV-Instant or RWKV-Curve in deck options. Needs imported model files and enough memory.</string>
-    <string name="ankiquest_rwkv_not_enough_memory">Not available: this phone has too little memory for your collection. Scheduling is unchanged.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Not available: this phone has too little memory for this model and your collection. Scheduling is unchanged. Under RWKV model files → Download you can allow the model anyway.</string>
     <string name="ankiquest_rwkv_no_model">Not available: import an RWKV two-head model first. Scheduling is unchanged.</string>
     <string name="ankiquest_rwkv_backend_failed">Not available: the RWKV engine could not load the model files. Scheduling is unchanged.</string>
     <string name="ankiquest_rwkv_ready">On: RWKV schedules the presets set to RWKV in deck options.</string>
@@ -45,6 +45,10 @@
         <item quantity="one">Needs about %1$s for your %2$s card; this phone allows %3$s.</item>
         <item quantity="other">Needs about %1$s for your %2$s cards; this phone allows %3$s.</item>
     </plurals>
+    <!-- Check box on a model past the memory limit; ticking it lets the player download and start it anyway -->
+    <string name="ankiquest_rwkv_override">I know what I\'m doing</string>
+    <!-- %1$s what the model needs and what this phone allows -->
+    <string name="ankiquest_rwkv_overridden">%1$s You allowed it anyway: RWKV may not start, and then turns itself off.</string>
     <string name="ankiquest_rwkv_imported">Imported: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Not imported: no file matches a known RWKV model.</string>
     <string name="ankiquest_rwkv_import_unreadable">Not imported: the file could not be read.</string>
