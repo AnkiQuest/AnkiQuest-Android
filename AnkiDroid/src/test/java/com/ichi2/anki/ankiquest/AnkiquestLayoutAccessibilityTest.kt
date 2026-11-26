@@ -70,7 +70,9 @@ class AnkiquestLayoutAccessibilityTest : RobolectricTest(loadBackend = false) {
             .flatMap { id ->
                 val layout = context.resources.getResourceEntryName(id)
                 val root = inflater.inflate(id, LinearLayout(context), false)
-                views(root).filterIsInstance<ImageView>().map { layout to it }
+                views(root)
+                    .filterIsInstance<ImageView>()
+                    .map { layout to it }
             }
     }
 
