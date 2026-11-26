@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestAki.Message
 import org.json.JSONArray
@@ -194,7 +195,7 @@ class AnkiquestAkiTest : RobolectricTest() {
             val today = case.getJSONObject("today")
             val expected = case.getJSONObject("expected")
             val profile = homeProfile(today) ?: continue
-            val card = AnkiquestAki.mood(null, profile)
+            val card = AnkiquestAki.mood(null, profile, now = 0L)
             assertEquals(enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase()), card.mood, name)
             assertEquals(akiMoodArt(expected), targetContext.resources.getResourceEntryName(card.image), name)
             checked++
@@ -213,7 +214,7 @@ class AnkiquestAkiTest : RobolectricTest() {
         var checked = 0
         for (case in fixtures.getJSONArray("moods").objects()) {
             val profile = homeProfile(case.getJSONObject("today")) ?: continue
-            val card = AnkiquestAki.mood(null, profile)
+            val card = AnkiquestAki.mood(null, profile, now = 0L)
             val expected = ankilopeMoodPoses.getValue(card.mood)
             assertEquals(expected, AnkiquestCompanion.resource(card.image), case.getString("name"))
             checked++
@@ -235,12 +236,16 @@ class AnkiquestAkiTest : RobolectricTest() {
         val serverState = if (state == "short") "pending" else state
         val frozen = today.getInt("frozen_days")
         val heatmap = JSONArray()
+        heatmap.put(JSONObject().put("state", "met"))
         repeat(frozen) { heatmap.put(JSONObject().put("frozen", true)) }
+        repeat(today.getInt("days_away")) { heatmap.put(JSONObject().put("state", "none")) }
         heatmap.put(JSONObject())
         return JSONObject()
             .put("streak_state", serverState)
             .put("streak", today.getInt("streak"))
-            .put("day_ends_at", Long.MAX_VALUE)
+            .put("day_ends_at", today.optLong("day_left_ms", Long.MAX_VALUE))
+            .put("freezes_enabled", true)
+            .put("stored_freezes", today.getInt("freezes"))
             .put(
                 "today",
                 JSONObject()
@@ -259,5 +264,38 @@ class AnkiquestAkiTest : RobolectricTest() {
             android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO,
             AnkiquestAki.image(targetContext, com.ichi2.anki.R.drawable.aki_review).importantForAccessibility,
         )
+    }
+
+    @Test
+    fun `the first freeze picture is scoped to the account and day`() {
+        chooseCompanion(AnkiquestCompanion.Choice.AKI)
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val account = assertNotNull(AnkiquestHomeData.account(prefs))
+        val fixture =
+            JSONObject(
+                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")).readText(),
+            )
+        val cases = fixture.getJSONObject("freeze_used").getJSONArray("cases").objects()
+        for ((index, case) in cases.withIndex()) {
+            val end = (index + 1L) * DAY_MS
+            val now = end - 1
+            val heatmap = JSONArray()
+            repeat(case.getInt("frozen_days")) { heatmap.put(JSONObject().put("frozen", true)) }
+            heatmap.put(JSONObject())
+            val profile =
+                JSONObject()
+                    .put("day_ends_at", end)
+                    .put("heatmap", heatmap)
+            if (case.getBoolean("opened_today")) {
+                assertEquals(AnkiquestPose.FREEZE_USED, AnkiquestAki.takeFreezePicture(account, profile, now, prefs))
+            }
+            val expected = AnkiquestPose.FREEZE_USED.takeIf { case.getBoolean("expected") }
+            assertEquals(expected, AnkiquestAki.takeFreezePicture(account, profile, now, prefs), case.getString("name"))
+            if (expected != null) {
+                assertEquals(expected, AnkiquestAki.takeFreezePicture(account.copy(user = "bob"), profile, now, prefs))
+            }
+            assertNull(AnkiquestAki.takeFreezePicture(account, profile, now, prefs))
+            assertNull(AnkiquestAki.takeFreezePicture(account, profile, end, prefs))
+        }
     }
 }

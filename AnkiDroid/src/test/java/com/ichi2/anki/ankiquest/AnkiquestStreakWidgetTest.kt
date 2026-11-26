@@ -39,6 +39,21 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
 class AnkiquestStreakWidgetTest : RobolectricTest() {
+    @Test
+    fun `the freeze window changes what the widget shows for an unchanged profile`() {
+        val now = 60_000L
+        val profile =
+            JSONObject()
+                .put("day_ends_at", now + 7_200_000)
+                .put("streak", 7)
+                .put("streak_state", "pending")
+                .put("freezes_enabled", true)
+                .put("stored_freezes", 1)
+        val before = AnkiquestStreakWidget.streakShown(profile, now - 1)
+        val inside = AnkiquestStreakWidget.streakShown(profile, now)
+        kotlin.test.assertNotEquals(before, inside)
+    }
+
     private fun me(
         streak: Int,
         state: String,
@@ -238,8 +253,9 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `two frozen days before today show Aki frozen`() {
+        chooseCompanion(AnkiquestCompanion.Choice.AKI)
         val now = TimeManager.time.intTimeMS()
-        val row = me(10, "protected", 0)
+        val row = me(10, "protected", 0).put("user", "alice")
         val heatmap = JSONArray()
         for (frozen in listOf(false, true, true, false)) {
             heatmap.put(JSONObject().put("frozen", frozen))
@@ -254,7 +270,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
 
         val widget =
             AnkiquestStreakWidget
-                .views(targetContext, JSONArray().put(row), "hill", AnkiquestStreakWidget.Size.HUGE)
+                .views(targetContext, JSONArray().put(row), "alice", AnkiquestStreakWidget.Size.HUGE)
                 .apply(targetContext, FrameLayout(targetContext))
         val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
         val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap)
@@ -449,7 +465,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
-        assertEquals(10, aki.size)
+        assertEquals(12, aki.size)
         val poses = aki + ankilopeMoodPoses.values + blumaMoodPoses.values
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

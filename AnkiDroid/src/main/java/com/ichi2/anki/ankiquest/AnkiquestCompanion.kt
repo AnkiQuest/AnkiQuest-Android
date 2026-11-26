@@ -178,6 +178,8 @@ internal object AnkiquestCompanion {
             AnkiquestPose.SAD to R.drawable.aki_sad,
             AnkiquestPose.HOPEFUL to R.drawable.aki_hopeful,
             AnkiquestPose.FROZEN to R.drawable.aki_frozen,
+            AnkiquestPose.FREEZE to R.drawable.aki_freeze,
+            AnkiquestPose.FREEZE_USED to R.drawable.aki_freeze_used,
             AnkiquestPose.NEGLECTED to R.drawable.aki_neglected,
         )
 
@@ -191,6 +193,7 @@ internal object AnkiquestCompanion {
             AnkiquestPose.SAD to R.drawable.ankilope_sad,
             AnkiquestPose.HOPEFUL to R.drawable.ankilope_hopeful,
             AnkiquestPose.FROZEN to R.drawable.ankilope_frozen,
+            AnkiquestPose.FREEZE_USED to R.drawable.ankilope_freeze_used,
             AnkiquestPose.NEGLECTED to R.drawable.ankilope_neglected,
             AnkiquestPose.WELCOME to R.drawable.ankilope_welcome,
             AnkiquestPose.REVIEW to R.drawable.ankilope_study,
@@ -206,6 +209,7 @@ internal object AnkiquestCompanion {
             AnkiquestPose.SAD to R.drawable.bluma_sad,
             AnkiquestPose.HOPEFUL to R.drawable.bluma_hopeful,
             AnkiquestPose.FROZEN to R.drawable.bluma_frozen,
+            AnkiquestPose.FREEZE_USED to R.drawable.bluma_freeze_used,
             AnkiquestPose.NEGLECTED to R.drawable.bluma_neglected,
         )
 
@@ -223,6 +227,7 @@ internal object AnkiquestCompanion {
             AnkiquestPose.SAD to R.drawable.anki_tan_sad,
             AnkiquestPose.HOPEFUL to R.drawable.anki_tan_hopeful,
             AnkiquestPose.FROZEN to R.drawable.anki_tan_frozen,
+            AnkiquestPose.FREEZE_USED to R.drawable.anki_tan_freeze_used,
             AnkiquestPose.NEGLECTED to R.drawable.anki_tan_neglected,
             AnkiquestPose.WELCOME to R.drawable.anki_tan_hopeful,
         )
@@ -249,9 +254,9 @@ internal object AnkiquestCompanion {
             R.drawable.aki_at_risk to AnkiquestPose.SAD,
             R.drawable.aki_sad to AnkiquestPose.SAD,
             R.drawable.aki_hopeful to AnkiquestPose.HOPEFUL,
-            R.drawable.aki_freeze_used to AnkiquestPose.FROZEN,
+            R.drawable.aki_freeze_used to AnkiquestPose.FREEZE_USED,
             R.drawable.aki_frozen to AnkiquestPose.FROZEN,
-            R.drawable.aki_freeze to AnkiquestPose.FROZEN_2,
+            R.drawable.aki_freeze to AnkiquestPose.FREEZE,
             R.drawable.aki_neglected to AnkiquestPose.NEGLECTED,
             R.drawable.aki_welcome to AnkiquestPose.WELCOME,
             R.drawable.aki_comeback to AnkiquestPose.WELCOME,

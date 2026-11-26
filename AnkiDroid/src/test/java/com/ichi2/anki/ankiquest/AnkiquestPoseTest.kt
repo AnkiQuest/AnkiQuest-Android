@@ -27,7 +27,10 @@ class AnkiquestPoseTest {
 
         // Each extension falls back to the fixture's pose.
         val extensions = fixture.getJSONObject("extensions")
-        val expected = extensions.keys().asSequence().associateWith { extensions.getString(it) }
+        val pictures = fixture.getJSONObject("pictures")
+        val expected =
+            extensions.keys().asSequence().associateWith { extensions.getString(it) } +
+                listOf("freeze", "freeze_used").associateWith { pictures.getString(it) }
         val actual =
             AnkiquestPose.entries
                 .mapNotNull { pose ->

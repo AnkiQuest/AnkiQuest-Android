@@ -94,12 +94,12 @@ class AnkiquestDebugTest : RobolectricTest() {
     fun `edited thresholds move each mood and heat`() {
         val rules = Rules(hopefulReviews = 3, frozen2Days = 4, frozen3Days = 6, hotDays = 3, blazingDays = 5, legendDays = 9)
         val mood = { state: State, reviews: Int, frozen: Int ->
-            AnkiquestMood.of(state, reviews, Stage.STARTED, 12, frozen, Goal.OPEN, rules)
+            AnkiquestMood.of(state, reviews, Stage.STARTED, 12, AnkiquestMood.History(frozenDays = frozen), Goal.OPEN, rules)
         }
 
         assertEquals(Mood.SAD, mood(State.SHORT, 2, 0), "two reviews are short of the edited hopeful")
         assertEquals(Mood.HOPEFUL, mood(State.SHORT, 3, 0))
-        assertEquals(Mood.SAD, AnkiquestMood.of(State.SHORT, 2, Stage.HALF, 12, 0, Goal.OPEN, rules))
+        assertEquals(Mood.SAD, AnkiquestMood.of(State.SHORT, 2, Stage.HALF, 12, AnkiquestMood.History(), Goal.OPEN, rules))
         assertEquals(Mood.FROZEN_1, mood(State.PENDING, 0, 3))
         assertEquals(Mood.FROZEN_2, mood(State.PENDING, 0, 4))
         assertEquals(Mood.FROZEN_2, mood(State.PENDING, 0, 5))
@@ -114,8 +114,8 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `a forced mood decides today's mood and pose`() {
         val forced = Overrides.NONE.forceMood(Mood.FROZEN_3)
-        assertEquals(Mood.FROZEN_3, AnkiquestMood.today(null, 0, Goal.OPEN, forced))
-        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, 0, Goal.OPEN, Overrides.NONE))
+        assertEquals(Mood.FROZEN_3, AnkiquestMood.today(null, AnkiquestMood.History(), Goal.OPEN, forced))
+        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, AnkiquestMood.History(), Goal.OPEN, Overrides.NONE))
         assertEquals(
             AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.AKI),
             AnkiquestMood.todayPose(Mood.SAD, 1, forced, Choice.AKI),
@@ -126,7 +126,7 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `a forced pose replaces only the picture`() {
         val forced = Overrides.NONE.forcePose(AnkiquestPose.DEAD)
-        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, 0, Goal.OPEN, forced))
+        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, AnkiquestMood.History(), Goal.OPEN, forced))
         val dead = AnkiquestCompanion.art(AnkiquestPose.DEAD, Choice.AKI)
         assertEquals(dead, AnkiquestMood.todayPose(Mood.FIRE, 400, forced, Choice.AKI))
         assertEquals(listOf(dead), AnkiquestMood.poses(Mood.FIRE, 400, Choice.AKI, forced), "no legend rotation")

@@ -60,6 +60,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var local: HomeLocal? = null
     private var localFailed = false
     private var profile: JSONObject? = null
+    private var freezeOpening: Pair<String, Long>? = null
 
     @StringRes private var profileFailure: Int? = null
     private var loading = false
@@ -157,6 +158,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var localRefreshJob: Job? = null
 
     override fun onPause() {
+        freezeOpening = null
         localRefreshJob?.cancel()
         super.onPause()
     }
@@ -403,7 +405,9 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun renderToday() {
         questsHeading = null
         title(R.string.ankiquest_nav_today, R.string.aq_home_today_subtitle)
-        content.addView(AnkiquestAki.encouragement(this, AnkiquestAki.mood(local, profile)))
+        val now = TimeManager.time.intTimeMS()
+        val card = AnkiquestAki.mood(local, profile, now)
+        content.addView(AnkiquestAki.encouragement(this, card, openingPicture(now)))
         profile?.let {
             views.text(content, getString(R.string.aq_home_streak_level, it.optInt("streak"), it.optInt("level")), small = true)
             AnkiquestBoards.ownWeekLine(this, AnkiquestBoards.parseOwnWeek(it), TimeManager.time.intTimeMS())?.let { line ->
@@ -497,6 +501,26 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             if (failure == R.string.aq_home_auth) button(content, R.string.aq_home_settings) { settings() }
         }
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
+    }
+
+    private fun openingPicture(now: Long): AnkiquestPose? {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            return null
+        }
+        val current = account ?: return null
+        val end = profile?.optLong("day_ends_at")?.takeIf { it > now } ?: return null
+        if (!AnkiquestCompanion.visible() || AnkiquestDebug.current().today != AnkiquestDebug.Today.Computed) {
+            return null
+        }
+        val opening = current.scope to end
+        if (freezeOpening == opening) {
+            return AnkiquestPose.FREEZE_USED
+        }
+        val picture = AnkiquestAki.takeFreezePicture(current, profile, now, AnkiDroidApp.sharedPrefs())
+        if (picture != null) {
+            freezeOpening = opening
+        }
+        return picture
     }
 
     /** Below the next study step, so it never stands between the player and their cards. */
