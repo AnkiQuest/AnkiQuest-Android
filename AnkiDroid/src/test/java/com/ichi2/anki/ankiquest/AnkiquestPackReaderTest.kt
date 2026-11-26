@@ -17,12 +17,13 @@ class AnkiquestPackReaderTest {
 
     @Test
     fun a_pack_with_its_pictures_is_read() {
-        val pack = read(
-            zip(
-                "companion.json" to index(poses = """{"face":"aki_face.webp"}"""),
-                "aki_face.webp" to webp(),
-            ),
-        )
+        val pack =
+            read(
+                zip(
+                    "companion.json" to index(poses = """{"face":"aki_face.webp"}"""),
+                    "aki_face.webp" to webp(),
+                ),
+            )
         assertEquals("aki", pack.info.id)
         assertEquals(mapOf("face" to "aki_face.webp"), pack.info.poses)
         assertContentEquals(info(poses = """{"face":"aki_face.webp"}""").toByteArray(), pack.index)
@@ -40,23 +41,77 @@ class AnkiquestPackReaderTest {
     @Test
     fun every_named_picture_is_there_and_nothing_else() {
         // A pose names a file the zip does not hold.
-        assertEquals(PackRefusal.MISSING_FILE, refused(zip("companion.json" to index(poses = """{"face":"aki_face.webp"}"""), "aki_asleep.webp" to webp())))
-        assertEquals(PackRefusal.UNUSED_FILE, refused(zip("companion.json" to index(poses = """{"face":"aki_face.webp"}"""), "extra.png" to png())))
+        assertEquals(
+            PackRefusal.MISSING_FILE,
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"aki_face.webp"}"""),
+                    "aki_asleep.webp" to webp(),
+                ),
+            ),
+        )
+        assertEquals(
+            PackRefusal.UNUSED_FILE,
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"aki_face.webp"}"""),
+                    "extra.png" to png(),
+                ),
+            ),
+        )
     }
 
     @Test
     fun entries_are_flat_picture_names_each_once() {
-        assertEquals(PackRefusal.DUPLICATE_ENTRY, refused(zip("companion.json" to index(poses = """{"face":"a.webp"}"""), "a.webp" to webp(), "a.webp" to webp())))
-        assertEquals(PackRefusal.BAD_ENTRY_NAME, refused(zip("companion.json" to index(poses = """{"face":"a.webp"}"""), "nested/a.webp" to webp())))
-        assertEquals(PackRefusal.BAD_ENTRY_NAME, refused(zip("companion.json" to index(poses = """{"face":"a.webp"}"""), "A.webp" to webp())))
+        assertEquals(
+            PackRefusal.DUPLICATE_ENTRY,
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"a.webp"}"""),
+                    "a.webp" to webp(),
+                    "a.webp" to webp(),
+                ),
+            ),
+        )
+        assertEquals(
+            PackRefusal.BAD_ENTRY_NAME,
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"a.webp"}"""),
+                    "nested/a.webp" to webp(),
+                ),
+            ),
+        )
+        assertEquals(
+            PackRefusal.BAD_ENTRY_NAME,
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"a.webp"}"""),
+                    "A.webp" to webp(),
+                ),
+            ),
+        )
     }
 
     @Test
     fun pictures_are_checked_before_anything_is_kept() {
-        assertEquals(PackRefusal.NOT_A_PICTURE, refused(zip("companion.json" to index(poses = """{"face":"a.webp"}"""), "a.webp" to "not a picture".toByteArray())))
+        assertEquals(
+            PackRefusal.NOT_A_PICTURE,
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"a.webp"}"""),
+                    "a.webp" to "not a picture".toByteArray(),
+                ),
+            ),
+        )
         assertEquals(
             PackRefusal.PICTURE_TOO_LARGE,
-            refused(zip("companion.json" to index(poses = """{"face":"a.png"}"""), "a.png" to png(width = AnkiquestPackReader.MAX_EDGE + 1))),
+            refused(
+                zip(
+                    "companion.json" to index(poses = """{"face":"a.png"}"""),
+                    "a.png" to png(width = AnkiquestPackReader.MAX_EDGE + 1),
+                ),
+            ),
         )
     }
 
