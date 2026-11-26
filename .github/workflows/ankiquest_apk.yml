@@ -157,9 +157,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}
         run: |
-          # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
-          cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk \
             --title "AnkiQuest $RELEASE" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 
@@ -176,7 +174,6 @@ jobs:
             --argjson size "$(stat -c %s AnkiQuest.apk)" \
             '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
             > nightly.json
-          cp AnkiQuest.apk AnkiDroid-Quest.apk
 
       # Updates the release in place and retries the release API; see the action.
       - name: Publish nightly
@@ -187,5 +184,4 @@ jobs:
           notes: "Built from ${{ github.sha }} after quest-${{ steps.release.outputs.number }}. Untested: pick the nightly update channel in AnkiQuest settings to get these."
           files: |
             AnkiQuest.apk
-            AnkiDroid-Quest.apk
             nightly.json

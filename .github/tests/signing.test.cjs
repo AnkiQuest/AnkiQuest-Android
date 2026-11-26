@@ -47,20 +47,14 @@ fs.copyFileSync(path.join(process.env.RELEASE_FIXTURE, files[0]), output);
     return { ...result, apk: fs.existsSync(output) ? fs.readFileSync(output, "utf8") : null };
 }
 
-test("key rotation selects the current APK when the legacy name is also published", t => {
-    const result = download(t, { "AnkiQuest.apk": "current", "AnkiDroid-Quest.apk": "legacy" });
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.apk, "current");
-});
-
-test("key rotation also accepts a release with only the current APK", t => {
+test("key rotation downloads the released APK", t => {
     const result = download(t, { "AnkiQuest.apk": "current" });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.apk, "current");
 });
 
-test("key rotation fails when the current APK is absent", t => {
-    const result = download(t, { "AnkiDroid-Quest.apk": "legacy" });
+test("key rotation fails when the APK is absent", t => {
+    const result = download(t, { "nightly.json": "{}" });
     assert.notEqual(result.status, 0);
     assert.equal(result.apk, null);
 });
