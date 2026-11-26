@@ -80,6 +80,7 @@ import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.withProgressDialog
 import com.ichi2.utils.Permissions.openAppSettingsScreen
+import com.ichi2.utils.openInputStreamSafe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -730,7 +731,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         launchCatchingTask {
             val results =
                 withContext(ioDispatcher) {
-                    val inputs = uris.map { uri -> { context.contentResolver.openInputStream(uri) ?: throw IOException(NO_STREAM) } }
+                    val inputs = uris.map { uri -> { context.contentResolver.openInputStreamSafe(uri) ?: throw IOException(NO_STREAM) } }
                     AnkiquestRwkv.import(context, inputs)
                 }
             if (!isAdded) {
