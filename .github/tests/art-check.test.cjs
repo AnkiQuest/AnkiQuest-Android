@@ -62,8 +62,20 @@ test("a committed companion picture fails, even one the release has", async t =>
         ["aki_face", "bluma_streak", "anki_tan_face"],
     );
     assert.deepEqual((await art.check(app, zip)).problems, [
-        "main/res/drawable-nodpi/aki_face.webp: committed; the build takes it from the pinned release",
-        "quest/res/drawable-xxhdpi/anki_tan_icon.png: committed; the build takes it from the pinned release",
+        "AnkiDroid/src/main/res/drawable-nodpi/aki_face.webp: committed; the build takes it from the pinned release",
+        "AnkiDroid/src/quest/res/drawable-xxhdpi/anki_tan_icon.png: committed; the build takes it from the pinned release",
+    ]);
+});
+
+test("a companion picture committed under docs fails", async t => {
+    const { app, zip } = fixture(t, code, ["aki_face", "bluma_streak", "anki_tan_face"]);
+    for (const name of ["art-archive/cow/bluma_sleeping.webp", "art-archive/anki-tan/anki_tan_neglected-three-blue-stars.webp", "dev/review.png"]) {
+        fs.mkdirSync(path.join(app, "docs", path.dirname(name)), { recursive: true });
+        fs.writeFileSync(path.join(app, "docs", name), "x");
+    }
+    assert.deepEqual((await art.check(app, zip)).problems, [
+        "docs/art-archive/anki-tan/anki_tan_neglected-three-blue-stars.webp: committed; the build takes it from the pinned release",
+        "docs/art-archive/cow/bluma_sleeping.webp: committed; the build takes it from the pinned release",
     ]);
 });
 
@@ -87,7 +99,7 @@ test("pictures that are not companions are not checked", async t => {
 });
 
 test("every companion prefix is checked", () => {
-    for (const name of ["aki_face.webp", "ankilope_streak.png", "anki_tan_sad.webp", "bluma_happy.webp", "cow_icon.webp", "duo_friends.webp"]) {
+    for (const name of ["aki_face.webp", "ankilope_streak.png", "anki_tan_sad.webp", "bluma_happy.webp", "cow_icon.webp", "duo_friends.webp", "anki_tan_neglected-three-blue-stars.webp"]) {
         assert.match(name, art.COMPANION);
     }
     assert.doesNotMatch("akiface.webp", art.COMPANION);

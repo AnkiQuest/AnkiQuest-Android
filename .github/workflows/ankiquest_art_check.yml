@@ -3,8 +3,8 @@ name: ankiquest art check
 
 # No companion picture is committed: the build unpacks them from the android-drawables.zip of the
 # AnkiQuest-Art release ankiquest-art.json pins. This checks that zip's SHA-256 and entries, that no
-# companion picture is committed under AnkiDroid/src, and that every companion drawable the app
-# names is in the release.
+# companion picture is committed under AnkiDroid/src or docs, and that every companion drawable
+# the app names is in the release.
 on:
   pull_request:
   # The merge queue runs it on its merge commit too.
