@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_optimize_title">Es hora de optimizar tus preajustes</string>
+    <string name="aq_optimize_stale">Ejecutaste «Optimizar todos los preajustes» por última vez hace al menos 30 días y 1000 repasos.</string>
+    <string name="aq_optimize_never">Tienes al menos 1000 repasos y aún no has ejecutado «Optimizar todos los preajustes».</string>
+    <string name="aq_optimize_fsrs">Ajusta los parámetros FSRS de cada preajuste a tu historial de repasos.</string>
+    <string name="aq_optimize_rwkv">Tus preajustes usan RWKV-Curve o RWKV-Instant: solo ajusta su respaldo FSRS. No entrena RWKV.</string>
+    <string name="aq_optimize_mixed">Ajusta los parámetros de tus preajustes FSRS a tu historial de repasos. En los preajustes RWKV-Curve y RWKV-Instant solo ajusta el respaldo FSRS; no entrena RWKV.</string>
+    <string name="aq_optimize_where">«Optimizar todos los preajustes» está en la sección FSRS de las opciones del mazo.</string>
+    <string name="aq_optimize_open">Abrir opciones del mazo</string>
+    <string name="aq_optimize_snooze">Recordármelo en una semana</string>
+    <string name="aq_optimize_dismiss">Descartar</string>
+    <string name="aq_optimize_setting">Recordarme optimizar los preajustes</string>
+    <string name="aq_optimize_setting_summary">Cuando «Optimizar todos los preajustes» se ejecutó por última vez hace al menos 30 días y 1000 repasos</string>
+</resources>

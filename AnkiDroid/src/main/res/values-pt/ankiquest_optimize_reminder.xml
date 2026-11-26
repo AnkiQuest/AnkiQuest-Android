@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_optimize_title">Está na hora de otimizar as tuas predefinições</string>
+    <string name="aq_optimize_stale">Executaste “Otimizar todas as predefinições” pela última vez há pelo menos 30 dias e 1000 revisões.</string>
+    <string name="aq_optimize_never">Tens pelo menos 1000 revisões e ainda não executaste “Otimizar todas as predefinições”.</string>
+    <string name="aq_optimize_fsrs">Ajusta os parâmetros FSRS de cada predefinição ao teu histórico de revisões.</string>
+    <string name="aq_optimize_rwkv">As tuas predefinições usam RWKV-Curve ou RWKV-Instant: só ajusta a alternativa FSRS delas. O RWKV em si não é treinado.</string>
+    <string name="aq_optimize_mixed">Ajusta os parâmetros das tuas predefinições FSRS ao teu histórico de revisões. Nas predefinições RWKV-Curve e RWKV-Instant só ajusta a alternativa FSRS; o RWKV em si não é treinado.</string>
+    <string name="aq_optimize_where">“Otimizar todas as predefinições” está na secção FSRS das opções do baralho.</string>
+    <string name="aq_optimize_open">Abrir opções do baralho</string>
+    <string name="aq_optimize_snooze">Lembrar-me daqui a uma semana</string>
+    <string name="aq_optimize_dismiss">Descartar</string>
+    <string name="aq_optimize_setting">Lembrar-me de otimizar as predefinições</string>
+    <string name="aq_optimize_setting_summary">Quando “Otimizar todas as predefinições” foi executado há pelo menos 30 dias e 1000 revisões</string>
+</resources>

@@ -16,6 +16,8 @@ AnkiDroid with [AnkiQuest](https://github.com/AnkiQuest/AnkiQuest-Desktop): stud
 
 **RWKV scheduler (experimental).** Off by default. RWKV, a neural network that predicts recall, can choose review cards (RWKV-Instant) or set answer intervals (RWKV-Curve), as the JSchoreels desktop fork does. AnkiQuest ships no RWKV weights, since they have no licence for redistribution. In Settings → AnkiQuest → RWKV model files, Download fetches the Small or Tiny models from JSchoreels/anki-rwkv's release on GitHub, or choose files you downloaded; only files that match the known models are kept. Then turn on RWKV scheduler and pick RWKV-Instant or RWKV-Curve as a preset's review scheduler in deck options. Turning it off hands scheduling back to FSRS at once. If a check fails when the app starts, for example because the model files were removed, it turns itself off and the setting says why. While it runs, Statistics shows an RWKV forecast and a chart of each card's recall.
 
+**Optimize reminder.** When Optimize All Presets in deck options last ran at least 30 days and 1,000 reviews ago, a reminder offers Open deck options, Remind me in a week and Dismiss. For RWKV-Curve and RWKV-Instant presets it says that only their FSRS fallback is optimized and RWKV itself isn't trained. Turn it off with Settings → AnkiQuest → Remind me to optimize presets.
+
 **Sharing.** One share sheet sends a moment to friends or groups in AnkiQuest, with an optional note, or to another app with "More apps…". It covers conquered cards, session moments, companion unlocks, your weekly place and finished decks. Undo takes back only that send.
 
 **Player profiles.** From a player's profile you can send or answer a friend request, send a message, or invite them to a group.

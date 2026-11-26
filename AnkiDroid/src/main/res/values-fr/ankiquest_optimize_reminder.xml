@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_optimize_title">C’est le moment d’optimiser tes préréglages</string>
+    <string name="aq_optimize_stale">Tu as lancé « Optimiser tous les préréglages » pour la dernière fois il y a au moins 30 jours et 1 000 révisions.</string>
+    <string name="aq_optimize_never">Tu as au moins 1 000 révisions et tu n’as jamais lancé « Optimiser tous les préréglages ».</string>
+    <string name="aq_optimize_fsrs">Il ajuste les paramètres FSRS de chaque préréglage à ton historique de révisions.</string>
+    <string name="aq_optimize_rwkv">Tes préréglages utilisent RWKV-Curve ou RWKV-Instant : il n’ajuste que leur repli FSRS. RWKV lui-même n’est pas entraîné.</string>
+    <string name="aq_optimize_mixed">Il ajuste les paramètres de tes préréglages FSRS à ton historique de révisions. Pour les préréglages RWKV-Curve et RWKV-Instant, il n’ajuste que le repli FSRS ; RWKV lui-même n’est pas entraîné.</string>
+    <string name="aq_optimize_where">« Optimiser tous les préréglages » se trouve dans la section FSRS des options du paquet.</string>
+    <string name="aq_optimize_open">Ouvrir les options du paquet</string>
+    <string name="aq_optimize_snooze">Me le rappeler dans une semaine</string>
+    <string name="aq_optimize_dismiss">Ignorer</string>
+    <string name="aq_optimize_setting">Me rappeler d’optimiser les préréglages</string>
+    <string name="aq_optimize_setting_summary">Quand « Optimiser tous les préréglages » a été lancé il y a au moins 30 jours et 1 000 révisions</string>
+</resources>
