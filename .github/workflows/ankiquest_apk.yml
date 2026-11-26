@@ -206,9 +206,8 @@ jobs:
       - name: Assets
         id: assets
         run: |
-          # org.ankiquest.ankidroid publishes no AnkiDroid-Quest.apk: that name is for updaters of
-          # the old package, whose final release is quest-24. Its updater finds AnkiQuest.apk here
-          # and shows the move notice instead of installing another package.
+          # The old package's updater, from quest-24, finds AnkiQuest.apk here and shows the move
+          # notice instead of installing another package.
           files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab)
           for file in "${files[@]}"; do
             jq -n --arg name "$file" --argjson size "$(stat -c %s "$file")" '{name: $name, size: $size}'
@@ -260,8 +259,8 @@ jobs:
           fi
           if ! gh release view quest-24 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets \
             | jq -e '(.isDraft == false) and (.isPrerelease == false) and
-                ([.assets[].name] | contains(["AnkiQuest.apk", "AnkiDroid-Quest.apk"]))' > /dev/null; then
-            echo "::error::Publish the final migration release as quest-24 with both legacy download names first"
+                any(.assets[]; .name == "AnkiQuest.apk")' > /dev/null; then
+            echo "::error::Publish the final old-package release as quest-24 with AnkiQuest.apk first"
             exit 1
           fi
 

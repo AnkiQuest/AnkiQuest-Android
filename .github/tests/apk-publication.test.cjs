@@ -39,8 +39,7 @@ function fakeBuild(t) {
     return { dir, apk };
 }
 
-// The new package's download names. AnkiDroid-Quest.apk stays with the old package's final
-// release, quest-24.
+// The new package's download names.
 const names = ["AnkiQuest-arm64-v8a.apk", "AnkiQuest.apk", "AnkiQuest-armeabi-v7a.apk", "AnkiQuest-x86_64.apk", "AnkiQuest-x86.apk", "AnkiQuest.aab"];
 
 // Runs the Assets step and returns its files output, as the nightly action receives it.
