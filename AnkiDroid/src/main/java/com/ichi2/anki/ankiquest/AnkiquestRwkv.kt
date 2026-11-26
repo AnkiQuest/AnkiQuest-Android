@@ -156,7 +156,6 @@ internal object AnkiquestRwkv {
                 }
             }
         }
-    }
 
     /**
      * Downloads [size]'s models from the official release; the caller restores the state afterwards,
