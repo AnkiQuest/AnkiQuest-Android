@@ -16,8 +16,10 @@ import anki.deck_config.DeckConfig
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.libanki.DeckId
+import com.ichi2.anki.libanki.EpochMilliseconds
 import com.ichi2.anki.libanki.EpochSeconds
 import com.ichi2.anki.pages.DeckOptions
 import kotlinx.coroutines.CancellationException
@@ -34,12 +36,15 @@ import timber.log.Timber
  * against `tests/fixtures/optimize_reminder.json`. This is a copy tested against the same cases, as
  * the desktop add-on's `addon/optimize_reminder.py` is; it goes once the app uses the crate's
  * bindings. The inputs come from the collection. The state is the synced setting
- * `optimize_reminder`, one for all the player's devices ([AnkiquestSettingsSync]).
+ * `optimize_reminder`, one for all the player's devices ([AnkiquestSettingsSync]). Its times are
+ * epoch milliseconds, never collection day numbers: collections on different devices can number
+ * their days differently.
  */
 internal object AnkiquestOptimizeReminder {
     const val DAYS = 30
     const val REVIEWS = 1000
     const val SNOOZE_DAYS = 7
+    const val DAY_MS = 86_400_000L
 
     // The collection config key Optimize All Presets sets to the day it ran; 0 or missing is never.
     private const val LAST_OPTIMIZE_KEY = "lastFsrsOptimize"
@@ -52,8 +57,8 @@ internal object AnkiquestOptimizeReminder {
 
     // The stored state's fields.
     private const val KIND = "kind"
-    private const val UNTIL_DAY = "until_day"
-    private const val OPTIMIZED_DAY = "optimized_day"
+    private const val UNTIL_MS = "until_ms"
+    private const val OPTIMIZED_MS = "optimized_ms"
 
     // Answers only: manual (type 4) and rescheduled (type 5) entries are not reviews.
     private const val ANSWERS_SQL = "select count() from revlog where id >= ? and ease > 0 and type < 4"
@@ -69,14 +74,17 @@ internal object AnkiquestOptimizeReminder {
 
         data object Off : State
 
-        /** Hidden while today is before [untilDay]. */
+        /** Hidden while now is before [untilMs]. */
         data class Snoozed(
-            val untilDay: Int,
+            val untilMs: EpochMilliseconds,
         ) : State
 
-        /** Hidden until Optimize All Presets runs again: while it last ran on [optimizedDay]. */
+        /**
+         * Hidden until Optimize All Presets runs again: until a run a day or more after
+         * [optimizedMs], the last one when it was dismissed (null: it had never run).
+         */
         data class Dismissed(
-            val optimizedDay: Int?,
+            val optimizedMs: EpochMilliseconds?,
         ) : State
     }
 
@@ -101,10 +109,10 @@ internal object AnkiquestOptimizeReminder {
         ) : Verdict
     }
 
-    /** What the rule reads from the collection. */
+    /** What the rule reads from the collection, and the time now. */
     data class Inputs(
-        val today: Int,
-        val lastOptimizedDay: Int?,
+        val nowMs: EpochMilliseconds,
+        val lastOptimizedMs: EpochMilliseconds?,
         val reviewsSince: Int,
         val presets: List<Scheduler>,
         val deck: DeckId,
@@ -125,7 +133,8 @@ internal object AnkiquestOptimizeReminder {
         inputs: Inputs,
         state: State,
     ): Verdict {
-        val last = inputs.lastOptimizedDay
+        val now = inputs.nowMs
+        val last = inputs.lastOptimizedMs
         val optimized = inputs.presets.filter { it != Scheduler.SM2 }
 
         // The first rule that holds names the verdict.
@@ -133,9 +142,9 @@ internal object AnkiquestOptimizeReminder {
             when {
                 state == State.Off -> Quiet.OFF
                 optimized.isEmpty() -> Quiet.NO_FSRS
-                state is State.Snoozed && inputs.today < state.untilDay -> Quiet.SNOOZED
-                state is State.Dismissed && state.optimizedDay == last -> Quiet.DISMISSED
-                last != null && inputs.today - last < DAYS -> Quiet.TOO_SOON
+                state is State.Snoozed && now < state.untilMs -> Quiet.SNOOZED
+                state is State.Dismissed && !optimizedSince(state.optimizedMs, last) -> Quiet.DISMISSED
+                last != null && now - last < DAYS * DAY_MS -> Quiet.TOO_SOON
                 inputs.reviewsSince < REVIEWS -> Quiet.TOO_FEW_REVIEWS
                 else -> null
             }
@@ -153,42 +162,69 @@ internal object AnkiquestOptimizeReminder {
         return Verdict.Remind(if (last == null) Since.NEVER else Since.STALE, wording)
     }
 
+    /**
+     * Whether Optimize All Presets ran again after [dismissed]. A run counts only from a day
+     * later: devices in other time zones put the end of the same collection day hours apart.
+     */
+    private fun optimizedSince(
+        dismissed: EpochMilliseconds?,
+        last: EpochMilliseconds?,
+    ): Boolean =
+        when {
+            last == null -> false
+            dismissed == null -> true
+            else -> last >= dismissed + DAY_MS
+        }
+
     fun next(
         state: State,
         event: Event,
-        today: Int,
-        lastOptimizedDay: Int?,
+        nowMs: EpochMilliseconds,
+        lastOptimizedMs: EpochMilliseconds?,
     ): State =
         when {
             event == Event.TURN_OFF -> State.Off
             state == State.Off && event == Event.TURN_ON -> State.On
             state == State.Off || event == Event.TURN_ON -> state
-            event == Event.SNOOZE -> State.Snoozed(today + SNOOZE_DAYS)
-            else -> State.Dismissed(lastOptimizedDay)
+            event == Event.SNOOZE -> State.Snoozed(nowMs + SNOOZE_DAYS * DAY_MS)
+            else -> State.Dismissed(lastOptimizedMs)
         }
 
-    /** Answers on the days after [lastOptimizedDay], or every answer when it never ran. */
-    fun reviewsSince(
-        col: Collection,
+    /**
+     * When Optimize All Presets last ran: the end of the collection day [lastOptimizedDay], since
+     * Anki records only the day. Null when it never ran.
+     */
+    fun optimizedAt(
         today: Int,
         dayCutoff: EpochSeconds,
         lastOptimizedDay: Int?,
-    ): Int {
-        val start = lastOptimizedDay?.let { (dayCutoff - (today - it) * DAY_SECONDS) * SECOND_MS } ?: 0L
-        return col.db.queryLongScalar(ANSWERS_SQL, start).toInt()
+    ): EpochMilliseconds? = lastOptimizedDay?.let { (dayCutoff - (today - it) * DAY_SECONDS) * SECOND_MS }
+
+    /** Answers since [lastOptimizedMs], or every answer when it never ran. */
+    fun reviewsSince(
+        col: Collection,
+        lastOptimizedMs: EpochMilliseconds?,
+    ): Int = col.db.queryLongScalar(ANSWERS_SQL, lastOptimizedMs ?: 0L).toInt()
+
+    /** When Optimize All Presets last ran in [col]'s collection, by [optimizedAt]. */
+    private fun lastOptimized(col: Collection): EpochMilliseconds? {
+        val day = col.config.get<Int>(LAST_OPTIMIZE_KEY)?.takeIf { it > 0 }
+        return optimizedAt(col.sched.today, col.sched.dayCutoff, day)
     }
 
     /** Call inside CollectionManager.withCol, away from the main thread. */
-    fun load(col: Collection): Inputs {
-        val today = col.sched.today
-        val last = col.config.get<Int>(LAST_OPTIMIZE_KEY)?.takeIf { it > 0 }
+    fun load(
+        col: Collection,
+        nowMs: EpochMilliseconds = TimeManager.time.intTimeMS(),
+    ): Inputs {
+        val last = lastOptimized(col)
         val deck = col.decks.selected()
         val configs = col.decks.getDeckConfigsForUpdate(deck)
         val fsrs = if (configs.fsrs) Fsrs.ON else Fsrs.OFF
         return Inputs(
-            today = today,
-            lastOptimizedDay = last,
-            reviewsSince = reviewsSince(col, today, col.sched.dayCutoff, last),
+            nowMs = nowMs,
+            lastOptimizedMs = last,
+            reviewsSince = reviewsSince(col, last),
             presets = configs.allConfigList.map { scheduler(fsrs, it.config.config) },
             deck = deck,
         )
@@ -216,8 +252,8 @@ internal object AnkiquestOptimizeReminder {
     }
 
     /**
-     * [raw] as a state when it is one exactly as [encode] writes it, with days a collection has:
-     * the form the server accepts for the synced setting. Null otherwise.
+     * [raw] as a state when it is one exactly as [encode] writes it, with times in epoch ms: the
+     * form the server accepts for the synced setting. Null otherwise.
      */
     fun parse(raw: Any?): State? {
         val json = raw as? JSONObject ?: return null
@@ -226,44 +262,43 @@ internal object AnkiquestOptimizeReminder {
         return when (kind) {
             "on" -> State.On.takeIf { fields.isEmpty() }
             "off" -> State.Off.takeIf { fields.isEmpty() }
-            "snoozed" -> day(json, UNTIL_DAY, 0)?.takeIf { fields == setOf(UNTIL_DAY) }?.let { State.Snoozed(it) }
+            "snoozed" -> ms(json, UNTIL_MS, 0)?.takeIf { fields == setOf(UNTIL_MS) }?.let { State.Snoozed(it) }
             "dismissed" -> {
-                if (fields != setOf(OPTIMIZED_DAY)) {
+                if (fields != setOf(OPTIMIZED_MS)) {
                     return null
                 }
-                if (json.isNull(OPTIMIZED_DAY)) {
+                if (json.isNull(OPTIMIZED_MS)) {
                     return State.Dismissed(null)
                 }
-                day(json, OPTIMIZED_DAY, 1)?.let { State.Dismissed(it) }
+                ms(json, OPTIMIZED_MS, 1)?.let { State.Dismissed(it) }
             }
             else -> null
         }
     }
 
-    /** A whole-number day from [first], as an [Int]; null for any other value. */
-    private fun day(
+    /** A whole-number time from [first]; null for any other value. */
+    private fun ms(
         json: JSONObject,
         key: String,
-        first: Int,
-    ): Int? {
+        first: Long,
+    ): EpochMilliseconds? {
         val value = json.opt(key)
-        val day = (value as? Int)?.toLong() ?: (value as? Long) ?: return null
-        return day.takeIf { it in first..Int.MAX_VALUE }?.toInt()
+        val ms = (value as? Int)?.toLong() ?: (value as? Long) ?: return null
+        return ms.takeIf { it >= first }
     }
 
     fun encode(state: State): JSONObject =
         when (state) {
             State.On -> JSONObject().put(KIND, "on")
             State.Off -> JSONObject().put(KIND, "off")
-            is State.Snoozed -> JSONObject().put(KIND, "snoozed").put(UNTIL_DAY, state.untilDay)
-            is State.Dismissed -> JSONObject().put(KIND, "dismissed").put(OPTIMIZED_DAY, state.optimizedDay ?: JSONObject.NULL)
+            is State.Snoozed -> JSONObject().put(KIND, "snoozed").put(UNTIL_MS, state.untilMs)
+            is State.Dismissed -> JSONObject().put(KIND, "dismissed").put(OPTIMIZED_MS, state.optimizedMs ?: JSONObject.NULL)
         }
 
-    /** Applies [event] to the stored state, with the collection's day and last optimization. */
+    /** Applies [event] to the stored state, now and with the collection's last optimization. */
     suspend fun record(event: Event) {
-        val (today, last) =
-            withCol { sched.today to config.get<Int>(LAST_OPTIMIZE_KEY)?.takeIf { it > 0 } }
-        remember(next(state(), event, today, last))
+        val last = withCol { lastOptimized(this) }
+        remember(next(state(), event, TimeManager.time.intTimeMS(), last))
     }
 
     /** The reminder's text for [since] and [wording], in the fixture's order. */

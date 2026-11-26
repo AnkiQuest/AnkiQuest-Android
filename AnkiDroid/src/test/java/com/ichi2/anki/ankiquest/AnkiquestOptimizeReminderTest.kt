@@ -10,6 +10,7 @@ import anki.deck_config.DeckConfig
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Event
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Fsrs
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Inputs
@@ -52,6 +53,8 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
 
     private fun JSONObject.day(key: String): Int? = if (isNull(key)) null else getInt(key)
 
+    private fun JSONObject.ms(key: String): Long? = if (isNull(key)) null else getLong(key)
+
     private fun state(json: JSONObject): State = AnkiquestOptimizeReminder.decode(json.toString())
 
     @Test
@@ -61,6 +64,20 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
             listOf(limits.getInt("days"), limits.getInt("reviews"), limits.getInt("snooze_days")),
             listOf(AnkiquestOptimizeReminder.DAYS, AnkiquestOptimizeReminder.REVIEWS, AnkiquestOptimizeReminder.SNOOZE_DAYS),
         )
+        assertEquals(86_400_000L, AnkiquestOptimizeReminder.DAY_MS)
+    }
+
+    @Test
+    fun `every optimization time`() {
+        for (case in cases("optimized_at")) {
+            val found =
+                AnkiquestOptimizeReminder.optimizedAt(
+                    case.getInt("today"),
+                    case.getLong("day_cutoff"),
+                    case.day("last_optimized_day"),
+                )
+            assertEquals(case.ms("expected"), found, case.getString("name"))
+        }
     }
 
     @Test
@@ -96,13 +113,7 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
                     review.getInt("type"),
                 )
             }
-            val found =
-                AnkiquestOptimizeReminder.reviewsSince(
-                    col,
-                    case.getInt("today"),
-                    case.getLong("day_cutoff"),
-                    case.day("last_optimized_day"),
-                )
+            val found = AnkiquestOptimizeReminder.reviewsSince(col, case.ms("last_optimized_ms"))
             assertEquals(case.getInt("expected"), found, case.getString("name"))
         }
     }
@@ -114,7 +125,7 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
                 case.getJSONArray("presets").let { list ->
                     (0 until list.length()).map { Scheduler.valueOf(list.getString(it).uppercase()) }
                 }
-            val inputs = Inputs(case.getInt("today"), case.day("last_optimized_day"), case.getInt("reviews_since"), presets, deck = 1)
+            val inputs = Inputs(case.getLong("now_ms"), case.ms("last_optimized_ms"), case.getInt("reviews_since"), presets, deck = 1)
             val found =
                 when (val verdict = AnkiquestOptimizeReminder.verdict(inputs, state(case.getJSONObject("state")))) {
                     is Verdict.Silent -> JSONObject().put("verdict", verdict.quiet.name.lowercase())
@@ -135,8 +146,8 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
                 AnkiquestOptimizeReminder.next(
                     state(case.getJSONObject("state")),
                     Event.valueOf(case.getString("event").uppercase()),
-                    case.getInt("today"),
-                    case.day("last_optimized_day"),
+                    case.getLong("now_ms"),
+                    case.ms("last_optimized_ms"),
                 )
             assertEquals(case.getJSONObject("expected").toMap(), AnkiquestOptimizeReminder.encode(found).toMap(), case.getString("name"))
             assertEquals(found, state(AnkiquestOptimizeReminder.encode(found)), "${case.getString("name")} stored")
@@ -179,11 +190,14 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
 
     @Test
     fun `the collection gives the last optimization and the preset schedulers`() {
-        assertEquals(null, AnkiquestOptimizeReminder.load(col).lastOptimizedDay)
+        assertEquals(null, AnkiquestOptimizeReminder.load(col).lastOptimizedMs)
         col.config.set("lastFsrsOptimize", 0)
-        assertEquals(null, AnkiquestOptimizeReminder.load(col).lastOptimizedDay, "0 is never")
+        assertEquals(null, AnkiquestOptimizeReminder.load(col).lastOptimizedMs, "0 is never")
+
+        // The end of that collection day, by the collection's day cutoff.
         col.config.set("lastFsrsOptimize", 5)
-        assertEquals(5, AnkiquestOptimizeReminder.load(col).lastOptimizedDay)
+        assertEquals((col.sched.dayCutoff - (col.sched.today - 5) * 86_400L) * 1_000, AnkiquestOptimizeReminder.load(col).lastOptimizedMs)
+        assertEquals(42L, AnkiquestOptimizeReminder.load(col, nowMs = 42).nowMs)
 
         // FSRS off: every preset is SM-2, whatever its RWKV keys say.
         val config = col.decks.configDictForDeckId(col.decks.selected())
@@ -199,7 +213,8 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
     fun `the state is kept in its preference`() {
         val prefs = targetContext.getSharedPreferences("optimize-reminder-test", 0)
         assertEquals(State.On, AnkiquestOptimizeReminder.state(prefs))
-        for (state in listOf(State.Off, State.Snoozed(437), State.Dismissed(null), State.Dismissed(400), State.On)) {
+        val states = listOf(State.Off, State.Snoozed(1_793_788_140_000), State.Dismissed(null), State.Dismissed(1_786_334_400_000), State.On)
+        for (state in states) {
             AnkiquestOptimizeReminder.remember(state, prefs)
             assertEquals(state, AnkiquestOptimizeReminder.state(prefs))
         }
@@ -208,9 +223,11 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
                 "not json",
                 """{"kind": "snoozed"}""",
                 """{"kind": "dismissed"}""",
-                """{"kind": "snoozed", "until_day": "x"}""",
-                """{"kind": "off", "until_day": 3}""",
-                """{"kind": "dismissed", "optimized_day": 0}""",
+                """{"kind": "snoozed", "until_ms": "x"}""",
+                """{"kind": "off", "until_ms": 3}""",
+                """{"kind": "dismissed", "optimized_ms": 0}""",
+                """{"kind": "snoozed", "until_day": 437}""",
+                """{"kind": "dismissed", "optimized_day": 400}""",
             )
         for (stored in broken) {
             assertEquals(State.On, AnkiquestOptimizeReminder.decode(stored), stored)
@@ -243,9 +260,11 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
             val value = case.getJSONObject("incoming").getJSONObject("optimize_reminder").get("value")
             assertEquals(!case.optBoolean("refused"), setting.usable(setting.decode(value)), case.getString("name"))
         }
-        for (raw in listOf("""{"kind": "snoozed", "until_day": true}""", """{"kind": "snoozed", "until_day": 2147483648}""")) {
+        for (raw in listOf("""{"kind": "snoozed", "until_ms": true}""", """{"kind": "snoozed", "until_ms": 9223372036854775808}""")) {
             assertEquals(null, AnkiquestOptimizeReminder.parse(JSONObject(raw)), raw)
         }
+        val latest = JSONObject().put("kind", "snoozed").put("until_ms", Long.MAX_VALUE)
+        assertEquals(State.Snoozed(Long.MAX_VALUE), AnkiquestOptimizeReminder.parse(latest))
     }
 
     @Test
@@ -256,12 +275,12 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
                     .readText(),
             )
         val entry = AnkiquestSettingsSync.entries(answer).getValue("optimize_reminder")
-        assertEquals(State.Snoozed(437), AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER.decode(entry.value))
+        assertEquals(State.Snoozed(1_793_788_140_000), AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER.decode(entry.value))
     }
 
     @Test
     fun `a snooze is a change to sync`() {
-        AnkiquestOptimizeReminder.remember(State.Snoozed(437))
+        AnkiquestOptimizeReminder.remember(State.Snoozed(1_793_788_140_000))
         assertTrue(AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER))
         assertFalse(AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER), "already noted")
     }
@@ -271,7 +290,7 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
         setIntroductionSlidesShown(true)
         BackupManagerTestUtilities.setupSpaceForBackup(targetContext)
         col.config.set("lastFsrsOptimize", 5)
-        val today = col.sched.today
+        val optimized = (col.sched.dayCutoff - (col.sched.today - 5) * 86_400L) * 1_000
         val host =
             startActivityControllerNormallyOpenCollectionWithIntent(
                 DeckPicker::class.java,
@@ -308,15 +327,19 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
         assertEquals(DeckOptions.getIntent(targetContext, 1).component, shadowOf(host).nextStartedActivity.component)
         assertEquals(State.On, AnkiquestOptimizeReminder.state())
 
+        // A snooze counts from the button press.
         dialog = show()
+        val pressed = TimeManager.time.intTimeMS()
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
         advanceRobolectricLooperUntil { AnkiquestOptimizeReminder.state() != State.On }
-        assertEquals(State.Snoozed(today + AnkiquestOptimizeReminder.SNOOZE_DAYS), AnkiquestOptimizeReminder.state())
+        val snoozed = AnkiquestOptimizeReminder.state() as State.Snoozed
+        val week = AnkiquestOptimizeReminder.SNOOZE_DAYS * AnkiquestOptimizeReminder.DAY_MS
+        assertTrue(snoozed.untilMs in pressed + week..TimeManager.time.intTimeMS() + week, snoozed.toString())
 
         dialog = show()
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
         advanceRobolectricLooperUntil { AnkiquestOptimizeReminder.state() is State.Dismissed }
-        assertEquals(State.Dismissed(5), AnkiquestOptimizeReminder.state())
+        assertEquals(State.Dismissed(optimized), AnkiquestOptimizeReminder.state())
         BackupManagerTestUtilities.reset()
     }
 
