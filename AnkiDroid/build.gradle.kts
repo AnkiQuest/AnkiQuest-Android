@@ -4,6 +4,7 @@
 import com.android.build.api.variant.FilterConfiguration.FilterType
 import com.ichi2.anki.gradle.AnkiquestArtTask
 import com.ichi2.anki.gradle.AnkiquestBrandingTask
+import com.ichi2.anki.gradle.UpstreamCommit
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.addAnkiBackendDependencies
@@ -83,12 +84,24 @@ val gitCommitHash =
 val upstreamCommitHash =
     providers
         .gradleProperty("upstreamCommit")
-        .map { sha ->
-            if (!sha.matches(Regex("[0-9a-f]{40}"))) {
-                throw GradleException("upstreamCommit must be a full commit hash")
+        .map(UpstreamCommit::of)
+        .orElse(UpstreamCommit.UNKNOWN)
+
+/**
+ * Where the build gets its updates: -PankiquestUpdates=github|none, default none.
+ * Only the GitHub release builds (ankiquest_apk.yml) pass github. Store builds (F-Droid,
+ * IzzyOnDroid, Play) and local builds stay none, so they never update themselves and do not
+ * request REQUEST_INSTALL_PACKAGES. See AnkiquestUpdater.Source.
+ */
+val ankiquestUpdates =
+    providers
+        .gradleProperty("ankiquestUpdates")
+        .map { source ->
+            if (source !in listOf("github", "none")) {
+                throw GradleException("ankiquestUpdates must be github or none")
             }
-            sha
-        }.orElse("unknown")
+            source
+        }.orElse("none")
 
 /**
  * Epoch millis of the build. Displayed on the 'About' screen.
@@ -154,6 +167,7 @@ android {
         buildConfigField("Boolean", "SHOW_DONATE_LINKS", "true")
         buildConfigField("int", "ANKIQUEST_RELEASE", (project.findProperty("ankiquestRelease") ?: "0").toString())
         buildConfigField("int", "ANKIQUEST_NIGHTLY", (project.findProperty("ankiquestNightly") ?: "0").toString())
+        buildConfigField("String", "ANKIQUEST_UPDATES", "\"${ankiquestUpdates.get()}\"")
         resValue("string", "app_name", "AnkiDroid")
 
         // The version number is of the form:
@@ -423,11 +437,18 @@ android {
     }
 }
 
-// AnkiQuest: the quest build (-PcustomSuffix=quest) adds src/quest, with the launcher icon and the updater's install permission.
+// AnkiQuest: the quest build (-PcustomSuffix=quest) adds src/quest, with the launcher icon.
 if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
     androidComponents.onVariants { variant ->
         variant.sources.res?.addStaticSourceDirectory("src/quest/res")
         variant.sources.manifests.addStaticManifestFile("src/quest/AndroidManifest.xml")
+    }
+}
+
+// AnkiQuest: only a self-updating build (-PankiquestUpdates=github) requests the install permission.
+if (ankiquestUpdates.get() == "github") {
+    androidComponents.onVariants { variant ->
+        variant.sources.manifests.addStaticManifestFile("src/githubUpdates/AndroidManifest.xml")
     }
 }
 

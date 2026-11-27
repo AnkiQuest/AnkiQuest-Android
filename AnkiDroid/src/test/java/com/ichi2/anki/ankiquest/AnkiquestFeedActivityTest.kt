@@ -93,6 +93,22 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a feed unlocked by the first upload drops the line on refresh`() {
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns
+            page.copy(items = emptyList(), attention = emptyList(), lock = AnkiquestLock.UPLOAD_FIRST)
+        val feed = launch()
+        assertTrue(feed.hasText(feed.getString(R.string.aq_upload_first)))
+
+        // The upload reached the server, which now shows friends' moments.
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns page
+        feed.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_friends_feed_loading).isVisible }
+
+        assertFalse(feed.hasText(feed.getString(R.string.aq_upload_first)))
+        assertTrue(feed.hasText("🎉 Cerro shared a win"))
+    }
+
+    @Test
     fun `cheering a friend's deck completion sends a cheer and shows it`() {
         val completion =
             AnkiquestFeed.item(
