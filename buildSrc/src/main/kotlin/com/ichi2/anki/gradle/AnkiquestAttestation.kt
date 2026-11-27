@@ -15,6 +15,10 @@ import dev.sigstore.tuf.SigstoreTufClient
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
+import org.gradle.api.attributes.java.TargetJvmEnvironment
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
@@ -116,10 +120,20 @@ fun Project.rulesAttestationClasspath(): Configuration {
         configurations.create("ankiquestAttestation") {
             isCanBeConsumed = false
             isCanBeResolved = true
+            // Jars for a standard JVM, so Guava and the rest pick their JVM variant.
+            attributes {
+                attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class.java, Usage.JAVA_RUNTIME))
+                attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category::class.java, Category.LIBRARY))
+                attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements::class.java, LibraryElements.JAR))
+                attribute(
+                    TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                    objects.named(TargetJvmEnvironment::class.java, TargetJvmEnvironment.STANDARD_JVM),
+                )
+            }
         }
     dependencies.add(configuration.name, "dev.sigstore:sigstore-java:${libsVersionFor("sigstoreJava")}") {
-        // The transports of signing, not needed to verify a bundle.
-        exclude(group = "io.grpc")
+        // Signing transports, not needed to verify a bundle.
+        exclude(group = "io.grpc", module = "grpc-netty-shaded")
         exclude(group = "com.google.oauth-client", module = "google-oauth-client-jetty")
     }
     dependencies.add(configuration.name, "org.jetbrains.kotlin:kotlin-stdlib:$embeddedKotlinVersion")

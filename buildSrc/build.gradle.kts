@@ -34,12 +34,13 @@ dependencies {
 }
 
 // The class path the build gives the attestation check (rulesAttestationClasspath), for its test.
-val attestationClasspath by configurations.creating {
-    isCanBeConsumed = false
-}
+val attestationClasspath =
+    configurations.create("attestationClasspath") {
+        isCanBeConsumed = false
+    }
 dependencies {
     attestationClasspath(libs.sigstore.java) {
-        exclude(group = "io.grpc")
+        exclude(group = "io.grpc", module = "grpc-netty-shaded")
         exclude(group = "com.google.oauth-client", module = "google-oauth-client-jetty")
     }
     attestationClasspath("org.jetbrains.kotlin:kotlin-stdlib:$embeddedKotlinVersion")

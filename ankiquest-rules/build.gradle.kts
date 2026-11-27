@@ -81,6 +81,9 @@ configurations.consumable("ankiquestRulesHostElements") {
 }
 
 dependencies {
+    // Only so the ExperimentalCoroutinesApi opt-in every module gets resolves; nothing here uses it.
+    compileOnly(libs.kotlinx.coroutines.core)
+
     // The bindings call their library through JNA: the AAR, with JNA's library per ABI.
     implementation(libs.jna) {
         artifact {
