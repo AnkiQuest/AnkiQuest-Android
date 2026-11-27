@@ -46,6 +46,33 @@ class AnkiquestMoodTest : RobolectricTest() {
     private inline fun <reified T : Enum<T>> named(name: String): T = enumValueOf(name.uppercase())
 
     @Test
+    fun `the streak share pictures follow the shared style and cases`() {
+        // The streak share picture (AnkiquestPicture): its ink, its number's gold, its hero size and
+        // every streak's heat, pose and next milestone, as streak_moods.json pins them.
+        val style = fixtures.getJSONObject("picture_style")
+        fun hex(color: Int) = "#%06X".format(0xFFFFFF and color)
+        assertEquals(style.getString("ink"), hex(targetContext.getColor(R.color.aq_heat_ink)))
+        assertEquals(style.getString("number"), hex(targetContext.getColor(R.color.aq_heat_number)))
+        assertEquals(style.getInt("hero"), AnkiquestPicture.STREAK_HERO)
+        for (case in cases("pictures")) {
+            val streak = case.getInt("streak")
+            val heat = AnkiquestMood.heat(streak)
+            assertEquals(case.getString("top"), hex(targetContext.getColor(heat.top)), "streak $streak")
+            assertEquals(case.getString("bottom"), hex(targetContext.getColor(heat.bottom)), "streak $streak")
+            assertEquals(
+                case.getString("pose"),
+                targetContext.resources.getResourceEntryName(AnkiquestCompanion.art(heat.pose, AnkiquestCompanion.Choice.AKI)),
+                "streak $streak",
+            )
+            if (case.isNull("next")) {
+                assertNull(AnkiquestMood.next(streak), "streak $streak")
+            } else {
+                assertEquals(case.getInt("next"), AnkiquestMood.next(streak), "streak $streak")
+            }
+        }
+    }
+
+    @Test
     fun `every shared mood and pose matches`() {
         for (case in cases("moods")) {
             val name = case.getString("name")

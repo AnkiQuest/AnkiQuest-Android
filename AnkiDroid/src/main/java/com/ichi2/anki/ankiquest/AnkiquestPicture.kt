@@ -30,7 +30,7 @@ internal object AnkiquestPicture {
     private const val BRAND_SIZE = 36f
 
     /** A streak picture's Aki and number. */
-    private const val STREAK_HERO = 400
+    internal const val STREAK_HERO = 400
     private const val NUMBER_SIZE = 240f
     private val numberFont: Typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
 
