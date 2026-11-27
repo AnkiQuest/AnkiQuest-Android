@@ -233,7 +233,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 // The streak widget's mood needs the run of frozen days and of days away before
                 // today, how yesterday ended (the night rule) and the freezes left.
                 .put("frozen_days", AnkiquestMood.frozenRun(profile.optJSONArray("heatmap")))
-                .put("days_away", AnkiquestMood.awayRun(profile.optJSONArray("heatmap")))
+                .put("days_away", AnkiquestMood.awayRun(profile))
                 .put("yesterday", AnkiquestMood.yesterday(profile.optJSONArray("heatmap")).name.lowercase())
                 .put("freezes", if (profile.optBoolean("freezes_enabled")) profile.optInt("stored_freezes").coerceAtLeast(0) else 0)
                 .put(

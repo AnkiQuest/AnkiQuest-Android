@@ -68,7 +68,7 @@ internal object AnkiquestAki {
                 day,
                 AnkiquestMood.frozenRun(heatmap),
                 reached,
-                daysAway = AnkiquestMood.awayRun(heatmap),
+                daysAway = AnkiquestMood.awayRun(current),
                 freezes = freezes,
                 dayLeftMs = dayLeft,
                 night = night,

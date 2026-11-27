@@ -130,6 +130,18 @@ internal object AnkiquestMood {
     /** Whether today's daily goal is reached. */
     enum class Goal { OPEN, REACHED }
 
+    /** Whether the player has ever studied: the profile's `lifetime.reviews > 0` (streak_moods.json `away_run`). */
+    enum class Studied {
+        NEVER,
+        EVER,
+        ;
+
+        companion object {
+            fun of(profile: JSONObject?): Studied =
+                if ((profile?.optJSONObject("lifetime")?.optLong("reviews") ?: 0) > 0) EVER else NEVER
+        }
+    }
+
     /**
      * How far today's review time has come toward the streak minimum. Each stage starts at
      * [percent] of the minimum, as `stages` in streak_moods.json says.
@@ -565,11 +577,19 @@ internal object AnkiquestMood {
         return days
     }
 
+    /** Days without reviews in a row ending yesterday in a [profile]'s heatmap, as [awayRun] counts them. */
+    fun awayRun(profile: JSONObject?): Int = awayRun(profile?.optJSONArray("heatmap"), Studied.of(profile))
+
     /**
      * Days without reviews in a row ending yesterday in a profile's [heatmap], whose last cell is
-     * today; 0 when no earlier day was studied (a new player is not away).
+     * today. Without a study day in the heatmap, a player who [studied] before it is away for
+     * every day of it before today, and one who never studied (a new player) is not away.
+     * Without a heatmap nothing is known: 0.
      */
-    fun awayRun(heatmap: JSONArray?): Int {
+    fun awayRun(
+        heatmap: JSONArray?,
+        studied: Studied,
+    ): Int {
         if (heatmap == null) {
             return 0
         }
@@ -579,7 +599,12 @@ internal object AnkiquestMood {
                 return last - index
             }
         }
-        return 0
+
+        // No study day in the heatmap: away since before it, or never studied at all.
+        return when (studied) {
+            Studied.EVER -> last + 1
+            Studied.NEVER -> 0
+        }
     }
 
     /** How yesterday ended, from a profile's [heatmap] whose last cell is today. */

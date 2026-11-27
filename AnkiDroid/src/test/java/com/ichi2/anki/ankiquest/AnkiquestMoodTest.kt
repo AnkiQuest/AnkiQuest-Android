@@ -118,8 +118,17 @@ class AnkiquestMoodTest : RobolectricTest() {
     @Test
     fun `every shared away run matches`() {
         for (case in cases("away_run")) {
-            assertEquals(case.getInt("expected"), AnkiquestMood.awayRun(case.optJSONArray("heatmap")), case.getString("name"))
+            val studied = if (case.getBoolean("studied")) AnkiquestMood.Studied.EVER else AnkiquestMood.Studied.NEVER
+            assertEquals(case.getInt("expected"), AnkiquestMood.awayRun(case.optJSONArray("heatmap"), studied), case.getString("name"))
         }
+    }
+
+    @Test
+    fun `studied is lifetime reviews above zero`() {
+        assertEquals(AnkiquestMood.Studied.NEVER, AnkiquestMood.Studied.of(null))
+        assertEquals(AnkiquestMood.Studied.NEVER, AnkiquestMood.Studied.of(JSONObject()))
+        assertEquals(AnkiquestMood.Studied.NEVER, AnkiquestMood.Studied.of(JSONObject("{\"lifetime\":{\"reviews\":0}}")))
+        assertEquals(AnkiquestMood.Studied.EVER, AnkiquestMood.Studied.of(JSONObject("{\"lifetime\":{\"reviews\":1}}")))
     }
 
     @Test
