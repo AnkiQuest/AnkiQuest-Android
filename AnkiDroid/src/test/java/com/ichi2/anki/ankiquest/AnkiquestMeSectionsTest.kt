@@ -225,6 +225,15 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
     }
 
     @Test
+    fun `sections read study history, records, study time, as the add-on's Progress`() {
+        val me = launch(AnkiquestMeSections.intent(targetContext, AnkiquestMeSections.Destination.RECORDS)).get()
+        awaitSections(me)
+        val titles = listOf(R.string.aq_history_title, R.string.aq_records_title, R.string.aq_study_time_title).map { me.getString(it) }
+        val headings = me.views<TextView>().filter { it.isClickable }.map { it.text.toString() }.filter { it in titles }
+        assertEquals(titles, headings)
+    }
+
+    @Test
     fun `legacy explicit activities redirect to the matching Me section`() {
         val records =
             startRegularActivity<AnkiquestRecordsActivity>(

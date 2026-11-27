@@ -37,24 +37,27 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-/** Me owns the sections; each loads on expansion and keeps its filters through profile refreshes. */
+/**
+ * Me owns the sections; each loads on expansion and keeps its filters through profile refreshes.
+ * They read Study history, Records, Study time, as the add-on's Progress window does.
+ */
 internal class AnkiquestMeSections(
     private val activity: AnkiActivity,
     savedState: Bundle?,
 ) {
-    enum class Destination { RECORDS, HISTORY, STUDY_TIME }
+    enum class Destination { HISTORY, RECORDS, STUDY_TIME }
 
     private val restored = savedState?.takeIf { it.getString(STATE_ACCOUNT) == AnkiquestHomeData.account()?.scope }
     private val initial = Destination.entries.firstOrNull { it.name == activity.intent.getStringExtra(EXTRA_SECTION) }
     private var pendingTarget = initial.takeIf { savedState == null }
-    private val records = RecordsSection(activity, restored, initial)
     private val history = HistorySection(activity, restored, initial)
+    private val records = RecordsSection(activity, restored, initial)
     private val studyTime = StudyTimeSection(activity, restored, initial)
     private val root =
         LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            addView(records.root)
             addView(history.root)
+            addView(records.root)
             addView(studyTime.root)
         }
 
@@ -64,22 +67,22 @@ internal class AnkiquestMeSections(
     }
 
     fun refresh() {
-        records.refresh()
         history.refresh()
+        records.refresh()
         studyTime.refresh()
     }
 
     fun save(out: Bundle) {
         out.putString(STATE_ACCOUNT, AnkiquestHomeData.account()?.scope)
-        records.save(out)
         history.save(out)
+        records.save(out)
         studyTime.save(out)
     }
 
     fun showTarget() {
         when (pendingTarget) {
-            Destination.RECORDS -> records.showHeader()
             Destination.HISTORY -> history.showHeader()
+            Destination.RECORDS -> records.showHeader()
             Destination.STUDY_TIME -> studyTime.showHeader()
             null -> return
         }
