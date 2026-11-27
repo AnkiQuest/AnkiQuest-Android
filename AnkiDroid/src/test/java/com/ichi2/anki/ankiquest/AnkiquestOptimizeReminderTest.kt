@@ -2,11 +2,14 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.app.Application
 import android.content.Intent
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import anki.deck_config.DeckConfig
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -29,6 +32,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -287,8 +291,16 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
 
     @Test
     fun `a snooze is a change to sync`() {
-        AnkiquestOptimizeReminder.remember(State.Snoozed(1_793_788_140_000))
-        assertTrue(AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER))
+        AnkiquestSettingsSync.listen(ApplicationProvider.getApplicationContext<Application>())
+        val snoozed = State.Snoozed(1_793_788_140_000)
+        val before = TimeManager.time.intTimeMS()
+        AnkiquestOptimizeReminder.remember(snoozed)
+
+        // The write itself stamps the change, once: noting it again finds nothing new.
+        val changed = JSONObject(assertNotNull(AnkiDroidApp.sharedPrefs().getString(AnkiquestSettingsSync.PREF_CHANGED, null)))
+        val record = changed.getJSONObject("optimize_reminder")
+        assertEquals(AnkiquestOptimizeReminder.encode(snoozed).toMap(), record.getJSONObject("value").toMap())
+        assertTrue(record.getLong("at") in before..TimeManager.time.intTimeMS(), record.toString())
         assertFalse(AnkiquestSettingsSync.note(AnkiquestSettingsSync.Setting.OPTIMIZE_REMINDER), "already noted")
     }
 
