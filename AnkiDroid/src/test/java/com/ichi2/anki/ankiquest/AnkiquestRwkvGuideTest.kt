@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.annotation.SuppressLint
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
@@ -45,6 +46,9 @@ class AnkiquestRwkvGuideTest : RobolectricTest(loadBackend = false) {
         assertTrue("recall" in page, page)
     }
 
+    // The guide's body is English only, so its figures use a dot whatever the JVM's locale:
+    // Locale.ROOT formats the expected text the way the asset writes it, not text a player sees.
+    @SuppressLint("LocaleRootUsage")
     @Test
     fun `the guide's sizes match the model lock list`() {
         val page = AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(targetContext, AnkiquestReleaseNotes.GUIDE))
