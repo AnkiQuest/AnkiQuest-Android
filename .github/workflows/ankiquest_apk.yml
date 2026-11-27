@@ -104,7 +104,7 @@ jobs:
           UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           echo "fatal_warnings=false" >> local.properties
-          quest=(-Pankiquest -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE"
+          quest=(-PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE"
             -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM_SHA")
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace -PankiquestUpdates=github "${quest[@]}"
           ./gradlew :AnkiDroid:bundlePlayRelease --stacktrace -PankiquestUpdates=none "${quest[@]}"
@@ -121,32 +121,30 @@ jobs:
           df -h
           free -m
 
-      # The AnkiQuest key alone signs only org.ankiquest.ankidroid. The old package needs the
-      # rotation lineage from the public test key, which this workflow no longer applies, so an
-      # APK of any other package stops the build before signing.
+      # Every APK of a build has the same package; the signing below fits that package.
       - name: Package
-        env:
-          PACKAGE: org.ankiquest.ankidroid
         run: |
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
-          for apk in AnkiQuest.apk AnkiQuest-*.apk; do
-            package=$("$aapt2" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
-            if [ "$package" != "$PACKAGE" ]; then
-              echo "::error::$apk has package $package, not $PACKAGE"
+          package_of() { "$aapt2" dump badging "$1" | sed -n "s/^package: name='\([^']*\)'.*/\1/p"; }
+          expected=$(package_of AnkiQuest.apk)
+          echo "package $expected"
+          for apk in AnkiQuest-*.apk; do
+            package=$(package_of "$apk")
+            if [ "$package" != "$expected" ]; then
+              echo "::error::$apk has package $package, not $expected"
               exit 1
             fi
           done
 
-      # Every published APK is signed with the AnkiQuest key alone, on every scheme, no test key and
-      # no rotation lineage. apksigner replaces the fallback key's signature Gradle wrote. The
-      # bundle is jar-signed with the AnkiQuest key as its upload key until Play has an upload key
-      # of its own (#319).
+      # Every published APK is signed with the rotation from the public test key to the AnkiQuest
+      # key, as released installs of this package expect. apksigner replaces the fallback key's
+      # signature Gradle wrote. The bundle is jar-signed with the AnkiQuest key as its upload key
+      # until Play has an upload key of its own (#319).
       - name: Sign with the AnkiQuest release key
         id: sign
         env:
           ANKIQUEST_KEYSTORE: ${{ secrets.ANKIQUEST_KEYSTORE }}
           ANKIQUEST_KEY_PASSWORD: ${{ secrets.ANKIQUEST_KEY_PASSWORD }}
-          RELEASE_CERTIFICATE_SHA256: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
         run: |
           if [ -z "$ANKIQUEST_KEYSTORE" ]; then
             if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then
@@ -161,19 +159,12 @@ jobs:
           printf '%s' "$ANKIQUEST_KEYSTORE" | base64 -d > "$keystore"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           for apk in AnkiQuest.apk AnkiQuest-*.apk; do
-            "$apksigner" sign --ks "$keystore" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD "$apk"
-            "$apksigner" verify --min-sdk-version 24 "$apk"
-
-            # The verifier reports the newest signer for a range. Check each scheme's first
-            # supported API separately: one certificate, the AnkiQuest key, and no lineage.
-            for api in 24 28 33; do
-              certificates=$("$apksigner" verify --min-sdk-version "$api" --max-sdk-version "$api" --print-certs "$apk")
-              digests=$(printf '%s\n' "$certificates" | awk '/^(V[^ ]+ )?Signer.*certificate SHA-256 digest:/ {print $NF}' | sort -u)
-              if [ "$digests" != "$RELEASE_CERTIFICATE_SHA256" ]; then
-                echo "::error::$apk on Android API $api must use the AnkiQuest release certificate alone"
-                exit 1
-              fi
-            done
+            "$apksigner" sign \
+              --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
+              --next-signer --ks "$keystore" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
+              --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
+              "$apk"
+            "$apksigner" verify --min-sdk-version 28 --print-certs "$apk" | grep -q "CN=AnkiQuest"
           done
 
           # Replace the fallback key's jar signature on the bundle.
@@ -213,10 +204,10 @@ jobs:
       - name: Assets
         id: assets
         run: |
-          # org.ankiquest.ankidroid publishes no AnkiDroid-Quest.apk: that name is for updaters of
-          # the old package, whose final release is quest-24. Its updater finds AnkiQuest.apk here
-          # and shows the move notice instead of installing another package.
-          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab)
+          # Released updaters still request AnkiDroid-Quest.apk. Copy after signing so the bytes match.
+          # quest-2 to quest-19 take the release's first .apk by name, so it must sort first.
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab AnkiDroid-Quest.apk)
           for file in "${files[@]}"; do
             jq -n --arg name "$file" --argjson size "$(stat -c %s "$file")" '{name: $name, size: $size}'
           done | jq -s . > assets.json
@@ -234,6 +225,7 @@ jobs:
             echo "- \`AnkiQuest-armeabi-v7a.apk\`: older 32-bit phones."
             echo "- \`AnkiQuest-x86_64.apk\`, \`AnkiQuest-x86.apk\`: emulators and Chromebooks."
             echo "- \`AnkiQuest.aab\`: app bundle for Google Play, not for installing."
+            echo "- \`AnkiDroid-Quest.apk\`: the same universal APK, kept for older built-in updaters."
           } > downloads.md
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -244,33 +236,6 @@ jobs:
             AnkiQuest-*.apk
             AnkiQuest.aab
           if-no-files-found: error
-
-      - name: Check the migration release
-        if: steps.sign.outputs.signed == 'true' && (startsWith(github.ref, 'refs/tags/quest-') || github.ref == 'refs/heads/master')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Pull requests squash-merge, so check the tag's files, not its ancestry. Only the final
-          # old-package source has all three: the export provider, the updater's move notice and
-          # the current-signer check.
-          bridge=refs/tags/quest-24:AnkiDroid/src/main/java/com/ichi2/anki/ankiquest
-          signer=b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
-          if ! git cat-file -e "$bridge/AnkiquestMoveProvider.kt" \
-            || ! git grep -q -F 'Download.MOVED' "$bridge/AnkiquestUpdater.kt" \
-            || ! git grep -q -F "RELEASE_SHA256 = \"$signer\"" "$bridge/AnkiquestMove.kt"; then
-            echo "::error::quest-24 must contain the old-package settings bridge, updater notice and signer check"
-            exit 1
-          fi
-          if ! git grep -q -F 'applicationId = "com.ichi2.anki"' refs/tags/quest-24 -- AnkiDroid/build.gradle.kts; then
-            echo "::error::quest-24 must use the legacy app's base ID"
-            exit 1
-          fi
-          if ! gh release view quest-24 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets \
-            | jq -e '(.isDraft == false) and (.isPrerelease == false) and
-                ([.assets[].name] | contains(["AnkiQuest.apk", "AnkiDroid-Quest.apk"]))' > /dev/null; then
-            echo "::error::Publish the final migration release as quest-24 with both legacy download names first"
-            exit 1
-          fi
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/quest-')

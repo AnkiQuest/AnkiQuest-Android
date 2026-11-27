@@ -196,7 +196,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
         every { AnkiquestShare.cardPng(any(), any(), picture) } returns "the server's PNG".toByteArray()
         // Robolectric's cache folder is not always under the provider's root, so the picture's address is made up.
-        val stream = "content://org.ankiquest.ankidroid.debug.apkgfileprovider/cache-directory/ankiquest-share/win.png".toUri()
+        val stream = "content://com.ichi2.anki.debug.apkgfileprovider/cache-directory/ankiquest-share/win.png".toUri()
         mockkStatic(FileProvider::class)
         every { FileProvider.getUriForFile(any(), any(), any()) } returns stream
         val card = launch()

@@ -497,7 +497,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
 
     @Test
     fun `an apk of another package shows the move instead of installing`() {
-        val shown = download(packageName = "org.ankiquest.ankidroid.other")
+        val shown = download(packageName = "dev.hilll.anki.other")
         assertEquals(targetContext.getString(R.string.ankiquest_moved_title), shown.title)
         val message = assertNotNull(shown.message)
         assertContains(message, "shared AnkiDroid folder")

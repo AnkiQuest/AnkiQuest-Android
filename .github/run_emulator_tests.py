@@ -11,7 +11,7 @@ import time
 
 
 def read_coverage():
-    shell = ["adb", "shell", "-T", "run-as", "org.ankiquest.ankidroid"]
+    shell = ["adb", "shell", "-T", "run-as", "com.ichi2.anki"]
     for attempt in range(1, 6):
         try:
             checksum = subprocess.check_output([*shell, "sha256sum", "coverage.ec"], timeout=30).split()
