@@ -61,6 +61,9 @@ runs:
         path: .ankiquest-art-cache
         key: ${{ steps.restore.outputs.cache-primary-key }}
 
+    # TEMPORARY, drop before merging.
+    - uses: ./.github/actions/ankiquest-rules-preview
+
     # A fixed value, not input, so nothing a pull request controls reaches the
     # environment file.
     - name: Use the art cache

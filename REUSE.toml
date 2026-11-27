@@ -14,3 +14,12 @@ path = "docs/art-archive/anki-tan/*.webp"
 precedence = "override"
 SPDX-FileCopyrightText = "Shigeyuki <https://www.patreon.com/Shigeyuki>"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# A GitHub build provenance bundle and Sigstore's public trust root, from sigstore-java's tests
+# (sigstore/sigstore-java v2.4.0, sigstore-java/src/test/resources/dev/sigstore), for the rules
+# attestation test in buildSrc.
+[[annotations]]
+path = "buildSrc/src/test/resources/sigstore/*.json"
+precedence = "override"
+SPDX-FileCopyrightText = "The Sigstore Authors"
+SPDX-License-Identifier = "Apache-2.0"

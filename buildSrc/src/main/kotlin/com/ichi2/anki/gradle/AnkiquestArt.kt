@@ -74,11 +74,11 @@ object AnkiquestArt {
     fun fetch(
         asset: Asset,
         cache: File,
-        download: (URI) -> ByteArray = { url -> url.toURL().openStream().use { it.readBytes() } },
+        download: (URI) -> ByteArray = ::get,
     ): File {
         // A cached copy counts only with the pinned hash, so a damaged file is fetched again.
         val cached = cache.resolve(asset.sha256)
-        if (cached.isFile && sha256(cached.readBytes()) == asset.sha256) {
+        if (isCached(cache, asset.sha256)) {
             return cached
         }
 
@@ -91,6 +91,20 @@ object AnkiquestArt {
         cached.writeBytes(bytes)
         return cached
     }
+
+    /**
+     * Whether [cache] holds the bytes with SHA-256 [sha256] (one file per asset, named by its hash),
+     * undamaged. AnkiQuest-Server's rules releases are cached the same way ([AnkiquestRules]).
+     */
+    fun isCached(
+        cache: File,
+        sha256: String,
+    ): Boolean {
+        val cached = cache.resolve(sha256)
+        return cached.isFile && sha256(cached.readBytes()) == sha256
+    }
+
+    fun get(url: URI): ByteArray = url.toURL().openStream().use { it.readBytes() }
 
     /**
      * Unpacks the drawables of [zip] into [res]`/drawable-nodpi` and answers their names. An entry

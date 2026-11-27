@@ -8,6 +8,7 @@ import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.addAnkiBackendDependencies
 import com.ichi2.anki.gradle.isCoverageEnabled
+import com.ichi2.anki.gradle.useRulesHostLibrary
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -420,6 +421,11 @@ android {
         resources {
             excludes += listOf("META-INF/DEPENDENCIES")
         }
+        // JNA's AAR also carries ABIs the app doesn't build (armeabi, mips, mips64); without the
+        // shared rules' library a device of those would install the universal APK and fail.
+        jniLibs {
+            excludes += listOf("lib/armeabi/**", "lib/mips/**", "lib/mips64/**")
+        }
     }
 }
 
@@ -463,6 +469,10 @@ androidComponents.onVariants { variant ->
         }
     variant.sources.res?.addGeneratedSourceDirectory(art, AnkiquestArtTask::resDir)
 }
+
+// AnkiQuest: the shared rules come from :ankiquest-rules; the unit tests load this machine's desktop
+// library from the same release (buildSrc AnkiquestRules.kt).
+useRulesHostLibrary()
 
 androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
     // We want the same version stream for all ABIs in debug but for release we can split them
@@ -885,6 +895,11 @@ dependencies {
 
     // Backend libraries
     addAnkiBackendDependencies(project)
+
+    // The shared rules, through their bindings. Those call their library through JNA, whose AAR
+    // comes with the module; the unit tests also need the jar, with the desktop JVMs' JNA library.
+    implementation(project(":ankiquest-rules"))
+    testImplementation(libs.jna)
 
     // May need a resolution strategy for support libs to our versions
     implementation(libs.acra.limiter)

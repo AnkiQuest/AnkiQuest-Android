@@ -102,7 +102,7 @@ internal object AnkiquestSettingsSync {
         OPTIMIZE_REMINDER(
             "optimize_reminder",
             AnkiquestOptimizeReminder.PREF_STATE,
-            AnkiquestOptimizeReminder.State.On,
+            AnkiquestOptimizeRule.State.On,
             Storage.OPTIMIZE_REMINDER,
         ),
         ;
@@ -113,7 +113,7 @@ internal object AnkiquestSettingsSync {
                 Storage.BOOLEAN -> value is Boolean
                 Storage.NUMBER_TEXT -> value is Int && range?.contains(value) != false
                 Storage.COUNTDOWNS -> value is AnkiquestCountdowns.Countdowns
-                Storage.OPTIMIZE_REMINDER -> value is AnkiquestOptimizeReminder.State
+                Storage.OPTIMIZE_REMINDER -> value is AnkiquestOptimizeRule.State
             }
 
         /** [raw] from JSON as this app keeps it; a value it cannot use stays as it is, so [usable] refuses it. */
@@ -128,7 +128,7 @@ internal object AnkiquestSettingsSync {
         fun encode(value: Any): Any =
             when (storage) {
                 Storage.COUNTDOWNS -> (value as AnkiquestCountdowns.Countdowns).toJson()
-                Storage.OPTIMIZE_REMINDER -> AnkiquestOptimizeReminder.encode(value as AnkiquestOptimizeReminder.State)
+                Storage.OPTIMIZE_REMINDER -> AnkiquestOptimizeReminder.encode(value as AnkiquestOptimizeRule.State)
                 Storage.BOOLEAN, Storage.NUMBER_TEXT -> value
             }
 

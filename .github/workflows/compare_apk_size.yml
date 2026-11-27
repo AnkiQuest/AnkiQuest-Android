@@ -56,6 +56,9 @@ jobs:
           fetch-depth: 0
           ref: 'refs/pull/${{ github.event.inputs.prNumber }}/head'
 
+      # TEMPORARY, drop before merging: the shared rules preview.
+      - uses: ./.github/actions/ankiquest-rules-preview
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         timeout-minutes: 5
@@ -79,7 +82,10 @@ jobs:
       - name: Checkout Baseline for PR
         # we want to checkout the base for this PR on main, not just main - as main moves over time
         # and we want to know the isolated affect of this PR regardless of when the workflow executes
-        run: git checkout `git merge-base origin/main HEAD`
+        # AnkiQuest: the base is the default branch, master here.
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: git checkout "$(git merge-base "origin/$DEFAULT_BRANCH" HEAD)"
 
       - name: Assemble Baseline APK
         # This makes sure we fetch gradle network resources with a retry

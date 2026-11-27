@@ -16,6 +16,15 @@ import anki.deck_config.DeckConfig
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Event
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Fsrs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Inputs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Preset
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Scheduler
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Since
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.State
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Verdict
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Wording
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.libanki.DeckId
@@ -32,28 +41,20 @@ import timber.log.Timber
  * Reminds the player to run Anki's Optimize All Presets once the collection's FSRS parameters are
  * 30 days and 1,000 reviews old.
  *
- * The rule is AnkiQuest-Server's `crates/rules` (`optimize_verdict`, `optimize_next`), tested
- * against `tests/fixtures/optimize_reminder.json`. This is a copy tested against the same cases, as
- * the desktop add-on's `addon/optimize_reminder.py` is; it goes once the app uses the crate's
- * bindings. The inputs come from the collection. The state is the synced setting
+ * The rule is AnkiQuest-Server's `crates/rules` (`optimize_verdict`, `optimize_next`), which the
+ * server and the desktop add-on follow too, called through [AnkiquestSharedRules] and tested
+ * against `tests/fixtures/optimize_reminder.json`. The inputs come from the collection. The state is the synced setting
  * `optimize_reminder`, one for all the player's devices ([AnkiquestSettingsSync]). Its times are
  * epoch milliseconds, never collection day numbers: collections on different devices can number
  * their days differently.
  */
 internal object AnkiquestOptimizeReminder {
-    const val DAYS = 30
-    const val REVIEWS = 1000
-    const val SNOOZE_DAYS = 7
-    const val DAY_MS = 86_400_000L
-
     // The collection config key Optimize All Presets sets to the day it ran; 0 or missing is never.
     private const val LAST_OPTIMIZE_KEY = "lastFsrsOptimize"
 
     /** The preference that holds the state; [AnkiquestSettingsSync] syncs it as `optimize_reminder`. */
     const val PREF_STATE = "ankiquestOptimizeReminder"
     private const val TAG = "AnkiquestOptimizeReminder"
-    private const val DAY_SECONDS = 86_400L
-    private const val SECOND_MS = 1_000L
 
     // The stored state's fields.
     private const val KIND = "kind"
@@ -63,132 +64,23 @@ internal object AnkiquestOptimizeReminder {
     // Answers only: manual (type 4) and rescheduled (type 5) entries are not reviews.
     private const val ANSWERS_SQL = "select count() from revlog where id >= ? and ease > 0 and type < 4"
 
-    enum class Scheduler { SM2, FSRS, RWKV_CURVE, RWKV_INSTANT }
-
-    /** Whether the collection uses FSRS; without it every preset is SM-2. */
-    enum class Fsrs { ON, OFF }
-
-    /** The reminder on every device: on, off by the settings switch, snoozed or dismissed. */
-    sealed interface State {
-        data object On : State
-
-        data object Off : State
-
-        /** Hidden while now is before [untilMs]. */
-        data class Snoozed(
-            val untilMs: EpochMilliseconds,
-        ) : State
-
-        /**
-         * Hidden until Optimize All Presets runs again: until a run a day or more after
-         * [optimizedMs], the last one when it was dismissed (null: it had never run).
-         */
-        data class Dismissed(
-            val optimizedMs: EpochMilliseconds?,
-        ) : State
-    }
-
-    enum class Event { SNOOZE, DISMISS, TURN_OFF, TURN_ON }
-
-    /** Why there is no reminder, in the order the rule checks. */
-    enum class Quiet { OFF, NO_FSRS, SNOOZED, DISMISSED, TOO_SOON, TOO_FEW_REVIEWS }
-
-    enum class Since { STALE, NEVER }
-
-    /** What optimizing does for the presets: FSRS parameters, the RWKV presets' FSRS fallback, or both. */
-    enum class Wording { FSRS, RWKV, MIXED }
-
-    sealed interface Verdict {
-        data class Silent(
-            val quiet: Quiet,
-        ) : Verdict
-
-        data class Remind(
-            val since: Since,
-            val wording: Wording,
-        ) : Verdict
-    }
-
-    /** What the rule reads from the collection, and the time now. */
-    data class Inputs(
-        val nowMs: EpochMilliseconds,
-        val lastOptimizedMs: EpochMilliseconds?,
-        val reviewsSince: Int,
-        val presets: List<Scheduler>,
-        val deck: DeckId,
-    )
-
+    /** The scheduler of a preset with [config]. */
     fun scheduler(
         fsrs: Fsrs,
         config: DeckConfig.Config,
-    ): Scheduler =
-        when {
-            fsrs == Fsrs.OFF -> Scheduler.SM2
-            config.rwkvReviewInstantOrderEnabled -> Scheduler.RWKV_INSTANT
-            config.rwkvReviewEnabled -> Scheduler.RWKV_CURVE
-            else -> Scheduler.FSRS
-        }
+    ): Scheduler = AnkiquestSharedRules.scheduler(Preset(fsrs, config.rwkvReviewEnabled, config.rwkvReviewInstantOrderEnabled))
 
     fun verdict(
         inputs: Inputs,
         state: State,
-    ): Verdict {
-        val now = inputs.nowMs
-        val last = inputs.lastOptimizedMs
-        val optimized = inputs.presets.filter { it != Scheduler.SM2 }
-
-        // The first rule that holds names the verdict.
-        val quiet =
-            when {
-                state == State.Off -> Quiet.OFF
-                optimized.isEmpty() -> Quiet.NO_FSRS
-                state is State.Snoozed && now < state.untilMs -> Quiet.SNOOZED
-                state is State.Dismissed && !optimizedSince(state.optimizedMs, last) -> Quiet.DISMISSED
-                last != null && now - last < DAYS * DAY_MS -> Quiet.TOO_SOON
-                inputs.reviewsSince < REVIEWS -> Quiet.TOO_FEW_REVIEWS
-                else -> null
-            }
-        if (quiet != null) {
-            return Verdict.Silent(quiet)
-        }
-
-        val fsrs = optimized.count { it == Scheduler.FSRS }
-        val wording =
-            when (fsrs) {
-                0 -> Wording.RWKV
-                optimized.size -> Wording.FSRS
-                else -> Wording.MIXED
-            }
-        return Verdict.Remind(if (last == null) Since.NEVER else Since.STALE, wording)
-    }
-
-    /**
-     * Whether Optimize All Presets ran again after [dismissed]. A run counts only from a day
-     * later: devices in other time zones put the end of the same collection day hours apart.
-     */
-    private fun optimizedSince(
-        dismissed: EpochMilliseconds?,
-        last: EpochMilliseconds?,
-    ): Boolean =
-        when {
-            last == null -> false
-            dismissed == null -> true
-            else -> last >= dismissed + DAY_MS
-        }
+    ): Verdict = AnkiquestSharedRules.verdict(inputs, state)
 
     fun next(
         state: State,
         event: Event,
         nowMs: EpochMilliseconds,
         lastOptimizedMs: EpochMilliseconds?,
-    ): State =
-        when {
-            event == Event.TURN_OFF -> State.Off
-            state == State.Off && event == Event.TURN_ON -> State.On
-            state == State.Off || event == Event.TURN_ON -> state
-            event == Event.SNOOZE -> State.Snoozed(nowMs + SNOOZE_DAYS * DAY_MS)
-            else -> State.Dismissed(lastOptimizedMs)
-        }
+    ): State = AnkiquestSharedRules.next(state, event, nowMs, lastOptimizedMs)
 
     /**
      * When Optimize All Presets last ran: the end of the collection day [lastOptimizedDay], since
@@ -198,7 +90,7 @@ internal object AnkiquestOptimizeReminder {
         today: Int,
         dayCutoff: EpochSeconds,
         lastOptimizedDay: Int?,
-    ): EpochMilliseconds? = lastOptimizedDay?.let { (dayCutoff - (today - it) * DAY_SECONDS) * SECOND_MS }
+    ): EpochMilliseconds? = AnkiquestSharedRules.optimizedAt(today, dayCutoff, lastOptimizedDay)
 
     /** Answers since [lastOptimizedMs], or every answer when it never ran. */
     fun reviewsSince(
@@ -218,15 +110,13 @@ internal object AnkiquestOptimizeReminder {
         nowMs: EpochMilliseconds = TimeManager.time.intTimeMS(),
     ): Inputs {
         val last = lastOptimized(col)
-        val deck = col.decks.selected()
-        val configs = col.decks.getDeckConfigsForUpdate(deck)
+        val configs = col.decks.getDeckConfigsForUpdate(col.decks.selected())
         val fsrs = if (configs.fsrs) Fsrs.ON else Fsrs.OFF
         return Inputs(
             nowMs = nowMs,
             lastOptimizedMs = last,
             reviewsSince = reviewsSince(col, last),
             presets = configs.allConfigList.map { scheduler(fsrs, it.config.config) },
-            deck = deck,
         )
     }
 
@@ -333,17 +223,22 @@ internal object AnkiquestOptimizeReminder {
         }
         offer = Offer.MADE
         activity.lifecycleScope.launch {
-            val inputs =
+            // The rule's inputs and the deck whose options the reminder opens.
+            val (inputs, deck) =
                 try {
-                    withCol { load(this) }
+                    withCol { load(this) to decks.selected() }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Timber.w(e, "AnkiQuest optimize reminder could not read the collection")
                     return@launch
+                } catch (e: LinkageError) {
+                    // The shared rules' library did not load: no reminder, rather than no deck list.
+                    Timber.w(e, "AnkiQuest optimize reminder could not load the shared rules")
+                    return@launch
                 }
             val verdict = verdict(inputs, state()) as? Verdict.Remind ?: return@launch
-            activity.lifecycle.withResumed { show(activity, inputs.deck, verdict) }
+            activity.lifecycle.withResumed { show(activity, deck, verdict) }
         }
     }
 
@@ -373,8 +268,8 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val context = requireContext()
         val arguments = requireArguments()
-        val since = AnkiquestOptimizeReminder.Since.valueOf(arguments.getString(ARG_SINCE)!!)
-        val wording = AnkiquestOptimizeReminder.Wording.valueOf(arguments.getString(ARG_WORDING)!!)
+        val since = Since.valueOf(arguments.getString(ARG_SINCE)!!)
+        val wording = Wording.valueOf(arguments.getString(ARG_WORDING)!!)
         val deck = arguments.getLong(ARG_DECK)
         val scope = requireActivity().lifecycleScope
         return AlertDialog
@@ -384,9 +279,9 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
             .setPositiveButton(R.string.aq_optimize_open) { _, _ ->
                 startActivity(DeckOptions.getIntent(context, deck))
             }.setNeutralButton(R.string.aq_optimize_snooze) { _, _ ->
-                scope.launch { AnkiquestOptimizeReminder.record(AnkiquestOptimizeReminder.Event.SNOOZE) }
+                scope.launch { AnkiquestOptimizeReminder.record(Event.SNOOZE) }
             }.setNegativeButton(R.string.aq_optimize_dismiss) { _, _ ->
-                scope.launch { AnkiquestOptimizeReminder.record(AnkiquestOptimizeReminder.Event.DISMISS) }
+                scope.launch { AnkiquestOptimizeReminder.record(Event.DISMISS) }
             }.create()
     }
 
@@ -403,7 +298,7 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
 
         fun create(
             deck: DeckId,
-            verdict: AnkiquestOptimizeReminder.Verdict.Remind,
+            verdict: Verdict.Remind,
         ) = AnkiquestOptimizeReminderDialog().apply {
             arguments =
                 Bundle().apply {
