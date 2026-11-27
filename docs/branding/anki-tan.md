@@ -12,6 +12,11 @@ The masters are in AnkiQuest/AnkiQuest-Art `anki-tan/`; its README lists
 which file each pose uses. Her face is the chibi's face, a headshot; every
 other pose is full body.
 
+Pictures that are no longer used, such as her neglected pose with all
+three headband stars lit, are in AnkiQuest-Art `archive/anki-tan/`. This
+repository commits no companion picture, in `docs/` either; the art check
+fails on one.
+
 ## Launcher icons
 
 Companion `anki_tan` gets her own launcher icons (`AnkiquestIcon.Icon`).
