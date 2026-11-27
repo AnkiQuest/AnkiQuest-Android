@@ -10,6 +10,8 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import java.util.Locale
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** The RWKV help page players open from the settings: readable, and saying what they must know. */
@@ -47,15 +49,17 @@ class AnkiquestRwkvGuideTest : RobolectricTest(loadBackend = false) {
     fun `the guide's sizes match the model lock list`() {
         val page = AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(targetContext, AnkiquestReleaseNotes.GUIDE))
 
-        // Every size the guide names comes from the lock list: the zips the Download fetches,
-        // and the weights.f32.bin a player can pick instead of them.
-        fun mb(bytes: Long) = "%.1f MB".format(bytes / 1_000_000.0)
-        for (size in RwkvSize.values()) {
+        // Every size the guide names comes from the lock list, once each: the zips the Download
+        // fetches, and the weights.f32.bin a player can pick instead of them.
+        fun mb(bytes: Long) = String.format(Locale.ROOT, "%.1f MB", bytes / 1_000_000.0)
+        for (size in RwkvSize.entries) {
             val name = size.name.lowercase().replaceFirstChar { it.uppercaseChar() }
             val twoHead = RwkvLock.ENTRIES.single { it.size == size && it.head == RwkvHead.TWO_HEAD }
             val instant = RwkvLock.ENTRIES.single { it.size == size && it.head == RwkvHead.INSTANT }
-            assertTrue("$name: two-head zip ${mb(twoHead.zipBytes)}, Instant-only zip ${mb(instant.zipBytes)}" in page, page)
-            assertTrue("${mb(twoHead.bytes)}" in page, page)
+            val zips = "$name: two-head zip ${mb(twoHead.zipBytes)}, Instant-only zip ${mb(instant.zipBytes)}"
+            val weights = "$name about ${mb(twoHead.bytes)}"
+            assertEquals(1, Regex.fromLiteral(zips).findAll(page).count(), zips)
+            assertEquals(1, Regex.fromLiteral(weights).findAll(page).count(), weights)
         }
     }
 }

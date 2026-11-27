@@ -35,7 +35,7 @@ class AnkiquestChangelogScreenshotTest : ScreenshotTest() {
     @Before
     fun fixNotes() {
         mockkObject(AnkiquestReleaseNotes)
-        every { AnkiquestReleaseNotes.read(any()) } returns NOTES
+        every { AnkiquestReleaseNotes.read(any(), any()) } returns NOTES
     }
 
     @After
