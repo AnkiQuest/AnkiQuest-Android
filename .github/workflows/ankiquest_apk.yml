@@ -98,12 +98,19 @@ jobs:
           UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           echo "fatal_warnings=false" >> local.properties
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace \
             -PcustomSuffix=quest -PcustomName="AnkiQuest" \
             -PankiquestRelease="$RELEASE" \
             -PankiquestNightly="$NIGHTLY" \
             -PupstreamCommit="$UPSTREAM_SHA"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
+
+      # Packaging failed now and then with no cause printed; free disk and memory rule those out.
+      - name: Disk and memory
+        if: failure()
+        run: |
+          df -h
+          free -m
 
       - name: Sign with the AnkiQuest release key
         id: sign

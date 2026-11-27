@@ -264,23 +264,32 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun `a freeze used yesterday shows Ankilope frozen on every widget`() {
-        // Regression: the transparent widget showed her study pose with "Streak protected".
-        chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
+    fun `a freeze used yesterday shows each companion's own frozen pose on every widget`() {
+        // Regressions: the transparent widget showed Ankilope's study pose with "Streak protected";
+        // Anki-tan showed her face on every widget and Bluma showed Ankilope recoloured.
+        val frozen =
+            mapOf(
+                AnkiquestCompanion.Choice.ANKILOPE to R.drawable.ankilope_frozen,
+                AnkiquestCompanion.Choice.COW to R.drawable.bluma_frozen,
+                AnkiquestCompanion.Choice.ANKI_TAN to R.drawable.anki_tan_frozen,
+            )
         val board = JSONArray().put(me(10, "protected", 0))
-        for (style in AnkiquestStreakWidget.Style.entries) {
-            for (size in AnkiquestStreakWidget.Size.entries) {
-                val widget =
-                    AnkiquestStreakWidget
-                        .views(targetContext, board, "hill", size, style = style)
-                        .apply(targetContext, FrameLayout(targetContext))
-                val name = "$style $size"
-                if (size == AnkiquestStreakWidget.Size.LARGE || size == AnkiquestStreakWidget.Size.HUGE) {
-                    assertPose(widget, R.drawable.ankilope_frozen, name)
-                    continue
+        for ((choice, pose) in frozen) {
+            chooseCompanion(choice)
+            for (style in AnkiquestStreakWidget.Style.entries) {
+                for (size in AnkiquestStreakWidget.Size.entries) {
+                    val widget =
+                        AnkiquestStreakWidget
+                            .views(targetContext, board, "hill", size, style = style)
+                            .apply(targetContext, FrameLayout(targetContext))
+                    val name = "$choice $style $size"
+                    if (size == AnkiquestStreakWidget.Size.LARGE || size == AnkiquestStreakWidget.Size.HUGE) {
+                        assertPose(widget, pose, name)
+                        continue
+                    }
+                    val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+                    assertEquals(pose, shadowOf(drawable).createdFromResId, name)
                 }
-                val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
-                assertEquals(R.drawable.ankilope_frozen, shadowOf(drawable).createdFromResId, name)
             }
         }
     }
@@ -475,14 +484,14 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `every streak pose covers the huge layout on a dense screen`() {
         val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
-        // Every pose the big layouts rotate through, and Ankilope's for each mood.
+        // Every pose the big layouts rotate through, and Ankilope's and Bluma's for each mood.
         val aki =
             AnkiquestMood.Mood.entries
                 .flatMap { mood -> listOf(0, 1, 7, 30, 100).flatMap { AnkiquestMood.poses(mood, it) } }
                 .toSet()
         // The away levels add Aki's neglected pose; a freeze in effect shows her frozen one.
         assertEquals(11, aki.size)
-        val poses = aki + ankilopeMoodPoses.values
+        val poses = aki + ankilopeMoodPoses.values + blumaMoodPoses.values
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeResource(targetContext.resources, pose, bounds)

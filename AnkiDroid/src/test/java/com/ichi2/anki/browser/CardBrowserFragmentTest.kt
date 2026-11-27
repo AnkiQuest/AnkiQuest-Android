@@ -34,9 +34,11 @@ import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.throwOnShowError
 import com.ichi2.anki.utils.ext.hasCheckedBackground
 import com.ichi2.testutils.withPref
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.not
 import org.hamcrest.CoreMatchers.sameInstance
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
@@ -89,20 +91,28 @@ class CardBrowserFragmentTest : RobolectricTest() {
     @Test
     fun `searchView EditText submit via IME_ACTION_SEARCH`() =
         withCardBrowserFragment(useSearchView = true) {
-            searchViewModel.submittedSearchFlow.test {
+            searchViewModel.submittedSearchFlow.filterNotNull().test {
                 searchViewModel.isScreenOpenFlow.value = true
+                searchView!!.editText.setText("cat")
                 searchView!!.editText.onEditorAction(IME_ACTION_SEARCH)
-                expectMostRecentItem()
+                advanceRobolectricLooperUntil { activityViewModel.searchRequestFlow.value.query == "cat" }
+                assertThat(expectMostRecentItem().query, equalTo("cat"))
+
+                searchView!!.editText.onEditorAction(IME_ACTION_SEARCH)
+                advanceRobolectricLooper()
+                expectNoEvents()
             }
         }
 
     @Test
     fun `searchView EditText submit via KEYCODE_ENTER`() =
         withCardBrowserFragment(useSearchView = true) {
-            searchViewModel.submittedSearchFlow.test {
+            searchViewModel.submittedSearchFlow.filterNotNull().test {
                 searchViewModel.isScreenOpenFlow.value = true
+                searchView!!.editText.setText("cat")
                 searchView!!.editText.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                expectMostRecentItem()
+                advanceRobolectricLooperUntil { activityViewModel.searchRequestFlow.value.query == "cat" }
+                assertThat(expectMostRecentItem().query, equalTo("cat"))
             }
         }
 
@@ -349,6 +359,24 @@ class CardBrowserFragmentTest : RobolectricTest() {
             activityViewModel.setSortType(SortType.NoOrdering).join()
             advanceRobolectricLooper()
             assertThat(sortChipDescription, equalTo("No sorting"))
+        }
+
+    @Test
+    fun `syncing an older search does not undo the current search - Issue 23274`() =
+        withCardBrowserFragment(useSearchView = true) {
+            val olderSearch = activityViewModel.searchRequestFlow.value
+            activityViewModel.setSelectedDeck(SelectableDeck.AllDecks)
+            activityViewModel.searchJob?.join()
+            advanceRobolectricLooper()
+            val currentSearch = activityViewModel.searchRequestFlow.value
+            assertThat("the deck changed", currentSearch, not(equalTo(olderSearch)))
+
+            searchViewModel.syncState(olderSearch)
+            advanceRobolectricLooper()
+            activityViewModel.searchJob?.join()
+            advanceRobolectricLooper()
+
+            assertThat(activityViewModel.searchRequestFlow.value, equalTo(currentSearch))
         }
 
     private fun CardBrowserFragment.assertSearchMode(advancedSearch: Boolean) {

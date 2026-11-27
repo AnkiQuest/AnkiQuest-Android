@@ -11,7 +11,9 @@ import android.widget.LinearLayout
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.commit
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -271,6 +273,7 @@ object AnkiquestDeckPickerHooks {
         openReviewer: () -> Unit,
         backgroundSync: suspend () -> Unit,
     ): Boolean {
+        startRwkv(activity)
         val studyRequested = activity.intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK)
         if (!handleEntry(activity, openReviewer)) {
             // The deck list stays in front, and upstream's intro, permission and changelog screens are done.
@@ -279,6 +282,20 @@ object AnkiquestDeckPickerHooks {
         }
         if (!studyRequested) backgroundSync()
         return true
+    }
+
+    /**
+     * Starts a saved RWKV scheduler once the deck list is up, so the backend's read of the review
+     * history does not hold the collection before the first screen. The list is drawn with the
+     * standard counts meanwhile and redrawn with RWKV's once the backend has replayed the history.
+     */
+    private fun startRwkv(activity: DeckPicker) {
+        AnkiquestRwkv.startSaved(activity.applicationContext)
+        activity.lifecycleScope.launch {
+            activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                AnkiquestRwkv.running.collect { activity.viewModel.updateDeckList() }
+            }
+        }
     }
 
     /** Handles a Study action delivered to an already running [activity]. */

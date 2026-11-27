@@ -116,9 +116,6 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
          */
         private const val COMPANION_MAX_PX = 1024
 
-        /** The small layouts' companion edge (`widget_ankiquest_streak_small.xml`). */
-        private const val SMALL_COMPANION_DP = 20
-
         /**
          * The flame beside the number grows and deepens in colour with the streak. Before today counts
          * it is grey, or icy blue after a freeze, at the same size.
@@ -407,10 +404,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             @DrawableRes aki: Int,
             pixels: Int?,
         ) {
-            // The cow's colours are drawn into a bitmap, so the small layouts need one too.
-            val cow = AnkiquestCompanion.choice() == AnkiquestCompanion.Choice.COW
-            val edge = pixels ?: (SMALL_COMPANION_DP * context.resources.displayMetrics.density).roundToInt().takeIf { cow }
-            val bitmap = edge?.let { AnkiquestCompanion.bitmap(context, aki, it) }
+            val bitmap = pixels?.let { AnkiquestCompanion.bitmap(context, aki, it) }
             if (bitmap == null) {
                 views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
                 return

@@ -40,6 +40,7 @@ ankiquest_about_based_on
 ankiquest_about_credits
 ankiquest_about_license
 ankiquest_ankidroid_changelog
+ankiquest_moved_message        # "the shared AnkiDroid folder": the collection folder's name
 
 # Not text: a link.
 link_facebook
