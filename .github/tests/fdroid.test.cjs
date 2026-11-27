@@ -8,7 +8,7 @@ const test = require("node:test");
 // F-Droid publishes the APK the release workflow uploads only if its own build from the
 // recipe matches it. Both must build with the same inputs and agree on the file name.
 const root = path.join(__dirname, "../..");
-const recipe = fs.readFileSync(path.join(root, "docs/fdroid/org.ankiquest.ankidroid.yml"), "utf8");
+const recipe = fs.readFileSync(path.join(root, "docs/fdroid/recipe.yml"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github/workflows/ankiquest_apk.yml"), "utf8");
 
 // A step of the workflow, from its name to the next step.
@@ -63,17 +63,13 @@ test("the F-Droid APK step sets the release inputs the recipe's prebuild sets", 
     assert.ok(step.includes("SOURCE_DATE_EPOCH"), "build time from the commit, as on F-Droid");
 });
 
-test("the F-Droid APK is checked and signed with the GitHub APKs, by the AnkiQuest key alone", () => {
+test("the F-Droid APK is checked and signed with the GitHub APKs", () => {
     const build = workflow.indexOf("      - name: F-Droid APK\n");
     for (const name of ["Package", "Sign with the AnkiQuest release key"]) {
         assert.ok(build < workflow.indexOf(`      - name: ${name}\n`), `the F-Droid APK is built before ${name}`);
-        assert.match(step(name), /for apk in AnkiQuest\.apk AnkiQuest-\*\.apk fdroid\.apk; do/);
+        assert.match(step(name), /for apk in [^\n]*AnkiQuest-\*\.apk fdroid\.apk; do\n\s*\[ -f "\$apk" \] \|\| continue\n/);
     }
-    const signing = step("Sign with the AnkiQuest release key");
-    assert.ok(signing.includes("--ks-key-alias ankiquest"));
-    for (const other of ["fallback-release-keystore", "--next-signer", "--lineage"]) {
-        assert.ok(!signing.includes(other), `the F-Droid APK must not use ${other}`);
-    }
+    assert.ok(step("Sign with the AnkiQuest release key").includes("--ks-key-alias ankiquest"));
     assert.ok(!fdroidStep().includes("apksigner"), "the F-Droid build leaves signing to the Sign step");
     assert.match(recipe, /^AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d$/m);
 });

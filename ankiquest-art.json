@@ -1,18 +1,18 @@
 {
   "_about": "The AnkiQuest-Art release this repository uses. AnkiQuest-Sync updates it when Art publishes a release; don't edit it by hand.",
-  "tag": "art-13",
-  "commit": "68f5e9aaf3bc425a5bd1bd95804581863f8a2251",
+  "tag": "art-15",
+  "commit": "87165598067fac20231e4f14ad8e0e26ca19bddf",
   "assets": {
     "android-drawables.zip": "d1e311c05bf8417af138fb26dd03e37018b6bd90e0a91642423122b1dde36207",
     "addon-art.zip": "1cca5e95cf4ec394d332a52caae3e5d3b0df984b941a4d764e94586749d81e3a",
-    "masters.zip": "0dfe2079d673e385bf4335e65724bc6e183e328afb0cb01ab4493e402cd20ea2",
-    "archive.zip": "776106a8de7bd9f6e8af93da9aa89db11db7a27a0e34557dc313ada2d70c224c",
-    "manifest.json": "49cd4a50b7df7fb5a9d33233dfd718c7266d56a69673bd55d7b4f256f5348d8b",
+    "masters.zip": "e0cd03b709841ca4590d0edbda3e9b71949d85a9b83b038a77f06b7f414bac84",
+    "archive.zip": "2d101807a7b56fc54440a8c94ed3cdc2f1965643a87d969ad2c9a12112c75ec1",
+    "manifest.json": "4c802837f21593baf3e23fcaa9a7892a9248416da8f253b77947097fa36142ac",
     "poses.json": "e41766b186c26082fcfff73027dcf37251ca4c748f6efd32f58f6c2247aeac3d",
-    "packs.json": "726332a028ae904706d822e19e3e5a3919432838206179ab365fbc28b749ef8f",
-    "pack-aki.zip": "944af94ee8dae6bcea9b2dda379315a84abe29e5fe17b3f2d899e4c17132f954",
-    "pack-anki_tan.zip": "2a6e3d471f47ae6a68f968c049d00283edbdc0e724830f2d76fec7204fc25897",
-    "pack-ankilope.zip": "35ffd352a3f547c829f2682ae18811d71fa93c32d3c0e118e21a26a923bf1da1",
-    "pack-cow.zip": "eab99ce44f173a52e6fdad6c26c22ff71d4410d0e1de583fde72b3102fbeb941"
+    "packs.json": "0e392e328858d4a2063bba944dd5ff2ce976ce4fb59ed830a0ab39a66b08c5fc",
+    "pack-aki.zip": "87371b1c23e64360ef5b6d41b692d37fc66135521ae3e0c9cceb6dc459cc1d42",
+    "pack-anki_tan.zip": "440d1e449942274cc09d069027d6d410ac0db87be49e1dcbd9d687a259e21fe4",
+    "pack-ankilope.zip": "21a96b3068293bc3b1d0f1c00dd0405ca5041f069bebe9e2f4e6559e7de74f3f",
+    "pack-cow.zip": "f6ae2dce94179d5baf1ce5b6726a9c74135209fb10a1b304d7c9bc34612742ce"
   }
 }

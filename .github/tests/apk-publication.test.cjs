@@ -39,13 +39,12 @@ function fakeBuild(t) {
     return { dir, apk };
 }
 
-// The new package's download names. AnkiDroid-Quest.apk stays with the old package's final
-// release, quest-24.
-const names = ["AnkiQuest-arm64-v8a.apk", "AnkiQuest.apk", "AnkiQuest-armeabi-v7a.apk", "AnkiQuest-x86_64.apk", "AnkiQuest-x86.apk", "AnkiQuest.aab"];
+// The download names. AnkiDroid-Quest.apk is a copy of AnkiQuest.apk for older built-in updaters.
+const names = ["AnkiQuest-arm64-v8a.apk", "AnkiQuest.apk", "AnkiQuest-armeabi-v7a.apk", "AnkiQuest-x86_64.apk", "AnkiQuest-x86.apk", "AnkiQuest.aab", legacyApk];
 
 // Runs the Assets step and returns its files output, as the nightly action receives it.
 function runAssets(t) {
-    const { dir } = fakeBuild(t);
+    const { dir, apk } = fakeBuild(t);
     const bin = path.join(dir, "bin");
     const output = path.join(dir, "github-output");
     fs.writeFileSync(output, "");
@@ -67,13 +66,13 @@ function runAssets(t) {
     execFileSync("bash", ["-euo", "pipefail", "-c", stepScript("Assets")], options);
     const assets = JSON.parse(fs.readFileSync(path.join(dir, "assets.json"), "utf8"));
     assert.deepEqual(assets.map(asset => asset.name), names);
-    assert.ok(!fs.existsSync(path.join(dir, legacyApk)), legacyApk + " belongs to the old package");
+    assert.deepEqual(fs.readFileSync(path.join(dir, legacyApk)), apk, "The alias must keep the signed APK bytes");
     const files = fs.readFileSync(output, "utf8").match(/^files<<EOF\n([\s\S]*?)EOF\n/m);
     assert.ok(files, "Assets must output the file list");
     return { dir, options, files: files[1].split("\n").filter(Boolean) };
 }
 
-test("release publishes the new download names without the legacy alias", (t) => {
+test("release publishes every download name, the legacy alias included", (t) => {
     const { dir, options } = runAssets(t);
     const publish = stepScript("Publish release");
     execFileSync("bash", ["-euo", "pipefail", "-c", publish], options);
@@ -83,10 +82,9 @@ test("release publishes the new download names without the legacy alias", (t) =>
     for (const name of names) {
         assert.ok(args.slice(create).includes(name), name + " must be attached to the release");
     }
-    assert.ok(!args.slice(create).includes(legacyApk), legacyApk + " must not be attached");
 });
 
-test("nightly publishes the new download names without the legacy alias", (t) => {
+test("nightly publishes every download name, the legacy alias included", (t) => {
     const { dir, options, files } = runAssets(t);
     assert.deepEqual(files, names);
 
@@ -104,5 +102,13 @@ test("nightly publishes the new download names without the legacy alias", (t) =>
     assert.match(step, /uses: AnkiQuest\/AnkiQuest-Dev\/\.github\/actions\/nightly-release@master/);
     assert.match(step, /notes-file: notes\.md/);
     assert.match(step, /files: \|\n {12}\$\{\{ steps\.assets\.outputs\.files \}\}\n {12}nightly\.json\n/);
-    assert.doesNotMatch(step, new RegExp(legacyApk.replace(".", "\\.")));
+});
+
+// quest-2 to quest-19 download the first .apk of the release's asset list, which GitHub sorts by
+// name. The legacy alias, the universal APK, must sort before the ABI APKs, which some devices
+// cannot install.
+test("older released apps find the universal APK first", (t) => {
+    const { files } = runAssets(t);
+    const apks = files.filter(name => name.endsWith(".apk")).sort();
+    assert.equal(apks[0], legacyApk);
 });

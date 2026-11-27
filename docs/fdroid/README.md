@@ -2,7 +2,7 @@
 
 How AnkiQuest gets into F-Droid's main repository. Nothing is submitted yet.
 
-- [`org.ankiquest.ankidroid.yml`](org.ankiquest.ankidroid.yml): draft recipe for [fdroiddata](https://gitlab.com/fdroid/fdroiddata), `metadata/org.ankiquest.ankidroid.yml`.
+- [`recipe.yml`](recipe.yml): draft recipe for [fdroiddata](https://gitlab.com/fdroid/fdroiddata), stored there as `metadata/<applicationId>.yml`.
 - [`fastlane/metadata/android/en-US/`](../../fastlane/metadata/android/en-US): the store listing F-Droid reads from this repository (title, descriptions, changelog). It has no screenshots yet: the five screens `AnkiquestBannerScreenshots` records for the README banner would serve, saved to `images/phoneScreenshots/`. Without `images/icon.png` F-Droid shows the APK's launcher icon.
 
 ## What F-Droid checks
@@ -14,7 +14,7 @@ From the [inclusion policy](https://f-droid.org/docs/Inclusion_Policy/) and the 
 | Free licence, built from source with a free toolchain | AGPL-3.0-or-later and GPL-3.0; F-Droid builds the `full` flavour with Gradle and Debian's OpenJDK. |
 | Prebuilt libraries only from trusted Maven repositories, freely licensed | The Rust backend comes from Maven Central as the `org.ankiquest` backend artifacts (`anki-backend-android`, GPL-3.0, built from AnkiQuest-Android-Backend and AnkiQuest-Anki), as upstream AnkiDroid's recipe takes `io.github.ankidroid:Anki-Android-Backend` from there. F-Droid does not build it from source. Other repositories: Google, Maven Central, JitPack. |
 | No Google Play Services, Firebase, Crashlytics or proprietary analytics | None. Analytics (opt-in) and crash reports (ask first) are upstream's, which F-Droid already ships. |
-| A fork has its own application ID, name and icon | `org.ankiquest.ankidroid` (#420), "AnkiQuest", the AnkiQuest launcher icon. Visible strings that named AnkiDroid say AnkiQuest (separate PR). |
+| A fork has its own application ID, name and icon | The application ID #420 introduces, outside AnkiDroid's `com.ichi2.anki` namespace; "AnkiQuest"; the AnkiQuest launcher icon. Visible strings that named AnkiDroid say AnkiQuest (separate PR). |
 | No self-updates without opt-in consent | The GitHub build checks for updates every six hours. The F-Droid build passes `-PankiquestUpdates=none` (#484), which removes the check and the install permission. |
 | Assets built from or fetched by the recipe, freely licensed | The companion pictures come from the AnkiQuest-Art release `ankiquest-art.json` pins: the recipe's prebuild fetches its packs and launcher icons and checks their SHA-256 (see "Companion art"). AnkiQuest-Art's licence, Anki-tan's CC BY-SA 4.0. |
 | Anti-features declared | None; see below. |
@@ -51,10 +51,10 @@ F-Droid either signs its own build, or publishes ours when its rebuild matches o
 
 How a release reaches F-Droid:
 
-1. A `quest-*` tag runs `ankiquest_apk.yml`. Its "F-Droid APK" step builds the universal APK with the recipe's Gradle inputs (`-Pankiquest`, `customName`, `-PankiquestUpdates=none`, the release number, the upstream commit, `SOURCE_DATE_EPOCH` from the commit). The Package and Sign steps check and sign it together with the GitHub APKs, with the AnkiQuest key alone, and "Publish F-Droid APK" uploads it to the `fdroid` release as `AnkiQuest-<versionCode>.apk`. `Binaries` may only use `%v` (versionName, upstream's) and `%c` (versionCode), not the tag number, hence one release holding every version.
+1. A `quest-*` tag runs `ankiquest_apk.yml`. Its "F-Droid APK" step builds the universal APK with the recipe's Gradle inputs (the AnkiQuest build switch, `customName`, `-PankiquestUpdates=none`, the release number, the upstream commit, `SOURCE_DATE_EPOCH` from the commit). The Package and Sign steps check and sign it together with the GitHub APKs, and "Publish F-Droid APK" uploads it to the `fdroid` release as `AnkiQuest-<versionCode>.apk`. `Binaries` may only use `%v` (versionName, upstream's) and `%c` (versionCode), not the tag number, hence one release holding every version.
 2. F-Droid builds the same commit from the recipe, copies our signature onto its build (`apksigcopier`) and publishes our APK only if that verifies against `AllowedAPKSigningKeys` (SHA-256 of the AnkiQuest certificate, `CN=AnkiQuest`, as in the repository README).
 
-The F-Droid APK differs from `AnkiQuest.apk` on the release only in having no self-updater. Every APK of `org.ankiquest.ankidroid`, on GitHub and for F-Droid, is signed with the AnkiQuest key alone, with no test key and no rotation lineage, so fdroidserver accepts it (it rejects an APK whose signers differ) and F-Droid and GitHub installs update each other on every supported Android version.
+The F-Droid APK differs from `AnkiQuest.apk` on the release only in having no self-updater. fdroidserver rejects an APK whose signers differ. The current package's APKs carry the key rotation from the public test key, so their v1 and v2 signer is not the AnkiQuest key; #420 signs the new package with the AnkiQuest key alone, with no test key and no rotation lineage, so F-Droid accepts it and F-Droid and GitHub installs update each other on every supported Android version.
 
 What makes the rebuild match:
 
@@ -75,8 +75,8 @@ Signature copying itself works on our APKs: copying quest-23's signature onto th
 
 ## Submitting
 
-Once #420, #484 and #493 are merged and the first `org.ankiquest.ankidroid` release is tagged:
+Once #420 and #493 are merged and the first release of the new package is tagged:
 
 1. Fill in the first build in the recipe (tag, versionName, versionCode).
-2. Fork [fdroiddata](https://gitlab.com/fdroid/fdroiddata), add the recipe as `metadata/org.ankiquest.ankidroid.yml`, run `fdroid readmeta`, `fdroid rewritemeta org.ankiquest.ankidroid`, `fdroid lint org.ankiquest.ankidroid` and `fdroid build -v -l org.ankiquest.ankidroid`.
+2. Fork [fdroiddata](https://gitlab.com/fdroid/fdroiddata), add the recipe as `metadata/<applicationId>.yml`, run `fdroid readmeta`, `fdroid rewritemeta <applicationId>`, `fdroid lint <applicationId>` and `fdroid build -v -l <applicationId>`.
 3. Open a merge request with the "App inclusion" template.

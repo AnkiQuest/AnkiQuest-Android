@@ -1,7 +1,6 @@
-# Draft of metadata/org.ankiquest.ankidroid.yml for gitlab.com/fdroid/fdroiddata.
-# Not submitted. It needs the org.ankiquest.ankidroid package (#420) and the
-# -PankiquestUpdates switch (#484) and -PankiquestArtCache (#493); see README.md
-# here for what is open.
+# Draft recipe for gitlab.com/fdroid/fdroiddata, stored there as
+# metadata/<applicationId>.yml. Not submitted: F-Droid gets the package #420
+# introduces, signed with the AnkiQuest key alone (README.md here, "Submitting").
 # The Gradle inputs must stay those of the "F-Droid APK" step in
 # .github/workflows/ankiquest_apk.yml; .github/tests/fdroid.test.cjs checks it.
 Categories:
@@ -20,15 +19,15 @@ Repo: https://github.com/AnkiQuest/AnkiQuest-Android.git
 # No anti-features: upstream's metadata/com.ichi2.anki.yml declares none, and
 # AnkiQuest's additions need none (README.md, "Anti-features").
 
-# F-Droid publishes our APK, signed with the AnkiQuest key alone, when its
-# rebuild matches it apart from the signature. ankiquest_apk.yml uploads that
+# F-Droid publishes our APK when its rebuild matches it apart from the
+# signature. ankiquest_apk.yml uploads that
 # APK to the `fdroid` release for every quest-* tag (README.md, "Signing").
 Binaries: https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk
 AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
 
 Builds:
-  # The first release as org.ankiquest.ankidroid; fill in its tag and the
-  # versionName in AnkiDroid/build.gradle.kts at that tag.
+  # The first release F-Droid gets; fill in its tag and the versionName in
+  # AnkiDroid/build.gradle.kts at that tag.
   - versionName: 2.26.0alpha15
     versionCode: 50025000
     commit: quest-25
@@ -63,7 +62,7 @@ Builds:
       - ankiquest-art
     output: build/outputs/apk/full/release/*universal*.apk
     gradleprops:
-      - ankiquest=true
+      - customSuffix=quest
       - customName=AnkiQuest
       - ankiquestUpdates=none
       - ankiquestArtCache=ankiquest-art

@@ -5,10 +5,8 @@
     <string name="ankiquest_move_message">Trazer as tuas definições e a tua sessão do AnkiQuest antigo?</string>
     <string name="ankiquest_move_accept">Trazer</string>
     <string name="ankiquest_move_decline">Não</string>
-    <string name="ankiquest_move_done_sync">Definições e sessão trazidas. Se as duas aplicações usarem a mesma pasta do AnkiDroid, força a paragem do AnkiQuest antigo nas definições do Android antes de continuar. A sincronização com o AnkiWeb começa quando a coleção é aberta.</string>
-    <string name="ankiquest_move_done_export">Definições e sessão trazidas. Se as duas aplicações usarem a mesma pasta do AnkiDroid, força a paragem do AnkiQuest antigo nas definições do Android antes de continuar. Se usarem pastas diferentes, exporta a coleção da aplicação antiga e importa o ficheiro aqui.</string>
-    <string name="ankiquest_move_done_private_sync">Definições e sessão trazidas. A tua coleção chega do AnkiWeb com a primeira sincronização, que começa agora.</string>
-    <string name="ankiquest_move_done_private_export">Definições e sessão trazidas. A tua coleção continua no AnkiQuest antigo: usa lá «Exportar coleção» e importa o ficheiro aqui.</string>
+    <string name="ankiquest_move_done_sync">Definições e sessão trazidas. A tua coleção chega do AnkiWeb com a primeira sincronização, que começa agora.</string>
+    <string name="ankiquest_move_done_export">Definições e sessão trazidas. A tua coleção continua no AnkiQuest antigo: usa lá «Exportar coleção» e importa o ficheiro aqui.</string>
     <string name="ankiquest_move_failed">O AnkiQuest antigo não entregou as suas definições. Configura esta aplicação como de costume.</string>
     <string name="ankiquest_move_loading">A transferir as tuas definições e sessão…</string>
 </resources>

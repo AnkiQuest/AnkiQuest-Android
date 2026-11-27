@@ -2,8 +2,9 @@
 // The app commits no companion picture: the build unpacks them from the android-drawables.zip of the
 // AnkiQuest-Art release ankiquest-art.json pins (buildSrc AnkiquestArt.kt). This checks that the
 // pinned zip has the pinned SHA-256 and only flat drawable entries, that no companion picture is
-// committed under AnkiDroid/src, and that every companion drawable the app names is in the release
-// (or is one of the app's own XML drawables, such as the launcher foregrounds).
+// committed under AnkiDroid/src or docs, and that every companion drawable the app names is in the
+// release (or is one of the app's own XML drawables, such as the launcher foregrounds). Pictures that
+// are no longer used live in AnkiQuest-Art's archive/, not here.
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -15,10 +16,14 @@ const ASSET = "android-drawables.zip";
 const RELEASES = "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download";
 const SOURCES = "AnkiDroid/src";
 
+// Where a committed companion picture fails the check: the app's sources and the docs.
+const SCANNED = [SOURCES, "docs"];
+
 // Companion pictures by name: one prefix per companion as the Art exporter names them (Bluma's poses
-// are bluma_*, her launcher icons cow_*), and the duo picture.
+// are bluma_*, her launcher icons cow_*), and the duo picture. A committed picture may also carry a
+// hyphenated suffix (anki_tan_neglected-three-blue-stars.webp); a drawable name can't.
 const PREFIX = "(?:aki|ankilope|anki_tan|bluma|cow|duo)_[a-z0-9_]+";
-const COMPANION = new RegExp(`^${PREFIX}\\.(?:webp|png|jpe?g)$`);
+const COMPANION = new RegExp(`^${PREFIX}(?:-[a-z0-9_-]+)?\\.(?:webp|png|jpe?g)$`);
 
 // A companion drawable named in code or resources.
 const REFERENCE = new RegExp(`(?:R\\.drawable\\.|@drawable/)(${PREFIX})`, "g");
@@ -73,9 +78,13 @@ function files(folder) {
         .sort();
 }
 
-/** The committed companion pictures under `root`'s AnkiDroid/src, relative to it. */
+/** The committed companion pictures under `root`'s scanned folders, relative to `root`. */
 function committed(root) {
-    return files(path.join(root, SOURCES)).filter((file) => COMPANION.test(path.posix.basename(file)));
+    return SCANNED.flatMap((folder) =>
+        files(path.join(root, folder))
+            .filter((file) => COMPANION.test(path.posix.basename(file)))
+            .map((file) => `${folder}/${file}`),
+    );
 }
 
 /**
