@@ -1,0 +1,78 @@
+# Draft recipe for gitlab.com/fdroid/fdroiddata, stored there as
+# metadata/<applicationId>.yml. Not submitted: F-Droid gets the package #420
+# introduces, signed with the AnkiQuest key alone (README.md here, "Submitting").
+# The Gradle inputs must stay those of the "F-Droid APK" step in
+# .github/workflows/ankiquest_apk.yml; .github/tests/fdroid.test.cjs checks it.
+Categories:
+  - Science & Education
+License: AGPL-3.0-or-later
+WebSite: https://ankiquest.org
+SourceCode: https://github.com/AnkiQuest/AnkiQuest-Android
+IssueTracker: https://github.com/AnkiQuest/AnkiQuest-Android/issues
+Changelog: https://github.com/AnkiQuest/AnkiQuest-Android/releases
+
+AutoName: AnkiQuest
+
+RepoType: git
+Repo: https://github.com/AnkiQuest/AnkiQuest-Android.git
+
+# No anti-features: upstream's metadata/com.ichi2.anki.yml declares none, and
+# AnkiQuest's additions need none (README.md, "Anti-features").
+
+# F-Droid publishes our APK when its rebuild matches it apart from the
+# signature. ankiquest_apk.yml uploads that APK to the `fdroid` release for
+# every quest-* tag (README.md, "Signing").
+Binaries: https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk
+AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
+
+Builds:
+  # The first release F-Droid gets; fill in its tag and the versionName in
+  # AnkiDroid/build.gradle.kts at that tag.
+  - versionName: 2.26.0alpha15
+    versionCode: 50025000
+    commit: quest-25
+    subdir: AnkiDroid
+    gradle:
+      - full
+    rm:
+      - tools
+      - docs
+    prebuild:
+      # As upstream AnkiDroid's recipe: no Maven publishing, no foojay JDK downloads.
+      - sed -i -e '/publishing/,/^    }/d' -e '/publish/d' ../api/build.gradle.kts
+      - sed -i -e '/foojay/d' ../settings.gradle.kts
+      # The daemon JVM criteria ask for JetBrains Runtime; build with Debian's OpenJDK.
+      - rm ../gradle/gradle-daemon-jvm.properties
+      # The same inputs ankiquest_apk.yml passes: release number from the tag,
+      # upstream AnkiDroid commit for the debug info, one universal APK.
+      - echo "fatal_warnings=false" >> ../local.properties
+      - echo "ankiquestRelease=$(git describe --tags --exact-match --match 'quest-[0-9]*' | sed 's/^quest-//')" >> ../gradle.properties
+      - git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
+      - echo "upstreamCommit=$(git merge-base HEAD FETCH_HEAD)" >> ../gradle.properties
+      - echo "systemProp.universal-apk=true" >> ../gradle.properties
+      # The companion packs and launcher icons of the AnkiQuest-Art release that
+      # ankiquest-art.json pins, checked against its SHA-256 before the build and
+      # stored by hash in ../ankiquest-art, where BundleAnkiquestPacks looks first
+      # (gradleprops ankiquestArtCache), so the build downloads no art itself.
+      - mkdir -p ../ankiquest-art
+      - sed -n 's/^ *"\(packs\.json\|pack-[a-z0-9_]*\.zip\|android-drawables\.zip\)":[[:space:]]*"\([0-9a-f]\{64\}\)".*/\2  \1/p' ../ankiquest-art.json > ../ankiquest-art/SHA256SUMS
+      - cd ../ankiquest-art && tag=$(sed -n 's/^ *"tag":[[:space:]]*"\(art-[0-9]*\)".*/\1/p' ../ankiquest-art.json) && while read -r sum name; do curl -fsSL --retry 3 -o "$name" "https://github.com/AnkiQuest/AnkiQuest-Art/releases/download/$tag/$name"; done < SHA256SUMS
+      - cd ../ankiquest-art && sha256sum -c SHA256SUMS && while read -r sum name; do mv "$name" "$sum"; done < SHA256SUMS
+    scanignore:
+      - ankiquest-art
+    output: build/outputs/apk/full/release/*universal*.apk
+    gradleprops:
+      - ankiquest=true
+      - customName=AnkiQuest
+      - ankiquestUpdates=none
+      - ankiquestArtCache=ankiquest-art
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^quest-[0-9]+$
+# versionCode from the tag (quest-<n> is 50000000 + n * 1000), versionName
+# from the build file at that tag.
+UpdateCheckData: '|quest-([0-9]+)|AnkiDroid/build.gradle.kts|versionName = "(.*)"'
+VercodeOperation:
+  - 50000000 + %c * 1000
+CurrentVersion: 2.26.0alpha15
+CurrentVersionCode: 50025000

@@ -110,14 +110,11 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
     companion object {
         /**
-         * Largest companion bitmap edge, the size the streak poses are exported at (float3/ankiquest#253).
+         * Largest companion bitmap edge, the size the streak poses are exported at (AnkiQuest/AnkiQuest-Desktop#253).
          * One such ARGB bitmap is 4 MiB, under the RemoteViews bitmap limit (screen width x height x 4 x 1.5)
          * of a 720 x 1280 screen.
          */
         private const val COMPANION_MAX_PX = 1024
-
-        /** The small layouts' companion edge (`widget_ankiquest_streak_small.xml`). */
-        private const val SMALL_COMPANION_DP = 20
 
         /**
          * The flame beside the number grows and deepens in colour with the streak. Before today counts
@@ -400,10 +397,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             @DrawableRes aki: Int,
             pixels: Int?,
         ) {
-            // The cow's colours are drawn into a bitmap, so the small layouts need one too.
-            val cow = AnkiquestCompanion.choice() == AnkiquestCompanion.Choice.COW
-            val edge = pixels ?: (SMALL_COMPANION_DP * context.resources.displayMetrics.density).roundToInt().takeIf { cow }
-            val bitmap = edge?.let { AnkiquestCompanion.bitmap(context, aki, it) }
+            val bitmap = pixels?.let { AnkiquestCompanion.bitmap(context, aki, it) }
             if (bitmap == null) {
                 views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
                 return

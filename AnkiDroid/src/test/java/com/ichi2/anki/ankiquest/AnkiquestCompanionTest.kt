@@ -56,7 +56,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(R.drawable.ankilope_place_1, AnkiquestCompanion.resource(R.drawable.aki_place_1))
         assertEquals(R.drawable.ankilope_place_2, AnkiquestCompanion.resource(R.drawable.aki_place_2))
         assertEquals(R.drawable.ankilope_place_3, AnkiquestCompanion.resource(R.drawable.aki_place_3))
-        assertEquals(R.drawable.ankilope_study, AnkiquestCompanion.resource(R.drawable.aki_streak_milestone))
+        assertEquals(R.drawable.ankilope_streak, AnkiquestCompanion.resource(R.drawable.aki_streak_milestone))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.resource(R.drawable.aki_deck_conquered))
         assertEquals(R.drawable.ankilope_challenge, AnkiquestCompanion.resource(R.drawable.aki_challenge))
         assertEquals(R.drawable.ankilope_challenge_won, AnkiquestCompanion.resource(R.drawable.aki_challenge_won))
@@ -75,11 +75,11 @@ class AnkiquestCompanionTest : RobolectricTest() {
     }
 
     @Test
-    fun `every streak mood shows Ankilope's own pose`() {
+    fun `every streak mood shows Ankilope's and Bluma's own pose`() {
         // Regression: a freeze used yesterday showed Ankilope's study pose although her frozen pose exists.
-        for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
+        for ((choice, moodPoses) in mapOf(Choice.ANKILOPE to ankilopeMoodPoses, Choice.COW to blumaMoodPoses)) {
             chooseCompanion(choice)
-            for ((mood, expected) in ankilopeMoodPoses) {
+            for ((mood, expected) in moodPoses) {
                 for (streak in listOf(0, 1, 7, 30, 100, 365)) {
                     val name = targetContext.resources.getResourceEntryName(expected)
                     val shown = AnkiquestMood.poses(mood, streak).map { AnkiquestCompanion.resource(it) }
@@ -100,23 +100,22 @@ class AnkiquestCompanionTest : RobolectricTest() {
             }
         }
 
-        // On fire she burns as her streak pose until her hot and blazing art is drawn, then wears her crown.
-        for (streak in listOf(1, 7, 30, 99)) {
+        // On fire she shows her streak pose until her streak tiers are drawn.
+        for (streak in listOf(1, 7, 30, 99, 100, 365)) {
             assertEquals(listOf(R.drawable.anki_tan_streak), AnkiquestMood.poses(AnkiquestMood.Mood.FIRE, streak), "$streak")
         }
-        val legend = listOf(R.drawable.anki_tan_streak_legend, R.drawable.anki_tan_streak_milestone)
-        assertEquals(legend, AnkiquestMood.poses(AnkiquestMood.Mood.FIRE, 100))
     }
 
     @Test
-    fun `Anki-tan shows her pose for Aki's pictures and her face for scenes`() {
+    fun `Anki-tan shows her pose for Aki's pictures and the scene's fallback for scenes`() {
         val shown = { aki: Int -> AnkiquestCompanion.resource(aki, Choice.ANKI_TAN) }
         assertEquals(R.drawable.anki_tan_face, shown(R.drawable.aki_face))
         assertEquals(R.drawable.anki_tan_happy, shown(R.drawable.aki_celebrate))
-        assertEquals(R.drawable.anki_tan_welcome, shown(R.drawable.aki_welcome))
-        assertEquals(R.drawable.anki_tan_review, shown(R.drawable.aki_review))
+        // Art's manifest names her hopeful master for welcome; review falls back to happy.
+        assertEquals(R.drawable.anki_tan_hopeful, shown(R.drawable.aki_welcome))
+        assertEquals(R.drawable.anki_tan_happy, shown(R.drawable.aki_review))
         assertEquals(R.drawable.anki_tan_streak, shown(R.drawable.aki_streak_blazing))
-        assertEquals(R.drawable.anki_tan_streak_milestone, shown(R.drawable.aki_streak_milestone))
+        assertEquals(R.drawable.anki_tan_streak, shown(R.drawable.aki_streak_milestone))
         assertEquals(R.drawable.anki_tan_frozen, shown(R.drawable.aki_freeze))
         assertEquals(R.drawable.anki_tan_neglected, shown(R.drawable.aki_neglected))
 
@@ -124,12 +123,11 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(R.drawable.anki_tan_happy, shown(R.drawable.aki_leech))
         assertEquals(R.drawable.anki_tan_happy, shown(R.drawable.aki_winner))
 
-        // She has no scene art: never Aki's or Ankilope's.
-        for (scene in listOf(R.drawable.aki_nudge, R.drawable.aki_place_1, R.drawable.aki_challenge_lost, R.drawable.aki_backlog)) {
-            assertEquals(R.drawable.anki_tan_face, shown(scene))
-        }
-        val preview = AnkiquestCompanion.preview(Choice.ANKI_TAN).map { shown(it) }
-        assertEquals(listOf(R.drawable.anki_tan_face, R.drawable.anki_tan_streak, R.drawable.anki_tan_sad), preview)
+        // She has no scene art: each scene shows the pose poses.json falls back to, never Aki's or Ankilope's.
+        assertEquals(R.drawable.anki_tan_hopeful, shown(R.drawable.aki_nudge))
+        assertEquals(R.drawable.anki_tan_happy, shown(R.drawable.aki_place_1))
+        assertEquals(R.drawable.anki_tan_sad, shown(R.drawable.aki_challenge_lost))
+        assertEquals(R.drawable.anki_tan_sad, shown(R.drawable.aki_backlog))
     }
 
     @Test
@@ -138,26 +136,6 @@ class AnkiquestCompanionTest : RobolectricTest() {
             val art = AnkiquestCompanion.art(pose, Choice.ANKI_TAN)
             assertTrue(targetContext.resources.getResourceEntryName(art).startsWith("anki_tan_"), "$pose")
         }
-    }
-
-    @Test
-    @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun `the cow is Ankilope recoloured on every surface`() {
-        val alice = account("alice")
-        assertTrue(AnkiquestCompanion.remember(alice, "cow"))
-        assertEquals(Choice.COW, AnkiquestCompanion.choice())
-        assertTrue(AnkiquestCompanion.visible())
-        for (pose in AnkiquestCompanion.preview(Choice.AKI) + R.drawable.aki_challenge + R.drawable.aki_place_1) {
-            assertEquals(AnkiquestCompanion.resource(pose, Choice.ANKILOPE), AnkiquestCompanion.resource(pose))
-        }
-
-        // The cow's bitmap has the Ankilope pose's shape in other colours.
-        val size = 64
-        val ankilope = requireNotNull(AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size, Choice.ANKILOPE))
-        val cow = requireNotNull(AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size))
-        assertEquals(ankilope.width to ankilope.height, cow.width to cow.height)
-        assertFalse(ankilope.sameAs(cow))
-        assertEquals(cow, AnkiquestCompanion.bitmap(targetContext, R.drawable.aki_face, size), "the recoloured bitmap is cached")
     }
 
     @Test
@@ -182,15 +160,6 @@ class AnkiquestCompanionTest : RobolectricTest() {
             }
             val alpha = Color.alpha(art[x, y]) * SILHOUETTE_ALPHA / OPAQUE
             assertTrue(Color.alpha(pixel) in alpha - ROUNDING..alpha + ROUNDING, "opacity at $x,$y")
-        }
-    }
-
-    @Test
-    fun `previews show face, fire and sad without repeating a picture`() {
-        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_streak, R.drawable.aki_sad), AnkiquestCompanion.preview(Choice.AKI))
-        for (choice in listOf(Choice.ANKILOPE, Choice.COW)) {
-            val pictures = AnkiquestCompanion.preview(choice).map { AnkiquestCompanion.resource(it, choice) }
-            assertEquals(listOf(R.drawable.ankilope_face, R.drawable.ankilope_study, R.drawable.ankilope_sad), pictures)
         }
     }
 

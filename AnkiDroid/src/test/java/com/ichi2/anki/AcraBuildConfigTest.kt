@@ -35,6 +35,7 @@ class AcraBuildConfigTest {
                 "ACRA_URL",
                 "ANKIQUEST_NIGHTLY",
                 "ANKIQUEST_RELEASE",
+                "ANKIQUEST_UPDATES",
                 "APPLICATION_ID",
                 "BACKEND_VERSION",
                 "BUILD_TIME",

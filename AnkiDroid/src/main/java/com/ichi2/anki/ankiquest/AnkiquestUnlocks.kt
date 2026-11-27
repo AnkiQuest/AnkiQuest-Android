@@ -12,7 +12,7 @@ import org.json.JSONObject
  * Companions earned at milestones: Ankilope at a level, the cow (Bluma) by hours of study, Anki-tan
  * by a streak. The server decides and keeps every unlock per account (`GET /api/unlocks/{user}`);
  * the app shows what it last answered. They are not settings: the settings-sync switch does not apply. The
- * conditions are the shared fixture `tests/fixtures/companion_unlock.json` in float3/ankiquest.
+ * conditions are the shared fixture `tests/fixtures/companion_unlock.json` in AnkiQuest-Server.
  */
 internal object AnkiquestUnlocks {
     private const val PREF_UNLOCKS = "ankiquestUnlocks"

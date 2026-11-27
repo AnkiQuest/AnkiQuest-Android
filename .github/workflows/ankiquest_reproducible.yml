@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: ankiquest reproducible build
 
-# Builds the release APK we ship twice from the same commit, on two runners, in
-# two checkout directories and two time zones, and compares the APKs with
-# diffoscope. F-Droid and IzzyOnDroid rebuild our APK and expect the same bytes (#352).
+# Builds the release APKs and app bundle we ship twice from the same commit, on two
+# runners, in two checkout directories and two time zones, and compares them with
+# diffoscope. F-Droid and IzzyOnDroid rebuild our APKs and expect the same bytes (#352).
+# This checks that two CI builds match. Rebuilding a shipped release also needs its
+# -PankiquestRelease and -PankiquestNightly values and the signature copied from the
+# release APK; #352 tracks that.
 on:
   workflow_dispatch:
   pull_request:
@@ -50,7 +53,7 @@ jobs:
   build:
     name: Build ${{ matrix.build }}
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 120
     strategy:
       matrix:
         include:
@@ -63,10 +66,12 @@ jobs:
     env:
       TZ: ${{ matrix.tz }}
     steps:
+      # Full history, for the merge base with upstream below.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           path: ${{ matrix.path }}
+          fetch-depth: 0
 
       - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
@@ -79,20 +84,39 @@ jobs:
         with:
           cache-provider: basic
 
-      # Same task and properties as ankiquest_apk.yml, signed with the public fallback key.
+      # The upstream commit ankiquest_apk.yml passes as -PupstreamCommit, so BuildConfig
+      # matches the shipped APK's.
+      - name: Upstream commit
+        id: upstream
+        working-directory: ${{ matrix.path }}
+        run: |
+          git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main
+          sha=$(git merge-base HEAD FETCH_HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      # Same tasks and properties as ankiquest_apk.yml, signed with the public fallback key.
       # The build time comes from the commit, and the build cache stays off so both
       # runners compile everything themselves.
       - name: Assemble
         working-directory: ${{ matrix.path }}
         env:
-          BUILD: ${{ matrix.build }}
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --no-build-cache --stacktrace \
-            -Pankiquest -PcustomName="AnkiQuest"
-          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-$BUILD.apk"
-          cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-$BUILD.txt"
+          quest=(--no-build-cache -Pankiquest -PcustomName="AnkiQuest"
+            -PupstreamCommit="$UPSTREAM_SHA")
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace -PankiquestUpdates=github "${quest[@]}"
+          ./gradlew :AnkiDroid:bundlePlayRelease --stacktrace -PankiquestUpdates=none "${quest[@]}"
+          out="$GITHUB_WORKSPACE/out"
+          mkdir -p "$out"
+          cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk "$out/AnkiQuest.apk"
+          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+            cp "AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-$abi-release.apk" "$out/AnkiQuest-$abi.apk"
+          done
+          cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab "$out/AnkiQuest.aab"
+          cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$out/mapping-full.txt"
+          cp AnkiDroid/build/outputs/mapping/playRelease/mapping.txt "$out/mapping-play.txt"
 
       # Packaging failed now and then with no cause printed; free disk and memory rule those out.
       - name: Disk and memory
@@ -101,34 +125,50 @@ jobs:
           df -h
           free -m
 
-      # The R8 mapping shows which classes and members R8 named or kept differently.
+      # The R8 mappings show which classes and members R8 named or kept differently.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: apk-${{ matrix.build }}
-          path: |
-            AnkiQuest-${{ matrix.build }}.apk
-            mapping-${{ matrix.build }}.txt
+          path: out
           if-no-files-found: error
 
   compare:
     name: Compare with diffoscope
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: apk-*
-          merge-multiple: true
 
+      # Every APK must match byte for byte. The app bundle's signature and AGP's dependency
+      # list, which AGP encrypts for Play with a random key, differ on every build, so the
+      # bundle is compared by its other entries.
       - name: Check
         id: check
         run: |
-          sha256sum AnkiQuest-*.apk
-          if cmp -s AnkiQuest-first.apk AnkiQuest-second.apk; then
-            echo "The APKs are identical."
+          mkdir -p report
+          for apk in apk-first/*.apk; do
+            name=$(basename "$apk")
+            sha256sum "apk-first/$name" "apk-second/$name"
+            if ! cmp -s "apk-first/$name" "apk-second/$name"; then
+              echo "$name" >> report/files.txt
+            fi
+          done
+          bundle_entries() {
+            unzip -v "$1" | awk 'NF == 8 { print $7, $8 }' \
+              | grep -v -E ' (META-INF/|BUNDLE-METADATA/com\.android\.tools\.build\.libraries/)' | sort -k2
+          }
+          if ! diff <(bundle_entries apk-first/AnkiQuest.aab) <(bundle_entries apk-second/AnkiQuest.aab) > /dev/null; then
+            echo AnkiQuest.aab >> report/files.txt
+          fi
+          if [ ! -s report/files.txt ]; then
+            echo "The APKs are identical, and so are the app bundles' contents."
             exit 0
           fi
+          echo "Files that differ:"
+          cat report/files.txt
           echo "differ=true" >> "$GITHUB_OUTPUT"
 
       # apt brings the tools diffoscope uses to unpack dex and resources. Ubuntu's diffoscope
@@ -142,65 +182,78 @@ jobs:
           "$RUNNER_TEMP/diffoscope/bin/pip" install --quiet diffoscope==339 androguard==4.1.4 apksigcopier==1.1.1 python-magic libarchive-c
           echo "$RUNNER_TEMP/diffoscope/bin" >> "$GITHUB_PATH"
 
-      # diffoscope on the whole APK ran past 40 minutes on the dex files. So list the entries
+      # diffoscope on a whole APK ran past 40 minutes on the dex files. So list the entries
       # that differ first, then run diffoscope on each of those, with a time limit per entry.
       - name: Compare
         if: steps.check.outputs.differ == 'true'
         run: |
-          # Entry order, sizes and timestamps, then the entries whose CRC differs.
-          mkdir -p report first second
-          zipinfo AnkiQuest-first.apk | tail -n +2 > report/first.zipinfo
-          zipinfo AnkiQuest-second.apk | tail -n +2 > report/second.zipinfo
-          diff report/first.zipinfo report/second.zipinfo > report/zipinfo.diff || true
-          unzip -v AnkiQuest-first.apk | awk 'NF == 8 { print $7, $8 }' | sort -k2 > report/first.crc
-          unzip -v AnkiQuest-second.apk | awk 'NF == 8 { print $7, $8 }' | sort -k2 > report/second.crc
-          join -1 2 -2 2 -a 1 -a 2 -e missing -o 0,1.1,2.1 report/first.crc report/second.crc \
-            | awk '$2 != $3 { print $1 }' > report/entries.txt
-          echo "Entries that differ:"
-          cat report/entries.txt
-          echo "zipinfo differences:"
-          head -n 200 report/zipinfo.diff
-
           # R8 mapping differences, without the header that holds the mapping's own hash.
-          diff <(grep -v '^#' mapping-first.txt) <(grep -v '^#' mapping-second.txt) > report/mapping.diff || true
-          echo "R8 mapping differences ($(wc -l < report/mapping.diff) lines):"
-          head -n 300 report/mapping.diff
+          for flavor in full play; do
+            diff <(grep -v '^#' "apk-first/mapping-$flavor.txt") <(grep -v '^#' "apk-second/mapping-$flavor.txt") \
+              > "report/mapping-$flavor.diff" || true
+            echo "R8 $flavor mapping differences ($(wc -l < "report/mapping-$flavor.diff") lines):"
+            head -n 300 "report/mapping-$flavor.diff"
+          done
 
-          # The APK itself without the dex files: the signing block and zip structure.
-          timeout 600 diffoscope --exclude-command '^apktool' --exclude-command '^procyon' \
-            --exclude-command '^javap' --exclude 'classes*.dex' \
-            --text report/apk.txt AnkiQuest-first.apk AnkiQuest-second.apk > /dev/null 2>&1 || true
+          while read -r file; do
+            dir="report/$file"
+            mkdir -p "$dir/first" "$dir/second"
 
-          # One diffoscope report per differing entry.
-          unzip -q AnkiQuest-first.apk -d first
-          unzip -q AnkiQuest-second.apk -d second
-          while read -r entry; do
-            name=$(echo "$entry" | tr '/' '_')
-            timeout 300 diffoscope --exclude-command '^procyon' --exclude-command '^javap' \
-              --text "report/$name.txt" "first/$entry" "second/$entry" > /dev/null 2>&1 || true
-          done < report/entries.txt
+            # Entry order, sizes and timestamps, then the entries whose CRC differs.
+            zipinfo "apk-first/$file" | tail -n +2 > "$dir/first.zipinfo"
+            zipinfo "apk-second/$file" | tail -n +2 > "$dir/second.zipinfo"
+            diff "$dir/first.zipinfo" "$dir/second.zipinfo" > "$dir/zipinfo.diff" || true
+            unzip -v "apk-first/$file" | awk 'NF == 8 { print $7, $8 }' | sort -k2 > "$dir/first.crc"
+            unzip -v "apk-second/$file" | awk 'NF == 8 { print $7, $8 }' | sort -k2 > "$dir/second.crc"
+            join -1 2 -2 2 -a 1 -a 2 -e missing -o 0,1.1,2.1 "$dir/first.crc" "$dir/second.crc" \
+              | awk '$2 != $3 { print $1 }' > "$dir/entries.txt"
+            echo "$file: entries that differ:"
+            cat "$dir/entries.txt"
+            echo "$file: zipinfo differences:"
+            head -n 200 "$dir/zipinfo.diff"
+
+            # The file itself without the dex files: the signing block and zip structure.
+            timeout 600 diffoscope --exclude-command '^apktool' --exclude-command '^procyon' \
+              --exclude-command '^javap' --exclude 'classes*.dex' --exclude '*/dex/classes*.dex' \
+              --text "$dir/file.txt" "apk-first/$file" "apk-second/$file" > /dev/null 2>&1 || true
+
+            # One diffoscope report per differing entry.
+            unzip -q "apk-first/$file" -d "$dir/first"
+            unzip -q "apk-second/$file" -d "$dir/second"
+            while read -r entry; do
+              name=$(echo "$entry" | tr '/' '_')
+              timeout 300 diffoscope --exclude-command '^procyon' --exclude-command '^javap' \
+                --text "$dir/$name.txt" "$dir/first/$entry" "$dir/second/$entry" > /dev/null 2>&1 || true
+            done < "$dir/entries.txt"
+            rm -rf "$dir/first" "$dir/second"
+          done < report/files.txt
           exit 1
 
       # The job summary holds at most 1 MiB; the full reports are in the artifact.
       - name: Show the differences
         if: failure()
         run: |
-          [ -d report ] || exit 0
-          for file in report/*.txt; do
-            [ -f "$file" ] || continue
+          [ -f report/files.txt ] || exit 0
+          find report -name '*.txt' -type f | sort | while read -r file; do
             echo "::group::$file"
             head -c 100000 "$file"
             echo "::endgroup::"
           done
           {
-            echo 'Entries that differ:'
+            echo 'Files that differ:'
             echo '```'
-            cat report/entries.txt
+            cat report/files.txt
             echo '```'
-            echo 'zipinfo differences:'
-            echo '```'
-            head -n 100 report/zipinfo.diff
-            echo '```'
+            while read -r file; do
+              echo "$file: entries that differ:"
+              echo '```'
+              cat "report/$file/entries.txt" 2>/dev/null
+              echo '```'
+              echo "$file: zipinfo differences:"
+              echo '```'
+              head -n 100 "report/$file/zipinfo.diff" 2>/dev/null
+              echo '```'
+            done < report/files.txt
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

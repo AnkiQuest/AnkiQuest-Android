@@ -85,6 +85,7 @@
     <string name="ankiquest_check_updates_summary">Installé : %1$s</string>
     <string name="ankiquest_local_build">version locale</string>
     <string name="ankiquest_update_none">Tu as la dernière version (%1$s).</string>
+    <string name="ankiquest_updates_off">Cette version ne se met pas à jour elle-même. Le store d’où tu l’as installée la met à jour.</string>
     <string name="ankiquest_update_check_failed">Impossible de vérifier les mises à jour sur GitHub. Réessaie plus tard.</string>
     <string name="ankiquest_period_hour">cette heure</string>
     <string name="ankiquest_period_day">Aujourd\'hui</string>

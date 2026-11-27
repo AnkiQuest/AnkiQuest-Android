@@ -32,7 +32,9 @@ test("the AnkiQuest build no longer comes from customSuffix=quest", () => {
     for (const file of workflows) {
         const workflow = read(file);
         assert.doesNotMatch(workflow, /customSuffix=quest/, file);
-        assert.match(workflow, /:AnkiDroid:assembleFullRelease [^\n]*\\\n\s+-Pankiquest -PcustomName="AnkiQuest"/, file);
+        assert.match(workflow, /quest=\((--no-build-cache )?-Pankiquest -PcustomName="AnkiQuest"/, file);
+        assert.match(workflow, /:AnkiDroid:assembleFullRelease [^\n]*"\$\{quest\[@\]\}"/, file);
+        assert.match(workflow, /:AnkiDroid:bundlePlayRelease [^\n]*"\$\{quest\[@\]\}"/, file);
     }
 });
 
@@ -42,11 +44,12 @@ test("the launcher icon test selects the AnkiQuest build", () => {
     assert.match(workflow, /:AnkiDroid:connectedPlayDebugAndroidTest -Pankiquest [^\n]*AnkiquestIconAliasTest\b/);
 });
 
-test("the APK workflow fails unless the built APK has the AnkiQuest package", () => {
+test("the APK workflow fails unless every built APK has the AnkiQuest package", () => {
     const workflow = read(".github/workflows/ankiquest_apk.yml");
-    const step = workflow.slice(workflow.indexOf("- name: Package and version code"));
+    const step = workflow.slice(workflow.indexOf("- name: Package\n"));
     assert.match(step, new RegExp(`PACKAGE: ${PACKAGE.replaceAll(".", "\\.")}\n`));
-    assert.match(step, /aapt2" dump badging AnkiQuest\.apk \| sed -n "s\/\^package: name=/);
+    assert.match(step, /for apk in AnkiQuest\.apk AnkiQuest-\*\.apk fdroid\.apk; do\n\s*\[ -f "\$apk" \] \|\| continue\n/);
+    assert.match(step, /aapt2" dump badging "\$apk" \| sed -n "s\/\^package: name=/);
     assert.match(step, /if \[ "\$package" != "\$PACKAGE" \]; then[\s\S]*?exit 1/);
 });
 

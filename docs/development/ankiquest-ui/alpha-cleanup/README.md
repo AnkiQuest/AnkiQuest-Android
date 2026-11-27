@@ -6,7 +6,8 @@ The master edit removes only pixels with alpha 1 through 4; pixels above alpha
 4 and all dimensions remain unchanged. It preserves the original contours,
 colors and glow.
 
-[Actual Android before/after images](review.png) are shown at 128px and 64px on
+[Actual Android before/after images](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/archive/aki/reviews/alpha-cleanup-android.png),
+in AnkiQuest-Art's archive, are shown at 128px and 64px on
 light and dark backgrounds. Each output was regenerated twice with the existing
 exporter's Lanczos resize, quality 88, full-quality alpha and method 6, and
 matched byte-for-byte. [Export hashes](exports.json) pin the five masters and

@@ -4,7 +4,8 @@ Six matching Aki/Ankilope poses replace the generic weekly-place aliases.
 Gold uses a friendly wave, silver holds the medal, and bronze has a relaxed
 smile. Rank remains ordinary translated UI text; the medals have no text.
 
-![All six poses at 128 and 64 pixels, on light and dark](podium-review.png)
+[All six poses at 128 and 64 pixels, on light and dark](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/docs/podium-review.png),
+in AnkiQuest-Art.
 
 The 1254px transparent PNG masters, exact prompts and references live in
 `AnkiQuest/AnkiQuest-Desktop` under `static/{aki,ankilope}/place_{1,2,3}.png` and
