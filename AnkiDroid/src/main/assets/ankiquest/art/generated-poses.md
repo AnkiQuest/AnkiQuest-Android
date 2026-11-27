@@ -14,5 +14,5 @@ under aki/ and ankilope/, with that repository's core-pose records. The
 AnkiQuest-Art licence applies.
 
 These poses were generated with OpenAI image_gen, which did not expose
-its model identifier. Android WebPs are exported from the masters by
-AnkiQuest-Art's art-export.
+its model identifier. Android WebPs are AnkiQuest-Art's exported copies,
+from the release pinned in ankiquest-art.json.

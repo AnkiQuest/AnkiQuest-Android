@@ -242,6 +242,10 @@ jobs:
           mode: restore
           group: unit
 
+      - name: AnkiQuest art cache
+        if: needs.changes.outputs.code != 'false'
+        uses: ./.github/actions/ankiquest-art-cache
+
       - name: Robolectric SDK cache
         # Linux only; macOS and Windows keep the SDK jars in their Gradle cache
         if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'

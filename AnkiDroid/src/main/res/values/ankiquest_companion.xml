@@ -9,7 +9,7 @@
     <string name="ankiquest_companion_summary">Choose Aki, Ankilope, or no companion. Synced across devices.</string>
     <string name="ankiquest_companion_aki" translatable="false">Aki</string>
     <string name="ankiquest_companion_ankilope" translatable="false">Ankilope</string>
-    <!-- A purple cow, earned by studying; art is still to come (float3/ankiquest#88). -->
+    <!-- Bluma, a purple cow earned by studying; AnkiQuest-Art names her cow. -->
     <string name="ankiquest_companion_cow" translatable="false">Bluma</string>
     <!-- Shigeyuki's character (CC BY-SA 4.0), earned by a streak. -->
     <string name="ankiquest_companion_anki_tan" translatable="false">Anki-tan</string>
