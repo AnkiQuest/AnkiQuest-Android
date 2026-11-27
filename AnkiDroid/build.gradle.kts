@@ -945,8 +945,14 @@ dependencies {
 
     // The shared rules' bindings call their library through JNA: the AAR, with JNA's library per
     // ABI, in the app; the jar, with the desktop JVMs' JNA library, in the unit tests.
-    implementation("net.java.dev.jna:jna:${libs.versions.jna.get()}@aar")
-    testImplementation("net.java.dev.jna:jna:${libs.versions.jna.get()}")
+    implementation(libs.jna) {
+        artifact {
+            name = "jna"
+            type = "aar"
+            extension = "aar"
+        }
+    }
+    testImplementation(libs.jna)
 
     // May need a resolution strategy for support libs to our versions
     implementation(libs.acra.limiter)
