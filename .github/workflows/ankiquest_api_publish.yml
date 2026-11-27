@@ -1,0 +1,134 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: ankiquest API publish
+
+# Publishes the api module to Maven Central as org.ankiquest:api, signed, with the vanniktech
+# plugin (see api/build.gradle.kts and docs/ankiquest-api.md).
+#
+# Releases are automatic: a push to master that touches api/ (or a manual run) publishes the
+# version in api/build.gradle.kts when it is not released yet (no tag api-v<version>, not on
+# Maven Central), then tags it. Pull requests that change api/ without a new version fail,
+# since a version on Maven Central can never change; they never publish.
+#
+# Secrets: MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD (a Central Portal user token for
+# the org.ankiquest namespace), SIGNING_PRIVATE_KEY and SIGNING_PASSWORD (the GPG key that
+# signs the artefacts), as in AnkiQuest's Anki-Android-Backend fork.
+on:
+  push:
+    branches: [master]
+    paths:
+      - "api/**"
+      - ".github/workflows/ankiquest_api_publish.yml"
+  pull_request:
+    paths:
+      - "api/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push never cancels a release run; pull request runs replace older ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+
+jobs:
+  # Which version this is, and whether to release it
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      publish: ${{ steps.read.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: read
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' api/build.gradle.kts)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # Pull requests: changing the published library needs a new version
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git fetch -q origin "$GITHUB_BASE_REF"
+            before=$(git show "origin/$GITHUB_BASE_REF:api/build.gradle.kts" | sed -n 's/^version = "\(.*\)"$/\1/p')
+            changed=$(git diff --name-only "origin/$GITHUB_BASE_REF...HEAD" -- api ':!api/**/*.md')
+            if [ -n "$changed" ] && [ "$before" = "$version" ]; then
+              echo "::error file=api/build.gradle.kts::api/ changed but the version is still $version; raise -ankiquest.N"
+              exit 1
+            fi
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Released already: tagged, or on Maven Central
+          .github/ankiquest_api_released.sh "$version"
+
+  publish:
+    needs: version
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # for the release tag
+    # One release run per version at a time. A second run of the same version (a manual retry
+    # during a master push run) waits here instead of uploading too; runs of other versions are
+    # never cancelled.
+    concurrency:
+      group: ankiquest-api-publish-${{ needs.version.outputs.version }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The last step pushes the api-v<version> tag.
+          persist-credentials: true # zizmor: ignore[artipacked]
+
+      # The version job ran before this run waited; ask again now that no other run of this
+      # version is publishing, and skip the upload and the tag if it released meanwhile
+      - id: released
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: .github/ankiquest_api_released.sh "$VERSION"
+
+      - name: Configure JDK
+        if: steps.released.outputs.publish == 'true'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: "jetbrains"
+          java-version: "21"
+
+      # No Gradle cache, so nothing a cache entry holds can reach the published library.
+      - name: Setup Gradle
+        if: steps.released.outputs.publish == 'true'
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-disabled: true
+
+      - name: Download Robolectric SDKs
+        if: steps.released.outputs.publish == 'true'
+        run: ./gradlew robolectricSdkDownload
+
+      - name: Test the api module
+        if: steps.released.outputs.publish == 'true'
+        run: ./gradlew :api:testDebugUnitTest
+
+      - name: Publish to Maven Central
+        if: steps.released.outputs.publish == 'true'
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: ./gradlew :api:publishAllPublicationsToMavenCentral --no-configuration-cache
+
+      - name: Tag the release
+        if: steps.released.outputs.publish == 'true'
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          git tag "api-v$VERSION"
+          git push origin "api-v$VERSION"

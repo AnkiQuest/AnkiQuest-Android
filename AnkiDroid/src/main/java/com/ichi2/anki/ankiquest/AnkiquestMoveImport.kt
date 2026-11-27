@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -13,6 +14,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
+import com.ichi2.anki.common.storage.AnkiDroidFolder
+import com.ichi2.anki.selectAnkiDroidFolder
 import com.ichi2.utils.LanguageUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -51,12 +54,12 @@ internal object AnkiquestMoveImport {
         ) : State
     }
 
-    /** How the collection, which stays in the old app's storage, reaches the new app. */
+    /** What to do after importing settings. Shared folders already contain the collection. */
     enum class Next {
         /** An AnkiWeb login moved: sync. */
         SYNC,
 
-        /** No AnkiWeb login: export the collection in the old app and import the file here. */
+        /** No AnkiWeb login: show how to export and import if the apps use separate folders. */
         EXPORT,
     }
 
@@ -285,11 +288,7 @@ internal object AnkiquestMoveImport {
         next: Next,
         onDone: (Next) -> Unit,
     ): AlertDialog {
-        val message =
-            when (next) {
-                Next.SYNC -> R.string.ankiquest_move_done_sync
-                Next.EXPORT -> R.string.ankiquest_move_done_export
-            }
+        val message = receipt(next, selectAnkiDroidFolder(activity))
         return AlertDialog
             .Builder(activity)
             .setTitle(R.string.ankiquest_move_title)
@@ -301,6 +300,30 @@ internal object AnkiquestMoveImport {
                 applyLanguage()
             }.show()
     }
+
+    /**
+     * The receipt text. With the shared folder as default, the old app may hold the same
+     * collection open, so the player closes it first; sync or export only applies to separate
+     * folders. Without the shared folder, the collection can only follow by sync or export.
+     */
+    @StringRes
+    fun receipt(
+        next: Next,
+        folder: AnkiDroidFolder,
+    ): Int =
+        when (folder) {
+            AnkiDroidFolder.PUBLIC ->
+                when (next) {
+                    Next.SYNC -> R.string.ankiquest_move_done_sync
+                    Next.EXPORT -> R.string.ankiquest_move_done_export
+                }
+
+            AnkiDroidFolder.APP_PRIVATE ->
+                when (next) {
+                    Next.SYNC -> R.string.ankiquest_move_done_private_sync
+                    Next.EXPORT -> R.string.ankiquest_move_done_private_export
+                }
+        }
 
     private fun failed(activity: AppCompatActivity): AlertDialog =
         AlertDialog

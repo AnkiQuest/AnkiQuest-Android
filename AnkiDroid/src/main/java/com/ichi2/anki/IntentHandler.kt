@@ -381,7 +381,7 @@ class IntentHandler : AbstractIntentHandler() {
     }
 
     companion object {
-        private const val ACTION_DO_SYNC = "com.ichi2.anki.DO_SYNC"
+        private const val ACTION_DO_SYNC = "org.ankiquest.ankidroid.DO_SYNC"
         const val EXTRA_DECK_ID = "EXTRA_DECK_ID"
         private const val ACTION_COPY_DEBUG_INFO = "com.ichi2.anki.COPY_DEBUG_INFO"
         private const val EXTRA_CLIPBOARD_DATA = "clip_data"

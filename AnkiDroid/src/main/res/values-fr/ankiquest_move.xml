@@ -5,8 +5,10 @@
     <string name="ankiquest_move_message">Transférer tes réglages et ta connexion depuis l’ancien AnkiQuest ?</string>
     <string name="ankiquest_move_accept">Transférer</string>
     <string name="ankiquest_move_decline">Non</string>
-    <string name="ankiquest_move_done_sync">Réglages et connexion transférés. Ta collection arrive d’AnkiWeb avec la première synchronisation, qui commence maintenant.</string>
-    <string name="ankiquest_move_done_export">Réglages et connexion transférés. Ta collection est encore dans l’ancien AnkiQuest : utilise « Exporter la collection » là-bas, puis importe le fichier ici.</string>
+    <string name="ankiquest_move_done_sync">Réglages et connexion transférés. Si les deux applis utilisent le même dossier AnkiDroid, force l’arrêt de l’ancien AnkiQuest dans les paramètres Android avant de continuer. La synchronisation avec AnkiWeb commence à l’ouverture de la collection.</string>
+    <string name="ankiquest_move_done_export">Réglages et connexion transférés. Si les deux applis utilisent le même dossier AnkiDroid, force l’arrêt de l’ancien AnkiQuest dans les paramètres Android avant de continuer. Si elles utilisent des dossiers distincts, exporte la collection de l’ancienne appli et importe le fichier ici.</string>
+    <string name="ankiquest_move_done_private_sync">Réglages et connexion transférés. Ta collection arrive d’AnkiWeb avec la première synchronisation, qui commence maintenant.</string>
+    <string name="ankiquest_move_done_private_export">Réglages et connexion transférés. Ta collection est encore dans l’ancien AnkiQuest : utilise « Exporter la collection » là-bas, puis importe le fichier ici.</string>
     <string name="ankiquest_move_failed">L’ancien AnkiQuest n’a pas transmis ses réglages. Configure cette application comme d’habitude.</string>
     <string name="ankiquest_move_loading">Transfert de tes réglages et de ta connexion…</string>
 </resources>

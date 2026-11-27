@@ -464,7 +464,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         const val LARGE_COMPANION_DP = 220
         const val HUGE_COMPANION_DP = 520
 
-        /** The streak widget poses are exported at this size (float3/ankiquest#253). */
+        /** The streak widget poses are exported at this size (AnkiQuest/AnkiQuest-Desktop#253). */
         const val COMPANION_MAX_PX = 1024
     }
 }

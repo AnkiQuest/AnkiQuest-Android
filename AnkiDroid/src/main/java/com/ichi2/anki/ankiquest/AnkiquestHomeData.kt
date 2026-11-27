@@ -156,7 +156,7 @@ internal data class HomeCountdown(
 )
 
 internal object AnkiquestHomeData {
-    /** Sent with every companion save: `docs/mobile-api.md`, study companion, in float3/ankiquest. */
+    /** Sent with every companion save: `docs/mobile-api.md`, study companion, in AnkiQuest-Server. */
     private const val COMPANIONS_HEADER = "X-AnkiQuest-Companions"
     private const val SHOWS_LOCKS = "milestones"
 

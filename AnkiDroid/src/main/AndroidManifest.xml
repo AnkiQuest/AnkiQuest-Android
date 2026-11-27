@@ -47,6 +47,10 @@
                 android:description="@string/read_write_permission_description"
                 android:protectionLevel="dangerous"
                 />
+    <!-- The app requests its own provider permission, including in debug builds.
+         The API library also declares the legacy package's permission for external clients. -->
+    <uses-permission android:name="${applicationId}.permission.READ_WRITE_DATABASE" />
+    <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE" tools:node="remove" />
 
     <supports-screens
         android:anyDensity="true"
@@ -232,9 +236,9 @@
                 <data android:mimeType="image/svg" />
             </intent-filter>
 
-            <!-- Tasker DO_SYNC intent -->
+            <!-- Tasker DO_SYNC intent: AnkiQuest's own action, not AnkiDroid's (#461) -->
             <intent-filter>
-                <action android:name="com.ichi2.anki.DO_SYNC" />
+                <action android:name="org.ankiquest.ankidroid.DO_SYNC" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -690,7 +694,15 @@
             android:exported="true"
             tools:ignore="ExportedContentProvider"
             >
-            <meta-data android:name="com.ichi2.anki.provider.spec" android:value="2" />
+            <!--
+            AnkiQuest's own names for AnkiDroid's provider spec key and discovery action, which the API
+            library also reads (#461): AnkiQuest exposes none of AnkiDroid's contract names.
+            -->
+            <meta-data android:name="org.ankiquest.provider.spec" android:value="2" />
+            <!-- Lets API clients find parallel builds (org.ankiquest.ankidroid.debug) -->
+            <intent-filter>
+                <action android:name="org.ankiquest.action.FLASHCARDS_PROVIDER" />
+            </intent-filter>
         </provider>
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -702,6 +714,8 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
         </provider>
+        <!-- The API library's provider chooser is for its clients -->
+        <activity android:name="com.ichi2.anki.api.ProviderChooserActivity" tools:node="remove" />
     </application>
 
 </manifest>
