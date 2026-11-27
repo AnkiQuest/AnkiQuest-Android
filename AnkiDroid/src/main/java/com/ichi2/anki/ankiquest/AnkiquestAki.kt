@@ -63,7 +63,7 @@ internal object AnkiquestAki {
         return Card(mood, day?.streak ?: 0, message(mood, local, day))
     }
 
-    private fun message(
+    internal fun message(
         mood: AnkiquestMood.Mood,
         local: HomeLocal?,
         day: AnkiquestDay.Verdict?,

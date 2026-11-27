@@ -20,6 +20,11 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
 class AnkiquestAkiTest : RobolectricTest() {
+    /** `streak_moods.json` from server master, the cases the desktop add-on also tests. */
+    private val moods by lazy {
+        JSONObject(checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText())
+    }
+
     private fun profile(
         state: String,
         reviews: Int,
@@ -183,11 +188,7 @@ class AnkiquestAkiTest : RobolectricTest() {
     fun `the home companion follows every shared streak mood`() {
         // The Home card and the widget show the same mood for the same day (#309), using the
         // cases in streak_moods.json that the desktop add-on also tests.
-        val fixtures =
-            JSONObject(
-                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
-            )
-        val cases = fixtures.getJSONArray("moods").objects()
+        val cases = moods.getJSONArray("moods").objects()
         var checked = 0
         for (case in cases) {
             val name = case.getString("name")
@@ -203,15 +204,40 @@ class AnkiquestAkiTest : RobolectricTest() {
     }
 
     @Test
+    fun `the home card line follows every shared mood message`() {
+        // The Today/Home line for a mood, against the messages cases in streak_moods.json
+        // that the desktop add-on also tests. The fixture speaks the add-on's names, which are
+        // this enum's lowercased: celebrate, freeze, waiting, review, streak, welcome.
+        val cases = moods.getJSONArray("messages").objects()
+        check(cases.isNotEmpty())
+        for (case in cases) {
+            val name = case.getString("name")
+            val mood = enumValueOf<AnkiquestMood.Mood>(case.getString("mood").uppercase())
+            val dues = case.getJSONArray("decks_due")
+            val decks = (0 until dues.length()).map { index -> HomeDeck(index + 1L, "Deck ${index + 1}", 0, 0, dues.getInt(index)) }
+            val local = HomeLocal(decks, decks.firstOrNull()?.id ?: 0)
+            val day =
+                AnkiquestDay.Verdict(
+                    met = case.getInt("reviews") > 0,
+                    streakState = null,
+                    streak = null,
+                    reviews = case.getInt("reviews"),
+                    timeMs = 0,
+                    streakMinutes = 0,
+                    unsent = 0,
+                    confirmed = false,
+                )
+            assertEquals(case.getInt("focus_due"), local.focus?.due ?: 0, name)
+            assertEquals(case.getString("expected"), AnkiquestAki.message(mood, local, day).name.lowercase(), name)
+        }
+    }
+
+    @Test
     fun `the home card shows Ankilope's pose for every shared streak mood`() {
         // Regression: Ankilope studied on a day a freeze kept; each mood has her own pose.
         chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
-        val fixtures =
-            JSONObject(
-                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
-            )
         var checked = 0
-        for (case in fixtures.getJSONArray("moods").objects()) {
+        for (case in moods.getJSONArray("moods").objects()) {
             val profile = homeProfile(case.getJSONObject("today")) ?: continue
             val card = AnkiquestAki.mood(null, profile)
             val expected = ankilopeMoodPoses.getValue(card.mood)
