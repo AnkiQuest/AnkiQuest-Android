@@ -15,6 +15,7 @@ import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.ankiquest.AnkiquestCrashAdministrator
 import com.ichi2.anki.ankiquest.AnkiquestDebugMenu
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -63,7 +64,11 @@ class DeveloperOptionsFragment : SettingsFragment() {
         requirePreference<Preference>(R.string.pref_trigger_crash_key).setOnPreferenceClickListener {
             // If we don't delete the limiter data, our test crash may not go through,
             // but we are triggering it very much on purpose, we want to see the crash in ACRA
-            this.context?.let { c -> CrashReportService.deleteLimiterData(c) }
+            this.context?.let { c ->
+                CrashReportService.deleteLimiterData(c)
+                // AnkiQuest sends each crash at most twice; the test crash must still go through.
+                AnkiquestCrashAdministrator.forget(c)
+            }
 
             Timber.w("Crash triggered on purpose from advanced preferences in debug mode")
             throw RuntimeException("This is a test crash")

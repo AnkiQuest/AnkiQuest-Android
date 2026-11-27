@@ -32,7 +32,6 @@ class AcraBuildConfigTest {
             "Review new BuildConfig fields for credentials and personal data before adding them here",
             buildConfig.keys().asSequence().toList(),
             containsInAnyOrder(
-                "ACRA_URL",
                 "ANKIQUEST_NIGHTLY",
                 "ANKIQUEST_RELEASE",
                 "APPLICATION_ID",

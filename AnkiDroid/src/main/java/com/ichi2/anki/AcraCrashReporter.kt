@@ -12,6 +12,8 @@ import androidx.core.content.pm.PackageInfoCompat
 import androidx.webkit.WebViewCompat
 import com.ichi2.anki.analytics.AnkiDroidCrashReportDialog
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.ankiquest.AnkiquestCrashAdministrator
+import com.ichi2.anki.ankiquest.AnkiquestCrashReports
 import com.ichi2.anki.ankiquest.AnkiquestPreferences
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.crashreporting.CrashReportService
@@ -34,6 +36,7 @@ import org.acra.config.HttpSenderConfigurationBuilder
 import org.acra.config.LimiterConfigurationBuilder
 import org.acra.config.LimiterData
 import org.acra.config.ToastConfigurationBuilder
+import org.acra.data.StringFormat
 import org.acra.sender.HttpSender
 import timber.log.Timber
 
@@ -70,8 +73,8 @@ private object AcraCrashReporter : CrashReporter {
     private enum class ToastType(
         @StringRes private val toastMessageRes: Int,
     ) {
-        AUTO_TOAST(CommonString.feedback_auto_toast_text),
-        MANUAL_TOAST(CommonString.feedback_for_manual_toast_text),
+        AUTO_TOAST(R.string.ankiquest_feedback_auto_toast_text),
+        MANUAL_TOAST(R.string.ankiquest_feedback_manual_toast_text),
         ;
 
         fun getToastMessage(context: Context) = context.getString(toastMessageRes)
@@ -88,6 +91,9 @@ private object AcraCrashReporter : CrashReporter {
                     "browser_search_history",
                     AnkiquestPreferences.NAMESPACE,
                 ).withSharedPreferencesName("acra")
+                .withReportFormat(StringFormat.JSON)
+                // No INSTALLATION_ID: the AnkiQuest server drops it, and deduplication needs no identity.
+                // ankiquest_feedback_disclaimer lists what these contain; keep it in step.
                 .withReportContent(
                     ReportField.REPORT_ID,
                     ReportField.APP_VERSION_CODE,
@@ -110,7 +116,6 @@ private object AcraCrashReporter : CrashReporter {
                     ReportField.USER_APP_START_DATE,
                     ReportField.USER_CRASH_DATE,
                     ReportField.LOGCAT,
-                    ReportField.INSTALLATION_ID,
                     ReportField.ENVIRONMENT,
                     ReportField.SHARED_PREFERENCES,
                     // ReportField.MEDIA_CODEC_LIST,
@@ -120,15 +125,16 @@ private object AcraCrashReporter : CrashReporter {
                     DialogConfigurationBuilder()
                         .withReportDialogClass(AnkiDroidCrashReportDialog::class.java)
                         .withCommentPrompt(application.getString(CommonString.empty_string))
-                        .withTitle(application.getString(CommonString.feedback_title))
+                        .withTitle(application.getString(R.string.ankiquest_feedback_title))
                         .withText(application.getString(CommonString.feedback_default_text))
                         .withPositiveButtonText(application.getString(CommonString.feedback_report))
-                        .withResIcon(R.drawable.logo_star_144dp)
+                        .withResIcon(AnkiquestCrashReports.ICON)
                         .withEnabled(dialogEnabled)
                         .build(),
+                    // AnkiQuest's own server, not ankidroid.org (#329).
                     HttpSenderConfigurationBuilder()
-                        .withHttpMethod(HttpSender.Method.PUT)
-                        .withUri(BuildConfig.ACRA_URL)
+                        .withHttpMethod(HttpSender.Method.POST)
+                        .withUri(AnkiquestCrashReports.URL)
                         .withEnabled(true)
                         .build(),
                     ToastConfigurationBuilder()
@@ -333,6 +339,7 @@ private object AcraCrashReporter : CrashReporter {
         setReportingMode(newValue)
         // If the user changed error reporting, make sure future reports have a chance to post
         deleteLimiterData(ctx)
+        AnkiquestCrashAdministrator.forget(ctx)
         // We also need to re-chain our UncaughtExceptionHandlers
         AnkiDroidUsageAnalytics.reinitialize(ctx.applicationContext)
         ThrowableFilterService.reInitialize()

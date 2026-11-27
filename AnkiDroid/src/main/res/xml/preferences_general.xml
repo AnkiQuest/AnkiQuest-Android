@@ -25,7 +25,7 @@
             android:entries="@array/error_reporting_choice_labels"
             android:entryValues="@array/error_reporting_choice_values"
             android:key="@string/error_reporting_mode_key"
-            android:title="@string/error_reporting_choice"
+            android:title="@string/ankiquest_error_reporting_choice"
             app:useSimpleSummaryProvider="true"/>
         <SwitchPreferenceCompat
             android:defaultValue="false"

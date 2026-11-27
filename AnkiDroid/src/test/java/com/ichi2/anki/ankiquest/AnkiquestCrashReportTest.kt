@@ -8,24 +8,116 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.acraCoreConfigBuilder
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.exception.UserSubmittedException
 import okhttp3.Request
 import okhttp3.Response
 import org.acra.ReportField
 import org.acra.builder.ReportBuilder
+import org.acra.collector.CustomDataCollector
 import org.acra.collector.SharedPreferencesCollector
+import org.acra.config.HttpSenderConfiguration
+import org.acra.config.ReportingAdministrator
 import org.acra.data.CrashReportData
+import org.acra.data.StringFormat
+import org.acra.plugins.loadEnabled
+import org.acra.sender.HttpSender
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.net.HttpURLConnection.HTTP_FORBIDDEN
+import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestCrashReportTest : RobolectricTest() {
+    /** AnkiQuest builds must never send reports to AnkiDroid's server (#329). */
+    @Test
+    fun `crash reports go to the AnkiQuest server`() {
+        val config = CrashReportService.acraCoreConfigBuilder.build()
+        val sender = config.pluginConfigurations.filterIsInstance<HttpSenderConfiguration>().single()
+
+        // Not ankidroid.org or any of its subdomains.
+        val host = URI(sender.uri).host
+        assertFalse(host == ANKIDROID_HOST || host.endsWith(".$ANKIDROID_HOST"), sender.uri)
+
+        // The server endpoint takes a JSON body by POST.
+        assertEquals("${AnkiquestAccount.DEFAULT_SERVER}/api/crash-reports", sender.uri)
+        assertEquals(HttpSender.Method.POST, sender.httpMethod)
+        assertEquals(StringFormat.JSON, config.reportFormat)
+    }
+
+    /** The same crash reaches the server at most twice per device, labelled with its signature. */
+    @Test
+    fun `the same crash is reported at most twice`() {
+        val crash = IllegalStateException("Card 12 missing")
+        val builders = List(3) { ReportBuilder().exception(crash) }
+
+        val verdicts = builders.map { administrator().shouldStartCollecting(targetContext, config(), it) }
+        assertEquals(listOf(true, true, false), verdicts)
+
+        // The signature goes into the report's custom data.
+        val report = CrashReportData()
+        CustomDataCollector().collect(ReportField.CUSTOM_DATA, targetContext, config(), builders[0], report)
+        val custom = report[ReportField.CUSTOM_DATA.name] as JSONObject
+        assertEquals(
+            AnkiquestCrashSignature.of(crash, AnkiquestRedaction.of(AnkiDroidApp.sharedPrefs())),
+            custom.getString(AnkiquestCrashAdministrator.SIGNATURE_FIELD),
+        )
+
+        // A different crash is still reported.
+        val other = ReportBuilder().exception(IllegalArgumentException("Card 12 missing"))
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), other))
+
+        // Forgetting the record, as the developer test crash does, lets it through again.
+        AnkiquestCrashAdministrator.forget(targetContext)
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)))
+    }
+
+    /** Cancelling the "Ask me" dialog takes back that report's send, and no other crash's. */
+    @Test
+    fun `a cancelled report may be sent again`() {
+        val cancelled = IllegalStateException("Card 12 missing")
+        val other = IllegalArgumentException("Card 12 missing")
+        val builders = List(2) { ReportBuilder().exception(cancelled) }
+        builders.forEach { assertTrue(administrator().shouldStartCollecting(targetContext, config(), it)) }
+        repeat(2) { assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(other))) }
+
+        // The dialog reads the report ACRA saved, with the signature in its custom data.
+        val report = CrashReportData()
+        CustomDataCollector().collect(ReportField.CUSTOM_DATA, targetContext, config(), builders[1], report)
+        AnkiquestCrashAdministrator.cancelled(targetContext, CrashReportData(report.toJSON()))
+
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(cancelled)))
+        assertFalse(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(other)))
+    }
+
+    /** ACRA's limiter is cleared on its own; AnkiQuest's record stays. */
+    @Test
+    fun `clearing ACRA's limiter keeps the record`() {
+        val crash = IllegalStateException("Card 12 missing")
+        repeat(2) { administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)) }
+
+        CrashReportService.deleteLimiterData(targetContext)
+
+        assertFalse(administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(crash)))
+    }
+
+    @Test
+    fun `reports the player submits are always sent`() {
+        val submitted = UserSubmittedException("Sent by the player")
+
+        val verdicts = List(3) { administrator().shouldStartCollecting(targetContext, config(), ReportBuilder().exception(submitted)) }
+
+        assertEquals(listOf(true, true, true), verdicts)
+    }
+
     @Test
     fun `crash reports omit AnkiQuest credentials and account caches`() {
         val keys =
@@ -64,6 +156,139 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         for (key in listOf("username", "hkey", "currentSyncUri", "browser_search_history")) {
             assertFalse(collected.has(key), key)
         }
+    }
+
+    /** Logs, traces and custom data in a report lose the server's address and any credentials (#216). */
+    @Test
+    fun `reports leave out server addresses and credentials`() {
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://$CUSTOM_HOST/")
+            putString(Ankiquest.PREF_TOKEN, TOKEN)
+        }
+        val signature = AnkiquestCrashSignature.hash("synthetic crash")
+        val report = CrashReportData()
+        report.put(
+            ReportField.LOGCAT,
+            listOf(
+                "W/AnkiDroid: java.net.UnknownHostException: Unable to resolve host \"$CUSTOM_HOST\": No address associated with hostname",
+                "W/AnkiDroid: java.net.ConnectException: Failed to connect to $CUSTOM_HOST/$CUSTOM_ADDRESS:443",
+                "D/AnkiDroid: --> POST https://$DEFAULT_HOST/api/reviews",
+                "D/AnkiDroid: Authorization: Bearer $TOKEN",
+                "D/AnkiDroid: Authorization: bearer $SHORT_SECRET",
+            ).joinToString("\n"),
+        )
+        report.put(ReportField.STACK_TRACE, trace(IOException("Unable to resolve host \"$CUSTOM_HOST\"", IOException("token $TOKEN"))))
+        report.put(
+            ReportField.CUSTOM_DATA,
+            JSONObject(
+                mapOf(
+                    "origin" to "AnkiquestApi",
+                    "additionalInfo" to "https://$CUSTOM_HOST/api/profile?t=$TOKEN",
+                    AnkiquestCrashAdministrator.SIGNATURE_FIELD to signature,
+                ),
+            ),
+        )
+
+        assertTrue(administrator().shouldSendReport(targetContext, config(), report))
+
+        // No address or credential is left anywhere in the report.
+        val sent = report.toJSON()
+        for (secret in listOf(CUSTOM_HOST, DEFAULT_HOST, CUSTOM_ADDRESS, TOKEN, SHORT_SECRET)) {
+            assertFalse(secret in sent, secret)
+        }
+
+        // What helps to diagnose the crash stays.
+        val logcat = checkNotNull(report.getString(ReportField.LOGCAT))
+        assertTrue("Unable to resolve host \"[server]\": No address associated with hostname" in logcat, logcat)
+        assertTrue("Failed to connect to [server]:443" in logcat, logcat)
+        assertTrue("Authorization: Bearer [removed]" in logcat, logcat)
+        val custom = report[ReportField.CUSTOM_DATA.name] as JSONObject
+        assertEquals("AnkiquestApi", custom.getString("origin"))
+        assertEquals(signature, custom.getString(AnkiquestCrashAdministrator.SIGNATURE_FIELD))
+    }
+
+    /**
+     * Preference names can hold a server: AnkiQuest keeps records per server under keys like
+     * `ankiquestUploadedThrough:https://host/user`. A name that is not excluded from collection
+     * loses its server and credentials as text does, and so does a preference's text.
+     */
+    @Test
+    fun `preference names and values leave out server addresses and credentials`() {
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://$CUSTOM_HOST/")
+            putString(Ankiquest.PREF_TOKEN, TOKEN)
+        }
+        val report = CrashReportData()
+        report.put(
+            ReportField.SHARED_PREFERENCES,
+            JSONObject(
+                mapOf(
+                    "default" to
+                        JSONObject(
+                            mapOf(
+                                "uploadedThrough:https://$CUSTOM_HOST/hill" to 7L,
+                                "capabilities:http://$CUSTOM_HOST:8080" to "x",
+                                "unlocks:https://$DEFAULT_HOST/hill" to true,
+                                "scope:$TOKEN" to "1",
+                                "lastServer" to "https://$CUSTOM_HOST/api",
+                                "theme" to "light",
+                            ),
+                        ),
+                ),
+            ),
+        )
+
+        assertTrue(administrator().shouldSendReport(targetContext, config(), report))
+
+        // No address or credential is left; names, values and their types otherwise stay.
+        val sent = report.toJSON()
+        for (secret in listOf(CUSTOM_HOST, DEFAULT_HOST, TOKEN)) {
+            assertFalse(secret in sent, secret)
+        }
+        val prefs = (report[ReportField.SHARED_PREFERENCES.name] as JSONObject).getJSONObject("default")
+        assertEquals(7L, prefs.getLong("uploadedThrough:https://[server]/hill"))
+        assertEquals("x", prefs.getString("capabilities:http://[server]:8080"))
+        assertEquals(true, prefs.getBoolean("unlocks:https://[server]/hill"))
+        assertEquals("1", prefs.getString("scope:[removed]"))
+        assertEquals("https://[server]/api", prefs.getString("lastServer"))
+        assertEquals("light", prefs.getString("theme"))
+    }
+
+    /**
+     * The server signs the trace it receives, which is redacted, so the device signs the redacted
+     * message too; otherwise the same crash gets two signatures.
+     */
+    @Test
+    fun `the signature matches the redacted trace`() {
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "https://$CUSTOM_HOST") }
+        val crash = IOException("Unable to resolve host \"$CUSTOM_HOST\": Bearer $TOKEN")
+
+        val (signature, trace) = signedTrace(crash)
+
+        // The server reads the class and message from the first line, and the frames below it.
+        val message = "Unable to resolve host \"[server]\": Bearer [removed]"
+        assertEquals("java.io.IOException: $message", trace.lines().first())
+        val canonical = AnkiquestCrashSignature.canonical("java.io.IOException", message, crash.stackTrace.toList())
+        assertEquals(AnkiquestCrashSignature.hash(canonical), signature)
+    }
+
+    /**
+     * The server's error text can quote what the player sent. Logged traces leave it out; the
+     * screens that show it read [AnkiquestHttpException.explanation] or the message.
+     */
+    @Test
+    fun `server error text stays out of logged exceptions`() {
+        val error = AnkiquestHttpException(HTTP_FORBIDDEN, "No player named $SECRET")
+
+        val (signature, trace) = signedTrace(error)
+
+        assertFalse(SECRET in trace, trace)
+        assertEquals("No player named $SECRET", error.explanation)
+        assertEquals("No player named $SECRET", error.message)
+
+        // The signature follows the trace the server receives.
+        val canonical = AnkiquestCrashSignature.canonical(error.javaClass.name, "HTTP $HTTP_FORBIDDEN", error.stackTrace.toList())
+        assertEquals(AnkiquestCrashSignature.hash(canonical), signature)
     }
 
     /**
@@ -105,6 +330,35 @@ class AnkiquestCrashReportTest : RobolectricTest() {
         }
     }
 
+    /** The text ACRA puts in `STACK_TRACE` for [error]. */
+    private fun trace(error: Throwable): String = StringWriter().also { error.printStackTrace(PrintWriter(it)) }.toString()
+
+    /** The signature the device sends for [crash], and the trace as it leaves the device. */
+    private fun signedTrace(crash: Throwable): Pair<String, String> {
+        val builder = ReportBuilder().exception(crash)
+        assertTrue(administrator().shouldStartCollecting(targetContext, config(), builder))
+
+        // ACRA collects the custom data and the trace, then asks whether to send them.
+        val report = CrashReportData()
+        CustomDataCollector().collect(ReportField.CUSTOM_DATA, targetContext, config(), builder, report)
+        report.put(ReportField.STACK_TRACE, trace(crash))
+        assertTrue(administrator().shouldSendReport(targetContext, config(), report))
+
+        val custom = report[ReportField.CUSTOM_DATA.name] as JSONObject
+        return custom.getString(AnkiquestCrashAdministrator.SIGNATURE_FIELD) to checkNotNull(report.getString(ReportField.STACK_TRACE))
+    }
+
+    private fun config() = CrashReportService.acraCoreConfigBuilder.build()
+
+    /** The administrator ACRA loads with the production configuration. */
+    private fun administrator(): AnkiquestCrashAdministrator {
+        val config = config()
+        return config.pluginLoader
+            .loadEnabled<ReportingAdministrator>(config)
+            .filterIsInstance<AnkiquestCrashAdministrator>()
+            .single()
+    }
+
     private fun collect(): JSONObject {
         val report = CrashReportData()
         SharedPreferencesCollector().collect(
@@ -119,5 +373,17 @@ class AnkiquestCrashReportTest : RobolectricTest() {
 
     companion object {
         private const val SECRET = "synthetic-private-token"
+        private const val ANKIDROID_HOST = "ankidroid.org"
+
+        /** A server the player set instead of the default one, and the address it resolved to. */
+        private const val CUSTOM_HOST = "quest.example.net"
+        private const val CUSTOM_ADDRESS = "203.0.113.7"
+
+        /** The device token format: 32 random bytes in lowercase hex. */
+        private const val TOKEN = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+        /** A credential too short to look like a token, recognised by the word in front of it. */
+        private const val SHORT_SECRET = "short-secret"
+        private val DEFAULT_HOST = checkNotNull(URI(AnkiquestAccount.DEFAULT_SERVER).host)
     }
 }
