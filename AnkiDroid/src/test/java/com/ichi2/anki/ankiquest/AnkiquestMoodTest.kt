@@ -50,6 +50,7 @@ class AnkiquestMoodTest : RobolectricTest() {
         // The streak share picture (AnkiquestPicture): its ink, its number's gold, its hero size and
         // every streak's heat, pose and next milestone, as streak_moods.json pins them.
         val style = fixtures.getJSONObject("picture_style")
+
         fun hex(color: Int) = "#%06X".format(0xFFFFFF and color)
         assertEquals(style.getString("ink"), hex(targetContext.getColor(R.color.aq_heat_ink)))
         assertEquals(style.getString("number"), hex(targetContext.getColor(R.color.aq_heat_number)))
