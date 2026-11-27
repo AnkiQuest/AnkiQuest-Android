@@ -3,7 +3,9 @@
 package com.ichi2.anki.provider
 
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.FlashCardsContract
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -35,10 +37,15 @@ class CardContentProviderStartupTest : RobolectricTest() {
 
     @Before
     fun setUpProvider() {
-        grantPermissions(FlashCardsContract.READ_WRITE_PERMISSION)
+        grantPermissions(FlashCardsContract.getPermission(BuildConfig.APPLICATION_ID))
         // Model a provider created before application startup has configured storage.
         targetContext.sharedPrefs().edit { remove(CollectionHelper.PREF_COLLECTION_PATH) }
-        provider = Robolectric.buildContentProvider(CardContentProvider::class.java).create(FlashCardsContract.AUTHORITY).get()
+        provider =
+            Robolectric
+                .buildContentProvider(
+                    CardContentProvider::class.java,
+                ).create(FlashCardsContract.getAuthority(BuildConfig.APPLICATION_ID))
+                .get()
     }
 
     @After
@@ -96,5 +103,17 @@ class CardContentProviderStartupTest : RobolectricTest() {
     }
 
     private fun queryDeckCount(): Int =
-        assertNotNull(provider.query(FlashCardsContract.Deck.CONTENT_ALL_URI, null, null, null, null)).use { it.count }
+        assertNotNull(
+            provider.query(
+                "content://${FlashCardsContract.getAuthority(
+                    BuildConfig.APPLICATION_ID,
+                )}/${FlashCardsContract.Deck.CONTENT_ALL_URI_SEGMENT}".toUri(),
+                null,
+                null,
+                null,
+                null,
+            ),
+        ).use {
+            it.count
+        }
 }
