@@ -2,6 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.Context
+import android.content.res.Configuration
 import android.view.ContextThemeWrapper
 import android.widget.ImageView
 import androidx.core.content.edit
@@ -23,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -71,14 +74,27 @@ class AnkiquestMoodTest : RobolectricTest() {
             } else {
                 assertEquals(case.getInt("next"), AnkiquestMood.next(streak), "streak $streak")
             }
-            assertEquals(
-                case.getString("unit"),
-                targetContext.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak),
-                "streak $streak",
-            )
-            val milestone = if (case.isNull("milestone")) null else case.getString("milestone")
-            assertEquals(milestone, AnkiquestMood.milestone(targetContext, streak), "streak $streak")
+
+            // The unit and the milestone line in every language the clients ship, as the cases word them.
+            val units = case.getJSONObject("unit")
+            val milestones = case.optJSONObject("milestone")
+            for (language in units.keys()) {
+                val context = localized(language)
+                assertEquals(
+                    units.getString(language),
+                    context.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak),
+                    "streak $streak $language",
+                )
+                assertEquals(milestones?.getString(language), AnkiquestMood.milestone(context, streak), "streak $streak $language")
+            }
         }
+    }
+
+    /** [targetContext] in [language], as a player with that system language sees it. */
+    private fun localized(language: String): Context {
+        val configuration = Configuration(targetContext.resources.configuration)
+        configuration.setLocale(Locale.forLanguageTag(language))
+        return targetContext.createConfigurationContext(configuration)
     }
 
     @Test
