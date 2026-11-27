@@ -91,7 +91,7 @@ internal object AnkiquestPicture {
                 if (card.body.isNotBlank() && card.body != AnkiquestMoments.streakDays(context, streak)) {
                     add(Piece.Words(text(card.body, BODY_SIZE * scale, ink)))
                 }
-                AnkiquestMood.nextLine(context, streak)?.let { add(Piece.Words(text(it, BODY_SIZE * scale, ink, Typeface.DEFAULT_BOLD))) }
+                AnkiquestMood.milestone(context, streak)?.let { add(Piece.Words(text(it, BODY_SIZE * scale, ink, Typeface.DEFAULT_BOLD))) }
             }
         val heat = AnkiquestMood.Heat.of(streak)
         val top = context.getColor(heat.top)

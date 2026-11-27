@@ -48,7 +48,8 @@ class AnkiquestMoodTest : RobolectricTest() {
     @Test
     fun `the streak share pictures follow the shared style and cases`() {
         // The streak share picture (AnkiquestPicture): its ink, its number's gold, its hero size and
-        // every streak's heat, pose and next milestone, as streak_moods.json pins them.
+        // every streak's heat, pose, next milestone and the words under the number, as
+        // streak_moods.json pins them.
         val style = fixtures.getJSONObject("picture_style")
 
         fun hex(color: Int) = "#%06X".format(0xFFFFFF and color)
@@ -70,6 +71,13 @@ class AnkiquestMoodTest : RobolectricTest() {
             } else {
                 assertEquals(case.getInt("next"), AnkiquestMood.next(streak), "streak $streak")
             }
+            assertEquals(
+                case.getString("unit"),
+                targetContext.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak),
+                "streak $streak",
+            )
+            val milestone = if (case.isNull("milestone")) null else case.getString("milestone")
+            assertEquals(milestone, AnkiquestMood.milestone(targetContext, streak), "streak $streak")
         }
     }
 
@@ -177,10 +185,8 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `the next milestone counts down`() {
-        assertEquals("36 days to 100 🔥", AnkiquestMood.nextLine(targetContext, 64))
-        assertEquals("1 day to 7 🔥", AnkiquestMood.nextLine(targetContext, 6))
-        assertNull(AnkiquestMood.nextLine(targetContext, 0))
-        assertNull(AnkiquestMood.nextLine(targetContext, 365))
+        assertEquals("36 days to 100", AnkiquestMood.milestone(targetContext, 64))
+        assertNull(AnkiquestMood.milestone(targetContext, 0))
     }
 
     @Test
