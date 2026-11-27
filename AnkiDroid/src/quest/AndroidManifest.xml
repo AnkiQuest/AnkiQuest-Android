@@ -16,9 +16,6 @@
         <package android:name="org.ankiquest.ankidroid" />
     </queries>
 
-    <!-- AnkiquestUpdater installs downloaded releases -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-
     <application
         android:icon="@mipmap/ankiquest_launcher"
         android:roundIcon="@mipmap/ankiquest_launcher"

@@ -33,10 +33,10 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 ### Features
 
 <div style="display:flex;">
- 
+
 - AnkiQuest: XP, streaks, quests, records and a leaderboard widget
 - Night mode
-- Whiteboard 
+- Whiteboard
 - Progress widget
 - Detailed statistics
 - [Review heatmap beneath the deck list](docs/review-heatmap.md)
@@ -55,12 +55,14 @@ AnkiQuest adds XP, streaks, daily quests, friends and leaderboards to Anki. Clie
 <div style="display:flex;">
 
 1. Create an account on an AnkiQuest server, such as [ankiquest.org](https://ankiquest.org). To run your own, see [AnkiQuest-Server](https://github.com/AnkiQuest/AnkiQuest-Server).
-2. Download the APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest" and offers later releases itself. Sync your collection through AnkiWeb as usual.
+2. Download an APK from [Releases](https://github.com/AnkiQuest/AnkiQuest-Android/releases/latest): `AnkiQuest-arm64-v8a.apk` for most phones, or `AnkiQuest.apk`, which runs on every device, if unsure. `AnkiQuest-armeabi-v7a.apk` is for older 32-bit phones, `AnkiQuest-x86_64.apk` and `AnkiQuest-x86.apk` for emulators and Chromebooks. `AnkiQuest.aab` is for Google Play and does not install. The app installs next to AnkiDroid as "AnkiQuest" and offers later releases itself, for the same device type. Sync your collection through AnkiWeb as usual.
 3. Open **Settings → ankiquest → Account → Sign in or create account**.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/AnkiQuest/AnkiQuest-Android">
     <img alt="Get it on Obtainium" height="80"
         src="https://github.com/user-attachments/assets/713d71c5-3dec-4ec4-a3f2-8d28d025a9c6"/></a>
+
+In Obtainium, set "Filter APKs by regular expression" to `^AnkiQuest-arm64-v8a\.apk$` for most phones, or `^AnkiQuest\.apk$` for the universal APK.
 
 </div>
 
@@ -101,6 +103,15 @@ For everything Anki, AnkiDroid's [user manual](https://docs.ankidroid.org/), [wi
 ./gradlew :AnkiDroid:testPlayDebugUnitTest --tests '…'
 node --test .github/tests/*.test.cjs
 ```
+
+The GitHub release APK is built with:
+
+```sh
+SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" ./gradlew :AnkiDroid:assembleFullRelease \
+  -Duniversal-apk=true -PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestUpdates=github
+```
+
+`-PankiquestUpdates=github` builds in the self-updater, which installs new releases from GitHub and requests `REQUEST_INSTALL_PACKAGES`. Without it (`none`, the default) the app neither checks for updates nor requests the permission: use that for store builds (F-Droid, IzzyOnDroid, Play), whose store updates them. Rebuilding the release APK for comparison takes `github`, as in `ankiquest_reproducible.yml`.
 
 AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`; [AGENTS.md](AGENTS.md) has the rules. Pull requests are welcome [here](https://github.com/AnkiQuest/AnkiQuest-Android/pulls). Changes that are not about AnkiQuest belong [upstream](https://github.com/ankidroid/Anki-Android); see AnkiDroid's [contribution guide](https://github.com/ankidroid/Anki-Android/wiki/Contributing).
 
