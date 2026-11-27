@@ -3,7 +3,7 @@ name: ankiquest APK
 
 # A documentation-only push to master builds no nightly, with paths-ignore: this is not a required
 # check and does not run in the merge queue. GitHub does not apply path filters to tag pushes, so
-# every quest-* tag still builds. The globs are the documentation list of ankiquest_lint.yml's
+# every quest-* tag still builds. The globs are the documentation list of lint.yml's
 # changes job (.github/tests/docs-only.test.cjs); they leave out the release notes in the app's
 # assets, which ship in the APK.
 on:
