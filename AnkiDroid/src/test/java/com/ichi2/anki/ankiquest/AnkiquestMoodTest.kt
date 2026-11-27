@@ -56,7 +56,7 @@ class AnkiquestMoodTest : RobolectricTest() {
         assertEquals(style.getInt("hero"), AnkiquestPicture.STREAK_HERO)
         for (case in cases("pictures")) {
             val streak = case.getInt("streak")
-            val heat = AnkiquestMood.heat(streak)
+            val heat = Heat.of(streak)
             assertEquals(case.getString("top"), hex(targetContext.getColor(heat.top)), "streak $streak")
             assertEquals(case.getString("bottom"), hex(targetContext.getColor(heat.bottom)), "streak $streak")
             assertEquals(
