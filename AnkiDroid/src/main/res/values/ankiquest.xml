@@ -95,6 +95,7 @@
     <string name="ankiquest_check_updates_summary">Installed: %1$s</string>
     <string name="ankiquest_local_build">local build</string>
     <string name="ankiquest_update_none">You have the latest version (%1$s).</string>
+    <string name="ankiquest_updates_off">This build does not update itself. The store you installed it from updates it.</string>
     <string name="ankiquest_update_check_failed">Could not check GitHub for updates. Try again later.</string>
     <string name="ankiquest_period_hour">this hour</string>
     <string name="ankiquest_period_day" comment="Daily leaderboard period label, in sentence case">today</string>

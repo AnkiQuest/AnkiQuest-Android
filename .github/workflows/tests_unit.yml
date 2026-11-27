@@ -242,6 +242,10 @@ jobs:
           mode: restore
           group: unit
 
+      - name: AnkiQuest art cache
+        if: needs.changes.outputs.code != 'false'
+        uses: ./.github/actions/ankiquest-art-cache
+
       - name: Robolectric SDK cache
         # Linux only; macOS and Windows keep the SDK jars in their Gradle cache
         if: needs.changes.outputs.code != 'false' && runner.os == 'Linux'
@@ -264,6 +268,14 @@ jobs:
         # Upstream uses 65 of 90; Windows needs about 71 here
         timeout-minutes: 80
         run: ./gradlew :AnkiDroid:jacocoCiUnitTestReports --daemon
+
+      - name: Test the self-updating build
+        if: needs.changes.outputs.code != 'false' && matrix.iteration == 1 && matrix.os == 'ubuntu-latest'
+        run: >
+          ./gradlew :AnkiDroid:testPlayDebugUnitTest
+          -PankiquestUpdates=github
+          --tests 'com.ichi2.anki.ankiquest.AnkiquestUpdaterTest'
+          --daemon
 
       - name: Save Gradle cache
         if: needs.changes.outputs.code != 'false'

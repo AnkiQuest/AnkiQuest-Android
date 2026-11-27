@@ -5,7 +5,8 @@ Aki and Ankilope calmly sort a stack of blank flashcards. The transparent
 server change for AnkiQuest/AnkiQuest-Desktop#88. `AnkiquestCompanion` maps the pair while
 preserving the account's mascot choice, including None.
 
-![Android exports at 128 and 64 pixels, on light and dark](review.png)
+[Android exports at 128 and 64 pixels, on light and dark](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/docs/backlog-art/review.png),
+in AnkiQuest-Art.
 
 Both masters and Android exports were reviewed at native size and at 64 pixels
 on light and dark backgrounds: complete limbs, ears, horns and tails, clean

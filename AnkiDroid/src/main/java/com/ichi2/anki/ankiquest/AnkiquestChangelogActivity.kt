@@ -5,7 +5,11 @@ package com.ichi2.anki.ankiquest
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.URLSpan
 import android.view.View
 import android.widget.TextView
 import androidx.core.text.parseAsHtml
@@ -33,7 +37,7 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
             ViewCompat.setAccessibilityHeading(this, true)
         }
         findViewById<View>(R.id.aq_changelog_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        val root = findViewById<View>(R.id.aq_changelog_root)
+        val root = findViewById<View>(R.id.root_layout)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
@@ -47,7 +51,7 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
         }
         findViewById<TextView>(R.id.aq_changelog_notes).apply {
             val asset = if (guide) AnkiquestReleaseNotes.GUIDE else AnkiquestReleaseNotes.ASSET
-            text = AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(context, asset)).parseAsHtml().trim()
+            text = browsable(AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(context, asset)).parseAsHtml().trim())
             movementMethod = LinkMovementMethod.getInstance()
         }
 
@@ -60,6 +64,29 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
             visibility = if (guide) View.GONE else View.VISIBLE
             setOnClickListener { openAnkiquestLink(AnkiquestLinks.RELEASES) }
         }
+    }
+
+    /**
+     * [notes] with each link opened by [openAnkiquestLink], as the buttons are: URLSpan starts no
+     * browsable intent and drops the link silently when no app handles it.
+     */
+    private fun browsable(notes: CharSequence): Spanned {
+        val text = SpannableStringBuilder(notes)
+        for (span in text.getSpans(0, text.length, URLSpan::class.java)) {
+            val start = text.getSpanStart(span)
+            val end = text.getSpanEnd(span)
+            val flags = text.getSpanFlags(span)
+            text.removeSpan(span)
+            text.setSpan(
+                object : ClickableSpan() {
+                    override fun onClick(widget: View) = openAnkiquestLink(span.url)
+                },
+                start,
+                end,
+                flags,
+            )
+        }
+        return text
     }
 
     companion object {

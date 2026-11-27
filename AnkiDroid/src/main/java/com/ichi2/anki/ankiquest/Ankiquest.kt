@@ -1291,10 +1291,14 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             return
         }
         banner.message = message
+        // The banner's colours are resources, so the contrast test pins them like every other pair.
+        val ink = if (important) R.color.aq_banner_important_ink else R.color.aq_banner_quiet_ink
+        val look = if (important) R.color.aq_banner_important else R.color.aq_banner_quiet
+        banner.setTextColor(host.getColor(ink))
         banner.background =
             GradientDrawable().apply {
                 cornerRadius = 20 * density
-                setColor(if (important) 0xF0B8860B.toInt() else 0xE0202830.toInt())
+                setColor(host.getColor(look))
             }
         banner.text = text
         banner.animate().cancel()

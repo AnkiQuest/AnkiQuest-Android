@@ -11,8 +11,8 @@
     <ImageButton
         android:id="@+id/ankiquest_deck_expand"
         style="?android:attr/borderlessButtonStyle"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:contentDescription="@string/ankiquest_deck_collapse"
         android:src="@drawable/ic_expand_less_black_24dp"
         app:tint="?attr/colorControlNormal" />
@@ -28,8 +28,8 @@
     <ImageButton
         android:id="@+id/ankiquest_deck_subdecks"
         style="?android:attr/borderlessButtonStyle"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:contentDescription="@string/ankiquest_deck_apply_subdecks"
         android:src="@drawable/ic_double_arrow_down"
         app:tint="?attr/colorControlNormal" />

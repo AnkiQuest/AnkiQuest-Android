@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// SPDX-License-Identifier: GPL-3.0-or-later
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -19,7 +18,7 @@ function run(id, options = {}) {
   return { id, head_sha: 'base-sha', head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', ...options };
 }
 
-function harness(batches = [[run(42)]], artifacts = {}, legacy = []) {
+function harness(batches = [[run(42)]], artifacts = {}) {
   const queries = [], artifactQueries = [], waits = [], messages = [], outputs = {}, compares = [];
   let primaryQueries = 0;
   const context = {
@@ -40,9 +39,7 @@ function harness(batches = [[run(42)]], artifacts = {}, legacy = []) {
   }, actions: {
     async listWorkflowRuns(query) {
       queries.push(query);
-      const runs = query.workflow_id === 'screenshot_store.yml'
-        ? batches[Math.min(primaryQueries++, batches.length - 1)]
-        : legacy;
+      const runs = batches[Math.min(primaryQueries++, batches.length - 1)];
       return { data: { workflow_runs: runs } };
     },
     async listWorkflowRunArtifacts(query) {
@@ -130,7 +127,7 @@ test('a PR waits for the base its merge commit was built on, not a stale event b
 
 test('a merge group waits for the master commit the queue built it on', async () => {
   // A group's parent can be the group queued ahead of it, which has no baseline.
-  const fixture = harness([[]], {}, [run(42)]);
+  const fixture = harness([[run(42)]]);
   fixture.context.payload = {
     merge_group: { base_ref: 'refs/heads/master', base_sha: 'queued-sha', head_sha: 'group-sha' },
   };
@@ -173,15 +170,6 @@ test('a manual recording on another branch can replace an expired artifact for t
   assert.equal(fixture.waits.length, 0);
 });
 
-test('the workflow rename can use an older workflow run only for the exact same base', async () => {
-  const fixture = harness([[]], {}, [run(49, { head_sha: 'other-sha' }), run(48)]);
-  assert.equal(await waitForBaseline(fixture), 48);
-  assert.deepEqual(fixture.queries.map(query => [query.workflow_id, query.head_sha]), [
-    ['screenshot_store.yml', 'base-sha'], ['ankiquest_screenshot_store.yml', 'base-sha'],
-  ]);
-  assert.deepEqual(fixture.artifactQueries.map(query => query.run_id), [48]);
-});
-
 test('a successful PR test or failed store cannot become a baseline', async () => {
   const fixture = harness([[
     run(50, { event: 'pull_request' }), run(49, { conclusion: 'failure' }), run(48),
@@ -199,7 +187,7 @@ test('a store with no screenshot artifact stays pending', async () => {
 test('timeout names the exact commit and a way to regenerate its baseline', async () => {
   const fixture = harness([[]]);
   await assert.rejects(waitForBaseline(fixture), /base-sha after 55 minutes.*screenshot_store.yml.*branch at that commit/);
-  assert.equal(fixture.queries.length, 220);
+  assert.equal(fixture.queries.length, 110);
   assert.equal(fixture.waits.reduce((sum, delay) => sum + delay, 0), 55 * 60 * 1000);
 });
 

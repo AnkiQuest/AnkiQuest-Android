@@ -64,3 +64,30 @@ test("key rotation fails when the current APK is absent", t => {
     assert.notEqual(result.status, 0);
     assert.equal(result.apk, null);
 });
+
+const apkWorkflow = fs.readFileSync(path.join(__dirname, "../workflows/ankiquest_apk.yml"), "utf8").replaceAll("\r\n", "\n");
+
+// The body of one step, from its name to the next step.
+function step(name) {
+    const body = apkWorkflow.split(`      - name: ${name}\n`)[1]?.split("\n      - ")[0];
+    assert.ok(body, `the build must have a "${name}" step`);
+    return body;
+}
+
+test("every APK is signed with the rotation to the release key", () => {
+    const signing = step("Sign with the AnkiQuest release key");
+    assert.match(signing, /for apk in AnkiQuest\.apk AnkiQuest-\*\.apk; do/);
+    assert.match(signing, /--next-signer --ks "\$keystore" --ks-key-alias ankiquest/);
+    assert.match(signing, /--lineage tools\/ankiquest-signing-lineage\.bin --rotation-min-sdk-version 28/);
+    assert.match(signing, /verify --min-sdk-version 28 --print-certs "\$apk" \| grep -q "CN=AnkiQuest"/);
+});
+
+test("every APK has the universal APK's package before signing", () => {
+    const check = apkWorkflow.indexOf("      - name: Package\n");
+    const signing = apkWorkflow.indexOf("      - name: Sign with the AnkiQuest release key\n");
+    assert.ok(check >= 0 && check < signing, "the package check must run before signing");
+    const body = step("Package");
+    assert.match(body, /expected=\$\(package_of AnkiQuest\.apk\)/);
+    assert.match(body, /for apk in AnkiQuest-\*\.apk; do/);
+    assert.match(body, /if \[ "\$package" != "\$expected" \]; then[\s\S]*?exit 1/);
+});

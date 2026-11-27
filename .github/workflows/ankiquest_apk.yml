@@ -3,7 +3,7 @@ name: ankiquest APK
 
 # A documentation-only push to master builds no nightly, with paths-ignore: this is not a required
 # check and does not run in the merge queue. GitHub does not apply path filters to tag pushes, so
-# every quest-* tag still builds. The globs are the documentation list of ankiquest_lint.yml's
+# every quest-* tag still builds. The globs are the documentation list of lint.yml's
 # changes job (.github/tests/docs-only.test.cjs); they leave out the release notes in the app's
 # assets, which ship in the APK.
 on:
@@ -36,11 +36,13 @@ env:
   # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
   # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
+  # The ABI splits in AnkiDroid/build.gradle.kts, each published as AnkiQuest-<abi>.apk.
+  ABIS: arm64-v8a armeabi-v7a x86_64 x86
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: write # publishes the release and the nightly
     steps:
@@ -91,6 +93,10 @@ jobs:
           sha=$(git merge-base HEAD FETCH_HEAD)
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
+      # The full flavor for GitHub: one APK per ABI plus the universal AnkiQuest.apk, whose
+      # name released self-updaters download. The ABI APKs follow upstream's split config and
+      # version codes. The play flavor goes to Google Play as an app bundle, without the
+      # self-updater, since Play forbids apps updating themselves (#319).
       - name: Assemble
         env:
           RELEASE: ${{ steps.release.outputs.number }}
@@ -98,13 +104,42 @@ jobs:
           UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
           echo "fatal_warnings=false" >> local.properties
-          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
-            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
-            -PankiquestRelease="$RELEASE" \
-            -PankiquestNightly="$NIGHTLY" \
-            -PupstreamCommit="$UPSTREAM_SHA"
-          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
+          quest=(-PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE"
+            -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM_SHA")
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace -PankiquestUpdates=github "${quest[@]}"
+          ./gradlew :AnkiDroid:bundlePlayRelease --stacktrace -PankiquestUpdates=none "${quest[@]}"
+          cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk AnkiQuest.apk
+          for abi in $ABIS; do
+            cp "AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-$abi-release.apk" "AnkiQuest-$abi.apk"
+          done
+          cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab AnkiQuest.aab
 
+      # Packaging failed now and then with no cause printed; free disk and memory rule those out.
+      - name: Disk and memory
+        if: failure()
+        run: |
+          df -h
+          free -m
+
+      # Every APK of a build has the same package; the signing below fits that package.
+      - name: Package
+        run: |
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          package_of() { "$aapt2" dump badging "$1" | sed -n "s/^package: name='\([^']*\)'.*/\1/p"; }
+          expected=$(package_of AnkiQuest.apk)
+          echo "package $expected"
+          for apk in AnkiQuest-*.apk; do
+            package=$(package_of "$apk")
+            if [ "$package" != "$expected" ]; then
+              echo "::error::$apk has package $package, not $expected"
+              exit 1
+            fi
+          done
+
+      # Every published APK is signed with the rotation from the public test key to the AnkiQuest
+      # key, as released installs of this package expect. apksigner replaces the fallback key's
+      # signature Gradle wrote. The bundle is jar-signed with the AnkiQuest key as its upload key
+      # until Play has an upload key of its own (#319).
       - name: Sign with the AnkiQuest release key
         id: sign
         env:
@@ -119,17 +154,28 @@ jobs:
             echo "::warning::No ANKIQUEST_KEYSTORE; this build stays on the public fallback key"
             exit 0
           fi
-          echo "$ANKIQUEST_KEYSTORE" | base64 -d > "$RUNNER_TEMP/ankiquest.jks"
+          keystore=$(mktemp "$RUNNER_TEMP/ankiquest.XXXXXX.jks")
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$ANKIQUEST_KEYSTORE" | base64 -d > "$keystore"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          "$apksigner" sign \
-            --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
-            --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
-            --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
-            AnkiQuest.apk
-          rm -f "$RUNNER_TEMP/ankiquest.jks"
-          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiQuest.apk | grep -q "CN=AnkiQuest"
+          for apk in AnkiQuest.apk AnkiQuest-*.apk; do
+            "$apksigner" sign \
+              --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
+              --next-signer --ks "$keystore" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
+              --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
+              "$apk"
+            "$apksigner" verify --min-sdk-version 28 --print-certs "$apk" | grep -q "CN=AnkiQuest"
+          done
+
+          # Replace the fallback key's jar signature on the bundle.
+          zip -q -d AnkiQuest.aab 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.EC' 'META-INF/*.DSA' 'META-INF/MANIFEST.MF' || true
+          jarsigner -keystore "$keystore" -storepass:env ANKIQUEST_KEY_PASSWORD \
+            -keypass:env ANKIQUEST_KEY_PASSWORD AnkiQuest.aab ankiquest
+          jarsigner -verify -certs -verbose AnkiQuest.aab | grep "CN=AnkiQuest" > /dev/null
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
+      # Each ABI APK adds its upstream ABI number times 10^8 to the universal version code
+      # (build.gradle.kts), so updates stay within one ABI and never downgrade.
       - name: Version code
         id: version
         env:
@@ -137,18 +183,58 @@ jobs:
           NIGHTLY: ${{ steps.release.outputs.nightly }}
         run: |
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
-          version_code=$("$aapt2" dump badging AnkiQuest.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          code_of() { "$aapt2" dump badging "$1" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p"; }
+          version_code=$(code_of AnkiQuest.apk)
           echo "versionCode $version_code (quest-$RELEASE + $NIGHTLY)"
           if [ "$RELEASE" -gt 0 ] && [ "$version_code" -ne $((50000000 + RELEASE * 1000 + NIGHTLY)) ]; then
             echo "::error::versionCode $version_code does not match quest-$RELEASE + $NIGHTLY"
             exit 1
           fi
+          declare -A abi_digit=([armeabi-v7a]=1 [x86]=2 [arm64-v8a]=3 [x86_64]=4)
+          for abi in $ABIS; do
+            code=$(code_of "AnkiQuest-$abi.apk")
+            if [ "$code" -ne $((abi_digit[$abi] * 100000000 + version_code)) ]; then
+              echo "::error::AnkiQuest-$abi.apk has versionCode $code, expected ${abi_digit[$abi]} * 10^8 + $version_code"
+              exit 1
+            fi
+          done
           echo "code=$version_code" >> "$GITHUB_OUTPUT"
+
+      # The download list for the release notes and nightly.json, most common first.
+      - name: Assets
+        id: assets
+        run: |
+          # Released updaters still request AnkiDroid-Quest.apk. Copy after signing so the bytes match.
+          # quest-2 to quest-19 take the release's first .apk by name, so it must sort first.
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          files=(AnkiQuest-arm64-v8a.apk AnkiQuest.apk AnkiQuest-armeabi-v7a.apk AnkiQuest-x86_64.apk AnkiQuest-x86.apk AnkiQuest.aab AnkiDroid-Quest.apk)
+          for file in "${files[@]}"; do
+            jq -n --arg name "$file" --argjson size "$(stat -c %s "$file")" '{name: $name, size: $size}'
+          done | jq -s . > assets.json
+          {
+            echo "files<<EOF"
+            printf '%s\n' "${files[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo
+            echo "## Downloads"
+            echo
+            echo "- \`AnkiQuest-arm64-v8a.apk\`: most phones."
+            echo "- \`AnkiQuest.apk\`: every device. Pick this if unsure."
+            echo "- \`AnkiQuest-armeabi-v7a.apk\`: older 32-bit phones."
+            echo "- \`AnkiQuest-x86_64.apk\`, \`AnkiQuest-x86.apk\`: emulators and Chromebooks."
+            echo "- \`AnkiQuest.aab\`: app bundle for Google Play, not for installing."
+            echo "- \`AnkiDroid-Quest.apk\`: the same universal APK, kept for older built-in updaters."
+          } > downloads.md
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ankiquest
-          path: AnkiQuest.apk
+          path: |
+            AnkiQuest.apk
+            AnkiQuest-*.apk
+            AnkiQuest.aab
           if-no-files-found: error
 
       - name: Publish release
@@ -157,11 +243,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}
         run: |
-          # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
-          cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+          cat AnkiDroid/src/main/assets/ankiquest/release-notes.md downloads.md > notes.md
+          gh release create "$GITHUB_REF_NAME" $(jq -r '.[].name' assets.json) \
             --title "AnkiQuest $RELEASE" \
-            --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
+            --notes-file notes.md
 
       - name: Nightly manifest
         id: nightly
@@ -173,10 +258,13 @@ jobs:
         run: |
           jq -n --argjson release "$RELEASE" --argjson nightly "$NIGHTLY" --argjson version_code "$VERSION_CODE" \
             --arg commit "$GITHUB_SHA" --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --argjson size "$(stat -c %s AnkiQuest.apk)" \
-            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
+            --argjson size "$(stat -c %s AnkiQuest.apk)" --slurpfile assets assets.json \
+            '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size, assets: $assets[0]}' \
             > nightly.json
-          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          {
+            echo "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."
+            cat downloads.md
+          } > notes.md
 
       # Updates the release in place and retries the release API; see the action.
       - name: Publish nightly
@@ -184,8 +272,7 @@ jobs:
         uses: AnkiQuest/AnkiQuest-Dev/.github/actions/nightly-release@master
         with:
           title: AnkiQuest nightly
-          notes: "Built from ${{ github.sha }} after quest-${{ steps.release.outputs.number }}. Untested: pick the nightly update channel in AnkiQuest settings to get these."
+          notes-file: notes.md
           files: |
-            AnkiQuest.apk
-            AnkiDroid-Quest.apk
+            ${{ steps.assets.outputs.files }}
             nightly.json

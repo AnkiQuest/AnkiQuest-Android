@@ -88,7 +88,12 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
         val requests = CopyOnWriteArrayList<Pair<String, String?>>()
         val server =
             AnkiquestTestServer { request ->
-                requests.add(request.uri.toString() to request.authorization)
+                // The settings sync Ankiquest.init starts on Dispatchers.IO reads the mocked account too, and can
+                // ask this server for its capabilities during the test on a slow runner (Windows run 44378382365).
+                // That request is not the code under test, so it is answered without being recorded.
+                if (request.path != CAPABILITIES) {
+                    requests.add(request.uri.toString() to request.authorization)
+                }
                 TestResponse.json(if (request.path.startsWith("/api/decks/")) settings else "[]")
             }
 
@@ -114,5 +119,10 @@ class AnkiquestLeaderboardScopesApiTest : RobolectricTest() {
                 }
             }
         }
+    }
+
+    private companion object {
+        /** `GET /api/capabilities`, which background work may send at any time. */
+        const val CAPABILITIES = "/api/capabilities"
     }
 }
