@@ -203,6 +203,38 @@ class AnkiquestAkiTest : RobolectricTest() {
     }
 
     @Test
+    fun `the home card line follows every shared mood message`() {
+        // The Today/Home line for a mood, against the messages cases in streak_moods.json
+        // that the desktop add-on also tests. The fixture speaks the add-on's names, which are
+        // this enum's lowercased: celebrate, freeze, waiting, review, streak, welcome.
+        val fixtures =
+            JSONObject(
+                checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
+            )
+        val cases = fixtures.getJSONArray("messages").objects()
+        check(cases.isNotEmpty())
+        for (case in cases) {
+            val name = case.getString("name")
+            val mood = enumValueOf<AnkiquestMood.Mood>(case.getString("mood").uppercase())
+            val dues = case.getJSONArray("decks_due")
+            val decks = (0 until dues.length()).map { index -> HomeDeck(index + 1L, "Deck ${index + 1}", 0, 0, dues.getInt(index)) }
+            val local = HomeLocal(decks, decks.firstOrNull()?.id ?: 0)
+            val day =
+                AnkiquestDay.Verdict(
+                    met = case.getInt("reviews") > 0,
+                    streakState = null,
+                    streak = null,
+                    reviews = case.getInt("reviews"),
+                    timeMs = 0,
+                    streakMinutes = 0,
+                    unsent = 0,
+                    confirmed = false,
+                )
+            assertEquals(case.getString("expected"), AnkiquestAki.message(mood, local, day).name.lowercase(), name)
+        }
+    }
+
+    @Test
     fun `the home card shows Ankilope's pose for every shared streak mood`() {
         // Regression: Ankilope studied on a day a freeze kept; each mood has her own pose.
         chooseCompanion(AnkiquestCompanion.Choice.ANKILOPE)
