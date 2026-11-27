@@ -10,7 +10,6 @@ import anki.deck_config.DeckConfig
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Event
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Fsrs
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Inputs
@@ -19,6 +18,7 @@ import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Since
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.State
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Verdict
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Wording
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.pages.DeckOptions
 import com.ichi2.anki.setIntroductionSlidesShown
 import com.ichi2.testutils.BackupManagerTestUtilities
@@ -206,7 +206,14 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
     fun `the state is kept in its preference`() {
         val prefs = targetContext.getSharedPreferences("optimize-reminder-test", 0)
         assertEquals(State.On, AnkiquestOptimizeReminder.state(prefs))
-        val states = listOf(State.Off, State.Snoozed(1_793_788_140_000), State.Dismissed(null), State.Dismissed(1_786_334_400_000), State.On)
+        val states =
+            listOf(
+                State.Off,
+                State.Snoozed(1_793_788_140_000),
+                State.Dismissed(null),
+                State.Dismissed(1_786_334_400_000),
+                State.On,
+            )
         for (state in states) {
             AnkiquestOptimizeReminder.remember(state, prefs)
             assertEquals(state, AnkiquestOptimizeReminder.state(prefs))
