@@ -9,13 +9,14 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 /**
- * Checks [AnkiquestPose] against `tests/fixtures/companion_poses.json` from AnkiQuest-Server, which
- * the desktop add-on also uses.
+ * Checks [AnkiquestPose] against the pinned AnkiQuest-Art release's `poses.json`, which the
+ * server-data fetch copies into the test resources and the desktop add-on also reads from its
+ * pinned release.
  */
 class AnkiquestPoseTest {
     private val fixture =
         JSONObject(
-            checkNotNull(javaClass.classLoader?.getResource("ankiquest/companion_poses.json")) { "missing companion poses" }.readText(),
+            checkNotNull(javaClass.classLoader?.getResource("ankiquest-art/poses.json")) { "missing Art poses" }.readText(),
         )
 
     @Test
@@ -67,8 +68,7 @@ class AnkiquestPoseTest {
                 R.drawable.ankilope_face,
                 R.drawable.ankilope_asleep,
                 R.drawable.ankilope_celebrate,
-                // Interim until her on-fire art exists.
-                R.drawable.ankilope_study,
+                R.drawable.ankilope_streak,
                 R.drawable.ankilope_sad,
                 R.drawable.ankilope_hopeful,
                 R.drawable.ankilope_frozen,
@@ -82,10 +82,25 @@ class AnkiquestPoseTest {
     fun `an extension without art shows its fallback`() {
         assertEquals(R.drawable.ankilope_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.ANKILOPE))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.art(AnkiquestPose.LEECH_DEFEATED, Choice.ANKILOPE))
-        assertEquals(R.drawable.ankilope_study, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, Choice.ANKILOPE))
+        assertEquals(R.drawable.ankilope_streak, AnkiquestCompanion.art(AnkiquestPose.STREAK_MILESTONE, Choice.ANKILOPE))
         // Aki has no art for the frozen levels: all three show her frozen pose.
         assertEquals(R.drawable.aki_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_2, Choice.AKI))
         assertEquals(R.drawable.aki_frozen, AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.AKI))
+
+        // Anki-tan's seven extensions still to draw (AnkiQuest-Server#57), until then their fallbacks.
+        val ankiTan =
+            mapOf(
+                AnkiquestPose.STREAK_HOT to R.drawable.anki_tan_streak,
+                AnkiquestPose.STREAK_BLAZING to R.drawable.anki_tan_streak,
+                AnkiquestPose.FROZEN_2 to R.drawable.anki_tan_frozen,
+                AnkiquestPose.FROZEN_3 to R.drawable.anki_tan_frozen,
+                AnkiquestPose.ABANDONED to R.drawable.anki_tan_neglected,
+                AnkiquestPose.LEECH_DEFEATED to R.drawable.anki_tan_happy,
+                AnkiquestPose.WINNER to R.drawable.anki_tan_happy,
+            )
+        for ((pose, expected) in ankiTan) {
+            assertEquals(expected, AnkiquestCompanion.art(pose, Choice.ANKI_TAN), "$pose")
+        }
     }
 
     @Test

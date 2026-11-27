@@ -9,8 +9,10 @@
     <string name="ankiquest_companion_summary">Choose Aki, Ankilope, or no companion. Synced across devices.</string>
     <string name="ankiquest_companion_aki" translatable="false">Aki</string>
     <string name="ankiquest_companion_ankilope" translatable="false">Ankilope</string>
-    <!-- A purple cow, earned by studying; art is still to come (float3/ankiquest#88). -->
+    <!-- Bluma, a purple cow earned by studying; AnkiQuest-Art names her cow. -->
     <string name="ankiquest_companion_cow" translatable="false">Bluma</string>
+    <!-- Shigeyuki's character (CC BY-SA 4.0), earned by a streak. -->
+    <string name="ankiquest_companion_anki_tan" translatable="false">Anki-tan</string>
     <string name="ankiquest_companion_none">No companion</string>
     <string name="ankiquest_companion_signed_out">Sign in to choose a companion.</string>
     <!-- A locked companion: how to earn it and how far the player is. Same wording as the desktop add-on. -->
@@ -18,6 +20,8 @@
     <string name="ankiquest_companion_level_progress">Level %1$d of %2$d</string>
     <string name="ankiquest_companion_hours_goal">Study for %1$d hours in total</string>
     <string name="ankiquest_companion_hours_progress">%1$d of %2$d hours</string>
+    <string name="ankiquest_companion_streak_goal">Keep a %1$d-day streak</string>
+    <string name="ankiquest_companion_streak_progress">%1$d of %2$d days</string>
     <!-- Tapping a companion toward its chibi Easter egg: how many taps are left. Same wording as the desktop add-on. -->
     <plurals name="ankiquest_companion_chibi_hint">
         <item quantity="one">You are %1$d tap away from chibi</item>

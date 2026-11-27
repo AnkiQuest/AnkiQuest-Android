@@ -19,7 +19,7 @@ internal fun chooseCompanion(choice: Choice) {
     assertTrue(AnkiquestCompanion.remember(requireNotNull(AnkiquestHomeData.account()), choice.id))
 }
 
-/** Ankilope's core pose for each streak mood; the cow draws hers. On fire she studies until her on-fire art exists. */
+/** Ankilope's core pose for each streak mood. */
 internal val ankilopeMoodPoses =
     mapOf(
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
@@ -31,7 +31,22 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.THAWING to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.ankilope_hopeful,
-        AnkiquestMood.Mood.FIRE to R.drawable.ankilope_study,
+        AnkiquestMood.Mood.FIRE to R.drawable.ankilope_streak,
+    )
+
+/** Bluma's core pose for each streak mood, from her own art. */
+internal val blumaMoodPoses =
+    mapOf(
+        AnkiquestMood.Mood.UNKNOWN to R.drawable.bluma_face,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.bluma_asleep,
+        AnkiquestMood.Mood.SAD to R.drawable.bluma_sad,
+        AnkiquestMood.Mood.FROZEN_1 to R.drawable.bluma_frozen,
+        AnkiquestMood.Mood.FROZEN_2 to R.drawable.bluma_frozen,
+        AnkiquestMood.Mood.FROZEN_3 to R.drawable.bluma_frozen,
+        AnkiquestMood.Mood.THAWING to R.drawable.bluma_frozen,
+        AnkiquestMood.Mood.HOPEFUL to R.drawable.bluma_hopeful,
+        AnkiquestMood.Mood.ALMOST to R.drawable.bluma_hopeful,
+        AnkiquestMood.Mood.FIRE to R.drawable.bluma_streak,
     )
 
 /** The shared pose's Aki drawable; her missing frozen extensions use the core frozen pose. */
@@ -44,3 +59,20 @@ internal fun akiMoodArt(expected: JSONObject): String {
         }
     return "aki_$shown"
 }
+
+/**
+ * Anki-tan's pose for each streak mood but fire, which burns by streak: her streak pose, and her
+ * crown from 100 days. Frozen 2 and 3 have no art of their own yet (AnkiQuest-Server#57).
+ */
+internal val ankiTanMoodPoses =
+    mapOf(
+        AnkiquestMood.Mood.UNKNOWN to R.drawable.anki_tan_face,
+        AnkiquestMood.Mood.ASLEEP to R.drawable.anki_tan_asleep,
+        AnkiquestMood.Mood.SAD to R.drawable.anki_tan_sad,
+        AnkiquestMood.Mood.FROZEN_1 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.FROZEN_2 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.FROZEN_3 to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.THAWING to R.drawable.anki_tan_frozen,
+        AnkiquestMood.Mood.HOPEFUL to R.drawable.anki_tan_hopeful,
+        AnkiquestMood.Mood.ALMOST to R.drawable.anki_tan_hopeful,
+    )

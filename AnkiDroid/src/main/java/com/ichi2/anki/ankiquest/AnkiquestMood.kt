@@ -20,6 +20,9 @@ internal object AnkiquestMood {
     private const val MINUTE_MS = 60_000L
     private const val PERCENT = 100L
 
+    /** Ends the milestone line on moment cards and share pictures. */
+    private const val FLAME = "🔥"
+
     /** The streak lengths the widget and pictures count down to. */
     private val milestones = listOf(7, 30, 100, 365)
 
@@ -69,15 +72,6 @@ internal object AnkiquestMood {
 
     /** Whether today's daily goal is reached. */
     enum class Goal { OPEN, REACHED }
-
-    /** Which players [Rules.hopefulReviews] makes hopeful. */
-    enum class HopefulCount {
-        /** Only players without a streak, as `streak_moods.json` says. */
-        WITHOUT_STREAK,
-
-        /** Players with a streak too; only the debug menu chooses it. */
-        WITH_STREAK,
-    }
 
     /**
      * How far today's review time has come toward the streak minimum. Each stage starts at
@@ -139,7 +133,7 @@ internal object AnkiquestMood {
      * secret debug menu ([AnkiquestDebug]) uses others, on this phone.
      */
     data class Rules(
-        /** Reviews today that make a day without a streak or freeze hopeful; with a streak too per [hopefulCount]. */
+        /** A changed debug review threshold for reaching hopeful. */
         val hopefulReviews: Int = 1,
         /** Frozen days in a row that show the second frozen level. */
         val frozen2Days: Int = 2,
@@ -148,8 +142,6 @@ internal object AnkiquestMood {
         val hotDays: Int = Heat.HOT.days,
         val blazingDays: Int = Heat.BLAZING.days,
         val legendDays: Int = Heat.LEGEND.days,
-        /** Whether [hopefulReviews] also counts for players with a streak. */
-        val hopefulCount: HopefulCount = HopefulCount.WITHOUT_STREAK,
     ) {
         /** Whether each threshold is reachable and in the order of its levels. */
         fun valid(): Boolean =
@@ -185,18 +177,25 @@ internal object AnkiquestMood {
         goal: Goal,
         rules: Rules = Rules.SHARED,
     ): Mood {
-        // Today counts, or the goal says the player did what they planned.
-        if (state == State.STUDIED || goal == Goal.REACHED) {
+        // Today counts, on exact or observed answers, or the goal says the player did what they planned.
+        if (state == State.STUDIED || state == State.UNVERIFIED || goal == Goal.REACHED) {
             return Mood.FIRE
         }
         if (state == State.UNKNOWN) {
             return Mood.UNKNOWN
         }
+        // A custom review threshold moves the hopeful boundary without changing the shared stages.
+        val progress =
+            when {
+                rules.hopefulReviews == Rules.SHARED.hopefulReviews -> stage
+                reviews >= rules.hopefulReviews -> maxOf(stage, Stage.HALF)
+                else -> minOf(stage, Stage.QUARTER)
+            }
 
         // A protected day means a freeze kept at least yesterday, even without the heatmap.
         val frozen = maxOf(frozenDays, if (state == State.PROTECTED) 1 else 0)
         if (frozen > 0) {
-            return when (stage) {
+            return when (progress) {
                 Stage.STARTED -> frozen(frozen, rules)
                 Stage.QUARTER -> Mood.THAWING
                 Stage.HALF -> Mood.HOPEFUL
@@ -204,24 +203,22 @@ internal object AnkiquestMood {
             }
         }
 
-        // Without a streak there is nothing to lose: enough study is hopeful.
+        // Without a streak there is nothing to lose: any study is hopeful.
         if (streak == 0) {
             return when {
                 reviews < rules.hopefulReviews -> Mood.ASLEEP
-                stage == Stage.THREE_QUARTERS -> Mood.ALMOST
+                progress == Stage.THREE_QUARTERS -> Mood.ALMOST
                 else -> Mood.HOPEFUL
             }
         }
-        // With a streak the stage decides, unless the debug menu counts reviews toward hopeful too.
-        val counted = rules.hopefulCount == HopefulCount.WITH_STREAK && reviews >= rules.hopefulReviews
-        return when (stage) {
-            Stage.STARTED, Stage.QUARTER -> if (counted) Mood.HOPEFUL else Mood.SAD
+        return when (progress) {
+            Stage.STARTED, Stage.QUARTER -> Mood.SAD
             Stage.HALF -> Mood.HOPEFUL
             Stage.THREE_QUARTERS -> Mood.ALMOST
         }
     }
 
-    /** The frozen mood for [days] frozen days in a row, at the levels [rules] sets. */
+    /** The frozen mood for [days] frozen days in a row, using [rules]' thresholds. */
     private fun frozen(
         days: Int,
         rules: Rules,
@@ -381,8 +378,14 @@ internal object AnkiquestMood {
     /** The next milestone after [streak], or null past the last one. */
     fun next(streak: Int): Int? = milestones.firstOrNull { it > streak }
 
-    /** "36 days to 100 🔥", or null without a streak or past the last milestone. */
+    /** "36 days to 100 🔥" for cards, or null without a streak or past the last milestone. */
     fun nextLine(
+        context: Context,
+        streak: Int,
+    ): String? = milestone(context, streak)?.let { "$it $FLAME" }
+
+    /** "36 days to 100", or null without a streak or past the last milestone. */
+    private fun milestone(
         context: Context,
         streak: Int,
     ): String? {
@@ -396,7 +399,7 @@ internal object AnkiquestMood {
 
     /**
      * The line under the streak number for [flame]: the next milestone once today counts, a nudge to
-     * study while it does not, or null without a streak.
+     * study while it does not, or null without a streak. No emoji: the number beside it has the flame.
      */
     fun line(
         context: Context,
@@ -408,7 +411,7 @@ internal object AnkiquestMood {
         }
         return when (flame) {
             Flame.NONE -> null
-            Flame.LIT -> nextLine(context, streak)
+            Flame.LIT -> milestone(context, streak)
             Flame.UNLIT, Flame.ICY -> context.getString(R.string.ankiquest_streak_nudge)
         }
     }

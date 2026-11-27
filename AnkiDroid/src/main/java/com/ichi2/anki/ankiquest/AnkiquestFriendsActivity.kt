@@ -412,7 +412,9 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                 views.text(panel, link).setTextIsSelectable(true)
                 views.text(panel, getString(R.string.aq_friends_invite_link_hint), small = true)
                 val owner = views.actions(panel)
-                views.chip(owner, getString(R.string.aq_friends_share_link), primary = true) { shareInvite(group, link) }
+                views.chip(owner, getString(R.string.aq_friends_share_link), primary = true) {
+                    AnkiquestGroupInvite.share(this, checkNotNull(account), group)
+                }
                 views.chip(owner, getString(R.string.aq_friends_new_link), enabled = !busy) {
                     confirm(getString(R.string.aq_friends_new_link_confirm), R.string.aq_friends_new_link) {
                         change(AnkiquestSocial.Change.NewInvite(group.id), { getString(R.string.aq_friends_new_link_done) })
@@ -565,7 +567,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                 setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
                 addView(field)
             }
-        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
+        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_accent)) }
         val dialog =
             MaterialAlertDialogBuilder(this)
                 .setTitle(title)
@@ -612,17 +614,6 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         preview = null
         inviteGone = false
         render()
-    }
-
-    private fun shareInvite(
-        group: AnkiquestSocial.Group,
-        link: String,
-    ) {
-        val send =
-            Intent(Intent.ACTION_SEND)
-                .setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, getString(R.string.aq_friends_invite_share_text, group.name, link))
-        startActivity(Intent.createChooser(send, getString(R.string.aq_friends_share_link)))
     }
 
     private fun openProfile(person: AnkiquestSocial.Person) = startActivity(AnkiquestProfileActivity.intent(this, person.user))

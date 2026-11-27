@@ -335,7 +335,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                     textSize = 18f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     gravity = Gravity.CENTER
-                    setTextColor(getColor(R.color.aq_home_primary))
+                    setTextColor(getColor(R.color.aq_home_accent))
                 },
             )
         }
@@ -353,16 +353,9 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             (card.friends ?: 0) > 0 ->
                 views
                     .button(content, getString(R.string.aq_conquest_tell)) {
-                        // Tell and Share use the same recipient choice on capable servers.
+                        // Tell and Share use the same recipient choice.
                         val current = account ?: return@button
-                        if (AnkiquestMomentShare.available(current)) {
-                            share(current, card)
-                            return@button
-                        }
-                        act(R.string.aq_conquest_telling) { signedIn ->
-                            val told = AnkiquestCommunity.tell(signedIn, card.at)
-                            resources.getQuantityString(R.plurals.aq_conquest_told_count, told, told)
-                        }
+                        share(current, card)
                     }.isEnabled = !busy
         }
         val better = labels?.better(card.label)
@@ -470,16 +463,19 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
     ): AnkiquestShare.Card = AnkiquestConquestShare.picture(this, current, card, deck)
 
     /**
-     * The owner's own conquest opens AnkiQuest's share sheet where the server takes chosen friends;
-     * anyone else's, or one on an older server, goes straight to Android's share sheet.
+     * The owner's own conquest opens AnkiQuest's share sheet; anyone else's goes straight to
+     * Android's share sheet.
      */
     private fun share(
         current: HomeAccount,
         card: AnkiquestCommunity.Conquest,
     ) {
         if (busy) return
-        if (!AnkiquestConquestShare.owns(current, card) || !AnkiquestMomentShare.available(current)) {
+        if (!AnkiquestConquestShare.owns(current, card)) {
             shareElsewhere(current, card)
+            return
+        }
+        if (AnkiquestServerUpdate.refuse(this, current)) {
             return
         }
         AnkiquestShareSheet(

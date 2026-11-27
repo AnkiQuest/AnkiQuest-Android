@@ -87,6 +87,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # AnkiQuest: the screenshot tests read AnkiQuest-Server master's API examples
+      # (docs/ankiquest-server-data.md).
+      - name: Fetch AnkiQuest-Server data
+        run: node .github/ankiquest_server_data.cjs fetch
+
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -99,9 +104,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
-          cache-provider: basic
           gradle-version: wrapper
+          # The gradle-cache action below caches the dependencies, one entry per job group
+          cache-disabled: true
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: restore
+          group: screenshot
+
+      - name: AnkiQuest art cache
+        uses: ./.github/actions/ankiquest-art-cache
 
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache
@@ -122,6 +137,14 @@ jobs:
         run: |
           # Use --rerun-tasks to disable cache for test task
           ./gradlew recordScreenshots -Pscreenshot -Ptheme=light,dark --stacktrace --rerun-tasks
+
+      - name: Save Gradle cache
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: save
+          group: screenshot
+          key: ${{ steps.gradle-cache.outputs.key }}
+          hit: ${{ steps.gradle-cache.outputs.hit }}
 
       # Native rendering can differ between CPU models; compare runs report this next to their own.
       - name: Record renderer CPU

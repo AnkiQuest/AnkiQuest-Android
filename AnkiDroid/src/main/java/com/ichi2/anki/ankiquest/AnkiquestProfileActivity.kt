@@ -6,11 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
+import android.text.InputFilter
+import android.text.InputType
 import android.text.format.DateUtils
 import android.view.View
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
@@ -18,6 +23,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
@@ -44,10 +50,16 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     private var loading = false
     private var allAchievements = false
 
-    /** Whether the player muted the one shown, and gets deck alerts from them; null where unknown. */
-    private var muted: Boolean? = null
+    /** The player's friends, requests, mutes and groups, and whether they get deck alerts from the one shown; null where unknown. */
+    private var social: AnkiquestSocial.Overview? = null
     private var deckAlerts: Boolean? = null
+
+    /** What the player's server supports, which decides how inviting works and whether Message shows. */
+    private var features: Set<String> = emptySet()
     private var changing = false
+
+    /** Message or the group picker, opened for [account]; closed when the account changes. */
+    private var dialog: AlertDialog? = null
 
     @StringRes private var failure: Int? = null
     private var generation = 0
@@ -113,10 +125,13 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         sections.refresh()
         if (current?.scope != account?.scope) {
             undo.clear()
+            dialog?.dismiss()
+            dialog = null
             account = current
             page = null
-            muted = null
+            social = null
             deckAlerts = null
+            features = emptySet()
         }
         loadJob?.cancel()
         val turn = ++generation
@@ -152,8 +167,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     }
 
     /**
-     * What the player can change about someone else from their profile: muting them, and their deck
-     * alerts while they share decks with the player. A control the server cannot tell about stays hidden.
+     * What the player can change about someone else from their profile: their friendship, inviting
+     * them to a group, muting them, and their deck alerts while they share decks with the player. A
+     * control the server cannot tell about stays hidden.
      */
     private fun loadControls(
         current: HomeAccount,
@@ -161,26 +177,55 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         turn: Int,
     ) {
         lifecycleScope.launch {
-            var mute: Boolean? = null
+            var overview: AnkiquestSocial.Overview? = null
             var alerts: Boolean? = null
-            boardAttempt { mute = AnkiquestSocial.overview(current).isMuted(user) }
+            boardAttempt { overview = AnkiquestSocial.overview(current) }
             boardAttempt {
                 val subscriptions = AnkiquestSubscriptions.repository.load(current)
                 if (subscriptions.senders.any { it.user == user }) alerts = user !in subscriptions.unsubscribedSenders
             }
             if (turn != generation || account?.scope != current.scope) return@launch
-            muted = mute
+            social = overview
             deckAlerts = alerts
+            features = AnkiquestCapabilities.features(current)
+            render()
+            refreshFeatures(current, turn)
+        }
+    }
+
+    /**
+     * Asks the server for its features again when they are stale, without holding up the controls,
+     * which use the ones it last reported meanwhile.
+     */
+    private fun refreshFeatures(
+        current: HomeAccount,
+        turn: Int,
+    ) {
+        lifecycleScope.launch {
+            var known = features
+            boardAttempt { known = AnkiquestCapabilities.current(current) }
+            if (turn != generation || account?.scope != current.scope || known == features) {
+                return@launch
+            }
+            features = known
             render()
         }
     }
 
-    /** Runs one change from the profile, then reads the profile and its controls again. */
+    /** Whether [opened] is still the account shown and the one signed in. */
+    private fun owns(opened: HomeAccount): Boolean = account?.scope == opened.scope && AnkiquestHomeData.account()?.scope == opened.scope
+
+    /**
+     * Runs one change from the profile as [owner], then reads the profile and its controls again.
+     * Nothing runs once [owner] is no longer the account shown, as for a dialog opened before.
+     */
     private fun change(
+        owner: HomeAccount? = account,
         after: (() -> Unit)? = null,
         work: suspend (HomeAccount) -> Unit,
     ) {
-        val current = account ?: return
+        val current = owner ?: return
+        if (!owns(current)) return
         if (changing) return
         changing = true
         render()
@@ -214,6 +259,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views.text(content, getString(R.string.ankiquest_streak_protection_summary), small = true)
             return
         }
+        social?.let { friendship(it, p) }
         deckAlerts?.let { on ->
             val label = if (on) R.string.aq_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
             views
@@ -224,7 +270,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                     change { AnkiquestSubscriptions.repository.setSubscribed(it, p.user, !on) }
                 }.isEnabled = !changing && !deckAlertAction.busy()
         }
-        muted?.let { isMuted ->
+        social?.isMuted(p.user)?.let { isMuted ->
             views
                 .button(content, getString(if (isMuted) R.string.aq_friends_unmute else R.string.aq_friends_mute)) {
                     if (isMuted) {
@@ -240,6 +286,150 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                     }
                 }.isEnabled = !changing
         }
+    }
+
+    /**
+     * The friendship action for the player shown, by [AnkiquestSocial.Relation], Message for a friend
+     * on a server with messages, then an invite to one of the player's groups they are not in.
+     */
+    private fun friendship(
+        overview: AnkiquestSocial.Overview,
+        p: AnkiquestBoards.Profile,
+    ) {
+        when (overview.relation(p.user)) {
+            AnkiquestSocial.Relation.NONE ->
+                socialButton(R.string.aq_profile_add_friend, AnkiquestSocial.Change.Befriend(p.user)) {
+                    getString(R.string.aq_friends_request_sent, p.display)
+                }
+            AnkiquestSocial.Relation.REQUESTED -> {
+                views.text(content, getString(R.string.aq_profile_request_sent), small = true)
+                socialButton(R.string.aq_friends_cancel_request, AnkiquestSocial.Change.Unfriend(p.user)) {
+                    getString(R.string.aq_friends_request_cancelled)
+                }
+            }
+            AnkiquestSocial.Relation.ASKED -> {
+                views.text(content, getString(R.string.aq_profile_request_received, p.display), small = true)
+                socialButton(R.string.aq_profile_accept_request, AnkiquestSocial.Change.Befriend(p.user)) {
+                    getString(R.string.aq_friends_accepted, p.display)
+                }
+                socialButton(R.string.aq_profile_decline_request, AnkiquestSocial.Change.Unfriend(p.user)) {
+                    getString(R.string.aq_friends_declined)
+                }
+            }
+            AnkiquestSocial.Relation.FRIENDS -> {
+                views.text(content, getString(R.string.aq_profile_friends, p.display), small = true)
+                if (AnkiquestMessages.FEATURE in features) {
+                    views
+                        .button(content, getString(R.string.aq_profile_message), primary = true) { askMessage(p) }
+                        .isEnabled = !changing
+                }
+            }
+        }
+        invites(overview, p)
+    }
+
+    /**
+     * Invitations waiting for the player shown, then Invite to group: sent by the server where it
+     * can ([AnkiquestSocial.InviteMode.DIRECT]), otherwise the group's link through the share sheet.
+     */
+    private fun invites(
+        overview: AnkiquestSocial.Overview,
+        p: AnkiquestBoards.Profile,
+    ) {
+        for (group in overview.invitedTo(p.user)) {
+            views.text(content, getString(R.string.aq_profile_invited, p.display, group.name), small = true)
+        }
+
+        val mode = AnkiquestSocial.InviteMode.of(features)
+        val groups = overview.invitable(p.user, mode)
+        if (groups.isEmpty()) {
+            return
+        }
+        views
+            .button(content, getString(R.string.aq_profile_invite)) {
+                val current = account ?: return@button
+                dialog =
+                    AnkiquestGroupInvite.pick(this, groups) { group ->
+                        // A group picked after the account changed belongs to the old account.
+                        if (!owns(current)) {
+                            return@pick
+                        }
+                        when (mode) {
+                            AnkiquestSocial.InviteMode.LINK -> AnkiquestGroupInvite.share(this, current, group)
+                            AnkiquestSocial.InviteMode.DIRECT -> invite(current, group, p)
+                        }
+                    }
+            }.isEnabled = !changing
+    }
+
+    /** Has the server invite the player shown to [group] as [owner], and says so once it did. */
+    private fun invite(
+        owner: HomeAccount,
+        group: AnkiquestSocial.Group,
+        p: AnkiquestBoards.Profile,
+    ) {
+        val sent = getString(R.string.aq_profile_invite_sent, p.display)
+        change(owner, after = { showThemedToast(this, sent, shortLength = true) }) {
+            AnkiquestSocial.change(it, AnkiquestSocial.Change.Invite(group.id, p.user))
+        }
+    }
+
+    /** Asks for a message to the friend shown and sends it as the account that asked. */
+    private fun askMessage(p: AnkiquestBoards.Profile) {
+        val opened = account ?: return
+        val field =
+            EditText(this).apply {
+                hint = getString(R.string.ankiquest_reply_hint)
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                filters = arrayOf(InputFilter.LengthFilter(AnkiquestReply.MAX_MESSAGE))
+                isSingleLine = true
+            }
+        val frame =
+            FrameLayout(this).apply {
+                setPadding(views.dp(24), views.dp(8), views.dp(24), 0)
+                addView(field)
+            }
+        dialog =
+            MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.aq_profile_message_to, p.display))
+                .setView(frame)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.aq_feed_send) { _, _ ->
+                    val text = AnkiquestReply.clean(field.text.toString())
+                    if (text.isNotEmpty()) {
+                        message(opened, p, text)
+                    }
+                }.show()
+        field.requestFocus()
+    }
+
+    private fun message(
+        owner: HomeAccount,
+        p: AnkiquestBoards.Profile,
+        text: String,
+    ) {
+        var outcome = AnkiquestMessages.Outcome.SENT
+        val line = {
+            when (outcome) {
+                AnkiquestMessages.Outcome.SENT -> getString(R.string.aq_profile_message_sent, p.display)
+                AnkiquestMessages.Outcome.DAILY_LIMIT -> getString(R.string.aq_profile_message_limit)
+            }
+        }
+        change(owner, after = { showThemedToast(this, line(), shortLength = false) }) {
+            outcome = AnkiquestMessages.send(it, p.user, text)
+        }
+    }
+
+    /** A button sending [action], which says [done] once the server took it; befriending stands out. */
+    private fun socialButton(
+        @StringRes label: Int,
+        action: AnkiquestSocial.Change,
+        done: () -> String,
+    ) {
+        views
+            .button(content, getString(label), primary = action is AnkiquestSocial.Change.Befriend) {
+                change(after = { showThemedToast(this, done(), shortLength = true) }) { AnkiquestSocial.change(it, action) }
+            }.isEnabled = !changing
     }
 
     private fun unmute(user: String) {

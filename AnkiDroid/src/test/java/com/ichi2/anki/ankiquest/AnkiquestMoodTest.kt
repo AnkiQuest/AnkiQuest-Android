@@ -30,7 +30,7 @@ import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * Checks [AnkiquestMood] against `tests/fixtures/streak_moods.json` from the ankiquest server, which
- * the desktop add-on also tests against. The ankiquest_fixtures workflow keeps this copy identical.
+ * the desktop add-on also tests against. CI copies it from server master before the tests.
  */
 @RunWith(AndroidJUnit4::class)
 class AnkiquestMoodTest : RobolectricTest() {
@@ -138,7 +138,7 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `the line under the number nudges until today counts`() {
-        assertEquals("36 days to 100 🔥", AnkiquestMood.line(targetContext, AnkiquestMood.Flame.LIT, 64))
+        assertEquals("36 days to 100", AnkiquestMood.line(targetContext, AnkiquestMood.Flame.LIT, 64))
         val nudge = "Study today to keep it"
         assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.UNLIT, 64))
         assertEquals(nudge, AnkiquestMood.line(targetContext, AnkiquestMood.Flame.ICY, 64))

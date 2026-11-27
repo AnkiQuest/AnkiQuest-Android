@@ -22,7 +22,6 @@
     <string name="aq_feed_view_invitation">View invitation</string>
     <string name="aq_feed_open_goal">Open goal</string>
     <string name="aq_feed_all_invitations">View all invitations</string>
-    <string name="aq_feed_legacy">This server shows the last 7 days. Update the server for saved read status and longer history.</string>
     <string name="aq_feed_yesterday">Yesterday</string>
     <string name="aq_feed_time_unread">%1$s · Unread</string>
     <string name="aq_feed_card">Card: %1$s</string>
@@ -33,6 +32,9 @@
     <string name="aq_feed_reply_to">Reply to %1$s</string>
     <string name="aq_feed_send">Send</string>
     <string name="aq_feed_reply_done">Your reply was sent.</string>
+    <string name="aq_feed_invite_declined">Invitation declined.</string>
+    <string name="aq_feed_invite_joined">You joined the group.</string>
+    <string name="aq_feed_invite_failed">The invitation could not be answered.</string>
     <string name="aq_feed_reply_failed">Your reply was not sent.</string>
     <string name="aq_feed_reply_sent">Reply sent</string>
     <string name="aq_feed_read_failed">Read status was not saved.</string>

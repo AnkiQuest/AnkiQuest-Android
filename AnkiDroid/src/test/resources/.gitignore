@@ -1,0 +1,7 @@
+# AnkiQuest-Server master's API examples and shared fixtures, copied by
+# `node .github/ankiquest_server_data.cjs fetch` (docs/ankiquest-server-data.md).
+/ankiquest/
+# Art's poses.json, downloaded from the pinned release by the same fetch.
+/ankiquest-art/
+/ankiquest-api/*.json
+!/ankiquest-api/names.json

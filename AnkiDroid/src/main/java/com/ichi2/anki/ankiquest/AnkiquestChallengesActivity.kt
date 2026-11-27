@@ -403,7 +403,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
         views.text(panel, title(challenge), heading = true)
         views.text(panel, getString(statusLabel(challenge, invited, ended)), small = true).apply {
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(getColor(if (challenge.status == "complete" || invited) R.color.aq_home_primary else R.color.aq_home_muted))
+            setTextColor(getColor(if (challenge.status == "complete" || invited) R.color.aq_home_accent else R.color.aq_home_muted))
         }
         val mode = getString(if (challenge.cooperative) R.string.aq_challenges_shared else R.string.aq_challenges_individual)
         views.text(panel, "$mode · ${timing(challenge, waiting, ended)}", small = true)
@@ -526,7 +526,7 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
                 setText(R.string.aq_challenges_create_when_ready)
                 form.addView(this)
             }
-        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_primary)) }
+        val problem = views.text(form, "", small = true).apply { setTextColor(getColor(R.color.aq_home_accent)) }
         val dialog =
             MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.aq_challenges_start)

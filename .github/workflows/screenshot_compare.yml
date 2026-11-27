@@ -70,6 +70,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # AnkiQuest: the screenshot tests read AnkiQuest-Server master's API examples
+      # (docs/ankiquest-server-data.md).
+      - name: Fetch AnkiQuest-Server data
+        run: node .github/ankiquest_server_data.cjs fetch
+
       - name: Wait for matching base screenshots
         id: source
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -114,9 +119,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
-          cache-provider: basic
           gradle-version: wrapper
+          # The gradle-cache action below caches the dependencies, one entry per job group
+          cache-disabled: true
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: ./.github/actions/gradle-cache
+        with:
+          mode: restore
+          group: screenshot  # written by the store job
+
+      - name: AnkiQuest art cache
+        uses: ./.github/actions/ankiquest-art-cache
 
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache

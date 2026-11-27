@@ -8,7 +8,6 @@ import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.R
-import com.ichi2.anki.ankiquest.AnkiquestMood.HopefulCount
 import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.AnkiquestMood.Rules
 import org.json.JSONObject
@@ -151,7 +150,6 @@ internal object AnkiquestDebug {
                 hotDays = stored.optInt(KEY_HOT, shared.hotDays),
                 blazingDays = stored.optInt(KEY_BLAZING, shared.blazingDays),
                 legendDays = stored.optInt(KEY_LEGEND, shared.legendDays),
-                hopefulCount = hopefulCount(stored.optString(KEY_HOPEFUL_COUNT), shared.hopefulCount),
             )
         return rules.takeIf { it.valid() } ?: shared
     }
@@ -164,13 +162,6 @@ internal object AnkiquestDebug {
             .put(KEY_HOT, rules.hotDays)
             .put(KEY_BLAZING, rules.blazingDays)
             .put(KEY_LEGEND, rules.legendDays)
-            .put(KEY_HOPEFUL_COUNT, rules.hopefulCount.name)
-
-    /** The stored [HopefulCount]; a missing or unknown name is [shared]. */
-    private fun hopefulCount(
-        name: String,
-        shared: HopefulCount,
-    ): HopefulCount = HopefulCount.entries.firstOrNull { it.name == name } ?: shared
 
     private const val KEY_HOPEFUL = "hopeful_reviews"
     private const val KEY_FROZEN_2 = "frozen_2_days"
@@ -178,5 +169,4 @@ internal object AnkiquestDebug {
     private const val KEY_HOT = "hot_days"
     private const val KEY_BLAZING = "blazing_days"
     private const val KEY_LEGEND = "legend_days"
-    private const val KEY_HOPEFUL_COUNT = "hopeful_count"
 }

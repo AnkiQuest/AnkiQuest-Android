@@ -11,8 +11,8 @@ import kotlin.test.assertTrue
 
 /**
  * Checks [ReviewHeatmap] against `tests/fixtures/review_heatmap.json` from the ankiquest repo,
- * which the desktop add-on's heatmap also follows. The ankiquest_fixtures workflow keeps this
- * copy identical.
+ * which the desktop add-on's heatmap also follows. CI copies it from server master before the
+ * tests.
  */
 class ReviewHeatmapFixtureTest {
     private val fixture =
