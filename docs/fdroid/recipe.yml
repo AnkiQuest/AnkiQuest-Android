@@ -20,8 +20,8 @@ Repo: https://github.com/AnkiQuest/AnkiQuest-Android.git
 # AnkiQuest's additions need none (README.md, "Anti-features").
 
 # F-Droid publishes our APK when its rebuild matches it apart from the
-# signature. ankiquest_apk.yml uploads that
-# APK to the `fdroid` release for every quest-* tag (README.md, "Signing").
+# signature. ankiquest_apk.yml uploads that APK to the `fdroid` release for
+# every quest-* tag (README.md, "Signing").
 Binaries: https://github.com/AnkiQuest/AnkiQuest-Android/releases/download/fdroid/AnkiQuest-%c.apk
 AllowedAPKSigningKeys: b397a61ecfaf0fe354da611772515e683ccb6fd0e952d477b8b3bca49e6c490d
 
