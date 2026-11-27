@@ -101,6 +101,9 @@ jobs:
             -PcustomSuffix=quest -PcustomName="AnkiQuest"
           cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk "$GITHUB_WORKSPACE/AnkiQuest-$BUILD.apk"
           cp AnkiDroid/build/outputs/mapping/fullRelease/mapping.txt "$GITHUB_WORKSPACE/mapping-$BUILD.txt"
+          # TEMPORARY, drop before merging: what the native libraries and dex weigh.
+          stat -c '%s %n' "$GITHUB_WORKSPACE/AnkiQuest-$BUILD.apk"
+          unzip -lv "$GITHUB_WORKSPACE/AnkiQuest-$BUILD.apk" | grep -E ' (lib/|classes[0-9]*\.dex)'
 
       # Packaging failed now and then with no cause printed; free disk and memory rule those out.
       - name: Disk and memory

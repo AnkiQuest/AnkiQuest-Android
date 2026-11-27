@@ -204,7 +204,8 @@ jobs:
       - name: Fetch AnkiQuest-Server data
         if: needs.changes.outputs.code != 'false'
         shell: bash
-        run: node .github/ankiquest_server_data.cjs fetch
+        # TEMPORARY, drop before merging: the server branch with optimize_reminder.json.
+        run: node .github/ankiquest_server_data.cjs fetch --ref optimize-reminder
 
       - name: Set up Codecov
         id: codecov
