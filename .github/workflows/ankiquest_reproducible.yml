@@ -14,7 +14,7 @@ on:
       - 'buildSrc/**'
       - '.github/workflows/ankiquest_reproducible.yml'
   # Documentation-only pushes skip it (not a required check, not in the merge queue). The globs
-  # are the documentation list of ankiquest_lint.yml's changes job (.github/tests/docs-only.test.cjs).
+  # are the documentation list of lint.yml's changes job (.github/tests/docs-only.test.cjs).
   push:
     branches:
       - master
