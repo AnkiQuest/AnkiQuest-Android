@@ -68,6 +68,9 @@ jobs:
           mode: restore
           group: unit  # written by the unit test job
 
+      - name: AnkiQuest art cache
+        uses: ./.github/actions/ankiquest-art-cache
+
       - name: Robolectric SDK cache
         uses: ./.github/actions/robolectric-sdk-cache
 

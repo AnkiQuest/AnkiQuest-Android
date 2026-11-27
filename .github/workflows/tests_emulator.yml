@@ -204,6 +204,9 @@ jobs:
           mode: restore
           group: emulator
 
+      - name: AnkiQuest art cache
+        uses: ./.github/actions/ankiquest-art-cache
+
         # Cache only the per-change emulator: the 16 KB snapshot costs about 2.5 GiB.
       - name: AVD cache
         if: matrix.target == 'google_apis' && matrix.device == 'phone'

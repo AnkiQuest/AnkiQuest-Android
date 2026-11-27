@@ -6,10 +6,17 @@
     <color name="aq_home_text">#20384A</color>
     <color name="aq_home_muted">#5B6C76</color>
     <color name="aq_home_primary">#245FAB</color>
+    <color name="aq_home_accent">@color/aq_home_primary</color>
     <color name="aq_home_primary_text">#FFFFFF</color>
     <color name="aq_home_tint">#EAF2FF</color>
     <color name="aq_home_avatar_text">@color/aq_home_primary</color>
     <color name="aq_home_outline">#DCE4E7</color>
+    <!-- The review banner's two looks (#207): translucent, so they tint the reviewer behind
+         them. The inks are their own, not the theme's text colour. -->
+    <color name="aq_banner_important">#F0B8860B</color>
+    <color name="aq_banner_quiet">#E0202830</color>
+    <color name="aq_banner_important_ink">#FF23272E</color>
+    <color name="aq_banner_quiet_ink">#FFFFFFFF</color>
     <string name="aq_home_activity">Activity</string>
     <string name="aq_home_settings">Account and preferences</string>
     <string name="aq_home_today_subtitle">Your next useful step, at your pace.</string>
