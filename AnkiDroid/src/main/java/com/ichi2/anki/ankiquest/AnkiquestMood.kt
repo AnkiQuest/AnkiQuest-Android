@@ -8,6 +8,7 @@ import androidx.annotation.DrawableRes
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * How Aki feels about today's streak: the one rule for every place the companion shows today, from
@@ -20,6 +21,24 @@ internal object AnkiquestMood {
     private const val MINUTE_MS = 60_000L
     private const val PERCENT = 100L
 
+    /** The server's day verdicts (`streak_state`) a kept profile names. */
+    private const val STATE_STUDIED = "studied"
+    private const val STATE_UNVERIFIED = "unverified"
+    private const val STATE_PROTECTED = "protected"
+
+    /** How long before the study day ends a freeze about to keep the streak shows as one (`freeze_window_ms`). */
+    const val FREEZE_WINDOW_MS = 7_200_000L
+
+    /** The night rule's usual first study time: from the last [RECENT_DAYS] studied days, [DEFAULT_USUAL] with fewer than [MIN_DAYS]. */
+    const val DEFAULT_USUAL = "08:00"
+    const val RECENT_DAYS = 14
+    const val MIN_DAYS = 3
+    private const val DAY_MINUTES = 24 * 60
+    private const val HOUR_MINUTES = 60
+
+    /** Days away from which each away mood starts (`away_levels`), later levels first. */
+    private val awayLevels = listOf(30 to Mood.DEAD, 7 to Mood.ABANDONED, 2 to Mood.NEGLECTED)
+
     /** Ends the milestone line on moment cards and share pictures. */
     private const val FLAME = "🔥"
 
@@ -31,11 +50,14 @@ internal object AnkiquestMood {
         /** Nothing is known about today. */
         UNKNOWN,
 
-        /** No streak to lose. */
+        /** No streak to lose; or, at night, a comfortable companion asleep until the player wakes ([Night]). */
         ASLEEP,
 
         /** A streak and no study yet today. */
         SAD,
+
+        /** A freeze in effect: today protected with no frozen day before it, or about to keep the streak tonight. */
+        FREEZE,
 
         /** A freeze kept yesterday, and under a quarter of today's minimum studied. */
         FROZEN_1,
@@ -53,6 +75,41 @@ internal object AnkiquestMood {
 
         /** Today counts, or today's goal is reached. */
         FIRE,
+
+        /** No streak and no study today, after 2 to 6 days away. */
+        NEGLECTED,
+
+        /** No streak and no study today, after 7 to 29 days away. */
+        ABANDONED,
+
+        /** No streak and no study today, after 30 days or more away. */
+        DEAD,
+    }
+
+    /** How the study day before today ended, as `night` in streak_moods.json names it. */
+    enum class Yesterday {
+        /** Studied, or the goal reached. */
+        COUNTED,
+
+        /** Kept by a freeze. */
+        PROTECTED,
+        MISSED,
+        UNKNOWN,
+    }
+
+    /**
+     * The night rule's inputs: the local time [now] (HH:MM), the study day's [rolloverHour], the
+     * local times of the first review on recent studied days ([firstReviews], oldest first) and how
+     * [yesterday] ended.
+     */
+    data class Night(
+        val now: String,
+        val rolloverHour: Int,
+        val firstReviews: List<String>,
+        val yesterday: Yesterday,
+    ) {
+        /** Whether [now] is from the rollover up to, not including, the usual first study time. */
+        fun window(): Boolean = afterRollover(now, rolloverHour) < usualFirstStudy(firstReviews, rolloverHour)
     }
 
     /** The flame beside the streak number: lit only once today counts, as Duolingo's. */
@@ -72,6 +129,17 @@ internal object AnkiquestMood {
 
     /** Whether today's daily goal is reached. */
     enum class Goal { OPEN, REACHED }
+
+    /** Whether the player has ever studied: the profile's `lifetime.reviews > 0` (streak_moods.json `away_run`). */
+    enum class Studied {
+        NEVER,
+        EVER,
+        ;
+
+        companion object {
+            fun of(profile: JSONObject?): Studied = if ((profile?.optJSONObject("lifetime")?.optLong("reviews") ?: 0) > 0) EVER else NEVER
+        }
+    }
 
     /**
      * How far today's review time has come toward the streak minimum. Each stage starts at
@@ -166,7 +234,10 @@ internal object AnkiquestMood {
 
     /**
      * The mood for today's [state] with [reviews] so far at [stage] toward the minimum, a [streak]
-     * of that many days and [frozenDays] frozen days in a row ending yesterday.
+     * of that many days and [frozenDays] frozen days in a row ending yesterday. [daysAway] counts
+     * days without reviews in a row ending yesterday, [freezes] the freezes left, [dayLeftMs] the
+     * time until the study day ends (null when unknown), [night] the night rule's inputs (null
+     * outside it) and [rules] the thresholds.
      */
     fun of(
         state: State,
@@ -175,6 +246,10 @@ internal object AnkiquestMood {
         streak: Int,
         frozenDays: Int,
         goal: Goal,
+        daysAway: Int = 0,
+        freezes: Int = 0,
+        dayLeftMs: Long? = null,
+        night: Night? = null,
         rules: Rules = Rules.SHARED,
     ): Mood {
         // Today counts, on exact or observed answers, or the goal says the player did what they planned.
@@ -192,30 +267,79 @@ internal object AnkiquestMood {
                 else -> minOf(stage, Stage.QUARTER)
             }
 
-        // A protected day means a freeze kept at least yesterday, even without the heatmap.
-        val frozen = maxOf(frozenDays, if (state == State.PROTECTED) 1 else 0)
-        if (frozen > 0) {
+        // At night a comfortable companion sleeps until the player's usual first study time.
+        if (sleeps(state, streak, night)) {
+            return Mood.ASLEEP
+        }
+
+        // A freeze covering today, with no frozen day before it, is in effect; frozen days show their level.
+        if (frozenDays > 0 || state == State.PROTECTED) {
             return when (progress) {
-                Stage.STARTED -> frozen(frozen, rules)
+                Stage.STARTED -> if (frozenDays == 0) Mood.FREEZE else frozen(frozenDays, rules)
                 Stage.QUARTER -> Mood.THAWING
                 Stage.HALF -> Mood.HOPEFUL
                 Stage.THREE_QUARTERS -> Mood.ALMOST
             }
         }
 
-        // Without a streak there is nothing to lose: any study is hopeful.
+        // Without a streak there is nothing to lose: any study is hopeful; days away show their level.
         if (streak == 0) {
             return when {
+                reviews == 0 -> away(daysAway)
                 reviews < rules.hopefulReviews -> Mood.ASLEEP
                 progress == Stage.THREE_QUARTERS -> Mood.ALMOST
                 else -> Mood.HOPEFUL
             }
+        }
+
+        // A freeze about to keep the streak tonight is in effect.
+        if (reviews == 0 && freezes > 0 && dayLeftMs != null && dayLeftMs <= FREEZE_WINDOW_MS) {
+            return Mood.FREEZE
         }
         return when (progress) {
             Stage.STARTED, Stage.QUARTER -> Mood.SAD
             Stage.HALF -> Mood.HOPEFUL
             Stage.THREE_QUARTERS -> Mood.ALMOST
         }
+    }
+
+    /** Whether the night rule puts a comfortable companion to sleep: no review yet, in the window, the streak alive and yesterday counted. */
+    private fun sleeps(
+        state: State,
+        streak: Int,
+        night: Night?,
+    ): Boolean {
+        if (night == null || state != State.PENDING) {
+            return false
+        }
+        return streak > 0 && night.yesterday == Yesterday.COUNTED && night.window()
+    }
+
+    /** The mood for no streak and no review today after [days] away. */
+    private fun away(days: Int): Mood = awayLevels.firstOrNull { days >= it.first }?.second ?: Mood.ASLEEP
+
+    /** Minutes after the study day's rollover for a local `HH:MM` [time]. */
+    fun afterRollover(
+        time: String,
+        rolloverHour: Int,
+    ): Int {
+        val (hours, minutes) = time.split(":").map(String::toInt)
+        return Math.floorMod(hours * HOUR_MINUTES + minutes - rolloverHour * HOUR_MINUTES, DAY_MINUTES)
+    }
+
+    /**
+     * The usual first study time in minutes after rollover: the median (lower middle for an even
+     * count) of the last [RECENT_DAYS] [firstReviews], [DEFAULT_USUAL] with fewer than [MIN_DAYS].
+     */
+    fun usualFirstStudy(
+        firstReviews: List<String>,
+        rolloverHour: Int,
+    ): Int {
+        val recent = firstReviews.takeLast(RECENT_DAYS).map { afterRollover(it, rolloverHour) }.sorted()
+        if (recent.size < MIN_DAYS) {
+            return afterRollover(DEFAULT_USUAL, rolloverHour)
+        }
+        return recent[(recent.size - 1) / 2]
     }
 
     /** The frozen mood for [days] frozen days in a row, using [rules]' thresholds. */
@@ -237,12 +361,17 @@ internal object AnkiquestMood {
         day: AnkiquestDay.Verdict?,
         frozenDays: Int,
         goal: Goal,
+        daysAway: Int = 0,
+        freezes: Int = 0,
+        dayLeftMs: Long? = null,
+        night: Night? = null,
         rules: Rules = Rules.SHARED,
     ): Mood {
         if (day == null) {
             return Mood.UNKNOWN
         }
-        return of(day.label, day.reviews, Stage.of(day.timeMs, day.streakMinutes), day.streak ?: 0, frozenDays, goal, rules)
+        val stage = Stage.of(day.timeMs, day.streakMinutes)
+        return of(day.label, day.reviews, stage, day.streak ?: 0, frozenDays, goal, daysAway, freezes, dayLeftMs, night, rules)
     }
 
     /**
@@ -254,7 +383,11 @@ internal object AnkiquestMood {
         frozenDays: Int,
         goal: Goal,
         debug: AnkiquestDebug.Overrides = AnkiquestDebug.current(),
-    ): Mood = debug.mood(of(day, frozenDays, goal, debug.rules))
+        daysAway: Int = 0,
+        freezes: Int = 0,
+        dayLeftMs: Long? = null,
+        night: Night? = null,
+    ): Mood = debug.mood(of(day, frozenDays, goal, daysAway, freezes, dayLeftMs, night, debug.rules))
 
     /**
      * The player's own pose for [mood] with a [streak] of that many days: [pose], unless [debug]
@@ -283,17 +416,81 @@ internal object AnkiquestMood {
         val last = AnkiquestIcon.lastKnown()?.takeIf { endsAt != null && it.optLong("day_ends_at") == endsAt }
         val goal = if (last?.optBoolean("goal_reached") == true) Goal.REACHED else Goal.OPEN
         val debug = AnkiquestDebug.current()
-        return todayPose(today(day, last?.optInt("frozen_days") ?: 0, goal, debug), day?.streak ?: 0, debug)
+        return todayPose(ownMood(day, AnkiquestIcon.lastKnown(), goal, now, debug), day?.streak ?: 0, debug)
     }
+
+    /**
+     * The signed-in player's mood for [day] with the [last] profile kept ([AnkiquestIcon.lastKnown]).
+     * While [last] describes today it brings frozen days, days away, freezes, the day's end and how
+     * yesterday ended; once its day has ended, its own verdict is how yesterday ended. The night
+     * rule's other inputs come from [AnkiquestNight]; the debug menu's [debug] overrides apply, as in [today].
+     */
+    fun ownMood(
+        day: AnkiquestDay.Verdict?,
+        last: JSONObject?,
+        goal: Goal,
+        now: Long,
+        debug: AnkiquestDebug.Overrides = AnkiquestDebug.current(),
+    ): Mood {
+        val endsAt = last?.optLong("day_ends_at")?.takeIf { it > 0 }
+        val kept = last?.takeIf { endsAt != null && endsAt > now }
+        return today(
+            day,
+            kept?.optInt("frozen_days") ?: 0,
+            goal,
+            debug,
+            daysAway = kept?.optInt("days_away") ?: 0,
+            freezes = kept?.optInt("freezes") ?: 0,
+            dayLeftMs = endsAt?.takeIf { kept != null }?.let { it - now },
+            night = AnkiquestNight.inputs(yesterday(last, now), now),
+        )
+    }
+
+    /**
+     * How yesterday ended for a server [profile] at [now]: while the profile describes today, from
+     * its heatmap or, in a kept profile, its `yesterday`; once its day has ended (within a day), from
+     * its own verdict.
+     */
+    fun yesterday(
+        profile: JSONObject?,
+        now: Long,
+    ): Yesterday {
+        if (profile == null) {
+            return Yesterday.UNKNOWN
+        }
+        val endsAt = profile.optLong("day_ends_at").takeIf { it > 0 } ?: return Yesterday.UNKNOWN
+        if (endsAt > now) {
+            val kept = Yesterday.entries.firstOrNull { it.name.lowercase() == profile.optString("yesterday") }
+            return kept ?: yesterday(profile.optJSONArray("heatmap"))
+        }
+        if (now - endsAt < DAY_MS) {
+            return ended(profile.optString("streak_state"))
+        }
+        return Yesterday.UNKNOWN
+    }
+
+    /** How a day the server judged as [streakState] ended. */
+    private fun ended(streakState: String): Yesterday =
+        when (streakState) {
+            STATE_STUDIED, STATE_UNVERIFIED -> Yesterday.COUNTED
+            STATE_PROTECTED -> Yesterday.PROTECTED
+            else -> Yesterday.MISSED
+        }
 
     /** The flame for [mood], so the flame says what Aki would even with no companion shown. */
     fun flame(mood: Mood): Flame =
         when (mood) {
-            Mood.UNKNOWN, Mood.ASLEEP -> Flame.NONE
+            Mood.UNKNOWN, Mood.ASLEEP, Mood.NEGLECTED, Mood.ABANDONED, Mood.DEAD -> Flame.NONE
             Mood.SAD, Mood.HOPEFUL, Mood.ALMOST -> Flame.UNLIT
-            Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3, Mood.THAWING -> Flame.ICY
+            Mood.FREEZE, Mood.FROZEN_1, Mood.FROZEN_2, Mood.FROZEN_3, Mood.THAWING -> Flame.ICY
             Mood.FIRE -> Flame.LIT
         }
+
+    /** The flame for [mood] with a [streak]: asleep with a streak is the night's, unlit (`night.flame`). */
+    fun flame(
+        mood: Mood,
+        streak: Int,
+    ): Flame = if (mood == Mood.ASLEEP && streak > 0) Flame.UNLIT else flame(mood)
 
     /** The pose for [mood] with a [streak] of that many days. */
     private fun named(
@@ -305,6 +502,10 @@ internal object AnkiquestMood {
             Mood.UNKNOWN -> AnkiquestPose.FACE
             Mood.ASLEEP -> AnkiquestPose.ASLEEP
             Mood.SAD -> AnkiquestPose.SAD
+            Mood.FREEZE -> AnkiquestPose.FREEZE
+            Mood.NEGLECTED -> AnkiquestPose.NEGLECTED
+            Mood.ABANDONED -> AnkiquestPose.ABANDONED
+            Mood.DEAD -> AnkiquestPose.DEAD
             // thawing and almost are moods with no pose of their own (AnkiQuest-Server#45).
             Mood.FROZEN_1, Mood.THAWING -> AnkiquestPose.FROZEN
             Mood.FROZEN_2 -> AnkiquestPose.FROZEN_2
@@ -373,6 +574,46 @@ internal object AnkiquestMood {
             days++
         }
         return days
+    }
+
+    /** Days without reviews in a row ending yesterday in a [profile]'s heatmap, as [awayRun] counts them. */
+    fun awayRun(profile: JSONObject?): Int = awayRun(profile?.optJSONArray("heatmap"), Studied.of(profile))
+
+    /**
+     * Days without reviews in a row ending yesterday in a profile's [heatmap], whose last cell is
+     * today. Without a study day in the heatmap, a player who [studied] before it is away for
+     * every day of it before today, and one who never studied (a new player) is not away.
+     * Without a heatmap nothing is known: 0.
+     */
+    fun awayRun(
+        heatmap: JSONArray?,
+        studied: Studied,
+    ): Int {
+        if (heatmap == null) {
+            return 0
+        }
+        val last = heatmap.length() - 2
+        for (index in last downTo 0) {
+            if (heatmap.optJSONObject(index)?.optString("state", "none") != "none") {
+                return last - index
+            }
+        }
+
+        // No study day in the heatmap: away since before it, or never studied at all.
+        return when (studied) {
+            Studied.EVER -> last + 1
+            Studied.NEVER -> 0
+        }
+    }
+
+    /** How yesterday ended, from a profile's [heatmap] whose last cell is today. */
+    fun yesterday(heatmap: JSONArray?): Yesterday {
+        val cell = heatmap?.takeIf { it.length() >= 2 }?.optJSONObject(heatmap.length() - 2) ?: return Yesterday.UNKNOWN
+        return when {
+            cell.optBoolean("frozen") -> Yesterday.PROTECTED
+            cell.optString("state") == "met" -> Yesterday.COUNTED
+            else -> Yesterday.MISSED
+        }
     }
 
     /** The next milestone after [streak], or null past the last one. */

@@ -25,6 +25,7 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.UNKNOWN to R.drawable.ankilope_face,
         AnkiquestMood.Mood.ASLEEP to R.drawable.ankilope_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.ankilope_sad,
+        AnkiquestMood.Mood.FREEZE to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.ankilope_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.ankilope_frozen,
@@ -32,6 +33,9 @@ internal val ankilopeMoodPoses =
         AnkiquestMood.Mood.HOPEFUL to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.ankilope_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.ankilope_streak,
+        AnkiquestMood.Mood.NEGLECTED to R.drawable.ankilope_neglected,
+        AnkiquestMood.Mood.ABANDONED to R.drawable.ankilope_neglected,
+        AnkiquestMood.Mood.DEAD to R.drawable.ankilope_neglected,
     )
 
 /** Bluma's core pose for each streak mood, from her own art. */
@@ -40,6 +44,7 @@ internal val blumaMoodPoses =
         AnkiquestMood.Mood.UNKNOWN to R.drawable.bluma_face,
         AnkiquestMood.Mood.ASLEEP to R.drawable.bluma_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.bluma_sad,
+        AnkiquestMood.Mood.FREEZE to R.drawable.bluma_frozen,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.bluma_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.bluma_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.bluma_frozen,
@@ -47,14 +52,21 @@ internal val blumaMoodPoses =
         AnkiquestMood.Mood.HOPEFUL to R.drawable.bluma_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.bluma_hopeful,
         AnkiquestMood.Mood.FIRE to R.drawable.bluma_streak,
+        AnkiquestMood.Mood.NEGLECTED to R.drawable.bluma_neglected,
+        AnkiquestMood.Mood.ABANDONED to R.drawable.bluma_neglected,
+        AnkiquestMood.Mood.DEAD to R.drawable.bluma_neglected,
     )
 
-/** The shared pose's Aki drawable; her missing frozen extensions use the core frozen pose. */
+/**
+ * The shared pose's Aki drawable; her missing frozen extensions and the freeze picture use the core
+ * frozen pose, her missing away extensions the core neglected pose.
+ */
 internal fun akiMoodArt(expected: JSONObject): String {
     val pose = expected.getString("pose")
     val shown =
         when (pose) {
-            "frozen_2", "frozen_3" -> "frozen"
+            "freeze", "frozen_2", "frozen_3" -> "frozen"
+            "abandoned", "dead" -> "neglected"
             else -> pose
         }
     return "aki_$shown"
@@ -69,10 +81,14 @@ internal val ankiTanMoodPoses =
         AnkiquestMood.Mood.UNKNOWN to R.drawable.anki_tan_face,
         AnkiquestMood.Mood.ASLEEP to R.drawable.anki_tan_asleep,
         AnkiquestMood.Mood.SAD to R.drawable.anki_tan_sad,
+        AnkiquestMood.Mood.FREEZE to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.FROZEN_1 to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.FROZEN_2 to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.FROZEN_3 to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.THAWING to R.drawable.anki_tan_frozen,
         AnkiquestMood.Mood.HOPEFUL to R.drawable.anki_tan_hopeful,
         AnkiquestMood.Mood.ALMOST to R.drawable.anki_tan_hopeful,
+        AnkiquestMood.Mood.NEGLECTED to R.drawable.anki_tan_neglected,
+        AnkiquestMood.Mood.ABANDONED to R.drawable.anki_tan_neglected,
+        AnkiquestMood.Mood.DEAD to R.drawable.anki_tan_neglected,
     )

@@ -25,9 +25,13 @@ class AnkiquestPoseTest {
         val expectedCore = (0 until core.length()).map { core.getString(it) }
         assertEquals(expectedCore, AnkiquestPose.entries.filter { it.chain().count() == 1 }.map { it.id })
 
-        // Each extension falls back to the fixture's pose.
+        // Each extension falls back to the fixture's pose, and so does each picture a mood shows.
         val extensions = fixture.getJSONObject("extensions")
-        val expected = extensions.keys().asSequence().associateWith { extensions.getString(it) }
+        val pictures = fixture.getJSONObject("pictures")
+        val moodPictures = AnkiquestPose.entries.map { it.id }.filter { pictures.has(it) }
+        val expected =
+            extensions.keys().asSequence().associateWith { extensions.getString(it) } +
+                moodPictures.associateWith { pictures.getString(it) }
         val actual =
             AnkiquestPose.entries
                 .mapNotNull { pose ->

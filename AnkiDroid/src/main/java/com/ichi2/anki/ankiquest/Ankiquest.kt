@@ -835,6 +835,14 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 else -> mark
             }
         val clock = clock()
+        // The night rule's inputs follow the collection; the widget reads the kept copy.
+        try {
+            AnkiquestNight.refresh(startedAt)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "AnkiQuest night inputs")
+        }
         val stamps = AnkiquestReviewOffsets.read(prefs)
         val deckSource = if (onlyTest) null else AnkiquestDeckNames.source(owner)
 
