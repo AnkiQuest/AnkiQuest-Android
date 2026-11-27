@@ -16,6 +16,15 @@ import anki.deck_config.DeckConfig
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Event
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Fsrs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Inputs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Preset
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Scheduler
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Since
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.State
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Verdict
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Wording
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.libanki.DeckId
@@ -55,65 +64,11 @@ internal object AnkiquestOptimizeReminder {
     // Answers only: manual (type 4) and rescheduled (type 5) entries are not reviews.
     private const val ANSWERS_SQL = "select count() from revlog where id >= ? and ease > 0 and type < 4"
 
-    enum class Scheduler { SM2, FSRS, RWKV_CURVE, RWKV_INSTANT }
-
-    /** Whether the collection uses FSRS; without it every preset is SM-2. */
-    enum class Fsrs { ON, OFF }
-
-    /** The reminder on every device: on, off by the settings switch, snoozed or dismissed. */
-    sealed interface State {
-        data object On : State
-
-        data object Off : State
-
-        /** Hidden while now is before [untilMs]. */
-        data class Snoozed(
-            val untilMs: EpochMilliseconds,
-        ) : State
-
-        /**
-         * Hidden until Optimize All Presets runs again: until a run a day or more after
-         * [optimizedMs], the last one when it was dismissed (null: it had never run).
-         */
-        data class Dismissed(
-            val optimizedMs: EpochMilliseconds?,
-        ) : State
-    }
-
-    enum class Event { SNOOZE, DISMISS, TURN_OFF, TURN_ON }
-
-    /** Why there is no reminder, in the order the rule checks. */
-    enum class Quiet { OFF, NO_FSRS, SNOOZED, DISMISSED, TOO_SOON, TOO_FEW_REVIEWS }
-
-    enum class Since { STALE, NEVER }
-
-    /** What optimizing does for the presets: FSRS parameters, the RWKV presets' FSRS fallback, or both. */
-    enum class Wording { FSRS, RWKV, MIXED }
-
-    sealed interface Verdict {
-        data class Silent(
-            val quiet: Quiet,
-        ) : Verdict
-
-        data class Remind(
-            val since: Since,
-            val wording: Wording,
-        ) : Verdict
-    }
-
-    /** What the rule reads from the collection, and the time now. */
-    data class Inputs(
-        val nowMs: EpochMilliseconds,
-        val lastOptimizedMs: EpochMilliseconds?,
-        val reviewsSince: Int,
-        val presets: List<Scheduler>,
-        val deck: DeckId,
-    )
-
+    /** The scheduler of a preset with [config]. */
     fun scheduler(
         fsrs: Fsrs,
         config: DeckConfig.Config,
-    ): Scheduler = AnkiquestSharedRules.scheduler(fsrs, config)
+    ): Scheduler = AnkiquestSharedRules.scheduler(Preset(fsrs, config.rwkvReviewEnabled, config.rwkvReviewInstantOrderEnabled))
 
     fun verdict(
         inputs: Inputs,
@@ -155,15 +110,13 @@ internal object AnkiquestOptimizeReminder {
         nowMs: EpochMilliseconds = TimeManager.time.intTimeMS(),
     ): Inputs {
         val last = lastOptimized(col)
-        val deck = col.decks.selected()
-        val configs = col.decks.getDeckConfigsForUpdate(deck)
+        val configs = col.decks.getDeckConfigsForUpdate(col.decks.selected())
         val fsrs = if (configs.fsrs) Fsrs.ON else Fsrs.OFF
         return Inputs(
             nowMs = nowMs,
             lastOptimizedMs = last,
             reviewsSince = reviewsSince(col, last),
             presets = configs.allConfigList.map { scheduler(fsrs, it.config.config) },
-            deck = deck,
         )
     }
 
@@ -270,9 +223,10 @@ internal object AnkiquestOptimizeReminder {
         }
         offer = Offer.MADE
         activity.lifecycleScope.launch {
-            val inputs =
+            // The rule's inputs and the deck whose options the reminder opens.
+            val (inputs, deck) =
                 try {
-                    withCol { load(this) }
+                    withCol { load(this) to decks.selected() }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -284,7 +238,7 @@ internal object AnkiquestOptimizeReminder {
                     return@launch
                 }
             val verdict = verdict(inputs, state()) as? Verdict.Remind ?: return@launch
-            activity.lifecycle.withResumed { show(activity, inputs.deck, verdict) }
+            activity.lifecycle.withResumed { show(activity, deck, verdict) }
         }
     }
 
@@ -314,8 +268,8 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val context = requireContext()
         val arguments = requireArguments()
-        val since = AnkiquestOptimizeReminder.Since.valueOf(arguments.getString(ARG_SINCE)!!)
-        val wording = AnkiquestOptimizeReminder.Wording.valueOf(arguments.getString(ARG_WORDING)!!)
+        val since = Since.valueOf(arguments.getString(ARG_SINCE)!!)
+        val wording = Wording.valueOf(arguments.getString(ARG_WORDING)!!)
         val deck = arguments.getLong(ARG_DECK)
         val scope = requireActivity().lifecycleScope
         return AlertDialog
@@ -325,9 +279,9 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
             .setPositiveButton(R.string.aq_optimize_open) { _, _ ->
                 startActivity(DeckOptions.getIntent(context, deck))
             }.setNeutralButton(R.string.aq_optimize_snooze) { _, _ ->
-                scope.launch { AnkiquestOptimizeReminder.record(AnkiquestOptimizeReminder.Event.SNOOZE) }
+                scope.launch { AnkiquestOptimizeReminder.record(Event.SNOOZE) }
             }.setNegativeButton(R.string.aq_optimize_dismiss) { _, _ ->
-                scope.launch { AnkiquestOptimizeReminder.record(AnkiquestOptimizeReminder.Event.DISMISS) }
+                scope.launch { AnkiquestOptimizeReminder.record(Event.DISMISS) }
             }.create()
     }
 
@@ -344,7 +298,7 @@ internal class AnkiquestOptimizeReminderDialog : DialogFragment() {
 
         fun create(
             deck: DeckId,
-            verdict: AnkiquestOptimizeReminder.Verdict.Remind,
+            verdict: Verdict.Remind,
         ) = AnkiquestOptimizeReminderDialog().apply {
             arguments =
                 Bundle().apply {

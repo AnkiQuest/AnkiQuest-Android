@@ -4,37 +4,48 @@ package com.ichi2.anki.gradle
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.Directory
+import org.gradle.api.Project
+import org.gradle.api.attributes.Usage
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.UntrackedTask
+import org.gradle.api.tasks.testing.Test
 import org.gradle.process.CommandLineArgumentProvider
+import org.gradle.workers.WorkerExecutor
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import javax.inject.Inject
 
 /**
  * The shared rules (AnkiQuest-Server's `crates/rules`) from the newest `rules-<N>` release of
  * AnkiQuest-Server, as the desktop add-on takes them: the Kotlin bindings, the library of each
  * Android ABI, and the desktop libraries the JVM unit tests load. Nothing is committed or pinned:
  * the app uses server `master`, so every build takes the newest release, checks each asset against
- * that release's `SHA256SUMS` and records the tag and hashes in the app's assets
- * (`ankiquest/rules-release.json`), so a build can be traced and rebuilt.
+ * that release's `SHA256SUMS` and its build provenance attestation ([AnkiquestAttestation]), and
+ * records the tag and hashes in the app's assets (`ankiquest/rules-release.json`), so a build can be
+ * traced and rebuilt.
  *
  * `-PankiquestRulesTag=<tag>` or `ANKIQUEST_RULES_TAG` takes that release instead, to rebuild one.
  * `-PankiquestRulesDir=<dir>` or `ANKIQUEST_RULES_DIR` takes the assets and their `SHA256SUMS`
- * from a folder, for a release not published yet. Assets are cached by SHA-256 like the art
- * ([AnkiquestArt]); offline, a build uses the newest release it saw before.
+ * from a folder, for a release not published yet or one built from source (F-Droid,
+ * docs/fdroid/README.md); a folder is trusted as it is, without an attestation. Assets are cached by
+ * SHA-256 like the art ([AnkiquestArt]), and only once their attestation verified; offline, a build
+ * uses the newest release it saw before.
  */
 object AnkiquestRules {
     const val SUMS = "SHA256SUMS"
+
+    /** The release's build provenance attestation of every asset, a Sigstore bundle. */
+    const val BUNDLE = "ankiquest_rules.sigstore.json"
     const val BINDINGS = "ankiquest_rules.kt"
 
     /** Where the bindings go in the generated sources: their package is `org.ankiquest.rules`. */
@@ -45,6 +56,9 @@ object AnkiquestRules {
 
     /** The record of the release a build took, in the app's assets. */
     const val RECORD = "ankiquest/rules-release.json"
+
+    /** The `Usage` of `:ankiquest-rules`'s desktop library for unit tests ([useRulesHostLibrary]). */
+    const val HOST_USAGE = "ankiquest-rules-host"
 
     /** The tag recorded for assets from a folder without a tag. */
     const val LOCAL_TAG = "local"
@@ -122,13 +136,17 @@ object AnkiquestRules {
 
     /**
      * Release [tag], or the newest one, with the assets [names] checked against its `SHA256SUMS`
-     * and cached in [cache]. Without network, the newest tag and its sums come from the cache.
+     * and cached in [cache]. An asset not cached yet is cached only after [verify] accepted the
+     * release's attestation ([BUNDLE]) for it; [verify] gets the bundle and the hashes by name. A
+     * cached asset was verified when it was cached, so it serves offline without checking again.
+     * Without network, the newest tag and its sums come from the cache.
      */
     fun released(
         tag: String?,
         cache: File,
         names: List<String>,
         download: (URI) -> ByteArray = AnkiquestArt::get,
+        verify: (bundle: File, digests: Map<String, String>) -> Unit,
     ): Release {
         // The tag: the one asked for, the newest online, or the newest seen before.
         val newest = cache.resolve(NEWEST)
@@ -166,14 +184,27 @@ object AnkiquestRules {
             }
         val sums = sums(sumsText)
 
-        val files =
-            names.associateWith { name ->
-                val sha256 = listed(sums, chosen, name)
-                AnkiquestArt.cached(URI("$RELEASES/$chosen/$name"), sha256, cache, download) { actual ->
-                    "$name of $chosen has SHA-256 $actual; its $SUMS says $sha256"
+        // What the cache has was verified before; the rest is downloaded and checked against the
+        // sums, then against the attestation, and only then cached.
+        val expected = names.associateWith { listed(sums, chosen, it) }
+        val missing = expected.filterValues { !AnkiquestArt.isCached(cache, it) }
+        if (missing.isNotEmpty()) {
+            val downloaded =
+                missing.mapValues { (name, sha256) ->
+                    val bytes = download(URI("$RELEASES/$chosen/$name"))
+                    val actual = AnkiquestArt.sha256(bytes)
+                    if (actual != sha256) {
+                        throw GradleException("$name of $chosen has SHA-256 $actual; its $SUMS says $sha256")
+                    }
+                    bytes
                 }
-            }
-        return Release(chosen, sums, files)
+            cache.mkdirs()
+            val bundle = cache.resolve("$chosen-$BUNDLE")
+            bundle.writeBytes(download(URI("$RELEASES/$chosen/$BUNDLE")))
+            verify(bundle, missing)
+            downloaded.forEach { (name, bytes) -> cache.resolve(missing.getValue(name)).writeBytes(bytes) }
+        }
+        return Release(chosen, sums, expected.mapValues { (_, sha256) -> cache.resolve(sha256) })
     }
 
     /** The assets [names] in [folder], checked against the `SHA256SUMS` there. */
@@ -264,12 +295,29 @@ abstract class AnkiquestRulesSource : DefaultTask() {
     @get:Internal
     abstract val cacheDir: DirectoryProperty
 
+    /** The attestation verifier's class path ([rulesAttestationClasspath]). */
+    @get:Internal
+    abstract val attestationClasspath: ConfigurableFileCollection
+
+    @get:Inject
+    abstract val workers: WorkerExecutor
+
     protected fun release(names: List<String>): AnkiquestRules.Release {
         val folder = localDir.orNull?.asFile
         if (folder != null) {
             return AnkiquestRules.local(folder, tag.orNull, names)
         }
-        return AnkiquestRules.released(tag.orNull, cacheDir.get().asFile, names)
+        val cache = cacheDir.get().asFile
+        return AnkiquestRules.released(tag.orNull, cache, names) { bundle, digests ->
+            workers
+                .classLoaderIsolation { classpath.from(attestationClasspath) }
+                .submit(VerifyRulesAttestation::class.java) {
+                    this.bundle.set(bundle)
+                    this.digests.set(digests)
+                    tufCache.set(cache.resolve("sigstore-tuf"))
+                }
+            workers.await()
+        }
     }
 }
 
@@ -313,11 +361,30 @@ abstract class AnkiquestRulesHostTask : AnkiquestRulesSource() {
     }
 }
 
-/** Points JNA at the rules library [AnkiquestRulesHostTask] wrote, for a unit test JVM. */
+/** Points JNA at the folder in [dir], the rules library [AnkiquestRulesHostTask] wrote, for a unit test JVM. */
 class AnkiquestRulesLibraryPath(
-    @get:InputDirectory
+    @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    val dir: Provider<Directory>,
+    val dir: FileCollection,
 ) : CommandLineArgumentProvider {
-    override fun asArguments(): List<String> = listOf("-Djna.library.path=${dir.get().asFile}")
+    override fun asArguments(): List<String> = listOf("-Djna.library.path=${dir.singleFile}")
+}
+
+/**
+ * Gives this project's unit tests the desktop library of `:ankiquest-rules` (its
+ * `ankiquestRulesHost` task), so code that calls the shared rules runs on the JVM.
+ */
+fun Project.useRulesHostLibrary() {
+    val scope = configurations.dependencyScope("ankiquestRulesHost")
+    val resolved =
+        configurations.resolvable("ankiquestRulesHostPath") {
+            extendsFrom(scope.get())
+            attributes {
+                attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class.java, AnkiquestRules.HOST_USAGE))
+            }
+        }
+    dependencies.add(scope.name, dependencies.project(mapOf("path" to ":ankiquest-rules")))
+    tasks.withType(Test::class.java).configureEach {
+        jvmArgumentProviders.add(AnkiquestRulesLibraryPath(resolved.get()))
+    }
 }

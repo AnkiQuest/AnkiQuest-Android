@@ -33,6 +33,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSharing
@@ -347,19 +348,19 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
         reminder.performClick()
         idleUntil { !reminder.isChecked }
-        assertEquals(AnkiquestOptimizeReminder.State.Off, AnkiquestOptimizeReminder.state())
+        assertEquals(AnkiquestOptimizeRule.State.Off, AnkiquestOptimizeReminder.state())
 
         reminder.performClick()
         idleUntil { reminder.isChecked }
-        assertEquals(AnkiquestOptimizeReminder.State.On, AnkiquestOptimizeReminder.state())
+        assertEquals(AnkiquestOptimizeRule.State.On, AnkiquestOptimizeReminder.state())
     }
 
     @Test
     fun `a snoozed optimize reminder shows its switch on and keeps the snooze`() {
-        AnkiquestOptimizeReminder.remember(AnkiquestOptimizeReminder.State.Snoozed(10))
+        AnkiquestOptimizeReminder.remember(AnkiquestOptimizeRule.State.Snoozed(10))
         val reminder = open().switch(R.string.ankiquest_optimize_reminder_key)
         assertTrue(reminder.isChecked)
-        assertEquals(AnkiquestOptimizeReminder.State.Snoozed(10), AnkiquestOptimizeReminder.state())
+        assertEquals(AnkiquestOptimizeRule.State.Snoozed(10), AnkiquestOptimizeReminder.state())
     }
 
     @Test

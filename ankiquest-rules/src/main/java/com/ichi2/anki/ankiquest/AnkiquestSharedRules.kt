@@ -2,18 +2,16 @@
 
 package com.ichi2.anki.ankiquest
 
-import anki.deck_config.DeckConfig
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Event
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Fsrs
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Inputs
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Quiet
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Scheduler
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Since
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.State
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Verdict
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Wording
-import com.ichi2.anki.libanki.EpochMilliseconds
-import com.ichi2.anki.libanki.EpochSeconds
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Event
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Fsrs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Inputs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Preset
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Quiet
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Scheduler
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Since
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.State
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Verdict
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Wording
 import org.ankiquest.rules.OptimizeEvent
 import org.ankiquest.rules.OptimizeInputs
 import org.ankiquest.rules.OptimizeSince
@@ -30,20 +28,18 @@ import org.ankiquest.rules.presetScheduler
 /**
  * The rules of AnkiQuest-Server's `crates/rules`, the ones the server and the desktop add-on
  * compute too, through their UniFFI bindings (`org.ankiquest.rules`, from the newest rules
- * release; see docs/ankiquest-server-data.md). The only code that imports the bindings: it turns
- * the app's types into theirs and back, so the rest of the app never sees them.
+ * release; see docs/ankiquest-server-data.md). The only code that imports the bindings, and the
+ * only module that sees them: it turns the app's types ([AnkiquestOptimizeRule]) into theirs and
+ * back, so the rest of the app never sees them.
  */
-internal object AnkiquestSharedRules {
-    /** The scheduler of a preset with [config], as Optimize All Presets sees it. */
-    fun scheduler(
-        fsrs: Fsrs,
-        config: DeckConfig.Config,
-    ): Scheduler {
+object AnkiquestSharedRules {
+    /** The scheduler of [preset], as Optimize All Presets sees it. */
+    fun scheduler(preset: Preset): Scheduler {
         val flags =
             PresetFlags(
-                fsrs = fsrs == Fsrs.ON,
-                rwkvReview = config.rwkvReviewEnabled,
-                rwkvInstantOrder = config.rwkvReviewInstantOrderEnabled,
+                fsrs = preset.fsrs == Fsrs.ON,
+                rwkvReview = preset.rwkvReview,
+                rwkvInstantOrder = preset.rwkvInstantOrder,
             )
         return when (presetScheduler(flags)) {
             PresetScheduler.SM2 -> Scheduler.SM2
@@ -53,12 +49,15 @@ internal object AnkiquestSharedRules {
         }
     }
 
-    /** When Optimize All Presets last ran, from the collection day it records; null when never. */
+    /**
+     * When Optimize All Presets last ran, in epoch ms: the end of collection day [lastOptimizedDay]
+     * (the day it records), with [dayCutoff] the end of [today] in epoch seconds. Null when never.
+     */
     fun optimizedAt(
         today: Int,
-        dayCutoff: EpochSeconds,
+        dayCutoff: Long,
         lastOptimizedDay: Int?,
-    ): EpochMilliseconds? = optimizedAtMs(today, dayCutoff, lastOptimizedDay)
+    ): Long? = optimizedAtMs(today, dayCutoff, lastOptimizedDay)
 
     /** Whether to remind the player now, and if not, why not. */
     fun verdict(
@@ -87,8 +86,8 @@ internal object AnkiquestSharedRules {
     fun next(
         state: State,
         event: Event,
-        nowMs: EpochMilliseconds,
-        lastOptimizedMs: EpochMilliseconds?,
+        nowMs: Long,
+        lastOptimizedMs: Long?,
     ): State {
         val shared =
             when (event) {

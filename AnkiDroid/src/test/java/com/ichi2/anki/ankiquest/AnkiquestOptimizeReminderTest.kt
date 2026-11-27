@@ -10,14 +10,14 @@ import anki.deck_config.DeckConfig
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Event
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Fsrs
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Inputs
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Scheduler
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Since
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.State
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Verdict
-import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder.Wording
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Event
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Fsrs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Inputs
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Scheduler
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Since
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.State
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Verdict
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule.Wording
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.pages.DeckOptions
 import com.ichi2.anki.setIntroductionSlidesShown
@@ -118,7 +118,7 @@ class AnkiquestOptimizeReminderTest : RobolectricTest() {
                 case.getJSONArray("presets").let { list ->
                     (0 until list.length()).map { Scheduler.valueOf(list.getString(it).uppercase()) }
                 }
-            val inputs = Inputs(case.getLong("now_ms"), case.ms("last_optimized_ms"), case.getInt("reviews_since"), presets, deck = 1)
+            val inputs = Inputs(case.getLong("now_ms"), case.ms("last_optimized_ms"), case.getInt("reviews_since"), presets)
             val found =
                 when (val verdict = AnkiquestOptimizeReminder.verdict(inputs, state(case.getJSONObject("state")))) {
                     is Verdict.Silent -> JSONObject().put("verdict", verdict.quiet.name.lowercase())

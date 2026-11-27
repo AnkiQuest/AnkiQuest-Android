@@ -58,6 +58,7 @@ import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestOptimizeReminder
+import com.ichi2.anki.ankiquest.AnkiquestOptimizeRule
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestRwkv
 import com.ichi2.anki.ankiquest.AnkiquestSettingsSync
@@ -610,12 +611,12 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     /** The switch is the reminder's off state; turning it on keeps a snooze or dismissal. */
     private fun bindOptimizeReminder() {
         val reminder = requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_optimize_reminder_key)
-        reminder.isChecked = AnkiquestOptimizeReminder.state() != AnkiquestOptimizeReminder.State.Off
+        reminder.isChecked = AnkiquestOptimizeReminder.state() != AnkiquestOptimizeRule.State.Off
         reminder.setOnPreferenceChangeListener { _, enabled ->
-            val event = if (enabled == true) AnkiquestOptimizeReminder.Event.TURN_ON else AnkiquestOptimizeReminder.Event.TURN_OFF
+            val event = if (enabled == true) AnkiquestOptimizeRule.Event.TURN_ON else AnkiquestOptimizeRule.Event.TURN_OFF
             launchCatchingTask {
                 AnkiquestOptimizeReminder.record(event)
-                reminder.isChecked = AnkiquestOptimizeReminder.state() != AnkiquestOptimizeReminder.State.Off
+                reminder.isChecked = AnkiquestOptimizeReminder.state() != AnkiquestOptimizeRule.State.Off
             }
             false
         }

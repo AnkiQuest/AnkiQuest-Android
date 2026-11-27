@@ -75,37 +75,33 @@ object AnkiquestArt {
         asset: Asset,
         cache: File,
         download: (URI) -> ByteArray = ::get,
-    ): File =
-        cached(asset.url, asset.sha256, cache, download) { actual ->
-            "${asset.name} of ${asset.tag} has SHA-256 $actual; $PIN says ${asset.sha256}"
-        }
-
-    /**
-     * The bytes with SHA-256 [sha256], from [cache] (one file per asset, named by its hash) or from
-     * [url] through [download]. Bytes with another hash fail the build with [mismatch] of their hash
-     * and are never cached. AnkiQuest-Server's rules releases use it too ([AnkiquestRules]).
-     */
-    fun cached(
-        url: URI,
-        sha256: String,
-        cache: File,
-        download: (URI) -> ByteArray = ::get,
-        mismatch: (String) -> String,
     ): File {
-        // A cached copy counts only with the expected hash, so a damaged file is fetched again.
-        val cached = cache.resolve(sha256)
-        if (cached.isFile && sha256(cached.readBytes()) == sha256) {
+        // A cached copy counts only with the pinned hash, so a damaged file is fetched again.
+        val cached = cache.resolve(asset.sha256)
+        if (isCached(cache, asset.sha256)) {
             return cached
         }
 
-        val bytes = download(url)
+        val bytes = download(asset.url)
         val actual = sha256(bytes)
-        if (actual != sha256) {
-            throw GradleException(mismatch(actual))
+        if (actual != asset.sha256) {
+            throw GradleException("${asset.name} of ${asset.tag} has SHA-256 $actual; $PIN says ${asset.sha256}")
         }
         cache.mkdirs()
         cached.writeBytes(bytes)
         return cached
+    }
+
+    /**
+     * Whether [cache] holds the bytes with SHA-256 [sha256] (one file per asset, named by its hash),
+     * undamaged. AnkiQuest-Server's rules releases are cached the same way ([AnkiquestRules]).
+     */
+    fun isCached(
+        cache: File,
+        sha256: String,
+    ): Boolean {
+        val cached = cache.resolve(sha256)
+        return cached.isFile && sha256(cached.readBytes()) == sha256
     }
 
     fun get(url: URI): ByteArray = url.toURL().openStream().use { it.readBytes() }

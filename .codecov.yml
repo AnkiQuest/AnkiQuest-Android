@@ -12,6 +12,7 @@ github_checks:
 flags:
   AnkiDroid-test: &unit {carryforward: true}
   anki-common-test: *unit
+  ankiquest-rules-test: *unit
   api-test: *unit
   common-test: *unit
   common_android-test: *unit

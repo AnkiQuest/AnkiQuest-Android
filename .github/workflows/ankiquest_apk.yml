@@ -166,7 +166,10 @@ jobs:
         run: |
           # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
           cp AnkiQuest.apk AnkiDroid-Quest.apk
-          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+          # The shared rules release the APK was built with; the F-Droid build reads its tag
+          # (docs/ankiquest-server-data.md, "F-Droid").
+          unzip -p AnkiQuest.apk assets/ankiquest/rules-release.json > rules-release.json
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk rules-release.json \
             --title "AnkiQuest $RELEASE" \
             --notes-file AnkiDroid/src/main/assets/ankiquest/release-notes.md
 

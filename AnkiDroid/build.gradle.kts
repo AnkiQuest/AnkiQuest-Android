@@ -4,14 +4,11 @@
 import com.android.build.api.variant.FilterConfiguration.FilterType
 import com.ichi2.anki.gradle.AnkiquestArtTask
 import com.ichi2.anki.gradle.AnkiquestBrandingTask
-import com.ichi2.anki.gradle.AnkiquestRulesHostTask
-import com.ichi2.anki.gradle.AnkiquestRulesLibraryPath
-import com.ichi2.anki.gradle.AnkiquestRulesSource
-import com.ichi2.anki.gradle.AnkiquestRulesTask
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
 import com.ichi2.anki.gradle.addAnkiBackendDependencies
 import com.ichi2.anki.gradle.isCoverageEnabled
+import com.ichi2.anki.gradle.useRulesHostLibrary
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -473,53 +470,9 @@ androidComponents.onVariants { variant ->
     variant.sources.res?.addGeneratedSourceDirectory(art, AnkiquestArtTask::resDir)
 }
 
-// AnkiQuest: the shared rules (AnkiQuest-Server's crates/rules) through their UniFFI bindings. Every
-// build takes the Kotlin bindings and the Android libraries from the newest rules-<N> release of
-// AnkiQuest-Server, checked against its SHA256SUMS, and records the tag in the assets; the unit tests
-// load this machine's desktop library from the same release. -PankiquestRulesTag=<tag> /
-// ANKIQUEST_RULES_TAG rebuilds with a given release, -PankiquestRulesDir=<dir> / ANKIQUEST_RULES_DIR
-// takes a folder with the assets and their SHA256SUMS. Cached by SHA-256 in the Gradle user home or
-// -PankiquestRulesCache=<dir> / ANKIQUEST_RULES_CACHE. See buildSrc AnkiquestRules.kt.
-fun ankiquestSetting(
-    property: String,
-    variable: String,
-) = providers.gradleProperty(property).orElse(providers.environmentVariable(variable))
-
-val ankiquestRulesCache =
-    ankiquestSetting("ankiquestRulesCache", "ANKIQUEST_RULES_CACHE")
-        .map { rootProject.file(it) }
-        .getOrElse(File(gradle.gradleUserHomeDir, "caches/ankiquest-rules"))
-
-// A local value, so the mapping holds no reference to this script (configuration cache).
-val ankiquestRulesDir =
-    rootProject.layout.projectDirectory.let { root ->
-        ankiquestSetting("ankiquestRulesDir", "ANKIQUEST_RULES_DIR").map { root.dir(it) }
-    }
-
-fun AnkiquestRulesSource.rulesFrom() {
-    localDir.set(ankiquestRulesDir)
-    tag.set(ankiquestSetting("ankiquestRulesTag", "ANKIQUEST_RULES_TAG"))
-    cacheDir.set(ankiquestRulesCache)
-}
-
-androidComponents.onVariants { variant ->
-    val rules =
-        tasks.register<AnkiquestRulesTask>("ankiquestRules${variant.name.replaceFirstChar { it.uppercase() }}") {
-            rulesFrom()
-        }
-    variant.sources.kotlin?.addGeneratedSourceDirectory(rules, AnkiquestRulesTask::kotlinDir)
-    variant.sources.jniLibs?.addGeneratedSourceDirectory(rules, AnkiquestRulesTask::jniLibsDir)
-    variant.sources.assets?.addGeneratedSourceDirectory(rules, AnkiquestRulesTask::assetsDir)
-}
-
-val ankiquestRulesHost =
-    tasks.register<AnkiquestRulesHostTask>("ankiquestRulesHost") {
-        rulesFrom()
-        hostDir.set(layout.buildDirectory.dir("generated/ankiquest/rules-host"))
-    }
-tasks.withType<Test>().configureEach {
-    jvmArgumentProviders.add(AnkiquestRulesLibraryPath(ankiquestRulesHost.flatMap { it.hostDir }))
-}
+// AnkiQuest: the shared rules come from :ankiquest-rules; the unit tests load this machine's desktop
+// library from the same release (buildSrc AnkiquestRules.kt).
+useRulesHostLibrary()
 
 androidComponents.onVariants(androidComponents.selector().withBuildType("release")) { variant ->
     // We want the same version stream for all ABIs in debug but for release we can split them
@@ -943,15 +896,9 @@ dependencies {
     // Backend libraries
     addAnkiBackendDependencies(project)
 
-    // The shared rules' bindings call their library through JNA: the AAR, with JNA's library per
-    // ABI, in the app; the jar, with the desktop JVMs' JNA library, in the unit tests.
-    implementation(libs.jna) {
-        artifact {
-            name = "jna"
-            type = "aar"
-            extension = "aar"
-        }
-    }
+    // The shared rules, through their bindings. Those call their library through JNA, whose AAR
+    // comes with the module; the unit tests also need the jar, with the desktop JVMs' JNA library.
+    implementation(project(":ankiquest-rules"))
     testImplementation(libs.jna)
 
     // May need a resolution strategy for support libs to our versions
