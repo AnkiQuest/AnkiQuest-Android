@@ -137,8 +137,7 @@ internal object AnkiquestMood {
         ;
 
         companion object {
-            fun of(profile: JSONObject?): Studied =
-                if ((profile?.optJSONObject("lifetime")?.optLong("reviews") ?: 0) > 0) EVER else NEVER
+            fun of(profile: JSONObject?): Studied = if ((profile?.optJSONObject("lifetime")?.optLong("reviews") ?: 0) > 0) EVER else NEVER
         }
     }
 
