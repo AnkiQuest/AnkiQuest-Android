@@ -6,6 +6,7 @@ import android.content.Context
 import android.text.InputType
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
@@ -122,6 +123,10 @@ internal object AnkiquestDebugMenu {
                 R.string.ankiquest_debug_hot_days to rules.hotDays,
                 R.string.ankiquest_debug_blazing_days to rules.blazingDays,
                 R.string.ankiquest_debug_legend_days to rules.legendDays,
+                R.string.ankiquest_debug_freeze_window to rules.freezeWindowMinutes,
+                R.string.ankiquest_debug_neglected_days to rules.neglectedDays,
+                R.string.ankiquest_debug_abandoned_days to rules.abandonedDays,
+                R.string.ankiquest_debug_dead_days to rules.deadDays,
             ).map { (label, value) ->
                 layout.addView(TextView(context).apply { setText(label) })
                 EditText(context).apply {
@@ -133,7 +138,7 @@ internal object AnkiquestDebugMenu {
         AlertDialog
             .Builder(context)
             .setTitle(R.string.ankiquest_debug_thresholds)
-            .setView(layout)
+            .setView(ScrollView(context).apply { addView(layout) })
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val numbers = fields.map { it.text.toString().toIntOrNull() ?: 0 }
                 val edited =
@@ -144,6 +149,10 @@ internal object AnkiquestDebugMenu {
                         hotDays = numbers[3],
                         blazingDays = numbers[4],
                         legendDays = numbers[5],
+                        freezeWindowMinutes = numbers[6],
+                        neglectedDays = numbers[7],
+                        abandonedDays = numbers[8],
+                        deadDays = numbers[9],
                     )
                 val next = overrides.withRules(edited)
                 if (next == null) {

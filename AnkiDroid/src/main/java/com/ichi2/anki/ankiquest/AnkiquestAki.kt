@@ -56,10 +56,10 @@ internal object AnkiquestAki {
                 goal.withServerDay(profile, now).streakDay
             }
 
-        // The pose follows the one mood rule; the profile's goal and frozen days count only while its day is today.
-        val current = profile?.takeIf { day != null }
+        // The pose only uses facts from the profile for today's study day.
+        val current = profile?.takeIf { day != null && it.optLong("day_ends_at") > now }
         val reached = if (current?.optJSONObject("goal")?.optBoolean("reached") == true) Goal.REACHED else Goal.OPEN
-        val mood = AnkiquestMood.today(day, AnkiquestMood.frozenRun(current?.optJSONArray("heatmap")), reached)
+        val mood = AnkiquestMood.today(day, AnkiquestMood.history(current, now), reached)
         return Card(mood, day?.streak ?: 0, message(mood, local, day))
     }
 
@@ -91,7 +91,8 @@ internal object AnkiquestAki {
         return Message.WELCOME
     }
 
-    private val frozen = setOf(AnkiquestMood.Mood.FROZEN_1, AnkiquestMood.Mood.FROZEN_2, AnkiquestMood.Mood.FROZEN_3)
+    private val frozen =
+        setOf(AnkiquestMood.Mood.FREEZE, AnkiquestMood.Mood.FROZEN_1, AnkiquestMood.Mood.FROZEN_2, AnkiquestMood.Mood.FROZEN_3)
 
     fun image(
         context: Context,
@@ -108,13 +109,14 @@ internal object AnkiquestAki {
     fun encouragement(
         context: Context,
         card: Card,
+        picture: AnkiquestPose? = null,
     ): LinearLayout =
         LinearLayout(context).apply {
             visibility = if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(context, 8), 0, dp(context, 8))
-            addView(image(context, card.image))
+            addView(image(context, picture?.let { AnkiquestCompanion.art(it) } ?: card.image))
 
             // A mood without a line shows the pose alone; the debug menu's overrides always say so.
             val line =

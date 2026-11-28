@@ -16,4 +16,8 @@
         <item quantity="other">Está a %1$d toques de chibi</item>
     </plurals>
     <string name="ankiquest_companion_signed_out">Entra para escolheres um companheiro.</string>
+    <string name="ankiquest_companion_mood_freeze">Um congelamento protege a tua sequência.</string>
+    <string name="ankiquest_companion_mood_neglected">O teu companheiro está à espera há alguns dias.</string>
+    <string name="ankiquest_companion_mood_abandoned">O teu companheiro está à espera há pelo menos uma semana.</string>
+    <string name="ankiquest_companion_mood_dead">O teu companheiro está à espera há pelo menos um mês.</string>
 </resources>

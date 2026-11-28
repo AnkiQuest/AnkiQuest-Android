@@ -33,6 +33,8 @@ internal enum class AnkiquestPose(
     DEAD("dead", NEGLECTED),
     LEECH_DEFEATED("leech_defeated", HAPPY),
     WINNER("winner", HAPPY),
+    FREEZE("freeze", FROZEN),
+    FREEZE_USED("freeze_used", FROZEN),
     ;
 
     /** This pose, then each fallback in turn, ending at a core pose. */

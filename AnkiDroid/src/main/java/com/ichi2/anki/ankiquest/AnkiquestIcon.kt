@@ -108,29 +108,37 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         now: Long,
     ): Mood {
         val server = AnkiquestDay.Server.profile(profile) ?: return Mood.DEFAULT
-        return mood(AnkiquestDay.judge(AnkiquestDay.carried(server, now), emptyList(), now))
+        return mood(AnkiquestDay.judge(AnkiquestDay.carried(server, now), emptyList(), now), AnkiquestMood.history(profile, now))
     }
 
     private fun ownMood(
         server: AnkiquestDay.Server?,
+        profile: JSONObject?,
         now: Long,
         prefs: SharedPreferences,
     ): Mood {
         if (server == null) return Mood.DEFAULT
-        return mood(AnkiquestDay.judgeOwn(AnkiquestDay.carried(server, now), now, prefs))
+        val day = AnkiquestDay.judgeOwn(AnkiquestDay.carried(server, now), now, prefs)
+        val current = profile?.takeIf { it.optLong("day_ends_at") == server.dayEndsAt }
+        return mood(day, AnkiquestMood.history(current, now))
     }
 
     /** The player's own [day] uses one frozen face and the default face for hopeful and almost. */
-    private fun mood(day: AnkiquestDay.Verdict?): Mood =
-        when (AnkiquestMood.today(day, 0, AnkiquestMood.Goal.OPEN)) {
+    private fun mood(
+        day: AnkiquestDay.Verdict?,
+        history: AnkiquestMood.History,
+    ): Mood =
+        when (AnkiquestMood.today(day, history, AnkiquestMood.Goal.OPEN)) {
             AnkiquestMood.Mood.FIRE -> Mood.HAPPY
             AnkiquestMood.Mood.SAD -> Mood.WORRIED
+            AnkiquestMood.Mood.FREEZE,
             AnkiquestMood.Mood.FROZEN_1,
             AnkiquestMood.Mood.FROZEN_2,
             AnkiquestMood.Mood.FROZEN_3,
             AnkiquestMood.Mood.THAWING,
             -> Mood.FROZEN
             AnkiquestMood.Mood.ASLEEP -> Mood.SLEEPY
+            AnkiquestMood.Mood.NEGLECTED, AnkiquestMood.Mood.ABANDONED, AnkiquestMood.Mood.DEAD -> Mood.WORRIED
             AnkiquestMood.Mood.HOPEFUL, AnkiquestMood.Mood.ALMOST, AnkiquestMood.Mood.UNKNOWN -> Mood.DEFAULT
         }
 
@@ -153,7 +161,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
         if (profile != null) remember(profile, prefs)
-        val mood = if (enabled(prefs)) ownMood(AnkiquestDay.Server.profile(profile), now, prefs) else Mood.DEFAULT
+        val mood = if (enabled(prefs)) ownMood(AnkiquestDay.Server.profile(profile), profile, now, prefs) else Mood.DEFAULT
         show(context, mood, prefs)
     }
 
@@ -184,8 +192,9 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         now: Long,
         prefs: SharedPreferences,
     ): Mood {
-        val server = AnkiquestDay.last(prefs) ?: AnkiquestDay.Server.profile(lastKnown(prefs))
-        return ownMood(server, now, prefs)
+        val profile = lastKnown(prefs)
+        val server = AnkiquestDay.last(prefs) ?: AnkiquestDay.Server.profile(profile)
+        return ownMood(server, profile, now, prefs)
     }
 
     /**
@@ -221,8 +230,11 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 .put("streak_state", profile.optString("streak_state"))
                 .put("day_ends_at", profile.optLong("day_ends_at"))
                 .put("goal_reached", profile.optJSONObject("goal")?.optBoolean("reached") == true)
-                // The streak widget's frozen mood needs the run of frozen days before today.
+                // The launcher and widget need the same day's history when redrawn from cache.
                 .put("frozen_days", AnkiquestMood.frozenRun(profile.optJSONArray("heatmap")))
+                .put("days_away", AnkiquestMood.awayRun(profile.optJSONArray("heatmap")))
+                .put("freezes_enabled", profile.optBoolean("freezes_enabled"))
+                .put("stored_freezes", profile.optInt("stored_freezes"))
                 .put(
                     "goal",
                     profile.optJSONObject("goal")?.let { goal ->

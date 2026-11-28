@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.common.time.TimeManager
@@ -159,8 +160,28 @@ internal object AnkiquestHomeData {
     /** Sent with every companion save: `docs/mobile-api.md`, study companion, in AnkiQuest-Server. */
     private const val COMPANIONS_HEADER = "X-AnkiQuest-Companions"
     private const val SHOWS_LOCKS = "milestones"
+    private const val PREF_FREEZE_SHOWN = "ankiquestFreezePictureShown"
 
     fun account(preferences: SharedPreferences = AnkiDroidApp.sharedPrefs()): HomeAccount? = HomeAccount.current(preferences)
+
+    fun freezePictureSeen(
+        account: HomeAccount,
+        endsAt: Long,
+        preferences: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Boolean = preferences.getLong(freezePictureKey(account), 0L) >= endsAt
+
+    fun markFreezePicture(
+        account: HomeAccount,
+        endsAt: Long,
+        preferences: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) {
+        if (!freezePictureSeen(account, endsAt, preferences)) {
+            preferences.edit { putLong(freezePictureKey(account), endsAt) }
+        }
+    }
+
+    // A renewed sign-in token does not start another first visit in the same study day.
+    private fun freezePictureKey(account: HomeAccount): String = scopedKey(PREF_FREEZE_SHOWN, sha256(account.server, account.user))
 
     /** The profile of the captured [account], so changed settings never borrow its credentials. */
     suspend fun profile(account: HomeAccount): JSONObject =

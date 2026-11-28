@@ -13,6 +13,7 @@ import com.ichi2.anki.ankiquest.AnkiquestChibi.Step
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestMood
 import com.ichi2.anki.ankiquest.AnkiquestUnlocks
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
@@ -109,10 +110,16 @@ class AnkiquestCompanionFragment : SettingsFragment() {
         }
     }
 
-    /** [text] above the cards, or nothing when null. */
+    /** Progress and errors take precedence over the companion's current mood. */
     private fun showStatus(text: String?) {
-        status().summary = text
-        status().isVisible = text != null
+        val line = text ?: companionMood()
+        status().summary = line
+        status().isVisible = line != null
+    }
+
+    private fun companionMood(): String? {
+        if (signedIn() == null || stale() || !AnkiquestCompanion.visible()) return null
+        return AnkiquestMood.companionLine(requireContext(), TimeManager.time.intTimeMS())
     }
 
     /** Reads the unlocks and the choice from the server. */

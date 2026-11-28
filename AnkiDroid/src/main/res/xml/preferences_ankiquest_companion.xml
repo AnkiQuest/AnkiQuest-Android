@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/ankiquest_companion_title"
     android:key="@string/ankiquest_companion_screen_key">
-    <!-- Shown only while the choice is loading, cannot be read, or needs an account. -->
+    <!-- Loading, account errors and the companion's current mood go here. -->
     <Preference
         android:key="@string/ankiquest_companion_status_key"
         android:persistent="false"

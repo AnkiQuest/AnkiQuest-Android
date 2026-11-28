@@ -16,4 +16,8 @@
         <item quantity="other">Tu es à %1$d appuis de chibi</item>
     </plurals>
     <string name="ankiquest_companion_signed_out">Connecte-toi pour choisir un compagnon.</string>
+    <string name="ankiquest_companion_mood_freeze">Un gel protège ta série.</string>
+    <string name="ankiquest_companion_mood_neglected">Ton compagnon attend depuis quelques jours.</string>
+    <string name="ankiquest_companion_mood_abandoned">Ton compagnon attend depuis au moins une semaine.</string>
+    <string name="ankiquest_companion_mood_dead">Ton compagnon attend depuis au moins un mois.</string>
 </resources>

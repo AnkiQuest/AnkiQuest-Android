@@ -65,6 +65,25 @@ class AnkiquestDebugTest : RobolectricTest() {
     }
 
     @Test
+    fun `stored limits move the freeze window and days away`() {
+        prefs.edit {
+            putString(
+                "ankiquestDebugRules",
+                """{"freeze_window_minutes":60,"neglected_days":4,"abandoned_days":8,"dead_days":31}""",
+            )
+        }
+        val rules = AnkiquestDebug.current(prefs).rules
+        val pendingFreeze = AnkiquestMood.History(freezes = 1, dayLeftMs = 5_400_000L)
+        assertEquals(Mood.SAD, AnkiquestMood.of(State.PENDING, 0, Stage.STARTED, 7, pendingFreeze, Goal.OPEN, rules))
+        val atWindowStart = pendingFreeze.copy(dayLeftMs = 3_600_000L)
+        assertEquals(Mood.FREEZE, AnkiquestMood.of(State.PENDING, 0, Stage.STARTED, 7, atWindowStart, Goal.OPEN, rules))
+        for ((days, expected) in listOf(3 to Mood.ASLEEP, 4 to Mood.NEGLECTED, 8 to Mood.ABANDONED, 31 to Mood.DEAD)) {
+            val away = AnkiquestMood.History(daysAway = days)
+            assertEquals(expected, AnkiquestMood.of(State.PENDING, 0, Stage.STARTED, 0, away, Goal.OPEN, rules))
+        }
+    }
+
+    @Test
     fun `thresholds out of order are refused`() {
         val invalid =
             listOf(
@@ -74,6 +93,9 @@ class AnkiquestDebugTest : RobolectricTest() {
                 Rules(hotDays = 1),
                 Rules(hotDays = 30, blazingDays = 30),
                 Rules(blazingDays = 100, legendDays = 100),
+                Rules(freezeWindowMinutes = 0),
+                Rules(neglectedDays = 8),
+                Rules(abandonedDays = 30),
             )
         for (rules in invalid) {
             assertNull(Overrides.NONE.withRules(rules), rules.toString())
@@ -94,12 +116,12 @@ class AnkiquestDebugTest : RobolectricTest() {
     fun `edited thresholds move each mood and heat`() {
         val rules = Rules(hopefulReviews = 3, frozen2Days = 4, frozen3Days = 6, hotDays = 3, blazingDays = 5, legendDays = 9)
         val mood = { state: State, reviews: Int, frozen: Int ->
-            AnkiquestMood.of(state, reviews, Stage.STARTED, 12, frozen, Goal.OPEN, rules)
+            AnkiquestMood.of(state, reviews, Stage.STARTED, 12, AnkiquestMood.History(frozenDays = frozen), Goal.OPEN, rules)
         }
 
         assertEquals(Mood.SAD, mood(State.SHORT, 2, 0), "two reviews are short of the edited hopeful")
         assertEquals(Mood.HOPEFUL, mood(State.SHORT, 3, 0))
-        assertEquals(Mood.SAD, AnkiquestMood.of(State.SHORT, 2, Stage.HALF, 12, 0, Goal.OPEN, rules))
+        assertEquals(Mood.SAD, AnkiquestMood.of(State.SHORT, 2, Stage.HALF, 12, AnkiquestMood.History(), Goal.OPEN, rules))
         assertEquals(Mood.FROZEN_1, mood(State.PENDING, 0, 3))
         assertEquals(Mood.FROZEN_2, mood(State.PENDING, 0, 4))
         assertEquals(Mood.FROZEN_2, mood(State.PENDING, 0, 5))
@@ -114,8 +136,8 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `a forced mood decides today's mood and pose`() {
         val forced = Overrides.NONE.forceMood(Mood.FROZEN_3)
-        assertEquals(Mood.FROZEN_3, AnkiquestMood.today(null, 0, Goal.OPEN, forced))
-        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, 0, Goal.OPEN, Overrides.NONE))
+        assertEquals(Mood.FROZEN_3, AnkiquestMood.today(null, AnkiquestMood.History(), Goal.OPEN, forced))
+        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, AnkiquestMood.History(), Goal.OPEN, Overrides.NONE))
         assertEquals(
             AnkiquestCompanion.art(AnkiquestPose.FROZEN_3, Choice.AKI),
             AnkiquestMood.todayPose(Mood.SAD, 1, forced, Choice.AKI),
@@ -126,7 +148,7 @@ class AnkiquestDebugTest : RobolectricTest() {
     @Test
     fun `a forced pose replaces only the picture`() {
         val forced = Overrides.NONE.forcePose(AnkiquestPose.DEAD)
-        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, 0, Goal.OPEN, forced))
+        assertEquals(Mood.UNKNOWN, AnkiquestMood.today(null, AnkiquestMood.History(), Goal.OPEN, forced))
         val dead = AnkiquestCompanion.art(AnkiquestPose.DEAD, Choice.AKI)
         assertEquals(dead, AnkiquestMood.todayPose(Mood.FIRE, 400, forced, Choice.AKI))
         assertEquals(listOf(dead), AnkiquestMood.poses(Mood.FIRE, 400, Choice.AKI, forced), "no legend rotation")
@@ -142,7 +164,8 @@ class AnkiquestDebugTest : RobolectricTest() {
 
     @Test
     fun `overrides are stored and read back`() {
-        val overrides = assertNotNull(Overrides.NONE.forcePose(AnkiquestPose.STREAK_LEGEND).withRules(Rules(legendDays = 50)))
+        val rules = Rules(legendDays = 50, freezeWindowMinutes = 60, neglectedDays = 4, abandonedDays = 8, deadDays = 31)
+        val overrides = assertNotNull(Overrides.NONE.forcePose(AnkiquestPose.STREAK_LEGEND).withRules(rules))
         AnkiquestDebug.save(overrides, prefs)
         assertEquals(overrides, AnkiquestDebug.current(prefs))
 
@@ -176,5 +199,17 @@ class AnkiquestDebugTest : RobolectricTest() {
     fun `the marker shows only while something is overridden`() {
         assertNull(AnkiquestDebug.marker(targetContext, Overrides.NONE))
         assertEquals("Debug override", AnkiquestDebug.marker(targetContext, Overrides.NONE.forceMood(Mood.FIRE)))
+    }
+
+    @Test
+    fun `the companion explains days away like desktop`() {
+        for ((mood, expected) in listOf(
+            Mood.NEGLECTED to "Your companion has been waiting a few days.",
+            Mood.ABANDONED to "Your companion has been waiting a week or more.",
+            Mood.DEAD to "Your companion has been waiting a month or more.",
+        )) {
+            AnkiquestDebug.save(Overrides.NONE.forceMood(mood), prefs)
+            assertEquals(expected, AnkiquestMood.companionLine(targetContext, now = 0L))
+        }
     }
 }

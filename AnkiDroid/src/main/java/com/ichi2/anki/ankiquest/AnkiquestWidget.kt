@@ -321,7 +321,8 @@ open class AnkiquestWidget : AppWidgetProvider() {
             fresh = Fresh(account.scope, account.user, profile, now)
             val known = currentBoard(account)
             val streakChanged =
-                before == null || AnkiquestStreakWidget.streakShown(before.profile) != AnkiquestStreakWidget.streakShown(profile)
+                before == null ||
+                    AnkiquestStreakWidget.streakShown(before.profile, before.at) != AnkiquestStreakWidget.streakShown(profile, now)
             if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false, scope = account.scope))
             // Without standings to put the row in, the leaderboards keep what they show until the poll.
             val shown = known ?: return

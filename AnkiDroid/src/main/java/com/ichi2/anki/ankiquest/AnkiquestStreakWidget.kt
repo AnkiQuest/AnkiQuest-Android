@@ -194,7 +194,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
         /**
          * The last own profile when it is for the study day of [entry], for what the leaderboard row
-         * does not say: the goal and the frozen days before today.
+         * does not say: the goal, streak history and available freezes.
          */
         private fun sameDay(
             entry: JSONObject?,
@@ -207,8 +207,12 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         }
 
         /** What the streak widget shows of [profile]; when it changes, the widget is drawn again. */
-        internal fun streakShown(profile: JSONObject): List<Any> {
+        internal fun streakShown(
+            profile: JSONObject,
+            now: Long,
+        ): List<Any> {
             val row = AnkiquestWidget.ownRow(profile, null)
+            val history = AnkiquestMood.history(profile, now)
             return listOf(
                 row.optLong("streak"),
                 AnkiquestWidget.streakState(row),
@@ -216,6 +220,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 row.optLong("streak_minutes"),
                 row.optLong("day_ends_at"),
                 profile.optJSONObject("goal")?.toString().orEmpty(),
+                history.frozenDays,
+                history.daysAway,
+                AnkiquestDebug.current().rules.freezePending(history),
             )
         }
 
@@ -296,14 +303,13 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val number = streak?.let { numbers.format(it) } ?: "–"
 
             // Today's mood, from the same day the status describes: it sets the companion and the flame.
-            val profile = sameDay(me, now)
+            val profile = if (own) sameDay(me, now) else null
             val goalState = if (profile?.optBoolean("goal_reached") == true) AnkiquestMood.Goal.REACHED else AnkiquestMood.Goal.OPEN
-            val frozen = profile?.optInt("frozen_days") ?: 0
             // Until the server answers for a new day, a counted day carries into it: the streak waits.
             val today = day ?: carriedDay(own, row, now)
             // The debug menu's overrides change only the player's own widget.
             val debug = if (own) AnkiquestDebug.current() else AnkiquestDebug.Overrides.NONE
-            val mood = AnkiquestMood.today(today, frozen, goalState, debug)
+            val mood = AnkiquestMood.today(today, AnkiquestMood.history(profile, now), goalState, debug)
 
             // Aki shows the mood when chosen; otherwise only the flame does.
             val companionVisible = AnkiquestCompanion.visible()
