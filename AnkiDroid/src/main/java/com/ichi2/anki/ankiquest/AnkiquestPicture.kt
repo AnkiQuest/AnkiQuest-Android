@@ -30,7 +30,7 @@ internal object AnkiquestPicture {
     private const val BRAND_SIZE = 36f
 
     /** A streak picture's Aki and number. */
-    private const val STREAK_HERO = 400
+    internal const val STREAK_HERO = 400
     private const val NUMBER_SIZE = 240f
     private val numberFont: Typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
 
@@ -91,7 +91,7 @@ internal object AnkiquestPicture {
                 if (card.body.isNotBlank() && card.body != AnkiquestMoments.streakDays(context, streak)) {
                     add(Piece.Words(text(card.body, BODY_SIZE * scale, ink)))
                 }
-                AnkiquestMood.nextLine(context, streak)?.let { add(Piece.Words(text(it, BODY_SIZE * scale, ink, Typeface.DEFAULT_BOLD))) }
+                AnkiquestMood.milestone(context, streak)?.let { add(Piece.Words(text(it, BODY_SIZE * scale, ink, Typeface.DEFAULT_BOLD))) }
             }
         val heat = AnkiquestMood.Heat.of(streak)
         val top = context.getColor(heat.top)

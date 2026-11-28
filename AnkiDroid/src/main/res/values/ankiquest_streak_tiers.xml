@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <resources>
-    <!-- The widget shows the flame beside the number, so no emoji here; cards append one. -->
+    <!-- The widget, moment cards and share pictures. No emoji: the wording is shared with the desktop add-on. -->
     <plurals name="ankiquest_streak_milestone">
         <item quantity="one">%1$d day to %2$d</item>
         <item quantity="other">%1$d days to %2$d</item>

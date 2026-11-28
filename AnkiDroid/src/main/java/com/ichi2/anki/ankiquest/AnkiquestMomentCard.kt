@@ -862,7 +862,7 @@ internal object AnkiquestMomentCard {
             val pad = (HERO_PAD_DP * density).toInt()
             holder.hero.setPadding(pad, pad, pad, pad)
             holder.streak.text = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale()).format(streak)
-            val next = AnkiquestMood.nextLine(host, streak)
+            val next = AnkiquestMood.milestone(host, streak)
             holder.next.text = next.orEmpty()
             holder.next.isVisible = next != null
         }

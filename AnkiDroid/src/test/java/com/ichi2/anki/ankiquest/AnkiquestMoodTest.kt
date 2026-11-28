@@ -2,6 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.Context
+import android.content.res.Configuration
 import android.view.ContextThemeWrapper
 import android.widget.ImageView
 import androidx.core.content.edit
@@ -24,6 +26,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -45,6 +48,55 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     /** A fixture mood or state: the lowercase name of the enum entry. */
     private inline fun <reified T : Enum<T>> named(name: String): T = enumValueOf(name.uppercase())
+
+    @Test
+    fun `the streak share pictures follow the shared style and cases`() {
+        // The streak share picture (AnkiquestPicture): its ink, its number's gold, its hero size and
+        // every streak's heat, pose, next milestone and the words under the number, as
+        // streak_moods.json pins them.
+        val style = fixtures.getJSONObject("picture_style")
+
+        fun hex(color: Int) = "#%06X".format(0xFFFFFF and color)
+        assertEquals(style.getString("ink"), hex(targetContext.getColor(R.color.aq_heat_ink)))
+        assertEquals(style.getString("number"), hex(targetContext.getColor(R.color.aq_heat_number)))
+        assertEquals(style.getInt("hero"), AnkiquestPicture.STREAK_HERO)
+        for (case in cases("pictures")) {
+            val streak = case.getInt("streak")
+            val heat = Heat.of(streak)
+            assertEquals(case.getString("top"), hex(targetContext.getColor(heat.top)), "streak $streak")
+            assertEquals(case.getString("bottom"), hex(targetContext.getColor(heat.bottom)), "streak $streak")
+            assertEquals(
+                case.getString("pose"),
+                targetContext.resources.getResourceEntryName(AnkiquestCompanion.art(heat.pose, AnkiquestCompanion.Choice.AKI)),
+                "streak $streak",
+            )
+            if (case.isNull("next")) {
+                assertNull(AnkiquestMood.next(streak), "streak $streak")
+            } else {
+                assertEquals(case.getInt("next"), AnkiquestMood.next(streak), "streak $streak")
+            }
+
+            // The unit and the milestone line in every language the clients ship, as the cases word them.
+            val units = case.getJSONObject("unit")
+            val milestones = case.optJSONObject("milestone")
+            for (language in units.keys()) {
+                val context = localized(language)
+                assertEquals(
+                    units.getString(language),
+                    context.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak),
+                    "streak $streak $language",
+                )
+                assertEquals(milestones?.getString(language), AnkiquestMood.milestone(context, streak), "streak $streak $language")
+            }
+        }
+    }
+
+    /** [targetContext] in [language], as a player with that system language sees it. */
+    private fun localized(language: String): Context {
+        val configuration = Configuration(targetContext.resources.configuration)
+        configuration.setLocale(Locale.forLanguageTag(language))
+        return targetContext.createConfigurationContext(configuration)
+    }
 
     @Test
     fun `every shared mood and pose matches`() {
@@ -156,10 +208,8 @@ class AnkiquestMoodTest : RobolectricTest() {
 
     @Test
     fun `the next milestone counts down`() {
-        assertEquals("36 days to 100 🔥", AnkiquestMood.nextLine(targetContext, 64))
-        assertEquals("1 day to 7 🔥", AnkiquestMood.nextLine(targetContext, 6))
-        assertNull(AnkiquestMood.nextLine(targetContext, 0))
-        assertNull(AnkiquestMood.nextLine(targetContext, 365))
+        assertEquals("36 days to 100", AnkiquestMood.milestone(targetContext, 64))
+        assertNull(AnkiquestMood.milestone(targetContext, 0))
     }
 
     @Test
