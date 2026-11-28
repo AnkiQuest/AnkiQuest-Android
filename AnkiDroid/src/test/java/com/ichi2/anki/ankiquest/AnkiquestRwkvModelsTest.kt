@@ -129,7 +129,7 @@ class AnkiquestRwkvModelsTest {
     }
 
     @Test
-    fun `the lock lists the Small and Tiny models of one release`() {
+    fun `the lock lists every model of the release`() {
         val entries = RwkvLock.ENTRIES
         assertEquals(RwkvSize.entries.size * RwkvHead.entries.size, entries.size)
         assertEquals(entries.size, entries.map { it.sha256 }.toSet().size)
@@ -139,6 +139,7 @@ class AnkiquestRwkvModelsTest {
             assertTrue(entry.zipSha256.matches(Regex("[0-9a-f]{64}")), entry.id)
             assertTrue(entry.zipBytes > entry.bytes, entry.id)
             assertTrue(entry.asset.startsWith("rwkv-${entry.size.name.lowercase()}-"), entry.id)
+            assertTrue(entry.logLoss in 0.2..0.4, entry.id)
         }
         for (size in RwkvSize.entries) {
             for (head in RwkvHead.entries) {
@@ -147,6 +148,49 @@ class AnkiquestRwkvModelsTest {
         }
     }
 
+    @Test
+    fun `the lock is the release's SHA256SUMS, every zip and nothing else`() {
+        // The release's own SHA256SUMS, as published: "<sha256> *<asset>".
+        val sums =
+            fixture("rwkv-family-2026-11-13.SHA256SUMS")
+                .lines()
+                .filter { it.isNotBlank() }
+                .associate { line ->
+                    val (sha, name) = line.split(" *", limit = 2)
+                    name to sha
+                }
+        val zips = sums.filterKeys { it.endsWith(".zip") }
+        assertEquals(zips, RwkvLock.ENTRIES.associate { it.asset to it.zipSha256 })
+    }
+
+    @Test
+    fun `the lock's weights are the ones each asset's manifest names`() {
+        // Asset, zip bytes, weights.f32.bin bytes and SHA-256, from each release zip and its manifest.json.
+        val rows =
+            fixture("rwkv-family-2026-11-13.weights.tsv")
+                .lines()
+                .filter { it.isNotBlank() && !it.startsWith("#") }
+                .map { it.split("\t") }
+        assertEquals(RwkvLock.ENTRIES.size, rows.size)
+        for ((asset, zipBytes, bytes, sha) in rows) {
+            val entry = RwkvLock.ENTRIES.single { it.asset == asset }
+            assertEquals(zipBytes.toLong(), entry.zipBytes, asset)
+            assertEquals(bytes.toLong(), entry.bytes, asset)
+            assertEquals(sha, entry.sha256, asset)
+        }
+    }
+
+    @Test
+    fun `the store accepts a Big model`() {
+        val big = bytes(120, 7)
+        val store = RwkvModelStore(dir, lock + entry("sm91s2", RwkvSize.BIG, RwkvHead.TWO_HEAD, big))
+        assertEquals("sm91s2", (store.import(big.inputStream()) as RwkvImport.Imported).entries.single().id)
+        val models = assertNotNull(store.models(RwkvVerify.HASH))
+        assertEquals(RwkvSize.BIG, models.twoHead.entry.size)
+    }
+
+    private fun fixture(name: String) = checkNotNull(javaClass.classLoader?.getResource("rwkv/$name")) { "missing $name" }.readText()
+
     private fun entry(
         id: String,
         size: RwkvSize,
@@ -154,7 +198,8 @@ class AnkiquestRwkvModelsTest {
         content: ByteArray,
     ): RwkvLockEntry {
         val zip = zip("rwkv-$id/weights.f32.bin" to content)
-        return RwkvLockEntry(id, size, head, "rwkv-$id.zip", content.size.toLong(), sha256(content), zip.size.toLong(), sha256(zip))
+        val bytes = content.size.toLong()
+        return RwkvLockEntry(id, size, head, "rwkv-$id.zip", bytes, sha256(content), zip.size.toLong(), sha256(zip), LOG_LOSS)
     }
 
     /** Serves each lock entry's zip, as the release would, and records the URLs asked for. */
@@ -181,33 +226,30 @@ class AnkiquestRwkvModelsTest {
     private val contents by lazy { mapOf("sm92" to smallTwoHead, "sm98" to smallInstant, "sm106" to tinyTwoHead) }
 
     @Test
-    fun `a download fetches the size's models from the release, two-head first`() {
+    fun `a download fetches the entry's asset from the release and checks it`() {
         val release = FakeRelease()
-        val progress = mutableListOf<Pair<Int, Int>>()
-        val results = RwkvDownload(store, release, lock).download(RwkvSize.SMALL) { done, total -> progress.add(done to total) }
+        val phases = mutableListOf<RwkvPhase>()
+        val result = RwkvDownload(store, release).download(lock[1]) { phases.add(it) }
 
-        assertEquals(listOf(RwkvImport.Imported(listOf(lock[0])), RwkvImport.Imported(listOf(lock[1]))), results)
-        assertEquals(listOf(RwkvLock.DOWNLOAD_URL + lock[0].asset, RwkvLock.DOWNLOAD_URL + lock[1].asset), release.asked)
-        assertEquals(listOf(0 to 2, 1 to 2), progress)
-        assertNotNull(store.models(RwkvVerify.HASH)?.instant)
+        assertEquals(RwkvImport.Imported(listOf(lock[1])), result)
+        assertEquals(listOf(RwkvLock.DOWNLOAD_URL + lock[1].asset), release.asked)
+        assertEquals(listOf(RwkvPhase.DOWNLOADING, RwkvPhase.VERIFYING), phases)
+        assertEquals(listOf(lock[1]), store.stored())
     }
 
     @Test
     fun `a download that differs from the lock is not kept`() {
-        val results = RwkvDownload(store, FakeRelease(broken = setOf("sm92")), lock).download(RwkvSize.SMALL) { _, _ -> }
-        assertEquals(RwkvImport.Rejected(RwkvImportError.DOWNLOAD_MISMATCH), results.first())
+        val result = RwkvDownload(store, FakeRelease(broken = setOf("sm92"))).download(lock[0]) { }
+        assertEquals(RwkvImport.Rejected(RwkvImportError.DOWNLOAD_MISMATCH), result)
         assertNull(store.models(RwkvVerify.SIZE))
     }
 
     @Test
-    fun `a download without a connection says so`() {
-        val results = RwkvDownload(store, FakeRelease(offline = true), lock).download(RwkvSize.TINY) { _, _ -> }
-        assertEquals(listOf(RwkvImport.Rejected(RwkvImportError.NETWORK_FAILED)), results)
-    }
-
-    @Test
-    fun `the download size is the sum of the size's zips`() {
-        assertEquals(lock[0].zipBytes + lock[1].zipBytes, RwkvDownload(store, FakeRelease(), lock).bytes(RwkvSize.SMALL))
+    fun `a download without a connection says so and is never checked`() {
+        val phases = mutableListOf<RwkvPhase>()
+        val result = RwkvDownload(store, FakeRelease(offline = true)).download(lock[2]) { phases.add(it) }
+        assertEquals(RwkvImport.Rejected(RwkvImportError.NETWORK_FAILED), result)
+        assertEquals(listOf(RwkvPhase.DOWNLOADING), phases)
     }
 
     private fun bytes(
@@ -231,6 +273,9 @@ class AnkiquestRwkvModelsTest {
     }
 
     private companion object {
+        /** A score in the range the release publishes; these tests do not compare scores. */
+        const val LOG_LOSS = 0.3
+
         /** 1990-01-01, inside the zip format's date range. */
         const val FIXED_TIME = 631_152_000_000L
     }

@@ -27,19 +27,20 @@ class AnkiquestRwkvTest {
                 sha256 = sha256(twoHead),
                 zipBytes = 0,
                 zipSha256 = "",
+                logLoss = 0.300356,
             ),
         )
     private val store by lazy { RwkvModelStore(File(folder.root, "rwkv"), lock) }
 
     /** An engine that records what it was handed, and fails if asked to. */
     private class FakeEngine(
-        private val refuse: Boolean = false,
+        private val failure: Throwable? = null,
     ) : RwkvEngine {
         val prepared = mutableListOf<RwkvModels>()
 
         override suspend fun prepare(models: RwkvModels): Long {
-            if (refuse) {
-                throw IllegalStateException("RWKV model file not found")
+            if (failure != null) {
+                throw failure
             }
             prepared.add(models)
             return 0
@@ -72,7 +73,17 @@ class AnkiquestRwkvTest {
     fun `a backend that refuses the models refuses the state`() =
         runTest {
             store.import(twoHead.inputStream())
-            assertEquals(RwkvState.Refused(RwkvBlocker.BACKEND_FAILED), RwkvState.Ready.start(store, FakeEngine(refuse = true)))
+            val engine = FakeEngine(IllegalStateException("RWKV model file not found"))
+            assertEquals(RwkvState.Refused(RwkvBlocker.BACKEND_FAILED), RwkvState.Ready.start(store, engine))
+        }
+
+    @Test
+    fun `a model too big to load turns RWKV off instead of crashing`() =
+        runTest {
+            store.import(twoHead.inputStream())
+            val state = RwkvState.Ready.start(store, FakeEngine(OutOfMemoryError("RWKV state")))
+            assertEquals(RwkvState.Refused(RwkvBlocker.BACKEND_FAILED), state)
+            assertEquals(RwkvSwitch.OFF, state.switch)
         }
 
     @Test

@@ -1,0 +1,7 @@
+# asset	zip bytes	weights.f32.bin bytes	weights.f32.bin sha256 (from the asset's manifest.json)
+rwkv-big-two-head.zip	24696077	11082637	b53a89729d518c2db970833b7159904368fe9e882298e0f715f4d302f7cf4ed5
+rwkv-big-instant-only.zip	24698170	11082637	682ba1ff207c51af7de5e2abeb25593362aa706b292cbcc338a1591fad0d935c
+rwkv-small-two-head.zip	3005254	1351553	4fbc5f963b6ef18d23dbc0f11358fed8a9c7c97c271d6eda95df3b8ed6fbeb6e
+rwkv-small-instant-only.zip	4227917	1351553	a006dcc039d19142dc95d257d9c238fb93c7efa12b78e18ec6ae881ac9009a24
+rwkv-tiny-two-head.zip	4097873	1270749	5b346308bbab6ff32241742544af762b714a16334f6a979423b40dfec8897ec3
+rwkv-tiny-instant-only.zip	4027791	1270749	2faacb5b913bcfbdc0e363532d533e3bcff6872c8358f1ef753ca87f9d2a60fd

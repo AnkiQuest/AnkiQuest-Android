@@ -3,18 +3,39 @@
 <resources>
     <string name="ankiquest_rwkv_title">RWKV-Planer (experimentell)</string>
     <string name="ankiquest_rwkv_off">Lässt ein RWKV-Modell die Optionsgruppen planen, die in den Stapeloptionen auf RWKV-Instant oder RWKV-Curve stehen. Braucht importierte Modelldateien und genug Arbeitsspeicher.</string>
-    <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für deine Sammlung. Die Planung bleibt unverändert.</string>
+    <string name="ankiquest_rwkv_not_enough_memory">Nicht verfügbar: Dieses Handy hat zu wenig Arbeitsspeicher für dieses Modell und deine Sammlung. Die Planung bleibt unverändert. Unter RWKV-Modelldateien → Herunterladen kannst du das Modell trotzdem erlauben.</string>
     <string name="ankiquest_rwkv_no_model">Nicht verfügbar: Importiere zuerst ein RWKV-Two-Head-Modell. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_backend_failed">Nicht verfügbar: Die RWKV-Engine konnte die Modelldateien nicht laden. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_ready">An: RWKV plant die Optionsgruppen, die in den Stapeloptionen auf RWKV stehen.</string>
     <string name="ankiquest_rwkv_models_title">RWKV-Modelldateien</string>
     <string name="ankiquest_rwkv_models_none">Keine importiert.</string>
-    <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe und sind nur für persönliche und Forschungszwecke (WEIGHTS-NOTICE.md des Release %1$s von JSchoreels/anki-rwkv). Herunterladen holt die Modelle einer Größe aus diesem Release auf GitHub. Oder lade selbst das Two-Head-Zip herunter, wenn du willst auch das Instant-only-Zip derselben Größe, und wähle die Zips oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
+    <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe und sind nur für persönliche und Forschungszwecke (WEIGHTS-NOTICE.md des Release %1$s von JSchoreels/anki-rwkv). Herunterladen zeigt jedes Modell dieses Release auf GitHub mit dem Arbeitsspeicher, den es für deine Sammlung braucht, und lädt das gewählte herunter. Oder lade die Zips selbst herunter und wähle sie oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
     <string name="ankiquest_rwkv_import_choose">Dateien wählen</string>
     <string name="ankiquest_rwkv_import_download">Herunterladen</string>
-    <string name="ankiquest_rwkv_downloading">Lade %1$d von %2$d herunter…</string>
+    <string name="ankiquest_rwkv_downloading">Lade %1$s herunter…</string>
     <string name="ankiquest_rwkv_download_network">Nicht heruntergeladen: keine Verbindung zu GitHub.</string>
     <string name="ankiquest_rwkv_download_mismatch">Nicht heruntergeladen: Die Datei passt nicht zum bekannten RWKV-Modell.</string>
+    <string name="ankiquest_rwkv_two_head">Two-Head</string>
+    <string name="ankiquest_rwkv_instant_only">Instant-only</string>
+    <string name="ankiquest_rwkv_recommended">Empfohlen</string>
+    <string name="ankiquest_rwkv_recommended_reason">Das genaueste Modell, das auf dieses Handy passt: LogLoss %1$s in der Auswertung des Release, niedriger ist besser.</string>
+    <string name="ankiquest_rwkv_downloaded">Heruntergeladen. %1$s</string>
+    <string name="ankiquest_rwkv_verifying">Datei wird geprüft…</string>
+    <string name="ankiquest_rwkv_failed">%1$s Tippe, um es erneut zu versuchen.</string>
+    <plurals name="ankiquest_rwkv_needs">
+        <item quantity="one">Braucht etwa %1$s für deine %2$s Karte.</item>
+        <item quantity="other">Braucht etwa %1$s für deine %2$s Karten.</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_needs_beside">
+        <item quantity="one">Braucht etwa %1$s für deine %2$s Karte, mit dem Two-Head-Modell seiner Größe.</item>
+        <item quantity="other">Braucht etwa %1$s für deine %2$s Karten, mit dem Two-Head-Modell seiner Größe.</item>
+    </plurals>
+    <plurals name="ankiquest_rwkv_too_big">
+        <item quantity="one">Braucht etwa %1$s für deine %2$s Karte; dieses Handy erlaubt %3$s.</item>
+        <item quantity="other">Braucht etwa %1$s für deine %2$s Karten; dieses Handy erlaubt %3$s.</item>
+    </plurals>
+    <string name="ankiquest_rwkv_override">Ich weiß, was ich tue</string>
+    <string name="ankiquest_rwkv_overridden">%1$s Du hast es trotzdem erlaubt: RWKV startet vielleicht nicht und schaltet sich dann selbst aus.</string>
     <string name="ankiquest_rwkv_imported">Importiert: %1$s</string>
     <string name="ankiquest_rwkv_import_unknown">Nicht importiert: Keine Datei passt zu einem bekannten RWKV-Modell.</string>
     <string name="ankiquest_rwkv_import_unreadable">Nicht importiert: Die Datei konnte nicht gelesen werden.</string>
