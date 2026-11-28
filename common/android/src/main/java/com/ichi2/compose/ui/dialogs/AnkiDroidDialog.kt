@@ -5,10 +5,13 @@ package com.ichi2.compose.ui.dialogs
 import android.os.Build
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalTextStyle
@@ -22,10 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.ichi2.anki.common.android.R
+import androidx.appcompat.R as AppCompatR
+import com.google.android.material.R as MaterialR
 
 /**
  * A [BasicAlertDialog] whose content renders inline in Compose previews.
@@ -85,9 +92,57 @@ fun AnkiDroidDialog(
     }
 }
 
-/** Insets inside the card. */
+/** Insets inside the card, matching the View dialog title and action panels. */
 @Composable
-fun ankiDroidDialogContentPadding(): PaddingValues = PaddingValues(24.dp)
+fun ankiDroidDialogContentPadding(): PaddingValues =
+    PaddingValues(
+        start = 24.dp,
+        top = dimensionResource(AppCompatR.dimen.abc_dialog_padding_top_material),
+        end = 24.dp,
+        bottom = dimensionResource(MaterialR.dimen.m3_alert_dialog_action_bottom_padding),
+    )
+
+/**
+ * Keeps the title and actions visible while the body scrolls when there is enough space.
+ * If the body would be shorter than [minimumBodyHeight], the whole card can scroll.
+ * The [preferredMinimumBodyHeight] can shrink if the body fits in the available space.
+ * Each slot emits one layout child, or no child for an omitted title.
+ */
+@Composable
+fun AnkiDroidDialogLayout(
+    body: @Composable () -> Unit,
+    actions: @Composable () -> Unit,
+    title: @Composable () -> Unit = {},
+    minimumBodyHeight: Dp = 0.dp,
+    preferredMinimumBodyHeight: Dp = 0.dp,
+) {
+    BoxWithConstraints(Modifier.padding(ankiDroidDialogContentPadding()), propagateMinConstraints = true) {
+        val viewportHeight = constraints.maxHeight
+        val scroll = rememberScrollState()
+        Layout(
+            contents = listOf(title, body, actions),
+            modifier = Modifier.verticalScroll(scroll, enabled = scroll.maxValue > 0),
+        ) { (titles, bodies, actionRows), constraints ->
+            val childConstraints = constraints.copy(minHeight = 0)
+            val actions = actionRows.single().measure(childConstraints)
+            val title = titles.singleOrNull()?.measure(childConstraints)
+            val titleHeight = title?.height ?: 0
+            val remainingHeight = (viewportHeight - actions.height - titleHeight).coerceAtLeast(0)
+            val bodyContent = bodies.single()
+            val preferredHeight = preferredMinimumBodyHeight.roundToPx()
+            val bodyNeedsMoreSpace =
+                remainingHeight < preferredHeight && bodyContent.minIntrinsicHeight(childConstraints.maxWidth) > remainingHeight
+            val bodyHeight =
+                if (remainingHeight < minimumBodyHeight.roundToPx() || bodyNeedsMoreSpace) viewportHeight else remainingHeight
+            val body = bodyContent.measure(childConstraints.copy(minHeight = minOf(preferredHeight, bodyHeight), maxHeight = bodyHeight))
+            layout(constraints.maxWidth, titleHeight + body.height + actions.height) {
+                title?.placeRelative(0, 0)
+                body.placeRelative(0, titleHeight)
+                actions.placeRelative(0, titleHeight + body.height)
+            }
+        }
+    }
+}
 
 /** View dialog actions: end aligned, with confirmation above dismissal when stacked. */
 @Composable
@@ -98,16 +153,29 @@ fun AnkiDroidDialogButtons(
     onDismissRequest: () -> Unit,
     confirmEnabled: Boolean = true,
 ) {
-    val topPadding = 24.dp
-    val spacing = 8.dp
+    val topPadding = dimensionResource(MaterialR.dimen.m3_alert_dialog_action_top_padding)
+    val spacing = dimensionResource(MaterialR.dimen.m3_btn_dialog_btn_spacing)
+    val minWidth = dimensionResource(MaterialR.dimen.m3_btn_dialog_btn_min_width)
+    val inset = dimensionResource(MaterialR.dimen.m3_btn_inset)
+    val buttonPadding =
+        PaddingValues(
+            start = dimensionResource(MaterialR.dimen.m3_btn_text_btn_padding_left),
+            top = dimensionResource(MaterialR.dimen.m3_btn_padding_top) + inset,
+            end = dimensionResource(MaterialR.dimen.m3_btn_text_btn_padding_right),
+            bottom = dimensionResource(MaterialR.dimen.m3_btn_padding_bottom) + inset,
+        )
     Layout(
         modifier = Modifier.fillMaxWidth().padding(top = topPadding),
         content = {
             TextButton(
                 onClick = onDismissRequest,
+                modifier = Modifier.sizeIn(minWidth = minWidth, minHeight = 48.dp),
+                contentPadding = buttonPadding,
             ) { Text(dismissText) }
             TextButton(
                 onClick = onConfirm,
+                modifier = Modifier.sizeIn(minWidth = minWidth, minHeight = 48.dp),
+                contentPadding = buttonPadding,
                 enabled = confirmEnabled,
             ) { Text(confirmText) }
         },
@@ -116,7 +184,8 @@ fun AnkiDroidDialogButtons(
         val dismiss = children[0].measure(buttonConstraints)
         val confirm = children[1].measure(buttonConstraints)
         val gap = spacing.roundToPx()
-        val stacked = dismiss.width + gap + confirm.width > constraints.maxWidth
+        // Both View actions have a start margin, including the first action.
+        val stacked = dismiss.width + confirm.width + 2 * gap > constraints.maxWidth
         val height = if (stacked) confirm.height + dismiss.height else maxOf(confirm.height, dismiss.height)
         layout(constraints.maxWidth, height) {
             if (stacked) {
