@@ -21,6 +21,10 @@
     <string name="ankiquest_debug_hot_days" translatable="false">Streak days for hot (2 or more)</string>
     <string name="ankiquest_debug_blazing_days" translatable="false">Streak days for blazing (more than hot)</string>
     <string name="ankiquest_debug_legend_days" translatable="false">Streak days for legend (more than blazing)</string>
+    <string name="ankiquest_debug_freeze_window" translatable="false">Minutes before a freeze (1 or more)</string>
+    <string name="ankiquest_debug_neglected_days" translatable="false">Days away for neglected (1 or more)</string>
+    <string name="ankiquest_debug_abandoned_days" translatable="false">Days away for abandoned (more than neglected)</string>
+    <string name="ankiquest_debug_dead_days" translatable="false">Days away for dead (more than abandoned)</string>
     <string name="ankiquest_debug_invalid" translatable="false">Not saved: each threshold must be in range and above the one before it.</string>
     <string name="ankiquest_debug_marker" translatable="false">Debug override</string>
 </resources>

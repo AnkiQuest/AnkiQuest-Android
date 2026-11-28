@@ -15,6 +15,10 @@
     <string name="ankiquest_companion_anki_tan" translatable="false">Anki-tan</string>
     <string name="ankiquest_companion_none">No companion</string>
     <string name="ankiquest_companion_signed_out">Sign in to choose a companion.</string>
+    <string name="ankiquest_companion_mood_freeze">A freeze is protecting your streak.</string>
+    <string name="ankiquest_companion_mood_neglected">Your companion has been waiting a few days.</string>
+    <string name="ankiquest_companion_mood_abandoned">Your companion has been waiting a week or more.</string>
+    <string name="ankiquest_companion_mood_dead">Your companion has been waiting a month or more.</string>
     <!-- A locked companion: how to earn it and how far the player is. Same wording as the desktop add-on. -->
     <string name="ankiquest_companion_level_goal">Reach level %1$d</string>
     <string name="ankiquest_companion_level_progress">Level %1$d of %2$d</string>

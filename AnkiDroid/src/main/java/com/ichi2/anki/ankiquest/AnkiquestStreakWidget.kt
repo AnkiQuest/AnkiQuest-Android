@@ -222,7 +222,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 profile.optJSONObject("goal")?.toString().orEmpty(),
                 history.frozenDays,
                 history.daysAway,
-                history.freezePending,
+                AnkiquestDebug.current().rules.freezePending(history),
             )
         }
 

@@ -15,4 +15,8 @@
         <item quantity="other">Du bist %1$d Tipps von Chibi entfernt</item>
     </plurals>
     <string name="ankiquest_companion_signed_out">Melde dich an, um einen Begleiter zu wählen.</string>
+    <string name="ankiquest_companion_mood_freeze">Ein Freeze schützt deinen Streak.</string>
+    <string name="ankiquest_companion_mood_neglected">Dein Begleiter wartet seit ein paar Tagen.</string>
+    <string name="ankiquest_companion_mood_abandoned">Dein Begleiter wartet seit mindestens einer Woche.</string>
+    <string name="ankiquest_companion_mood_dead">Dein Begleiter wartet seit mindestens einem Monat.</string>
 </resources>

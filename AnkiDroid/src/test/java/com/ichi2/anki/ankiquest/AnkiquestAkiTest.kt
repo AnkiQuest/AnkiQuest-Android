@@ -189,13 +189,14 @@ class AnkiquestAkiTest : RobolectricTest() {
                 checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
             )
         val cases = fixtures.getJSONArray("moods").objects()
+        val now = 0L
         var checked = 0
         for (case in cases) {
             val name = case.getString("name")
             val today = case.getJSONObject("today")
             val expected = case.getJSONObject("expected")
-            val profile = homeProfile(today) ?: continue
-            val card = AnkiquestAki.mood(null, profile, now = 0L)
+            val profile = homeProfile(today, now) ?: continue
+            val card = AnkiquestAki.mood(null, profile, now)
             assertEquals(enumValueOf<AnkiquestMood.Mood>(expected.getString("mood").uppercase()), card.mood, name)
             assertEquals(akiMoodArt(expected), targetContext.resources.getResourceEntryName(card.image), name)
             checked++
@@ -211,10 +212,11 @@ class AnkiquestAkiTest : RobolectricTest() {
             JSONObject(
                 checkNotNull(javaClass.classLoader?.getResource("ankiquest/streak_moods.json")) { "missing streak moods" }.readText(),
             )
+        val now = 0L
         var checked = 0
         for (case in fixtures.getJSONArray("moods").objects()) {
-            val profile = homeProfile(case.getJSONObject("today")) ?: continue
-            val card = AnkiquestAki.mood(null, profile, now = 0L)
+            val profile = homeProfile(case.getJSONObject("today"), now) ?: continue
+            val card = AnkiquestAki.mood(null, profile, now)
             val expected = ankilopeMoodPoses.getValue(card.mood)
             assertEquals(expected, AnkiquestCompanion.resource(card.image), case.getString("name"))
             checked++
@@ -226,7 +228,10 @@ class AnkiquestAkiTest : RobolectricTest() {
      * A server profile that the Home card judges as the fixture's [today], or null for an unknown
      * day: Home learns the goal and frozen days from the same profile, so it has neither then.
      */
-    private fun homeProfile(today: JSONObject): JSONObject? {
+    private fun homeProfile(
+        today: JSONObject,
+        now: Long,
+    ): JSONObject? {
         val state = today.getString("state")
         if (state == "unknown") {
             return null
@@ -240,10 +245,11 @@ class AnkiquestAkiTest : RobolectricTest() {
         repeat(frozen) { heatmap.put(JSONObject().put("frozen", true)) }
         repeat(today.getInt("days_away")) { heatmap.put(JSONObject().put("state", "none")) }
         heatmap.put(JSONObject())
+        val end = if (today.isNull("day_left_ms")) Long.MAX_VALUE else now + today.getLong("day_left_ms")
         return JSONObject()
             .put("streak_state", serverState)
             .put("streak", today.getInt("streak"))
-            .put("day_ends_at", today.optLong("day_left_ms", Long.MAX_VALUE))
+            .put("day_ends_at", end)
             .put("freezes_enabled", true)
             .put("stored_freezes", today.getInt("freezes"))
             .put(
@@ -286,16 +292,29 @@ class AnkiquestAkiTest : RobolectricTest() {
                 JSONObject()
                     .put("day_ends_at", end)
                     .put("heatmap", heatmap)
+
+            fun visit(
+                player: HomeAccount,
+                time: Long,
+            ): AnkiquestFreezeVisit {
+                val day = AnkiquestFreezeVisit.Day(player.scope, end).takeIf { end > time }
+                return AnkiquestFreezeVisit.Open.prepare(day, AnkiquestMood.history(profile, time)) {
+                    AnkiquestHomeData.freezePictureSeen(player, it.endsAt, prefs)
+                }
+            }
             if (case.getBoolean("opened_today")) {
-                assertEquals(AnkiquestPose.FREEZE_USED, AnkiquestAki.takeFreezePicture(account, profile, now, prefs))
+                assertEquals(AnkiquestPose.FREEZE_USED, visit(account, now).picture)
+                AnkiquestHomeData.markFreezePicture(account, end, prefs)
             }
             val expected = AnkiquestPose.FREEZE_USED.takeIf { case.getBoolean("expected") }
-            assertEquals(expected, AnkiquestAki.takeFreezePicture(account, profile, now, prefs), case.getString("name"))
+            assertEquals(expected, visit(account, now).picture, case.getString("name"))
             if (expected != null) {
-                assertEquals(expected, AnkiquestAki.takeFreezePicture(account.copy(user = "bob"), profile, now, prefs))
+                AnkiquestHomeData.markFreezePicture(account, end, prefs)
+                assertEquals(expected, visit(account.copy(user = "bob"), now).picture)
             }
-            assertNull(AnkiquestAki.takeFreezePicture(account, profile, now, prefs))
-            assertNull(AnkiquestAki.takeFreezePicture(account, profile, end, prefs))
+            assertNull(visit(account, now).picture)
+            assertNull(visit(account.copy(token = "renewed"), now).picture)
+            assertNull(visit(account, end).picture)
         }
     }
 }

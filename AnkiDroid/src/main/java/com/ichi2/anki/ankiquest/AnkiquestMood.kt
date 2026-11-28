@@ -20,10 +20,6 @@ import org.json.JSONObject
 internal object AnkiquestMood {
     private const val MINUTE_MS = 60_000L
     private const val PERCENT = 100L
-    private const val FREEZE_WINDOW_MS = 7_200_000L
-    private const val NEGLECTED_DAYS = 2
-    private const val ABANDONED_DAYS = 7
-    private const val DEAD_DAYS = 30
 
     /** Ends the milestone line on moment cards and share pictures. */
     private const val FLAME = "🔥"
@@ -91,10 +87,7 @@ internal object AnkiquestMood {
         val daysAway: Int = 0,
         val freezes: Int = 0,
         val dayLeftMs: Long? = null,
-    ) {
-        val freezePending: Boolean
-            get() = freezes > 0 && dayLeftMs != null && dayLeftMs in 1L..FREEZE_WINDOW_MS
-    }
+    )
 
     /** Read the full profile or the account's remembered summary while its study day is current. */
     fun history(
@@ -180,13 +173,24 @@ internal object AnkiquestMood {
         val hotDays: Int = Heat.HOT.days,
         val blazingDays: Int = Heat.BLAZING.days,
         val legendDays: Int = Heat.LEGEND.days,
+        val freezeWindowMinutes: Int = 120,
+        val neglectedDays: Int = 2,
+        val abandonedDays: Int = 7,
+        val deadDays: Int = 30,
     ) {
         /** Whether each threshold is reachable and in the order of its levels. */
         fun valid(): Boolean =
             hopefulReviews >= 1 &&
                 frozen2Days in 2 until frozen3Days &&
                 hotDays in 2 until blazingDays &&
-                blazingDays < legendDays
+                blazingDays < legendDays &&
+                freezeWindowMinutes > 0 &&
+                neglectedDays in 1 until abandonedDays &&
+                abandonedDays < deadDays
+
+        /** Whether an available freeze can be used at the upcoming rollover. */
+        fun freezePending(history: History): Boolean =
+            history.freezes > 0 && history.dayLeftMs != null && history.dayLeftMs in 1L..(freezeWindowMinutes * MINUTE_MS)
 
         /** The heat of a [streak] that counts today; an unknown or zero streak burns as day one. */
         fun heat(streak: Int): Heat =
@@ -243,13 +247,13 @@ internal object AnkiquestMood {
         // Without a streak, days away only matter until the first new review.
         if (streak == 0) {
             return when {
-                reviews == 0 -> away(history.daysAway)
+                reviews == 0 -> away(history.daysAway, rules)
                 reviews < rules.hopefulReviews -> Mood.ASLEEP
                 progress == Stage.THREE_QUARTERS -> Mood.ALMOST
                 else -> Mood.HOPEFUL
             }
         }
-        if (reviews == 0 && history.freezePending) {
+        if (reviews == 0 && rules.freezePending(history)) {
             return Mood.FREEZE
         }
         return when (progress) {
@@ -259,11 +263,14 @@ internal object AnkiquestMood {
         }
     }
 
-    private fun away(days: Int): Mood =
+    private fun away(
+        days: Int,
+        rules: Rules,
+    ): Mood =
         when {
-            days >= DEAD_DAYS -> Mood.DEAD
-            days >= ABANDONED_DAYS -> Mood.ABANDONED
-            days >= NEGLECTED_DAYS -> Mood.NEGLECTED
+            days >= rules.deadDays -> Mood.DEAD
+            days >= rules.abandonedDays -> Mood.ABANDONED
+            days >= rules.neglectedDays -> Mood.NEGLECTED
             else -> Mood.ASLEEP
         }
 
@@ -327,12 +334,37 @@ internal object AnkiquestMood {
     @DrawableRes
     fun ownPose(now: Long): Int {
         val day = AnkiquestDay.ownCarried(now)
+        val debug = AnkiquestDebug.current()
+        return todayPose(ownMood(day, now, debug), day?.streak ?: 0, debug)
+    }
+
+    /** The companion settings' status line for protection or days away, as on desktop. */
+    fun companionLine(
+        context: Context,
+        now: Long,
+    ): String? {
+        val mood = ownMood(AnkiquestDay.ownCarried(now), now, AnkiquestDebug.current())
+        val text =
+            when (mood) {
+                Mood.FREEZE -> R.string.ankiquest_companion_mood_freeze
+                Mood.NEGLECTED -> R.string.ankiquest_companion_mood_neglected
+                Mood.ABANDONED -> R.string.ankiquest_companion_mood_abandoned
+                Mood.DEAD -> R.string.ankiquest_companion_mood_dead
+                else -> return null
+            }
+        return context.getString(text)
+    }
+
+    private fun ownMood(
+        day: AnkiquestDay.Verdict?,
+        now: Long,
+        debug: AnkiquestDebug.Overrides,
+    ): Mood {
         // The last profile's goal and frozen days only count while its day is the one judged.
         val endsAt = AnkiquestDay.last()?.dayEndsAt?.takeIf { it > now }
         val last = AnkiquestIcon.lastKnown()?.takeIf { endsAt != null && it.optLong("day_ends_at") == endsAt }
         val goal = if (last?.optBoolean("goal_reached") == true) Goal.REACHED else Goal.OPEN
-        val debug = AnkiquestDebug.current()
-        return todayPose(today(day, history(last, now), goal, debug), day?.streak ?: 0, debug)
+        return today(day, history(last, now), goal, debug)
     }
 
     /** The flame for [mood], so the flame says what Aki would even with no companion shown. */

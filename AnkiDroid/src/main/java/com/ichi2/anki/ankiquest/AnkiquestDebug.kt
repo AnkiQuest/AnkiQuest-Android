@@ -150,6 +150,10 @@ internal object AnkiquestDebug {
                 hotDays = stored.optInt(KEY_HOT, shared.hotDays),
                 blazingDays = stored.optInt(KEY_BLAZING, shared.blazingDays),
                 legendDays = stored.optInt(KEY_LEGEND, shared.legendDays),
+                freezeWindowMinutes = stored.optInt(KEY_FREEZE_WINDOW, shared.freezeWindowMinutes),
+                neglectedDays = stored.optInt(KEY_NEGLECTED, shared.neglectedDays),
+                abandonedDays = stored.optInt(KEY_ABANDONED, shared.abandonedDays),
+                deadDays = stored.optInt(KEY_DEAD, shared.deadDays),
             )
         return rules.takeIf { it.valid() } ?: shared
     }
@@ -162,6 +166,10 @@ internal object AnkiquestDebug {
             .put(KEY_HOT, rules.hotDays)
             .put(KEY_BLAZING, rules.blazingDays)
             .put(KEY_LEGEND, rules.legendDays)
+            .put(KEY_FREEZE_WINDOW, rules.freezeWindowMinutes)
+            .put(KEY_NEGLECTED, rules.neglectedDays)
+            .put(KEY_ABANDONED, rules.abandonedDays)
+            .put(KEY_DEAD, rules.deadDays)
 
     private const val KEY_HOPEFUL = "hopeful_reviews"
     private const val KEY_FROZEN_2 = "frozen_2_days"
@@ -169,4 +177,8 @@ internal object AnkiquestDebug {
     private const val KEY_HOT = "hot_days"
     private const val KEY_BLAZING = "blazing_days"
     private const val KEY_LEGEND = "legend_days"
+    private const val KEY_FREEZE_WINDOW = "freeze_window_minutes"
+    private const val KEY_NEGLECTED = "neglected_days"
+    private const val KEY_ABANDONED = "abandoned_days"
+    private const val KEY_DEAD = "dead_days"
 }

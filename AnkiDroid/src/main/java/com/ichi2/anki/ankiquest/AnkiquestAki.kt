@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.view.Gravity
 import android.view.View
@@ -11,7 +10,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
-import androidx.core.content.edit
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMood.Goal
 import com.ichi2.anki.common.time.TimeManager
@@ -19,8 +17,6 @@ import org.json.JSONObject
 
 /** Aki encourages real progress without changing study, scoring or notification rules. */
 internal object AnkiquestAki {
-    private const val PREF_FREEZE_SHOWN = "ankiquestFreezePictureShown"
-
     /** What the Home card says, chosen to fit Aki's mood. */
     enum class Message { WELCOME, REVIEW, CELEBRATE, STREAK, FREEZE, WAITING }
 
@@ -97,25 +93,6 @@ internal object AnkiquestAki {
 
     private val frozen =
         setOf(AnkiquestMood.Mood.FREEZE, AnkiquestMood.Mood.FROZEN_1, AnkiquestMood.Mood.FROZEN_2, AnkiquestMood.Mood.FROZEN_3)
-
-    /** Claims the first Today display after a freeze for this account and study day. */
-    fun takeFreezePicture(
-        account: HomeAccount,
-        profile: JSONObject?,
-        now: Long,
-        prefs: SharedPreferences,
-    ): AnkiquestPose? {
-        val end = profile?.optLong("day_ends_at")?.takeIf { it > now } ?: return null
-        if (AnkiquestMood.history(profile, now).frozenDays == 0) {
-            return null
-        }
-        val key = scopedKey(PREF_FREEZE_SHOWN, sha256(account.server, account.user))
-        if (prefs.getLong(key, 0L) >= end) {
-            return null
-        }
-        prefs.edit { putLong(key, end) }
-        return AnkiquestPose.FREEZE_USED
-    }
 
     fun image(
         context: Context,

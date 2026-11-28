@@ -20,7 +20,9 @@ import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestChibi
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestCompanion.Choice
+import com.ichi2.anki.ankiquest.AnkiquestDebug
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestMood.Mood
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import io.mockk.coEvery
@@ -202,6 +204,18 @@ class AnkiquestCompanionFragmentTest : RobolectricTest() {
 
         assertFalse(fragment.status().isVisible)
         coVerify { AnkiquestHomeData.companion(match { it.user == "another-member" }) }
+    }
+
+    @Test
+    fun `the companion explains freeze protection after loading`() {
+        AnkiquestDebug.save(AnkiquestDebug.Overrides.NONE.forceMood(Mood.FREEZE))
+        val fragment = open()
+        assertEquals("A freeze is protecting your streak.", fragment.status().summary)
+        assertTrue(fragment.status().isVisible)
+
+        fragment.card("No companion").performClick()
+        idle()
+        assertFalse(fragment.status().isVisible)
     }
 
     private fun signIn(user: String) =

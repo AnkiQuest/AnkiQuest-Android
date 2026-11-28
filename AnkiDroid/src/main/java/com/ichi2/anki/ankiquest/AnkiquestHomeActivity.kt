@@ -18,6 +18,7 @@ import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.doOnLayout
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.core.widget.TextViewCompat
@@ -60,7 +61,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var local: HomeLocal? = null
     private var localFailed = false
     private var profile: JSONObject? = null
-    private var freezeOpening: Pair<String, Long>? = null
+    private var freezeVisit: AnkiquestFreezeVisit = AnkiquestFreezeVisit.Closed
 
     @StringRes private var profileFailure: Int? = null
     private var loading = false
@@ -152,13 +153,13 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         account = AnkiquestHomeData.account()
         deckChoices = AnkiquestDeckChoices(this, ::selectDeck, ::copyChosen)
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
-        render()
+        render(null)
     }
 
     private var localRefreshJob: Job? = null
 
     override fun onPause() {
-        freezeOpening = null
+        freezeVisit = AnkiquestFreezeVisit.Closed
         localRefreshJob?.cancel()
         super.onPause()
     }
@@ -176,6 +177,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     override fun onResume() {
         super.onResume()
         if (!::content.isInitialized) return
+        freezeVisit = AnkiquestFreezeVisit.Open
         AnkiquestMoments.clearQuiet(AnkiDroidApp.sharedPrefs())
         refresh()
         offerCountdowns()
@@ -239,11 +241,11 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         passwordJob?.cancel()
         if (current == null) {
             loading = false
-            render()
+            showToday()
             return
         }
         loading = true
-        render()
+        showToday()
         refreshAvatar(current, turn)
         refreshCopies(current, turn)
         refreshPasswordPrompt(current, turn)
@@ -285,7 +287,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     profileFailure = failure
                     if (failure == R.string.aq_home_auth) profile = null
                     loading = false
-                    render()
+                    showToday()
                 }
             }
     }
@@ -301,7 +303,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         local = value
         localFailed = value == null
         scheduleLocalRefresh(value?.nextUpdateAt)
-        render()
+        showToday()
     }
 
     private fun refreshCopies(
@@ -322,7 +324,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     }
                 if (isCurrent(turn, current.scope)) {
                     copyInbox = result
-                    render()
+                    showToday()
                 }
             }
     }
@@ -355,12 +357,40 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 val next = if (offered) PasswordPrompt.Offered(current) else PasswordPrompt.Hidden
                 if (isCurrent(turn, current.scope) && next != passwordPrompt) {
                     passwordPrompt = next
-                    render()
+                    showToday()
                 }
             }
     }
 
-    private fun render() {
+    private fun showToday() {
+        val now = TimeManager.time.intTimeMS()
+        val previous = freezeVisit
+        val next =
+            previous.prepare(openingDay(now), AnkiquestMood.history(profile, now)) { day ->
+                AnkiquestHomeData.freezePictureSeen(checkNotNull(account), day.endsAt)
+            }
+        freezeVisit = next
+        render(next.picture)
+        if (next is AnkiquestFreezeVisit.Ready && next !== previous) {
+            content.doOnPreDraw { recordOpening(next) }
+        }
+    }
+
+    /** Only a frame drawn for the current visit can record the freeze picture. */
+    private fun recordOpening(ready: AnkiquestFreezeVisit.Ready) {
+        val shown = freezeVisit.displayed(ready)
+        if (shown === freezeVisit) return
+        val now = TimeManager.time.intTimeMS()
+        val current = account?.takeIf { ownsScope(it.scope) }
+        if (current == null || !content.isShown || content.windowVisibility != View.VISIBLE || openingDay(now) != ready.day) {
+            freezeVisit = AnkiquestFreezeVisit.Open
+            return
+        }
+        AnkiquestHomeData.markFreezePicture(current, ready.day.endsAt)
+        freezeVisit = shown
+    }
+
+    private fun render(picture: AnkiquestPose?) {
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
@@ -368,7 +398,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
         renderAvatar()
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
-        renderToday()
+        renderToday(picture)
         val target = questsHeading?.takeIf { focus == FOCUS_QUESTS }
         if (target != null || profile != null) focus = null
         if (target != null) {
@@ -402,12 +432,12 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
     }
 
-    private fun renderToday() {
+    private fun renderToday(picture: AnkiquestPose?) {
         questsHeading = null
         title(R.string.ankiquest_nav_today, R.string.aq_home_today_subtitle)
         val now = TimeManager.time.intTimeMS()
         val card = AnkiquestAki.mood(local, profile, now)
-        content.addView(AnkiquestAki.encouragement(this, card, openingPicture(now)))
+        content.addView(AnkiquestAki.encouragement(this, card, picture))
         profile?.let {
             views.text(content, getString(R.string.aq_home_streak_level, it.optInt("streak"), it.optInt("level")), small = true)
             AnkiquestBoards.ownWeekLine(this, AnkiquestBoards.parseOwnWeek(it), TimeManager.time.intTimeMS())?.let { line ->
@@ -503,24 +533,13 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
     }
 
-    private fun openingPicture(now: Long): AnkiquestPose? {
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            return null
-        }
+    private fun openingDay(now: Long): AnkiquestFreezeVisit.Day? {
         val current = account ?: return null
         val end = profile?.optLong("day_ends_at")?.takeIf { it > now } ?: return null
         if (!AnkiquestCompanion.visible() || AnkiquestDebug.current().today != AnkiquestDebug.Today.Computed) {
             return null
         }
-        val opening = current.scope to end
-        if (freezeOpening == opening) {
-            return AnkiquestPose.FREEZE_USED
-        }
-        val picture = AnkiquestAki.takeFreezePicture(current, profile, now, AnkiDroidApp.sharedPrefs())
-        if (picture != null) {
-            freezeOpening = opening
-        }
-        return picture
+        return AnkiquestFreezeVisit.Day(current.scope, end)
     }
 
     /** Below the next study step, so it never stands between the player and their cards. */
@@ -543,7 +562,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (passwordPrompt != offered) return
         passwordJob?.cancel()
         passwordPrompt = PasswordPrompt.Hidden
-        render()
+        showToday()
     }
 
     private fun renderGoal(
@@ -631,7 +650,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     ) {
         if (goalSetup == GoalSetup.SAVING || AnkiquestHomeData.account()?.scope != owner.scope) return
         goalSetup = GoalSetup.SAVING
-        render()
+        showToday()
         lifecycleScope.launch {
             try {
                 applyGoal(owner, AnkiquestDailyGoal.save(owner, choice, restart = choice.mode == AnkiquestDailyGoal.Mode.BACKLOG))
@@ -641,7 +660,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 Timber.w(e, "AnkiQuest suggested goal could not be saved")
                 if (AnkiquestHomeData.account()?.scope == owner.scope) {
                     goalSetup = GoalSetup.FAILED
-                    render()
+                    showToday()
                 }
             }
         }
@@ -716,7 +735,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         val work = CopyState.Sending(current)
         copyState = work
         copyStatus = getString(R.string.aq_copies_sending)
-        render()
+        showToday()
         lifecycleScope.launch {
             // Starting a send requires the same resumed account; an accepted send can finish while hidden.
             if (!ownsCopy(work) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
@@ -756,7 +775,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         copyStatus = status
         copyState = CopyState.Ready
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            render()
+            showToday()
         }
     }
 
@@ -771,7 +790,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         val work = CopyState.Importing(current)
         copyState = work
         copyStatus = getString(R.string.aq_copies_downloading)
-        render()
+        showToday()
         lifecycleScope.launch {
             try {
                 val file = AnkiquestDeckCopies.download(current, id, cacheDir)
@@ -802,7 +821,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         val work = CopyState.Dismissing(current)
         copyState = work
-        render()
+        showToday()
         lifecycleScope.launch {
             try {
                 AnkiquestDeckCopies.dismiss(current, id)
