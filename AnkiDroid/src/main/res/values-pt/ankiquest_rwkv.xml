@@ -8,6 +8,7 @@
     <string name="ankiquest_rwkv_backend_failed">Indisponível: o motor RWKV não conseguiu carregar os arquivos de modelo. O agendamento não muda.</string>
     <string name="ankiquest_rwkv_ready">Ativado: o RWKV agenda as predefinições postas em RWKV nas opções do baralho.</string>
     <string name="ankiquest_rwkv_models_title">Arquivos de modelo RWKV</string>
+    <string name="ankiquest_rwkv_guide_title">Como funciona o RWKV</string>
     <string name="ankiquest_rwkv_models_none">Nenhum importado.</string>
     <string name="ankiquest_rwkv_import_message">O AnkiQuest não inclui pesos RWKV: eles não têm licença de redistribuição e são só para uso pessoal e de pesquisa (WEIGHTS-NOTICE.md da versão %1$s de JSchoreels/anki-rwkv). Baixar busca os modelos de um tamanho nessa versão no GitHub. Ou baixe você mesmo o zip de duas cabeças e, se quiser, o zip Instant-only do mesmo tamanho, e escolha os zips ou os arquivos weights.f32.bin deles. Só ficam os arquivos cujo SHA-256 corresponde a um modelo conhecido.</string>
     <string name="ankiquest_rwkv_import_choose">Escolher arquivos</string>

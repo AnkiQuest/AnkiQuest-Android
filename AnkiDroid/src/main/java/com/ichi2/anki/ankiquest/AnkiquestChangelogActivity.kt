@@ -29,10 +29,11 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
             return
         }
         super.onCreate(savedInstanceState)
+        val guide = intent.getBooleanExtra(EXTRA_GUIDE, false)
 
         // Header, as on the other AnkiQuest pages
         findViewById<TextView>(R.id.aq_changelog_title).apply {
-            setText(R.string.ankiquest_changelog)
+            setText(if (guide) R.string.ankiquest_rwkv_guide_title else R.string.ankiquest_changelog)
             ViewCompat.setAccessibilityHeading(this, true)
         }
         findViewById<View>(R.id.aq_changelog_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
@@ -43,20 +44,25 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
             insets
         }
 
-        // The release this build is, and its notes
-        findViewById<TextView>(R.id.aq_changelog_release).text =
-            AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build)
+        // The release this build is, and its notes; the guide page shows the RWKV help alone
+        findViewById<TextView>(R.id.aq_changelog_release).apply {
+            visibility = if (guide) View.GONE else View.VISIBLE
+            text = AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build)
+        }
         findViewById<TextView>(R.id.aq_changelog_notes).apply {
-            text = browsable(AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(context)).parseAsHtml().trim())
+            val asset = if (guide) AnkiquestReleaseNotes.GUIDE else AnkiquestReleaseNotes.ASSET
+            text = browsable(AnkiquestReleaseNotes.html(AnkiquestReleaseNotes.read(context, asset)).parseAsHtml().trim())
             movementMethod = LinkMovementMethod.getInstance()
         }
 
         // Rate AnkiQuest is offered here and on About only
-        findViewById<View>(R.id.aq_changelog_rate).setOnClickListener {
-            openAnkiquestLink(AnkiquestLinks.rateUrl(this))
+        findViewById<View>(R.id.aq_changelog_rate).apply {
+            visibility = if (guide) View.GONE else View.VISIBLE
+            setOnClickListener { openAnkiquestLink(AnkiquestLinks.rateUrl(this@AnkiquestChangelogActivity)) }
         }
-        findViewById<View>(R.id.aq_changelog_releases).setOnClickListener {
-            openAnkiquestLink(AnkiquestLinks.RELEASES)
+        findViewById<View>(R.id.aq_changelog_releases).apply {
+            visibility = if (guide) View.GONE else View.VISIBLE
+            setOnClickListener { openAnkiquestLink(AnkiquestLinks.RELEASES) }
         }
     }
 
@@ -84,6 +90,11 @@ class AnkiquestChangelogActivity : AnkiActivity(R.layout.activity_ankiquest_chan
     }
 
     companion object {
+        /** Shows [AnkiquestReleaseNotes.GUIDE], the RWKV help page, instead of this build's notes. */
+        const val EXTRA_GUIDE = "guide"
+
         fun intent(context: Context): Intent = Intent(context, AnkiquestChangelogActivity::class.java)
+
+        fun guideIntent(context: Context): Intent = intent(context).putExtra(EXTRA_GUIDE, true)
     }
 }

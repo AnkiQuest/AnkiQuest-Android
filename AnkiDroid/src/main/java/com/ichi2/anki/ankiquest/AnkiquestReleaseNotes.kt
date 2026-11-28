@@ -9,14 +9,20 @@ import android.content.Context
  * notes of each quest-<n> release, so the app shows the notes of the release it was built from.
  */
 internal object AnkiquestReleaseNotes {
-    private const val ASSET = "ankiquest/release-notes.md"
+    const val ASSET = "ankiquest/release-notes.md"
+
+    /** The RWKV help page, in the same words as the release notes. */
+    const val GUIDE = "ankiquest/rwkv-guide.md"
     private val PARAGRAPH = Regex("""\n\s*\n""")
     private val LINK = Regex("""\[([^\]]+)]\(([^)\s]+)\)""")
     private val BOLD = Regex("""\*\*(.+?)\*\*""")
 
-    fun read(context: Context): String =
+    fun read(
+        context: Context,
+        asset: String = ASSET,
+    ): String =
         context.assets
-            .open(ASSET)
+            .open(asset)
             .bufferedReader()
             .use { it.readText() }
 

@@ -45,6 +45,7 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
 import com.ichi2.anki.ankiquest.AnkiquestBoards
+import com.ichi2.anki.ankiquest.AnkiquestChangelogActivity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
@@ -642,6 +643,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         }
         requirePreference<Preference>(R.string.ankiquest_rwkv_models_key).setOnPreferenceClickListener {
             showRwkvImport()
+            true
+        }
+        requirePreference<Preference>(R.string.ankiquest_rwkv_guide_key).setOnPreferenceClickListener {
+            startActivity(AnkiquestChangelogActivity.guideIntent(requireContext()))
             true
         }
         runRwkv({ context, ram -> AnkiquestRwkv.restore(context, ram) }) { }

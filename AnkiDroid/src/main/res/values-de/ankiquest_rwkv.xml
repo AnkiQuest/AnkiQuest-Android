@@ -8,6 +8,7 @@
     <string name="ankiquest_rwkv_backend_failed">Nicht verfügbar: Die RWKV-Engine konnte die Modelldateien nicht laden. Die Planung bleibt unverändert.</string>
     <string name="ankiquest_rwkv_ready">An: RWKV plant die Optionsgruppen, die in den Stapeloptionen auf RWKV stehen.</string>
     <string name="ankiquest_rwkv_models_title">RWKV-Modelldateien</string>
+    <string name="ankiquest_rwkv_guide_title">Wie RWKV funktioniert</string>
     <string name="ankiquest_rwkv_models_none">Keine importiert.</string>
     <string name="ankiquest_rwkv_import_message">AnkiQuest liefert keine RWKV-Gewichte mit: Sie haben keine Lizenz zur Weitergabe und sind nur für persönliche und Forschungszwecke (WEIGHTS-NOTICE.md des Release %1$s von JSchoreels/anki-rwkv). Herunterladen holt die Modelle einer Größe aus diesem Release auf GitHub. Oder lade selbst das Two-Head-Zip herunter, wenn du willst auch das Instant-only-Zip derselben Größe, und wähle die Zips oder ihre weights.f32.bin-Dateien. Behalten werden nur Dateien, deren SHA-256 zu einem bekannten Modell passt.</string>
     <string name="ankiquest_rwkv_import_choose">Dateien wählen</string>

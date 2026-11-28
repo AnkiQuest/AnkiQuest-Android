@@ -110,7 +110,7 @@ class AnkiquestChangelogActivityTest : RobolectricTest() {
     /** Notes with one link, to [NOTES_LINK], instead of this build's. */
     private fun linkedNotes() {
         mockkObject(AnkiquestReleaseNotes)
-        every { AnkiquestReleaseNotes.read(any()) } returns "Read [the notes]($NOTES_LINK) first."
+        every { AnkiquestReleaseNotes.read(any(), any()) } returns "Read [the notes]($NOTES_LINK) first."
     }
 
     private fun changelog(): AnkiquestChangelogActivity {
