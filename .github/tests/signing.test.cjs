@@ -76,7 +76,7 @@ function step(name) {
 
 test("every APK is signed with the rotation to the release key", () => {
     const signing = step("Sign with the AnkiQuest release key");
-    assert.match(signing, /for apk in AnkiQuest\.apk AnkiQuest-\*\.apk; do/);
+    assert.match(signing, /for apk in AnkiQuest\.apk AnkiQuest-\*\.apk fdroid\.apk; do\n\s*\[ -f "\$apk" \] \|\| continue\n/);
     assert.match(signing, /--next-signer --ks "\$keystore" --ks-key-alias ankiquest/);
     assert.match(signing, /--lineage tools\/ankiquest-signing-lineage\.bin --rotation-min-sdk-version 28/);
     assert.match(signing, /verify --min-sdk-version 28 --print-certs "\$apk" \| grep -q "CN=AnkiQuest"/);
@@ -88,6 +88,6 @@ test("every APK has the universal APK's package before signing", () => {
     assert.ok(check >= 0 && check < signing, "the package check must run before signing");
     const body = step("Package");
     assert.match(body, /expected=\$\(package_of AnkiQuest\.apk\)/);
-    assert.match(body, /for apk in AnkiQuest-\*\.apk; do/);
+    assert.match(body, /for apk in AnkiQuest-\*\.apk fdroid\.apk; do\n\s*\[ -f "\$apk" \] \|\| continue\n/);
     assert.match(body, /if \[ "\$package" != "\$expected" \]; then[\s\S]*?exit 1/);
 });

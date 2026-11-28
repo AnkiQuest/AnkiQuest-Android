@@ -103,6 +103,7 @@ jobs:
           NIGHTLY: ${{ steps.release.outputs.nightly }}
           UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
         run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           echo "fatal_warnings=false" >> local.properties
           quest=(-PcustomSuffix=quest -PcustomName="AnkiQuest" -PankiquestRelease="$RELEASE"
             -PankiquestNightly="$NIGHTLY" -PupstreamCommit="$UPSTREAM_SHA")
@@ -113,6 +114,22 @@ jobs:
             cp "AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-$abi-release.apk" "AnkiQuest-$abi.apk"
           done
           cp AnkiDroid/build/outputs/bundle/playRelease/AnkiDroid-play-release.aab AnkiQuest.aab
+
+      # F-Droid rebuilds each release from docs/fdroid/recipe.yml and publishes our APK when its
+      # rebuild matches it apart from the signature (Binaries in the recipe). The Gradle inputs
+      # are the recipe's (fdroid.test.cjs): no self-updater, universal APK. Package and Sign
+      # below check and sign it like the GitHub APKs.
+      - name: F-Droid APK
+        if: startsWith(github.ref, 'refs/tags/quest-')
+        env:
+          RELEASE: ${{ steps.release.outputs.number }}
+          UPSTREAM: ${{ steps.upstream.outputs.sha }}
+        run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true --stacktrace \
+            -PcustomSuffix=quest -PcustomName=AnkiQuest -PankiquestUpdates=none -PankiquestArtCache=ankiquest-art \
+            -PankiquestRelease="$RELEASE" -PupstreamCommit="$UPSTREAM"
+          cp AnkiDroid/build/outputs/apk/full/release/AnkiDroid-full-universal-release.apk fdroid.apk
 
       # Packaging failed now and then with no cause printed; free disk and memory rule those out.
       - name: Disk and memory
@@ -128,7 +145,8 @@ jobs:
           package_of() { "$aapt2" dump badging "$1" | sed -n "s/^package: name='\([^']*\)'.*/\1/p"; }
           expected=$(package_of AnkiQuest.apk)
           echo "package $expected"
-          for apk in AnkiQuest-*.apk; do
+          for apk in AnkiQuest-*.apk fdroid.apk; do
+            [ -f "$apk" ] || continue
             package=$(package_of "$apk")
             if [ "$package" != "$expected" ]; then
               echo "::error::$apk has package $package, not $expected"
@@ -158,7 +176,8 @@ jobs:
           trap 'rm -f "$keystore"' EXIT
           printf '%s' "$ANKIQUEST_KEYSTORE" | base64 -d > "$keystore"
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          for apk in AnkiQuest.apk AnkiQuest-*.apk; do
+          for apk in AnkiQuest.apk AnkiQuest-*.apk fdroid.apk; do
+            [ -f "$apk" ] || continue
             "$apksigner" sign \
               --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
               --next-signer --ks "$keystore" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
@@ -247,6 +266,23 @@ jobs:
           gh release create "$GITHUB_REF_NAME" $(jq -r '.[].name' assets.json) \
             --title "AnkiQuest $RELEASE" \
             --notes-file notes.md
+
+      # The recipe's Binaries URL names the APK by version code, since F-Droid only substitutes
+      # the version code and name, not the tag. Not in assets.json: the release lists the GitHub
+      # APKs, and the fdroid pre-release is never the latest one the updater reads.
+      - name: Publish F-Droid APK
+        if: startsWith(github.ref, 'refs/tags/quest-')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          code=$("$aapt2" dump badging fdroid.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          mv fdroid.apk "AnkiQuest-$code.apk"
+          if ! gh release view fdroid > /dev/null 2>&1; then
+            gh release create fdroid --prerelease --latest=false --title "AnkiQuest for F-Droid" \
+              --notes "APKs F-Droid checks its builds against, one per release. Install AnkiQuest from F-Droid or from the quest-* releases instead."
+          fi
+          gh release upload fdroid "AnkiQuest-$code.apk" --clobber
 
       - name: Nightly manifest
         id: nightly
