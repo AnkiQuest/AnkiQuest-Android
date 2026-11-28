@@ -3,6 +3,7 @@
 
 package com.ichi2.widget.cardanalysis
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
@@ -166,7 +167,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
             shorterMessage: String,
             size: SizeF,
         ): RemoteViews {
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_card_analysis)
+            val remoteViews = fullTouchViews(context)
             remoteViews.setViewVisibility(R.id.empty_widget, View.VISIBLE)
             remoteViews.setViewVisibility(R.id.cardAnalysisDataHolder, View.GONE)
             remoteViews.setViewVisibility(R.id.deckNameCardAnalysis, View.GONE)
@@ -180,7 +181,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
                     configIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-            remoteViews.setOnClickPendingIntent(R.id.empty_widget, configPendingIntent)
+            remoteViews.setWidgetClickAction(configPendingIntent)
             remoteViews.fitMessage(context, size, message, shorterMessage)
             return remoteViews
         }
@@ -200,7 +201,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
             deckData: DeckWidgetData,
             size: SizeF,
         ): RemoteViews {
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_card_analysis)
+            val remoteViews = fullTouchViews(context)
             remoteViews.setTextViewText(R.id.deckNameCardAnalysis, deckData.name)
             remoteViews.setTextViewText(R.id.deckNew_card_analysis_widget, deckData.newCount.toString())
             remoteViews.setTextViewText(R.id.deckDue_card_analysis_widget, deckData.reviewCount.toString())
@@ -226,7 +227,7 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
                     intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
-            remoteViews.setOnClickPendingIntent(R.id.deckNameCardAnalysis, pendingIntent)
+            remoteViews.setWidgetClickAction(pendingIntent)
 
             remoteViews.setBackgrounds(size.cornersTooRound())
             remoteViews.fitTo(context, size)
@@ -234,6 +235,19 @@ class CardAnalysisWidget : AnalyticsWidgetProvider() {
         }
 
         private fun SizeF.cornersTooRound() = height > 0 && height < CORNER_RADIUS_DP * 3
+
+        /**
+         * Inflates [R.layout.widget_card_analysis] under the alias's own layout ID, so launchers
+         * reinflate widgets placed with the old deck-name click target.
+         */
+        // RemoteViewLayout reads the alias's <item> as the layout's views; the layout it points to is checked as itself.
+        @SuppressLint("RemoteViewLayout")
+        private fun fullTouchViews(context: Context) = RemoteViews(context.packageName, R.layout.widget_card_analysis_full_touch)
+
+        private fun RemoteViews.setWidgetClickAction(pendingIntent: PendingIntent) {
+            // Keep the touch target large when fitting shrinks the text.
+            setOnClickPendingIntent(android.R.id.background, pendingIntent)
+        }
 
         private fun RemoteViews.setBackgrounds(cornersTooRound: Boolean) {
             setInt(
