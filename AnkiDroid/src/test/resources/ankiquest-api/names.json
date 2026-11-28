@@ -37,6 +37,7 @@
         "reminders_save",
         "settings",
         "settings_countdowns",
+        "settings_optimize_reminder",
         "settings_save",
         "share_moment",
         "share_moment_group",

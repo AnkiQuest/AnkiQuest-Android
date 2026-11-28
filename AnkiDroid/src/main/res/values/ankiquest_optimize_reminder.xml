@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <!-- AnkiQuest-Server tests/fixtures/optimize_reminder.json "wording", in its order; the desktop add-on shows the same. -->
+    <string name="ankiquest_optimize_reminder_key" translatable="false">ankiquestOptimizeReminderSwitch</string>
+    <string name="aq_optimize_title">Time to optimize your presets</string>
+    <string name="aq_optimize_stale">You last ran Optimize All Presets at least 30 days and 1,000 reviews ago.</string>
+    <string name="aq_optimize_never">You have at least 1,000 reviews and haven\'t run Optimize All Presets yet.</string>
+    <string name="aq_optimize_fsrs">It fits each preset\'s FSRS parameters to your review history.</string>
+    <string name="aq_optimize_rwkv">Your presets use RWKV-Curve or RWKV-Instant: it fits only their FSRS fallback. RWKV itself isn\'t trained by it.</string>
+    <string name="aq_optimize_mixed">It fits the parameters of your FSRS presets to your review history. For RWKV-Curve and RWKV-Instant presets it fits only the FSRS fallback; RWKV itself isn\'t trained by it.</string>
+    <string name="aq_optimize_where">Optimize All Presets is in the FSRS section of deck options.</string>
+    <string name="aq_optimize_open">Open deck options</string>
+    <string name="aq_optimize_snooze">Remind me in a week</string>
+    <string name="aq_optimize_dismiss">Dismiss</string>
+    <string name="aq_optimize_setting" maxLength="41">Remind me to optimize presets</string>
+    <string name="aq_optimize_setting_summary">When Optimize All Presets last ran at least 30 days and 1,000 reviews ago</string>
+</resources>

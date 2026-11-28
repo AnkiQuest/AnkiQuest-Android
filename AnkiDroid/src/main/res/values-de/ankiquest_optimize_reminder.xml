@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<resources>
+    <string name="aq_optimize_title">Zeit, deine Voreinstellungen zu optimieren</string>
+    <string name="aq_optimize_stale">Du hast „Alle Voreinstellungen optimieren“ zuletzt vor mindestens 30 Tagen und 1.000 Wiederholungen ausgeführt.</string>
+    <string name="aq_optimize_never">Du hast mindestens 1.000 Wiederholungen und „Alle Voreinstellungen optimieren“ noch nie ausgeführt.</string>
+    <string name="aq_optimize_fsrs">Es passt die FSRS-Parameter jeder Voreinstellung an deinen Lernverlauf an.</string>
+    <string name="aq_optimize_rwkv">Deine Voreinstellungen nutzen RWKV-Curve oder RWKV-Instant: Es passt nur ihren FSRS-Ersatz an. RWKV selbst wird dabei nicht trainiert.</string>
+    <string name="aq_optimize_mixed">Es passt die Parameter deiner FSRS-Voreinstellungen an deinen Lernverlauf an. Bei RWKV-Curve- und RWKV-Instant-Voreinstellungen passt es nur den FSRS-Ersatz an; RWKV selbst wird dabei nicht trainiert.</string>
+    <string name="aq_optimize_where">„Alle Voreinstellungen optimieren“ findest du im FSRS-Abschnitt der Stapeloptionen.</string>
+    <string name="aq_optimize_open">Stapeloptionen öffnen</string>
+    <string name="aq_optimize_snooze">In einer Woche erinnern</string>
+    <string name="aq_optimize_dismiss">Verwerfen</string>
+    <string name="aq_optimize_setting">Erinnern, Voreinstellungen zu optimieren</string>
+    <string name="aq_optimize_setting_summary">Wenn „Alle Voreinstellungen optimieren“ zuletzt vor mindestens 30 Tagen und 1.000 Wiederholungen lief</string>
+</resources>

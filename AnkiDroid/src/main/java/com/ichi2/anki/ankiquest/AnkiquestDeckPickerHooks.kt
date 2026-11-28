@@ -264,7 +264,8 @@ object AnkiquestDeckPickerHooks {
      *
      * The local destination opens before any optional network work,
      * and an explicit Study action does not start a competing sync.
-     * When the deck list stays, Aki greets a player who has not met her on this device.
+     * When the deck list stays, Aki greets a player who has not met her on this device; otherwise
+     * the player may be reminded to optimize their presets.
      *
      * @return true if AnkiQuest handled startup, in which case the caller skips its own sync.
      */
@@ -277,7 +278,12 @@ object AnkiquestDeckPickerHooks {
         val studyRequested = activity.intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK)
         if (!handleEntry(activity, openReviewer)) {
             // The deck list stays in front, and upstream's intro, permission and changelog screens are done.
-            AnkiquestGreeting.offer(activity)
+            // The greeting goes first; the optimize reminder waits for a start without it.
+            if (AnkiquestGreeting.state() == AnkiquestGreeting.State.PENDING) {
+                AnkiquestGreeting.offer(activity)
+            } else {
+                AnkiquestOptimizeReminder.offer(activity)
+            }
             return false
         }
         if (!studyRequested) backgroundSync()
