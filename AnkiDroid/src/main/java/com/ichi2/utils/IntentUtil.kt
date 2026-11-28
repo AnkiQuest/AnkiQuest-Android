@@ -3,6 +3,7 @@
 package com.ichi2.utils
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.webkit.MimeTypeMap
@@ -55,18 +56,23 @@ object IntentUtil {
             false
         }
 
+    /**
+     * Starts [intent], or shows 'No suitable app found' if no app handles it.
+     *
+     * This does not check [canOpenIntent] first: with package visibility (Android 11+),
+     * `resolveActivity` can return `null` although an app handles the intent.
+     * Android recommends calling `startActivity` and catching [ActivityNotFoundException].
+     *
+     * https://developer.android.com/training/package-visibility/use-cases
+     */
     fun tryOpenIntent(
         activity: Activity,
         intent: Intent,
     ) {
         try {
-            if (canOpenIntent(activity, intent)) {
-                activity.startActivity(intent)
-            } else {
-                val errorMsg = activity.getString(CommonString.feedback_no_suitable_app_found)
-                activity.showSnackbar(errorMsg, Snackbar.LENGTH_SHORT)
-            }
+            activity.startActivity(intent)
         } catch (e: Exception) {
+            // usually ActivityNotFoundException: no app handles the intent
             Timber.w(e)
             val errorMsg = activity.getString(CommonString.feedback_no_suitable_app_found)
             activity.showSnackbar(errorMsg, Snackbar.LENGTH_SHORT)
