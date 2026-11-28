@@ -3,7 +3,6 @@
 // Accepts manual recordings (workflow_dispatch) and checks that the artifact still exists.
 
 const WORKFLOW = "screenshot_store.yml";
-const PREVIOUS_WORKFLOW = "ankiquest_screenshot_store.yml";
 const RETRY_MS = 30_000;
 // The baseline build can outlast a 30-minute wait (under Maven Central
 // throttling it needed 25 minutes for the build alone), so allow 55 minutes.
@@ -39,25 +38,17 @@ async function baseCommit({ github, context }) {
     return { sha: context.sha, ref: context.ref.replace(/^refs\/heads\//, "") };
 }
 
-async function runsAt(github, repo, workflow, sha) {
-    try {
-        // No status filter: status=success can omit a finished run.
-        const {
-            data: { workflow_runs: runs },
-        } = await github.rest.actions.listWorkflowRuns({
-            ...repo,
-            workflow_id: workflow,
-            head_sha: sha,
-            per_page: 100,
-        });
-        return runs;
-    } catch (error) {
-        // Once the old file is removed, the API may no longer accept its name.
-        if (workflow === PREVIOUS_WORKFLOW && error.status === 404) {
-            return [];
-        }
-        throw error;
-    }
+async function runsAt(github, repo, sha) {
+    // No status filter: status=success can omit a finished run.
+    const {
+        data: { workflow_runs: runs },
+    } = await github.rest.actions.listWorkflowRuns({
+        ...repo,
+        workflow_id: WORKFLOW,
+        head_sha: sha,
+        per_page: 100,
+    });
+    return runs;
 }
 
 module.exports = async function waitForScreenshotBaseline({
@@ -71,30 +62,27 @@ module.exports = async function waitForScreenshotBaseline({
 
     // Store jobs can overlap or outlive the branch tip. Only this commit's artifact is safe.
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-        // Earlier base commits were recorded by the workflow's former file name.
-        for (const workflow of [WORKFLOW, PREVIOUS_WORKFLOW]) {
-            for (const run of await runsAt(github, context.repo, workflow, base.sha)) {
-                if (
-                    run.head_sha !== base.sha ||
-                    run.status !== "completed" ||
-                    run.conclusion !== "success" ||
-                    !["push", "workflow_dispatch"].includes(run.event)
-                ) {
-                    continue;
-                }
-                const {
-                    data: { artifacts },
-                } = await github.rest.actions.listWorkflowRunArtifacts({
-                    ...context.repo,
-                    run_id: run.id,
-                    per_page: 100,
-                });
-                if (
-                    artifacts.some(artifact => artifact.name === "screenshot" && !artifact.expired)
-                ) {
-                    core.info(`Using screenshot baseline from ${base.sha}: run ${run.id}`);
-                    return run.id;
-                }
+        for (const run of await runsAt(github, context.repo, base.sha)) {
+            if (
+                run.head_sha !== base.sha ||
+                run.status !== "completed" ||
+                run.conclusion !== "success" ||
+                !["push", "workflow_dispatch"].includes(run.event)
+            ) {
+                continue;
+            }
+            const {
+                data: { artifacts },
+            } = await github.rest.actions.listWorkflowRunArtifacts({
+                ...context.repo,
+                run_id: run.id,
+                per_page: 100,
+            });
+            if (
+                artifacts.some(artifact => artifact.name === "screenshot" && !artifact.expired)
+            ) {
+                core.info(`Using screenshot baseline from ${base.sha}: run ${run.id}`);
+                return run.id;
             }
         }
         core.info(`Waiting for screenshot baseline ${base.sha} (${base.ref})`);

@@ -59,6 +59,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         val channel = AnkiquestUpdater.channel().name.lowercase()
         val channelLabel = entries.getOrNull(values.indexOf(channel)) ?: channel
         binding.updateChannel.text = getString(R.string.ankiquest_about_channel, channelLabel)
+        binding.updateChannel.isVisible = AnkiquestUpdater.source() == AnkiquestUpdater.Source.GITHUB
         binding.ankidroidVersion.text = getString(R.string.ankiquest_about_based_on, pkgVersionName)
         binding.backendVersion.text =
             "(anki " + BackendBuildConfig.ANKI_DESKTOP_VERSION + " / " + BackendBuildConfig.ANKI_COMMIT_HASH.subSequence(0, 8) + ")"

@@ -9,7 +9,8 @@ in [server PR #237](https://github.com/AnkiQuest/AnkiQuest-Desktop/pull/237), co
 `660e119bee68d56b0e6e6a646eae66b657130f8f`. All 38 drawables match that exporter
 byte for byte; the existing 30 files are unchanged.
 
-![Android WebPs at 128 and 64 pixels, on light and dark backgrounds](review.png)
+[Android WebPs at 128 and 64 pixels, on light and dark backgrounds](https://github.com/AnkiQuest/AnkiQuest-Art/blob/master/archive/aki/reviews/social-android.png),
+in AnkiQuest-Art's archive.
 
 The sheet uses the actual Android exports. The original masters were also
 reviewed at native size. The updated companion and nudge expectations failed
